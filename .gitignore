@@ -1,0 +1,16 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+neuron_workspace/
+batch_workspace/
+.venv/
+.venv-build/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+verification/v0_2_0/_sample_workspaces/
+verification/**/_sample_workspaces/
