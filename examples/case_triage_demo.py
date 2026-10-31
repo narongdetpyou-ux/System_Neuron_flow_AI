@@ -7,14 +7,16 @@ import tempfile
 
 from neuron_flow import Runtime
 from app.domains.case_triage import build_workflow, registry
+from app.observability import init_sentry, run_job
 
 
 def main():
+    init_sentry()  # no-op unless SENTRY_DSN is set and sentry-sdk is installed
     case = {"case_id": "SYN-001", "summary": "I cannot upload an attachment"}
     with tempfile.TemporaryDirectory(prefix="neuron-triage-demo-") as workspace:
         with Runtime(workspace, agents=registry()) as runtime:
             runtime.submit(build_workflow("synthetic_case_001", case))
-            result = runtime.run("synthetic_case_001")
+            result = run_job(runtime, "synthetic_case_001")
             print(json.dumps({
                 "job_id": result["job_id"],
                 "status": result["status"],
