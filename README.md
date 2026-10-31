@@ -35,6 +35,7 @@ Scope: single-machine Python runtime, no service-level agreement, network securi
 - [Architecture Review v2](docs/System_Neuron_Flow_Architecture_Review_v2.md)
 - [Deterministic case-triage pilot](docs/case_triage_pilot.md)
 - [Internal funding-readiness evidence pack](docs/funding/README.md)
+- [Optional Sentry error reporting](docs/observability_sentry.md)
 
 Run the synthetic example: `python -m examples.case_triage_demo`.
 The example is **not** an AI agent, public API, real-world user pilot or

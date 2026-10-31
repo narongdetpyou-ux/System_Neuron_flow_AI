@@ -12,5 +12,9 @@ license = "GPL-3.0-only"
 license-files = ["LICENSE"]
 dependencies = []
 
+[project.optional-dependencies]
+# Application-layer error reporting only; Core stays dependency-free.
+observability = ["sentry-sdk>=2.0"]
+
 [tool.setuptools.packages.find]
 include = ["neuron_flow*"]
