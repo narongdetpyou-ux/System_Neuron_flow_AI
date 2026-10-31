@@ -1,0 +1,47 @@
+name: Shadow eval with Claude (manual)
+# Scores shadow mode on the synthetic case set with the real Claude API.
+# Manual only, because it uses API credits (one short request per case, 61 cases).
+# Needs the repository secret ANTHROPIC_API_KEY (Settings -> Secrets and variables -> Actions).
+on:
+  workflow_dispatch:
+    inputs:
+      model:
+        description: "Claude model id"
+        default: "claude-haiku-5-5"
+        required: true
+      limit:
+        description: "Only the first N cases (leave empty for all)"
+        default: ""
+        required: false
+jobs:
+  eval:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      NEURON_FLOW_LLM_PROVIDER: anthropic
+      NEURON_FLOW_LLM_MODEL: ${{ inputs.model }}
+      LIMIT: ${{ inputs.limit }}
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Check the API key is configured
+        run: |
+          if [ -z "$ANTHROPIC_API_KEY" ]; then
+            echo "::error::Add the repository secret ANTHROPIC_API_KEY (Settings -> Secrets and variables -> Actions), then run again."
+            exit 1
+          fi
+      - name: Score shadow mode with Claude
+        run: |
+          ARGS=()
+          if [ -n "$LIMIT" ]; then ARGS=(--limit "$LIMIT"); fi
+          python -m app.eval.triage_shadow_eval --summary "$GITHUB_STEP_SUMMARY" --out shadow-eval-claude.json "${ARGS[@]}"
+      - name: Keep the scorecard
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: shadow-eval-claude
+          path: shadow-eval-claude.json
+          if-no-files-found: ignore

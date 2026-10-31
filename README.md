@@ -42,3 +42,18 @@ The example is **not** an AI agent, public API, real-world user pilot or
 operational human-review service. Funding documentation includes explicit
 eligibility, evidence, ownership and cost-estimate gaps; it is not a
 submitted application.
+
+## Shadow mode: AI second opinion (case_triage v2)
+
+The v1 keyword rules stay the official suggestion; an AI model (Claude, or an
+offline keyword simulation for tests) adds a second opinion, and disagreements
+raise the review priority. Every proposal still waits for a human. No Core file
+changed. See [case_triage v2 shadow mode](docs/case_triage_v2_shadow.md).
+
+```bash
+python -m examples.case_triage_shadow_demo        # 3 synthetic cases, offline mock AI
+python -m app.eval.triage_shadow_eval             # scorecard on 61 labelled synthetic cases
+```
+
+With `NEURON_FLOW_LLM_PROVIDER=anthropic` and `ANTHROPIC_API_KEY` set, the same
+commands use Claude. On GitHub: *Actions → Shadow eval with Claude (manual)*.

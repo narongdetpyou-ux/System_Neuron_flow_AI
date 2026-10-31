@@ -16,3 +16,13 @@ jobs:
       - run: python -m unittest discover -s tests -v
       - name: Run synthetic domain demonstration
         run: python -m examples.case_triage_demo
+      - name: Run shadow-mode demonstration (offline mock AI)
+        run: python -m examples.case_triage_shadow_demo
+      - name: Score shadow mode on the synthetic case set (offline mock AI)
+        run: python -m app.eval.triage_shadow_eval --summary "$GITHUB_STEP_SUMMARY" --out shadow-eval-mock.json
+      - name: Keep the scorecard
+        if: matrix.python-version == '3.12'
+        uses: actions/upload-artifact@v4
+        with:
+          name: shadow-eval-mock
+          path: shadow-eval-mock.json

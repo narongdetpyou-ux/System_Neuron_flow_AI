@@ -9,6 +9,10 @@ Design rules (see docs/observability_sentry.md):
   job snapshot after ``Runtime.run`` and sends one event per FAILED step and
   one per DELIVERY_FAILED job. BLOCKED steps are consequences, so they are
   attached as context to the root failure instead of creating noise.
+* Degraded steps: a SUCCEEDED step whose output is ``{"status": "unavailable",
+  "reason": "<code>"}`` (e.g. the AI second opinion was unavailable) sends one
+  ``warning`` event, grouped by agent and reason. Only the fixed reason code
+  and error class name are read from the output.
 * Privacy first: job ``input``, step ``params``, step ``output`` and receipt
   paths are never sent. Error *messages* are omitted by default because an
   agent or validator may echo user text; opt in with
@@ -18,8 +22,11 @@ Design rules (see docs/observability_sentry.md):
 """
 
 import os
+import re
 
 _MESSAGE_LIMIT = 300
+_CODE = re.compile(r"^[a-z0-9_]{1,60}$")
+_CODE_NAME = re.compile(r"^[A-Za-z][A-Za-z0-9_]{0,99}$")
 _SCRUBBED_KEYS = ("request", "user", "breadcrumbs")
 
 
@@ -124,6 +131,27 @@ class SentryReporter:
                          "step_id": step_id, "attempts": state.get("attempts"),
                          "max_attempts": definition.get("max_attempts"),
                          "blocked_dependents": blocked, **fields}))
+        for step_id, state in states.items():
+            output = state.get("output")
+            if state.get("status") != "SUCCEEDED" or not isinstance(output, dict) \
+                    or output.get("status") != "unavailable":
+                continue
+            # Degraded but finished: e.g. the AI second opinion was unavailable and the
+            # case went to review on the rules suggestion alone. Warn, don't page.
+            agent = steps_spec.get(step_id, {}).get("agent", "unknown")
+            reason = output.get("reason")
+            reason = reason if isinstance(reason, str) and _CODE.fullmatch(reason) else "unspecified"
+            error_type = output.get("error_type")
+            error_type = error_type if isinstance(error_type, str) and _CODE_NAME.fullmatch(error_type) else "Unknown"
+            sent.append(self._send(
+                f"Neuron Flow step degraded: {agent} ({reason})", level="warning",
+                fingerprint=["neuron-flow", "step-degraded", agent, reason],
+                tags={"neuron_flow.event": "step_degraded", "neuron_flow.agent": agent,
+                      "neuron_flow.degraded_reason": reason, "neuron_flow.error_type": error_type,
+                      "neuron_flow.agent_version": str(versions.get(agent, {}).get("version", "?"))},
+                context={"job_id": snapshot.get("job_id"), "job_status": snapshot.get("status"),
+                         "step_id": step_id, "attempts": state.get("attempts"), "reason": reason,
+                         "error_type": error_type}))
         if snapshot.get("status") == "DELIVERY_FAILED":
             details = snapshot.get("delivery_error_details") or {}
             fields = self._error_fields({"type": details.get("type", "DeliveryError"),
@@ -144,14 +172,14 @@ class SentryReporter:
             scope.set_context("neuron_flow", {"job_id": job_id, "exception_type": type(exc).__name__})
             return self.sdk.capture_exception(exc)
 
-    def _send(self, message, *, fingerprint, tags, context):
+    def _send(self, message, *, fingerprint, tags, context, level="error"):
         try:
             with self.sdk.new_scope() as scope:
                 scope.fingerprint = fingerprint
                 for key, value in tags.items():
                     scope.set_tag(key, value)
                 scope.set_context("neuron_flow", context)
-                return self.sdk.capture_message(message, level="error")
+                return self.sdk.capture_message(message, level=level)
         except Exception:
             # Observability must never change a job outcome.
             return None
