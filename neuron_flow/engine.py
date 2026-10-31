@@ -188,12 +188,15 @@ class Dendrite:
         return {"job_id": normalized["job_id"], "created": created}
 
     def ingest(self, raw_input, job_id=None):
-        """Select the supported invoice workflow directly from structured input."""
-        if not isinstance(raw_input, dict) or not {"document_id", "items"} <= raw_input.keys():
-            raise SpecError("Unsupported input: expected a structured invoice with document_id and items")
-        from .agents import invoice_workflow
-        identifier = job_id if job_id is not None else f"invoice_{fingerprint(raw_input)[:16]}"
-        return self.submit(invoice_workflow(raw_input, identifier))
+        """Ingest a portable workflow specification, without domain-specific adapters."""
+        if not isinstance(raw_input, dict):
+            raise SpecError("Expected a structured workflow object")
+        spec = dict(raw_input)
+        if job_id is not None:
+            if "job_id" in spec and spec["job_id"] != job_id:
+                raise SpecError("Conflicting job_id")
+            spec["job_id"] = job_id
+        return self.submit(spec)
 
 
 class Axon:
@@ -443,8 +446,7 @@ class Runtime:
         self.closed = False
         try:
             if agents is None:
-                from .agents import default_agents
-                agents = default_agents()
+                agents = []  # Domain agents must be provided explicitly by the embedding application.
             self.store = Store(self.workspace / "state.sqlite3")
             self.synapse = Synapse(self.store, agents, validation_timeout_s)
             self.dendrite = Dendrite(self.store, self.synapse)
