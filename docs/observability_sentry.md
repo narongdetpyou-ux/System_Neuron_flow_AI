@@ -15,6 +15,7 @@ Sentry's automatic exception capture would miss almost every real failure.
 | Step `FAILED` | one `error` event per failed step | `neuron-flow / step-failed / <agent> / <error type>` |
 | Step `BLOCKED` | no separate event; listed as `blocked_dependents` on the root failure | — |
 | Job `DELIVERY_FAILED` | one `error` event | `neuron-flow / delivery-failed / <error type>` |
+| Step `SUCCEEDED` but degraded: output `{"status": "unavailable", "reason": "<code>"}` (e.g. AI second opinion unavailable) | one `warning` event | `neuron-flow / step-degraded / <agent> / <reason>` |
 | `Runtime.run` raises (e.g. agent version drift, unknown agent) | exception event, then re-raised | Sentry default |
 
 Tags: `neuron_flow.event`, `neuron_flow.agent`, `neuron_flow.agent_version`,
