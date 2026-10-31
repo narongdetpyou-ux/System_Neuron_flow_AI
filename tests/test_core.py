@@ -30,7 +30,7 @@ class CoreLogicTests(unittest.TestCase):
                 self.assertEqual(result["status"],"SUCCEEDED")
                 self.assertEqual(result["steps"]["second"]["output"],{"copied":"hello"})
                 self.assertFalse(runtime.submit(workflow())["created"])
-                with self.assertRaises(SpecError):
+                with self.assertRaisesRegex(ValueError, "job_id already exists"):
                     runtime.submit({"job_id":"portable","input":{"value":"different"},"steps":workflow()["steps"]})
             with Runtime(temp,agents=registry()) as restarted:
                 self.assertEqual(restarted.status("portable")["status"],"SUCCEEDED")
