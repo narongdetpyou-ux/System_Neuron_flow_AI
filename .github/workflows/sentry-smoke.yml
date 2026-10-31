@@ -1,0 +1,25 @@
+name: Sentry smoke test
+# Sends one synthetic step failure to the neuron-flow-runtime Sentry project.
+# The DSN can only submit events (it cannot read data) and is rate-limited to
+# 200 events/hour in Sentry. A repository secret SENTRY_DSN, if set, takes priority.
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "app/observability/**"
+      - "examples/sentry_smoke_test.py"
+      - ".github/workflows/sentry-smoke.yml"
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    env:
+      SENTRY_DSN: ${{ secrets.SENTRY_DSN || 'https://c9fe6f2bab4b5413589b8bea048d35cb@o4512352375603200.ingest.us.sentry.io/4512352394674176' }}
+      SENTRY_ENVIRONMENT: ci
+      SENTRY_RELEASE: neuron-flow@${{ github.sha }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install "sentry-sdk>=2.0"
+      - run: python -m examples.sentry_smoke_test

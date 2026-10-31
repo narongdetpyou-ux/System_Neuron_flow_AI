@@ -39,8 +39,14 @@ export SENTRY_ENVIRONMENT=development        # optional
 python -m examples.sentry_smoke_test         # sends one synthetic failure
 ```
 
-Do not commit the DSN. For GitHub Actions, store it as a repository secret and only
-set it on jobs that should report; the unit tests use a stub SDK and need no network.
+**No local environment needed:** `.github/workflows/sentry-smoke.yml` runs the smoke
+test on GitHub Actions whenever the observability code changes (or manually via
+*Actions → Sentry smoke test → Run workflow*). That workflow contains the DSN on purpose:
+a DSN can only submit events, not read them, and this key ("CI and development") is
+rate-limited to 200 events/hour in Sentry. If it leaks or gets abused, revoke it in
+Sentry → neuron-flow-runtime → Settings → Client Keys and set a `SENTRY_DSN` repository
+secret instead (the secret automatically takes priority). Use a separate, non-committed
+DSN for any production deployment. The unit tests use a stub SDK and need no network.
 
 ## Usage in application code
 
