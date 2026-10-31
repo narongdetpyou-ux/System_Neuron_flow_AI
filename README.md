@@ -29,3 +29,15 @@ python -m unittest discover -s tests -v
 ```
 
 Scope: single-machine Python runtime, no service-level agreement, network security boundary or production sandbox. This branch is deliberately a portable starting point, not a fully general batch-processing service.
+
+## Current domain proof and funding preparation
+
+- [Architecture Review v2](docs/System_Neuron_Flow_Architecture_Review_v2.md)
+- [Deterministic case-triage pilot](docs/case_triage_pilot.md)
+- [Internal funding-readiness evidence pack](docs/funding/README.md)
+
+Run the synthetic example: `python -m examples.case_triage_demo`.
+The example is **not** an AI agent, public API, real-world user pilot or
+operational human-review service. Funding documentation includes explicit
+eligibility, evidence, ownership and cost-estimate gaps; it is not a
+submitted application.
