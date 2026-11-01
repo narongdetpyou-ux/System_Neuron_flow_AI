@@ -1,10 +1,10 @@
 # case_triage v2 — shadow mode (AI second opinion)
 
-**Status:** implemented and tested with the offline mock AI. The Claude code path
-is tested against a local fake API server. It has **not yet been run against the
-real Claude API** because that needs an `ANTHROPIC_API_KEY`. Synthetic data only. This is
-not a production service, public API or human-review service. No Core
-(`neuron_flow/`) file was changed.
+**Status:** on `main` since 2026-11-01 (PR #9). Implemented and tested with the offline mock AI. The
+Claude code path is tested against a local fake API server. It has **not yet been run against the real
+Claude API**, because that needs an `ANTHROPIC_API_KEY`. Synthetic data only. This is not a production
+service, public API or human-review service. No Core (`neuron_flow/`) file was changed. Design principles:
+[design_philosophy.md](design_philosophy.md).
 
 ## ภาพรวมการทำงาน (สรุปภาษาไทย)
 
@@ -116,7 +116,7 @@ It does not show AI accuracy.
 2. On GitHub, add a repository secret: **Settings → Secrets and variables →
    Actions → New repository secret**, named `ANTHROPIC_API_KEY`.
 3. Open **Actions → Shadow eval with Claude (manual) → Run workflow**. For a first try, set
-   `limit` to 5. This workflow appears once this change is on `main`.
+   `limit` to 5. This workflow is available now.
 4. Read the scorecard on the run page, or download `shadow-eval-claude.json`.
 
 ## Code map

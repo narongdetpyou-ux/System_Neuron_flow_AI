@@ -1,7 +1,7 @@
 # Internal technical project brief — System Neuron Flow AI
 
 **Status:** Internal working brief. Not a completed funder application.
-**Date:** 2026-10-31.
+**Date:** 2026-10-31; implementation section updated 2026-11-01 (`main` @ `59c6889`).
 **Applicant:** Independent developer (name, legal status and country-specific
 eligibility to be supplied and confirmed by the applicant).
 **Code:** https://github.com/narongdetpyou-ux/System_Neuron_flow_AI
@@ -14,6 +14,10 @@ require review before public release.
 Develop and evaluate a small, inspectable, single-machine workflow execution
 platform that safely coordinates *trusted* task agents, persists progress,
 retries bounded failures, and produces verifiable completion receipts.
+
+**Guiding principle (set by the owner):** plain language on the outside and deep,
+verifiable work inside, with equitable learning support offered without being
+asked. See [design philosophy](../design_philosophy.md).
 
 ## Problem statement (hypothesis, not yet independently validated)
 
@@ -38,10 +42,23 @@ yet been benchmarked or validated with prospective users.
   `AgentDefinition`, SQLite state/events, bounded child processes, retry
   and recovery, report receipts, integrity primitives, case-memory and
   candidate evaluation utilities.
-- Domain demonstration: fixed, synthetic support-case triage in
-  `app/domains/case_triage/` without LLM, third-party integrations or
-  automated human approval.
-- Architecture: versioned proposal for admission queue, single Runner,
+- Domain demonstration: synthetic support-case triage in
+  `app/domains/case_triage/`.
+  - v1 uses deterministic keyword rules.
+  - v2 adds an AI second opinion in shadow mode. The rules stay the official
+    suggestion and every proposal waits for a human; nothing is approved
+    automatically.
+  - Both versions run on the unchanged Core.
+- AI gateway in `app/llm/` (offline mock + Claude provider). It handles
+  outages, off-contract answers, prompt injection and secrets as documented.
+  This was tested offline only: **no live model has been called yet**.
+- Measurement and monitoring:
+  - A scorecard over 61 synthetic labelled cases in English and Thai runs in
+    CI. Its mock scores test the pipeline, not accuracy.
+  - Sentry error monitoring, with live smoke-test events received.
+  - 53 automated tests.
+- Architecture: [architecture](../architecture.md) covers the layers, decisions
+  and milestone status, including the planned admission queue, single Runner,
   API and two-phase human review. **Those services are not implemented.**
 
 ## Intended beneficiaries (to validate, not asserted customers)

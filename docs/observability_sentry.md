@@ -1,6 +1,7 @@
 # Sentry error reporting
 
-**Status:** optional, application layer only. Core (`neuron_flow/`) does not import Sentry.
+**Status:** on `main` since 2026-11-01 (PR #8; degraded-step warnings in PR #9). Optional, application layer
+only. Core (`neuron_flow/`) does not import Sentry.
 **Sentry project:** organization `neuron-flow`, project `neuron-flow-runtime` (platform: Python).
 
 ## Why an adapter instead of plain `sentry_sdk.init()`
@@ -19,7 +20,8 @@ Sentry's automatic exception capture would miss almost every real failure.
 | `Runtime.run` raises (e.g. agent version drift, unknown agent) | exception event, then re-raised | Sentry default |
 
 Tags: `neuron_flow.event`, `neuron_flow.agent`, `neuron_flow.agent_version`,
-`neuron_flow.error_type`, `neuron_flow.retries_exhausted`.
+`neuron_flow.error_type`, `neuron_flow.retries_exhausted`, and `neuron_flow.degraded_reason`
+for degraded steps.
 Context `neuron_flow`: `job_id`, `step_id`, `attempts`, `max_attempts`, `job_status`.
 
 ## Privacy defaults
@@ -28,8 +30,19 @@ Context `neuron_flow`: `job_id`, `step_id`, `attempts`, `max_attempts`, `job_sta
   variables, request/user data, breadcrumbs (`send_default_pii=False`).
 - Error messages are **off by default** because an agent or validator may echo user
   text. Enable with `NEURON_FLOW_SENTRY_INCLUDE_MESSAGES=1` (truncated to 300 chars).
-- Keep this rule when LLM agents arrive: prompts and model responses must not be put
-  into exception messages or Sentry context.
+- AI agents follow the same rule. The AI gateway passes on only the provider's HTTP status
+  and error type, never its message. Prompts, case text and model answers never go into
+  exception messages or Sentry context.
+
+## Alerts (configured in Sentry, not in code)
+
+1. **"Neuron Flow: email me on new or returning errors"** emails the project owner when an
+   issue is new, comes back after being resolved, or reappears after being ignored. It sends
+   at most one email per issue every 30 minutes.
+2. Sentry's default **"Send a notification for high priority issues"** is also active.
+3. The synthetic smoke-test issue (`smoke.permanent`, NEURON-FLOW-RUNTIME-1) is set to
+   **ignored forever**. The recurring CI check therefore keeps recording events without
+   sending email. Real failures have different fingerprints, so they still alert.
 
 ## Setup
 
