@@ -31,9 +31,13 @@ jobs:
       - name: Build the image
         run: docker build -t neuron-flow:ci .
       - name: Start the service with a data disk (configured as in render.yaml's paid variant)
+        # --cap-drop KILL: like Render's containers, root here may not signal another user's processes.
+        # On Render that stopped tini (process 1, root) from passing SIGTERM on to the service, which runs
+        # as the neuron user: "[FATAL tini (1)] Unexpected error when forwarding signal: 'Operation not
+        # permitted'" (2026-11-01), and every deploy killed the service instead of stopping it.
         run: |
           docker volume create nf-data
-          docker run -d --name nf -p 8000:8000 \
+          docker run -d --name nf -p 8000:8000 --cap-drop KILL \
             -e NEURON_FLOW_ACCESS_KEY="$ACCESS_KEY" \
             -e NEURON_FLOW_DATA_DIR=/var/data \
             -v nf-data:/var/data neuron-flow:ci
@@ -64,12 +68,22 @@ jobs:
         run: |
           docker restart -t 30 nf
           python -m examples.service_smoke_test --url http://127.0.0.1:8000 --key "$ACCESS_KEY" --state smoke.json --after-restart
-      - name: Stop gracefully
+      - name: Stop gracefully, and check the restart above was graceful too
         run: |
           docker stop -t 30 nf
-          docker logs nf 2>&1 | grep "serve: stopping"
-          docker logs nf 2>&1 | grep "runner: stopping after the current job"
-          if docker logs nf 2>&1 | grep -q "$ACCESS_KEY"; then echo "::error::the access key appeared in the logs"; exit 1; fi
+          logs="$(docker logs nf 2>&1)"
+          if grep -q "FATAL tini" <<<"$logs"; then
+            echo "::error::tini could not pass the stop signal on, so the service was killed instead of stopped"
+            grep "FATAL tini" <<<"$logs"
+            exit 1
+          fi
+          # Two stops: the restart and this one. Both must reach the launcher and the Runner.
+          for line in "serve: stopping" "runner: stopping after the current job"; do
+            count="$(grep -c "$line" <<<"$logs" || true)"
+            echo "\"$line\": $count"
+            test "$count" -ge 2 || { echo "::error::expected \"$line\" after the restart and after the stop"; exit 1; }
+          done
+          if grep -q "$ACCESS_KEY" <<<"$logs"; then echo "::error::the access key appeared in the logs"; exit 1; fi
       - name: Service logs
         if: always()
         run: docker logs nf 2>&1 | tail -n 80 || true
