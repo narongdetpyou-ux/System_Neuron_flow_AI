@@ -1,4 +1,4 @@
-"""The service over a real socket, plus the launcher pieces (privileges, Runner supervision, settings)."""
+"""The service over a real socket, plus the launcher pieces (boot, privileges, Runner supervision, settings)."""
 
 import json
 import logging
@@ -13,10 +13,12 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
+from app import boot
 from app.api import ApiApp, make_server
 from app.api.limits import RateLimiter
+from app.boot import drop_privileges
 from app.persistence import QueueStore
-from app.serve import RunnerSupervisor, drop_privileges
+from app.serve import RunnerSupervisor
 from app.services.runner import Runner
 from app.settings import Settings, SettingsError
 from tests.service_fixtures import KEY, case_body, settings, wait_for
@@ -152,6 +154,40 @@ class LauncherTests(unittest.TestCase):
         first = wait_for(lambda: supervisor.process, timeout=10)
         wait_for(lambda: supervisor.process is not first, timeout=10)
         supervisor.stop(grace_s=2)
+
+
+class BootTests(unittest.TestCase):
+    """``python -m app.boot``: process 1 of the image. It must hand over to tini, because a root tini
+    cannot pass stop signals on where root lacks CAP_KILL (Render); the container check covers the rest."""
+
+    NO_USER = "no-such-user-for-neuron-flow-tests"
+
+    def _boot(self, argv, execv):
+        with tempfile.TemporaryDirectory() as temp:
+            code = boot.main(argv, environ={"NEURON_FLOW_DATA_DIR": temp}, user=self.NO_USER, execv=execv)
+            folders = sorted(path.name for path in Path(temp).iterdir())
+        return code, folders
+
+    def test_boot_prepares_the_data_folder_and_hands_the_service_to_tini(self):
+        calls = []
+        code, folders = self._boot([], lambda path, args: calls.append((path, args)))
+        self.assertEqual(code, 0)
+        self.assertEqual(folders, ["app", "core"])
+        self.assertEqual(calls, [("/usr/bin/tini", ["/usr/bin/tini", "--", "python", "-m", "app.serve"])])
+
+    def test_boot_runs_the_command_it_is_given_under_tini(self):
+        calls = []
+        self._boot(["python", "-m", "app.services.runner"], lambda path, args: calls.append(args))
+        self.assertEqual(calls, [["/usr/bin/tini", "--", "python", "-m", "app.services.runner"]])
+
+    def test_boot_explains_a_missing_tini_instead_of_crashing(self):
+        def missing(path, args):
+            raise FileNotFoundError(path)
+
+        with self.assertLogs("neuron_flow.boot", "ERROR") as logs:
+            code, _ = self._boot([], missing)
+        self.assertEqual(code, 1)
+        self.assertIn("python -m app.serve", logs.output[0])
 
 
 class ServeEndToEndTests(unittest.TestCase):

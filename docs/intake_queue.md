@@ -1,11 +1,11 @@
 # Intake API, job queue, Runner and web page (round 2, Milestone B)
 
-**Status:** built in PR #11 and tested offline (98 tests, including killing the Runner mid-step). The
-container build is checked on every push by *Actions → Service container*. **Not deployed yet**; the
-host is Render (`render.yaml`). Railway was the first choice, but it has paused new sign-ups since
-22 Oct 2026 after a security incident; `railway.json` stays in the repository for later. Synthetic data
-only. Review decisions (approve/reject) come with Milestone C, so in this round every case ends at
-"waiting for a person". No Core (`neuron_flow/`) file was changed.
+**Status:** built in PR #11 and tested offline (101 tests on 2026-11-01, including killing the Runner
+mid-step). The container build is checked on every push by *Actions → Service container*. Live on
+Render's free plan since 2026-11-01 (`render.yaml`). Railway was the first choice, but it has paused new
+sign-ups since 22 Oct 2026 after a security incident; `railway.json` stays in the repository for later.
+Synthetic data only. Review decisions (approve/reject) come with Milestone C, so in this round every case
+ends at "waiting for a person". No Core (`neuron_flow/`) file was changed.
 Design principles: [design_philosophy.md](design_philosophy.md).
 
 ## ภาพรวมการทำงาน (ภาษาไทย)
@@ -69,17 +69,25 @@ Design principles: [design_philosophy.md](design_philosophy.md).
 browser / n8n / curl
       │  HTTPS (Render's edge)
       ▼
-container: tini ─► python -m app.serve
-                    ├─ HTTP API + web page (app/api, app/web) ── admits, reads ──► <data>/app/queue.sqlite3
-                    └─ Runner child process (app/services/runner.py), restarted with back-off if it exits
-                         ├─ claims jobs, freezes specs, records results and a heartbeat in queue.sqlite3
-                         └─ the only owner of Runtime(<data>/core): Core SQLite, reports, workspace lock
+container: app.boot (root) ─becomes─► tini ─► python -m app.serve
+                                               ├─ HTTP API + web page (app/api, app/web) ── admits, reads ──► <data>/app/queue.sqlite3
+                                               └─ Runner child process (app/services/runner.py), restarted with back-off if it exits
+                                                    ├─ claims jobs, freezes specs, records results and a heartbeat in queue.sqlite3
+                                                    └─ the only owner of Runtime(<data>/core): Core SQLite, reports, workspace lock
 ```
 
 - `<data>` is `NEURON_FLOW_DATA_DIR` (on Render, the disk's mount path), else Railway's
   `RAILWAY_VOLUME_MOUNT_PATH`, else `./neuron_workspace` (not persistent in a container).
-- The launcher starts as root only to take ownership of the disk (hosts may mount it as root), then
-  switches to the unprivileged `neuron` user before it opens anything.
+- The container starts as root only to take ownership of the disk (hosts may mount it as root).
+  `app/boot.py` (process 1) does that, switches to the unprivileged `neuron` user, then replaces itself
+  with tini (same process, now `neuron`). tini, the launcher and the Runner all run as `neuron`, and
+  nothing opens the data as root.
+- tini must not stay root. On Render, root in the container may not signal another user's processes (no
+  `CAP_KILL`). A root tini therefore could not pass SIGTERM on to the launcher: it logged
+  `[FATAL tini (1)] Unexpected error when forwarding signal: 'Operation not permitted'` and exited, and the
+  service was killed instead of stopped on every deploy, restart and sleep (seen on 2026-11-01; fixed by
+  `app/boot.py`). The *Service container* job runs the image with `--cap-drop KILL`, checks that process 1 runs
+  as `neuron`, and fails unless both its restart and its stop are graceful.
 - The API never opens the Core `Runtime` (ADR-001). A disk attaches to one instance only, and a service
   with a disk cannot scale out, so two Runners never share it. Without a disk (Render's free plan) each
   instance has its own throwaway data, so an overlapping deploy cannot share anything either.
@@ -107,10 +115,10 @@ For every job the queue still shows as `RUNNING`:
    If Core had already finished the job before the crash, its saved result is used and nothing runs again.
 
 In `case_triage.v2` only the AI step has a second attempt; the rule, compare and prepare steps take
-milliseconds and have one. A planned stop is graceful: on SIGTERM the Runner finishes its current job
-first, and the host waits 30 seconds before it stops the container (Render's default, which its free
-plan does not let `render.yaml` change; `drainingSeconds` in `railway.json`). The launcher gives the Runner
-25 of those seconds.
+milliseconds and have one. A planned stop is graceful: tini passes SIGTERM on to the launcher, which
+passes it to the Runner, and the Runner finishes its current job first. The host waits 30 seconds before
+it stops the container (Render's default, which its free plan does not let `render.yaml` change;
+`drainingSeconds` in `railway.json`). The launcher gives the Runner 25 of those seconds.
 
 ## API reference
 

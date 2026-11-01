@@ -160,10 +160,11 @@ app/persistence/               queue_store.py: the application job queue, events
 app/services/                  workflows.py (catalog), admission.py, runner.py (with reconciliation), results.py
 app/api/                       routes.py (ApiApp), server.py (standard-library HTTP server), limits.py
 app/web/                       index.html, app.css, app.js: the Thai web page
+app/boot.py                    process 1 of the image: takes the data folder, drops root, becomes tini
 app/settings.py, app/serve.py  environment settings; the launcher (API + supervised Runner in one container)
 Dockerfile, render.yaml        the container and the Render Blueprint (railway.json kept for Railway)
 examples/                      case_triage_demo, case_triage_shadow_demo, sentry_smoke_test, service_smoke_test
-tests/                         98 tests: core, triage v1/v2, AI gateway, scorecard, Sentry, API, queue, Runner, HTTP
+tests/                         101 tests: core, triage v1/v2, AI gateway, scorecard, Sentry, API, queue, Runner, HTTP
 .github/workflows/             core-tests, service-container, sentry-smoke, shadow-eval-claude (manual)
 .github/scripts/               check_render_blueprint.py: render.yaml structure, build filter, Render's schema
 planned: review ledger and artifact store, app/domains/study_guide/
@@ -209,6 +210,8 @@ planned: review ledger and artifact store, app/domains/study_guide/
 - A failed validator blocks only the dependent steps.
 - Delivery conflicts get their own status.
 - The container runs without root, keeps its data across a restart and stops cleanly (CI container job).
+  That job now runs without `CAP_KILL`, as Render does. Until `app/boot.py` (2026-11-01), process 1
+  (tini) ran as root and could not pass SIGTERM on there, so stops on Render were not clean.
 
 **P0 still open:**
 - A review decision applies once per version, unauthorised reviews are denied, and approval creates exactly

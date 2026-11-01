@@ -105,7 +105,7 @@ If a task seems to need breaking a rule:
 ## 4. Checking your work
 
 ```bash
-python -m unittest discover -s tests -v        # all tests (98 on 2026-11-01); Python 3.10–3.13
+python -m unittest discover -s tests -v        # all tests (101 on 2026-11-01); Python 3.10–3.13
 python -m examples.case_triage_demo            # v1 rules, one synthetic case
 python -m examples.case_triage_shadow_demo     # v2 shadow mode with the offline mock AI
 python -m app.eval.triage_shadow_eval          # scorecard on 61 synthetic cases
@@ -160,6 +160,7 @@ Notes for cloud sessions (claude.ai/code):
 | `app/persistence/queue_store.py` | the application queue in its own SQLite file (`<data>/app/queue.sqlite3`) |
 | `app/services/` | workflow catalog, admission, Runner with reconciliation, result summaries |
 | `app/api/`, `app/web/` | standard-library HTTP API and the Thai web page |
+| `app/boot.py` | the image's process 1: takes the data folder as root, switches to `neuron`, becomes tini |
 | `app/settings.py`, `app/serve.py` | settings from the environment; the launcher (API + supervised Runner) |
 | `Dockerfile`, `render.yaml`, `railway.json` | the container, the Render Blueprint, the Railway config kept for later |
 | `tests/`, `examples/`, `.github/` | tests, demos and smoke tests, CI (`.github/scripts/` holds the `render.yaml` check) |
@@ -174,12 +175,18 @@ Notes for cloud sessions (claude.ai/code):
   - health check at `/healthz`;
   - `main` deploys only after the GitHub checks pass;
   - a merge that changes only files the running service never reads (`*.md`, `docs/`, `tests/`,
-    `examples/`, `.github/`, `.claude/`) does not deploy (`buildFilter.ignoredPaths`). The *Service container* check fails if a file
-    the image is built from would be ignored; keep it that way when adding folders;
+    `examples/`, `.github/`, `.claude/`) does not deploy (`buildFilter.ignoredPaths`). The *Service
+    container* check fails if a file the image is built from would be ignored; keep it that way when
+    adding folders;
   - Render generates `NEURON_FLOW_ACCESS_KEY`.
 - **Where to change settings.** Change them in `render.yaml`, not in the dashboard: a Blueprint sync
   overwrites dashboard edits that conflict with the file. Secrets (`ANTHROPIC_API_KEY`, `SENTRY_DSN`) go in
   the dashboard's Environment tab, never in a file.
+- **No `CAP_KILL` on Render.** Root in Render's containers may not signal another user's processes, so
+  tini must run as the same user as the service (`app/boot.py`). A root tini logged `[FATAL tini (1)]
+  Unexpected error when forwarding signal: 'Operation not permitted'`, and every stop killed the service.
+  The *Service container* job runs with `--cap-drop KILL` and fails if process 1 is root or a stop is not
+  graceful. Keep both when changing the `Dockerfile`.
 - **Free plan limits.** The service sleeps after 15 idle minutes and has no disk, so the queue is lost on
   every sleep, restart and deploy. Render also refuses some settings on free web services even though its
   schema allows them, for example a disk and `maxShutdownDelaySeconds`. The *Service container* check
