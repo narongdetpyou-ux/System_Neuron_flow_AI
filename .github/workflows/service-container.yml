@@ -1,7 +1,8 @@
 name: Service container (same build as Render)
 # Builds the Dockerfile that Render uses (render.yaml), starts it with a data disk that is mounted as
-# root, submits cases over HTTP, restarts the container (like a redeploy) and checks that nothing was
-# lost. Render deploys main only when these checks pass (autoDeployTrigger: checksPass).
+# root and without CAP_KILL (as on Render), submits cases over HTTP, restarts the container (like a
+# redeploy), checks that nothing was lost and that both stops were graceful. Render deploys main only
+# when these checks pass (autoDeployTrigger: checksPass).
 # The access key below is a throwaway value used only inside this job.
 on:
   push:
@@ -31,9 +32,13 @@ jobs:
       - name: Build the image
         run: docker build -t neuron-flow:ci .
       - name: Start the service with a data disk (configured as in render.yaml's paid variant)
+        # --cap-drop KILL: like Render's containers, root here may not signal another user's processes.
+        # On Render that stopped tini (process 1, root) from passing SIGTERM on to the service, which runs
+        # as the neuron user: "[FATAL tini (1)] Unexpected error when forwarding signal: 'Operation not
+        # permitted'" (2026-11-01), and every deploy killed the service instead of stopping it.
         run: |
           docker volume create nf-data
-          docker run -d --name nf -p 8000:8000 \
+          docker run -d --name nf -p 8000:8000 --cap-drop KILL \
             -e NEURON_FLOW_ACCESS_KEY="$ACCESS_KEY" \
             -e NEURON_FLOW_DATA_DIR=/var/data \
             -v nf-data:/var/data neuron-flow:ci
@@ -43,19 +48,30 @@ jobs:
         run: |
           docker exec -i nf python - <<'EOF'
           import pathlib
+
+          def uids(proc):  # real, effective, saved and filesystem user ids
+              status = (proc / "status").read_text()
+              return set(next(line.split()[1:] for line in status.splitlines() if line.startswith("Uid:")))
+
+          # Process 1 is tini, and it must run as the service user too: without CAP_KILL (as on Render) a
+          # root tini cannot pass stop signals on to the service (app/boot.py).
+          init = pathlib.Path("/proc/1")
+          init_command = (init / "cmdline").read_bytes().split(b"\0")
+          print("1", b" ".join(init_command).decode().strip(), "uids", sorted(uids(init)))
+          assert init_command[0].rsplit(b"/", 1)[-1] == b"tini", "process 1 should be tini"
+          assert uids(init) == {"10001"}, "process 1 (tini) still runs as root"
           found = 0
           for proc in pathlib.Path("/proc").glob("[0-9]*"):
               try:
                   command = (proc / "cmdline").read_bytes().split(b"\0")
-                  status = (proc / "status").read_text()
+                  ids = uids(proc)
               except OSError:
                   continue
-              # Only the Python processes; tini (process 1) stays root by design to forward signals.
+              # The Python processes: the launcher and the Runner.
               is_python = b"python" in command[0].rsplit(b"/", 1)[-1]
               if is_python and (b"app.serve" in command or b"app.services.runner" in command):
-                  uid = next(line.split()[1] for line in status.splitlines() if line.startswith("Uid:"))
-                  print(proc.name, b" ".join(command).decode().strip(), "uid", uid)
-                  assert uid == "10001", "a service process still runs as root"
+                  print(proc.name, b" ".join(command).decode().strip(), "uids", sorted(ids))
+                  assert ids == {"10001"}, "a service process still runs as root"
                   found += 1
           assert found == 2, f"expected the launcher and the Runner, found {found}"
           EOF
@@ -64,12 +80,22 @@ jobs:
         run: |
           docker restart -t 30 nf
           python -m examples.service_smoke_test --url http://127.0.0.1:8000 --key "$ACCESS_KEY" --state smoke.json --after-restart
-      - name: Stop gracefully
+      - name: Stop gracefully, and check the restart above was graceful too
         run: |
           docker stop -t 30 nf
-          docker logs nf 2>&1 | grep "serve: stopping"
-          docker logs nf 2>&1 | grep "runner: stopping after the current job"
-          if docker logs nf 2>&1 | grep -q "$ACCESS_KEY"; then echo "::error::the access key appeared in the logs"; exit 1; fi
+          logs="$(docker logs nf 2>&1)"
+          if grep -q "FATAL tini" <<<"$logs"; then
+            echo "::error::tini could not pass the stop signal on, so the service was killed instead of stopped"
+            grep "FATAL tini" <<<"$logs"
+            exit 1
+          fi
+          # Two stops: the restart and this one. Both must reach the launcher and the Runner.
+          for line in "serve: stopping" "runner: stopping after the current job"; do
+            count="$(grep -c "$line" <<<"$logs" || true)"
+            echo "\"$line\": $count"
+            test "$count" -ge 2 || { echo "::error::expected \"$line\" after the restart and after the stop"; exit 1; }
+          done
+          if grep -q "$ACCESS_KEY" <<<"$logs"; then echo "::error::the access key appeared in the logs"; exit 1; fi
       - name: Service logs
         if: always()
         run: docker logs nf 2>&1 | tail -n 80 || true

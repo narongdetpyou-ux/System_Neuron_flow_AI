@@ -20,7 +20,7 @@ differs, this file and architecture.md win.
   - AI ให้ความเห็นที่สอง
   - ถ้าสองฝ่ายเห็นไม่ตรงกัน เคสจะถูกยกให้คนดูก่อน
 - ถ้าเครื่องดับกลางทาง ระบบทำต่อได้ ส่งซ้ำก็ไม่เกิดงานซ้ำ
-- ผ่านชุดทดสอบอัตโนมัติ 98 ข้อ และพร้อมขึ้น Render
+- ผ่านชุดทดสอบอัตโนมัติ 101 ข้อ และเปิดใช้ออนไลน์บน Render แล้ว
 
 **ลำดับต่อจากนี้** แต่ละขั้นจบด้วยสิ่งที่คุณลองเองได้
 
@@ -70,7 +70,7 @@ Marks: ✅ done · 🟡 built or partly checked (the status says what is left) �
 
 | ID | Work package | Status | Needs |
 |---|---|---|---|
-| 0.1 | Put round 2 online on Render | 🟡 live since 2026-11-01; the owner's resend check is still open | — |
+| 0.1 | Put round 2 online on Render | ✅ live since 2026-11-01 (the graceful-stop fix in the status note is confirmed on Render after its merge) | — |
 | 0.2 | Free or paid hosting | ⬜ owner decision D1 | 0.1 |
 | 0.3 | First scorecard run with real Claude | ⬜ owner (API key, D2) | — |
 | 0.4 | Claude for the online page | ⬜ optional | 0.1, 0.3 |
@@ -147,7 +147,16 @@ decisions would vanish on every sleep.
     https://neuron-flow.onrender.com, and Render's `/healthz` checks return 200.
   - The logs show the Runner starting with the mock AI, the page polling `/v1/status`, and one case going
     from `POST /v1/jobs 202` to `REVIEW_REQUIRED`.
-  - Still open: the owner's resend check ("ส่งซ้ำ" returns the same job). It is not in the logs yet.
+  - The owner's resend check passed. After the PR #15 deploy, the logs show `POST /v1/jobs 200` at 15:10:04,
+    15:10:22 and 15:10:50 UTC. A 200 reply to `POST /v1/jobs` is only ever a duplicate returning the existing
+    job (`app/api/routes.py`); a new job gets 202.
+  - Found while checking: replacing the old instance logged `[FATAL tini (1)] Unexpected error when
+    forwarding signal: 'Operation not permitted'`, with no `serve: stopping` after it. Root in Render's
+    containers lacks `CAP_KILL`, so a root tini could not pass SIGTERM on to the service, which runs as
+    `neuron`. Every stop killed the service instead. This was reproduced in CI with `--cap-drop KILL` and
+    the real tini. It was fixed by running tini as `neuron` (`app/boot.py`); the CI job now keeps
+    `--cap-drop KILL`. To confirm on Render after the merge, the next stop (deploy, restart or sleep) must
+    log `serve: stopping` and no FATAL line.
 
 ### 0.2 Free or paid hosting (owner decision D1)
 

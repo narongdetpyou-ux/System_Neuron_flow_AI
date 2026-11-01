@@ -1,9 +1,10 @@
 """Start the whole service in one container: the HTTP API in this process, and the single Runner as
-a supervised child process. The Dockerfile (used by Render and Railway) runs ``python -m app.serve``.
+a supervised child process. In the image (used by Render and Railway), ``app.boot`` prepares the data
+folder, drops root and starts tini, which runs ``python -m app.serve`` as the ``neuron`` user.
 
 Steps:
 1. read the settings (data folder, port, access key) from the environment;
-2. when started as root (hosts may mount disks as root), give the data folder to the unprivileged
+2. when started as root directly (not through ``app.boot``), give the data folder to the unprivileged
    ``neuron`` user from the image and drop root before anything else runs;
 3. create the queue database;
 4. start the Runner; if it stops unexpectedly, start it again after a short pause (its
@@ -12,7 +13,6 @@ Steps:
 """
 
 import logging
-import os
 import signal
 import subprocess
 import sys
@@ -21,33 +21,14 @@ import time
 from pathlib import Path
 
 from app.api import ApiApp, make_server
+from app.boot import RUN_AS, drop_privileges, prepare_data_folders
 from app.observability import SentryReporter, init_sentry
 from app.persistence import QueueStore
 from app.settings import Settings
 
-RUN_AS = "neuron"
 RESTART_DELAYS_S = (1, 2, 5, 10, 30)
 STOP_GRACE_S = 25
 log = logging.getLogger("neuron_flow.serve")
-
-
-def drop_privileges(data_dir, user=RUN_AS):
-    """If running as root and the image's service user exists, hand it the data folder and switch to it."""
-    if os.name != "posix" or os.geteuid() != 0:
-        return False
-    import pwd
-    try:
-        entry = pwd.getpwnam(user)
-    except KeyError:
-        return False  # root outside our image (for example a developer machine): leave it alone
-    for folder, directories, files in os.walk(data_dir):
-        for name in [folder, *(os.path.join(folder, item) for item in directories + files)]:
-            os.chown(name, entry.pw_uid, entry.pw_gid, follow_symlinks=False)
-    os.setgroups([])
-    os.setgid(entry.pw_gid)
-    os.setuid(entry.pw_uid)
-    os.environ["HOME"] = "/tmp"
-    return True
 
 
 class RunnerSupervisor:
@@ -93,8 +74,7 @@ class RunnerSupervisor:
 def main():
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s", stream=sys.stdout)
     settings = Settings.from_env()
-    for folder in (settings.core_dir, settings.queue_db.parent):
-        folder.mkdir(parents=True, exist_ok=True)
+    prepare_data_folders(settings)
     if drop_privileges(settings.data_dir):
         log.info("serve: running as the '%s' user", RUN_AS)
     store = QueueStore(settings.queue_db)
