@@ -49,7 +49,7 @@ Since round 2, cases can also come in from outside, through an HTTP API or a Tha
 | Case triage v1: deterministic keyword rules | `app/domains/case_triage/agents.py`, `workflow.py` | Working |
 | Case triage v2: shadow mode with AI second opinion | `app/domains/case_triage/shadow_*.py` | Working with the offline mock AI; Claude path tested against a fake API, **not yet run against the real Claude API** |
 | AI gateway: versioned prompt, mock and Claude providers | `app/llm/` | Working (see above) |
-| Error monitoring | `app/observability/` | Sentry errors and degraded-AI warnings |
+| Error monitoring | `app/observability/` | Sentry errors, degraded-AI warnings and Runner recoveries |
 | Scorecard: 61 synthetic labelled cases (EN + TH) | `app/eval/` | Runs in CI; mock scores test the pipeline, not AI accuracy |
 | Intake API, durable job queue, single Runner with crash recovery, Thai web page | `app/api/`, `app/persistence/`, `app/services/`, `app/web/`, `app/serve.py` | Working (round 2), tested offline and as a container in CI; **not deployed yet** (host: Railway) |
 | Human-review decisions, n8n intake, reviewer notifications | — | **Not built yet** (Milestone C in [architecture](docs/architecture.md)) |
