@@ -1,8 +1,24 @@
 # Measurement and evidence protocol
 
-This file specifies **prospective** tests. It is not a report of completed
-results. Current baseline: original five tests plus a new domain pilot suite;
-link to the exact CI run and commit before describing a result as verified.
+This file specifies the measurement protocol. The table "Metrics and gates" lists
+**prospective** targets, not completed results.
+
+**Current baseline (2026-11-01, `main` @ `59c6889`):** 53 automated tests, green in CI
+(https://github.com/narongdetpyou-ux/System_Neuron_flow_AI/actions/runs/41236673003).
+Always link the exact CI run and commit before describing a result as verified.
+
+## Checks already automated (synthetic data)
+
+| Check | What the test does | Result in CI |
+|---|---|---|
+| Domain independence so far | Added v1 and the v2 AI shadow mode | 0 Core code files changed |
+| AI provider outage | Simulated outage on every attempt | Case still reaches human review on the rules suggestion |
+| Off-contract AI answer | Unknown category, broken JSON, cut-off answer | Retried once, then marked unavailable; never saved |
+| Prompt injection | Injected instructions in English and Thai | Answer stays within fixed choices; review still required |
+| Secret handling | Real-path run with a test key | Key absent from every stored file; redirects refused |
+| Model or prompt change | Re-run an old job after changing the model | Job refuses to run (`Agent version changed`) |
+| AI outcome change | Two scorecard reports compared with `candidate_gate` | Any per-case change is flagged |
+| Scorecard | 61 labelled synthetic cases (EN + TH), mock AI | Pipeline completes 61/61. Mock scores are inflated by design and are **not** accuracy |
 
 ## Test populations
 
@@ -25,7 +41,8 @@ link to the exact CI run and commit before describing a result as verified.
 | Review idempotency | Replay same authorized review decision/version | 1 durable decision and at most 1 linked phase-B job |
 | Artifact integrity | Deliberately flip one byte after writing | Verification rejects changed bytes |
 | Core contract rejection | Unknown agent, invalid DAG, >1MiB JSON | Error before any trusted agent executes |
-| Runtime regression | Existing original five core tests | All pass |
+| Runtime regression | All existing automated tests (53 as of 2026-11-01) | All pass |
+| Live AI quality | Scorecard run against a real model, with labels reviewed by a person | Recorded honestly, failures included; no target set before the first live run |
 | Documentation reproducibility | Fresh checkout on supported Python versions | Tests and synthetic demo run without hidden credentials |
 
 These are test **targets**, not measured success rates. Benchmark sample

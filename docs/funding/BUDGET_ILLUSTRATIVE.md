@@ -13,7 +13,7 @@ anyone as contracted, paid or recruited.
 | Independent developer implementation & tests | 240 hours × $25 | $6,000 |
 | External security / reliability technical review | 30 hours × $60 | $1,800 |
 | Testing hardware / accessible development setup | Allowance, if eligible | $900 |
-| CI, hosting and reproducibility expenses | Allowance | $500 |
+| CI, hosting, reproducibility and AI API usage for evaluation runs | Allowance | $500 |
 | Technical documentation/accessibility review | 20 hours × $30 | $600 |
 | Contingency or unallocated buffer | Allowance, **only if allowed** | $200 |
 | **Illustrative total** | | **$10,000** |
@@ -27,7 +27,7 @@ before submission; no vendor quotation has been collected.
 
 | Gate | Indicative window | Acceptance evidence |
 |---|---|---|
-| M0 — Existing foundation | Before funded work | Dated code SHA, baseline CI, architecture v2, synthetic domain proof |
+| M0 — Existing foundation | Before funded work (in place as of 2026-11-01) | Code SHA `59c6889` and green CI; `docs/architecture.md`; triage v1 rules and v2 AI shadow mode (tested offline); Sentry monitoring; synthetic scorecard |
 | M1 — Admission/Runner | Weeks 1–3 | Deterministic request-key idempotency; concurrent duplicate cases; only Runner opens Core Runtime |
 | M2 — Crash recovery | Weeks 4–6 | Controlled worker/controller interruption; replay reconciliation; no unsafely repeated external effects |
 | M3 — Human review + artifact checks | Weeks 7–9 | Authenticated accept/reject; single linked phase-B job; unauthorized decision rejected; changed artifact detected |

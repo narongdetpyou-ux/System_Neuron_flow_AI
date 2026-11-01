@@ -1,59 +1,95 @@
-# System Neuron Flow AI — Core Logic Extraction
+# System Neuron Flow AI
 
-This branch isolates **portable internal logic** from the original Neuron Flow document/finance application.
-It is a foundation for a different system, **not** a release of the original application.
+A small, inspectable workflow runtime that coordinates **trusted agents**, including AI agents. It talks in
+plain language on the outside and does deep, checked work inside. It runs on a single machine and uses only
+the Python standard library; `sentry-sdk` is an optional extra.
 
-## Included
-- `engine.py`: Dendrite → Synapse → Axon → Soma → AxonTerminal; supervised multiprocessing, workflow DAGs, retries, idempotent local delivery and restart recovery.
-- `model.py`: strict JSON contracts, size limits, deterministic workflow validation.
-- `storage.py`: SQLite persistence, events, workspace ownership.
-- `supervision.py`: bounded isolated trusted Python operations and hard deadlines (not a hostile-code sandbox).
-- `integrity.py`: hashes, manifests, atomic workspace backup/restore.
-- `telemetry.py`: bounded phase telemetry.
-- `case_memory.py`: six-dimensional process-memory retrieval with immutable reviewer-declared evidence.
-- `evaluation.py`: stable cohort routing, paired outcome and efficiency regression gates.
-- `tests/`: minimal domain-independent regression checks.
+> ภาษาไทย: ระบบที่คุยด้วยภาษาธรรมดา แต่ภายในทำงานลึกและตรวจสอบได้ ดู [หลักปรัชญาการออกแบบ](docs/design_philosophy.md)
 
-## Excluded
-Purchase/invoice agents; CSV, OCR, PDF and external connector adapters; batch reporting and local HTTP/CLI application wrappers; distribution/release assets; historical verification snapshots; business documentation, policies and fixtures. These remain in the original `main` history, with no history rewrite.
+## Design philosophy
 
-## Embedding contract
-Provide an explicit list of `AgentDefinition(name, entrypoint, validator, version)` to `Runtime(workspace, agents=[...])`.
-Agents must be trusted importable Python callables; the runtime does **not** execute arbitrary untrusted Python safely. Use `runtime.submit(workflow)` or `runtime.ingest(workflow)` with `job_id`, `input`, and `steps`. Each step declares its registered `agent`, optional `depends_on`, `params`, `timeout_s`, `max_attempts`, `retry_delay_s`.
+Set by the project owner, and the compass for every feature ([full text](docs/design_philosophy.md)):
 
-No domain agent, demo invoice, external integration or runnable document application is bundled. Reviewers remain caller-attested, not authenticated by the CaseMemory store.
+1. **Plain language outside, deep work inside.** Everyday words and metaphors in; structured, checked work inside.
+2. **Understand, then elaborate on request.** Summary first, details when asked.
+3. **Stay inside the frame.** The frame is versioned data; "out of scope" is an honest answer.
+4. **AI proposes, code verifies, people decide what matters.**
+5. **No perfectionism.** Small measured steps, honest uncertainty.
+6. **Equitable support without being asked.** When someone starts talking about technology, the first
+   response offers study resources, explains what each one is for, and says which topics to study first.
 
-## Verify
+## What it does today
+
+The working example is support-case triage in **shadow mode** (case_triage v2):
+
+1. A case comes in, for example "I cannot upload an attachment" (English or Thai).
+2. The v1 keyword rules suggest a queue. This stays the **official** suggestion.
+3. At the same time an AI model gives a **second opinion**. If the AI is briefly unavailable, it is retried
+   once; if it is still unavailable, the case continues on the rules alone. A setup problem (for example a
+   bad key) fails loudly.
+4. When rules and AI disagree, the case is raised to **elevated** review priority, with the reasons.
+5. A human reviewer always decides (`PENDING_HUMAN_REVIEW`). Failures and degraded AI answers are reported
+   to Sentry.
+
+## What is inside
+
+| Part | Where | Status |
+|---|---|---|
+| Core runtime: DAG workflows, bounded child processes, retries, restart recovery, verified receipts | `neuron_flow/` | Working; unchanged since extraction |
+| Case triage v1: deterministic keyword rules | `app/domains/case_triage/agents.py`, `workflow.py` | Working |
+| Case triage v2: shadow mode with AI second opinion | `app/domains/case_triage/shadow_*.py` | Working with the offline mock AI; Claude path tested against a fake API, **not yet run against the real Claude API** |
+| AI gateway: versioned prompt, mock and Claude providers | `app/llm/` | Working (see above) |
+| Error monitoring | `app/observability/` | Sentry errors and degraded-AI warnings |
+| Scorecard: 61 synthetic labelled cases (EN + TH) | `app/eval/` | Runs in CI; mock scores test the pipeline, not AI accuracy |
+| Job queue, single Runner, HTTP API, human-review service, web page | — | **Not built yet** (designed in [architecture](docs/architecture.md)) |
+
+## Try it
+
+**On GitHub, no local setup needed:**
+- *Actions → Core logic tests* runs every test on Python 3.10 and 3.12, plus both demos and the scorecard.
+  The scorecard table appears on the run page.
+- *Actions → Sentry smoke test* checks that error reporting reaches Sentry.
+- *Actions → Shadow eval with Claude (manual)* runs the scorecard against real Claude. It needs the
+  repository secret `ANTHROPIC_API_KEY`.
+
+**Locally (Python 3.10+):**
 ```bash
-python -m unittest discover -s tests -v
+python -m unittest discover -s tests -v        # 53 tests
+python -m examples.case_triage_demo            # v1 rules, one synthetic case
+python -m examples.case_triage_shadow_demo     # v2 shadow mode, three synthetic cases (offline mock AI)
+python -m app.eval.triage_shadow_eval          # scorecard on 61 synthetic cases
 ```
+With `NEURON_FLOW_LLM_PROVIDER=anthropic` and `ANTHROPIC_API_KEY` set, the same commands use Claude.
 
-Scope: single-machine Python runtime, no service-level agreement, network security boundary or production sandbox. This branch is deliberately a portable starting point, not a fully general batch-processing service.
+## Embedding the Core
 
-## Current domain proof and funding preparation
+Pass an explicit list of `AgentDefinition(name, entrypoint, validator, version)` to
+`Runtime(workspace, agents=[...])`. Agents must be trusted, importable Python callables; the runtime does
+**not** run untrusted code safely. Submit with `runtime.submit(workflow)` (or `runtime.ingest`), where the
+workflow has `job_id`, `input` and `steps`. Each step names a registered `agent` and may set
+`depends_on`, `params`, `timeout_s`, `max_attempts` (1–5) and `retry_delay_s`. Messages are JSON only, at
+most 1 MiB. The agent `version` is frozen into each job, so an old job refuses to run on changed agents.
 
-- [Architecture Review v2](docs/System_Neuron_Flow_Architecture_Review_v2.md)
-- [Deterministic case-triage pilot](docs/case_triage_pilot.md)
-- [Internal funding-readiness evidence pack](docs/funding/README.md)
-- [Optional Sentry error reporting](docs/observability_sentry.md)
+## Documentation
 
-Run the synthetic example: `python -m examples.case_triage_demo`.
-The example is **not** an AI agent, public API, real-world user pilot or
-operational human-review service. Funding documentation includes explicit
-eligibility, evidence, ownership and cost-estimate gaps; it is not a
-submitted application.
+| Document | What it is for |
+|---|---|
+| [Design philosophy](docs/design_philosophy.md) | The owner's principles, the first-response rule and study resources (mostly Thai) |
+| [Architecture](docs/architecture.md) | Layers, Core constraints, how AI fits, decisions (ADRs), milestones and their status |
+| [case_triage v1](docs/case_triage_pilot.md) | The deterministic keyword rules |
+| [case_triage v2 shadow mode](docs/case_triage_v2_shadow.md) | The AI second opinion: flow, failure handling, configuration, scorecard |
+| [Sentry error reporting](docs/observability_sentry.md) | What gets reported, privacy rules, alerts |
+| [Funding readiness pack](docs/funding/README.md) | Internal evidence register; not a submitted application |
 
-## Shadow mode: AI second opinion (case_triage v2)
+## Scope and limits
 
-The v1 keyword rules stay the official suggestion; an AI model (Claude, or an
-offline keyword simulation for tests) adds a second opinion, and disagreements
-raise the review priority. Every proposal still waits for a human. No Core file
-changed. See [case_triage v2 shadow mode](docs/case_triage_v2_shadow.md).
+- Runs on one machine. No service-level agreement, and no network security boundary yet.
+- Agent child processes isolate failures; they are **not** a security sandbox.
+- All test data is synthetic. Mock AI scores are inflated by design and are not evidence of AI accuracy.
+- The real Claude API has not been called yet, so there are no accuracy, latency or cost claims for Claude.
 
-```bash
-python -m examples.case_triage_shadow_demo        # 3 synthetic cases, offline mock AI
-python -m app.eval.triage_shadow_eval             # scorecard on 61 labelled synthetic cases
-```
+## Origin
 
-With `NEURON_FLOW_LLM_PROVIDER=anthropic` and `ANTHROPIC_API_KEY` set, the same
-commands use Claude. On GitHub: *Actions → Shadow eval with Claude (manual)*.
+Extracted on 2026-10-31 (commit `09100f7`) from the original Neuron Flow document/finance application.
+Purchase and invoice agents, CSV/OCR/PDF adapters, the old HTTP/CLI wrappers and the business fixtures
+remain only in that earlier history. License: GPL-3.0-only.

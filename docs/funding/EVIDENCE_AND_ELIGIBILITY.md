@@ -1,17 +1,21 @@
 # Grant diligence: evidence register and eligibility blockers
 
-**Prepared:** 2026-10-31. **Internal working reference only.**
-Funding calls, terms and legal eligibility can change. Recheck every
-original program page on the day of application.
+**Prepared:** 2026-10-31. **Evidence register updated:** 2026-11-01 (`main` @ `59c6889`).
+**Internal working reference only.**
+The funder notes below are a **snapshot researched on 2026-10-31**. Funding calls, terms and legal
+eligibility can change, so recheck every original program page on the day of application.
 
 ## Evidence register
 
 | Claim | Source | Confidence / limitation |
 |---|---|---|
 | Portable Core exists | `neuron_flow/`, root README; source-controlled on GitHub | Verified code, not external production adoption |
-| Baseline core tests exist | `tests/test_core.py`; earlier green main workflow run https://github.com/narongdetpyou-ux/System_Neuron_flow_AI/actions/runs/41148065810 | Five scoped tests only, prior to new domain additions |
-| Four-layer Architecture reviewed | `docs/System_Neuron_Flow_Architecture_Review_v2.md` | Proposed design, not an implemented API |
-| Deterministic case-triage example added | `app/domains/case_triage/`, `examples/case_triage_demo.py`, `tests/test_case_triage.py` | Synthetic examples; verify latest CI before claiming execution |
+| Automated tests pass | 53 tests in `tests/`; green CI on `main` @ `59c6889` (Python 3.10, 3.12): https://github.com/narongdetpyou-ux/System_Neuron_flow_AI/actions/runs/41236673003 | Synthetic tests; not production evidence |
+| Architecture documented | `docs/architecture.md` | Layers 1–2 implemented; queue, Runner, API and review service are design only |
+| Case-triage domain, v1 rules and v2 AI shadow mode | `app/domains/case_triage/`, `examples/`, `tests/test_case_triage*.py` | Synthetic data. The AI path was tested offline with a mock and a fake API server; **no live model has been run** |
+| No Core changes needed for new domain versions | `git diff 09100f7 main -- neuron_flow/` is empty | Shows the no-Core-change rule so far; a second unrelated domain is still to come |
+| Error monitoring works end to end | Sentry project `neuron-flow-runtime` received CI smoke-test events | Integration check only |
+| Measurement harness exists | `app/eval/` scorecard, 61 synthetic labelled cases (EN + TH), shown on the CI run page | Mock scores are inflated by design; no AI accuracy claim |
 | Open-source deployment | Repository currently **private** | Not demonstrated. GPL license alone is insufficient to claim public distribution |
 | Real user needs / traction | None independently verified | **Missing**; interview real users if applying to adoption-based programs |
 | Independent review / security certification | None independently verified | **Missing** |
@@ -26,7 +30,8 @@ original program page on the day of application.
 - Grant track backs open-source researchers/maintainers/public goods, rolling
   application, with distribution, compute, engineering and community support.
 - Fit is conditional: demonstrate a specific verifiable *open AI* use case;
-  this repo currently does **not** run an AI model and is private.
+  this repo has an optional AI integration (shadow mode), tested offline but
+  **not yet run against a live model**, and it is private.
 - No award amount, assistance allocation or selection is guaranteed.
 
 **Emergent Ventures, Mercatus Center**

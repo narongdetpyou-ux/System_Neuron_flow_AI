@@ -1,59 +1,73 @@
 # Funding readiness — internal evidence pack
 
-**As-of:** 2026-10-31. **Use:** planning, technical due diligence, and an
-honest evidence register. **Not:** a completed grant application or an
-assertion that the grant program will accept this project.
+**As of:** 2026-11-01 (`main` @ `59c6889`). **Use:** planning, technical due diligence, and an honest evidence
+register. **Not:** a completed grant application, or an assertion that any grant program will accept this
+project.
 
 ## What exists
 
-- The source-controlled portable Core Runtime and five original focused
-  core regression tests; see root README and `tests/test_core.py`.
-- A reviewed architecture proposal at
-  [Architecture Review v2](../System_Neuron_Flow_Architecture_Review_v2.md).
-- Deterministic, synthetic support-case triage domain proof and regression
-  tests in `app/domains/case_triage/`, `tests/test_case_triage.py`
-  and `docs/case_triage_pilot.md`. **Check current CI** before claiming it passed.
-- A clearly marked internal technical project concept and an *illustrative*
-  grant budget in this directory.
+- **Core runtime** (`neuron_flow/`). It is unchanged since its extraction on 2026-10-31.
+- **53 automated tests** passing on Python 3.10 and 3.12 in CI, and also checked on 3.11 and 3.13.
+  - Latest green run on `main`: https://github.com/narongdetpyou-ux/System_Neuron_flow_AI/actions/runs/41236673003
+- **Support-case triage domain:**
+  - v1: deterministic keyword rules.
+  - v2: shadow mode, where an AI gives a second opinion. Rules stay official and a human always decides.
+- **AI gateway** (`app/llm/`). It has an offline mock and a Claude provider. The Claude path is tested only
+  against a local fake API, and **no live model has been called yet**.
+- **Scorecard** (`app/eval/`) with 61 synthetic, developer-labelled cases in English and Thai.
+- **Sentry error monitoring.** CI smoke-test events have been received by the Sentry project.
+- **Documentation:**
+  - [Design philosophy](../design_philosophy.md)
+  - [Architecture](../architecture.md): layers, constraints, decisions and milestone status
+  - Domain docs for [v1](../case_triage_pilot.md) and [v2](../case_triage_v2_shadow.md)
+- **This directory:** an internal project concept and an *illustrative* budget, both clearly marked as such.
 
 ## Documents
 
-1. [Internal project brief](INTERNAL_PROJECT_BRIEF.md) — problem, hypothesis,
-   scope, beneficiaries, deliverables, limitations.
-2. [Illustrative budget and milestones](BUDGET_ILLUSTRATIVE.md) — explicit
-   cost assumptions and verifiable gates.
-3. [Evidence, eligibility and blockers](EVIDENCE_AND_ELIGIBILITY.md) —
-   fact-based readiness checklist with funder-policy links.
-4. [Measurement protocol](METRICS_PLAN.md) — prospective checks, not
-   fabricated metrics.
+1. [Internal project brief](INTERNAL_PROJECT_BRIEF.md): problem, hypothesis, scope, beneficiaries,
+   deliverables, limitations.
+2. [Illustrative budget and milestones](BUDGET_ILLUSTRATIVE.md): explicit cost assumptions and verifiable gates.
+3. [Evidence, eligibility and blockers](EVIDENCE_AND_ELIGIBILITY.md): fact-based readiness checklist with
+   funder-policy links.
+4. [Measurement protocol](METRICS_PLAN.md): which checks are automated now, and which are still prospective.
 
 ## What a grant reviewer can honestly verify today
 
-The Core library exists; a domain integration example has been added;
-unit/integration test code exists; architecture decisions have been documented.
-These facts do **not** imply product-market fit, open-source traction,
-production security, independent benchmarking, a usable HTTP service, a
-real-world human approval workflow, or guaranteed award eligibility.
+- The Core library exists, and two domain versions run on it without Core changes.
+- The automated tests pass in CI.
+- The AI integration handles outages, off-contract answers, prompt injection and secrets as documented.
+  This was tested offline only.
+- The architecture decisions are written down.
+
+These facts do **not** imply any of the following:
+- product-market fit or open-source traction
+- AI accuracy (no live model has been run)
+- production security or independent benchmarking
+- a usable HTTP service or a real human-review workflow
+- award eligibility
 
 ## Non-negotiable before a public open-source application
 
-- The repository is presently **private**. A license in a private repository
-  does not create public availability or user adoption. The owner must decide
-  what to publish and inspect all secrets, provenance and rights before doing so.
-- No third-party users, testimonials or security certifications have been
-  evidenced. Never replace these fields with synthetic numbers.
-- Applicant identity, residence and fiscal status, grant-specific eligibility,
-  payment rails, real availability, and exact project-cost quotations are
-  not verified in this pack.
-- Several grant makers limit use of AI in proposals and/or implementation.
-  This pack was produced with AI assistance and must **not** be passed off as
-  independently written by the applicant. Review each funder's policy first.
+- **The repository is private.** A license in a private repository does not create public availability or
+  user adoption. Before publishing anything, the owner must decide what to publish and check secrets,
+  provenance and rights.
+  - Before going public, move the Sentry DSN in `.github/workflows/sentry-smoke.yml` into a repository
+    secret, or rotate it. It is submit-only and rate-limited, but it should not be public.
+- **No outside evidence yet.** No third-party users, testimonials or security certifications have been
+  evidenced. Never fill these fields with synthetic numbers.
+- **Applicant facts are unverified.** This pack does not verify the applicant's identity, residence and
+  fiscal status, grant-specific eligibility, payment rails, real availability, or exact cost quotations.
+- **AI assistance must be disclosed.** Several grant makers limit the use of AI in proposals and/or
+  implementation. This pack and much of the code were produced with AI assistance and must **not** be passed
+  off as written independently by the applicant. Review each funder's policy first.
 
 ## Next evidence gates
 
-1. Confirm the domain-proof GitHub Actions run and save its link plus SHA.
-2. Build the proposed durable admission, sole Runner and recovery application
-   slice; test controller crash and idempotency.
-3. Verify identity-bound review and artifacts; perform an independent review.
-4. Publish an approved public code snapshot if the chosen fund requires it.
-5. Collect genuine third-party feedback and scope-specific cost quotations.
+1. ✅ Domain proof confirmed in CI, with link and SHA recorded above.
+2. Run the scorecard once against the real Claude API (*Actions → Shadow eval with Claude*). Record the run
+   link, the model and the results, including failures.
+3. Build the durable admission, single Runner and recovery slice (Milestone B), and test controller crashes
+   and idempotency.
+4. Verify identity-bound review and artifacts (Milestone C), then get an independent review.
+5. Publish an approved public code snapshot if the chosen fund requires it.
+6. Collect genuine third-party feedback and scope-specific cost quotations.
