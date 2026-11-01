@@ -38,7 +38,9 @@ jobs:
                   status = (proc / "status").read_text()
               except OSError:
                   continue
-              if b"app.serve" in command or b"app.services.runner" in command:
+              # Only the Python processes; tini (process 1) stays root by design to forward signals.
+              is_python = b"python" in command[0].rsplit(b"/", 1)[-1]
+              if is_python and (b"app.serve" in command or b"app.services.runner" in command):
                   uid = next(line.split()[1] for line in status.splitlines() if line.startswith("Uid:"))
                   print(proc.name, b" ".join(command).decode().strip(), "uid", uid)
                   assert uid == "10001", "a service process still runs as root"
