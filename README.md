@@ -51,15 +51,16 @@ Since round 2, cases can also come in from outside, through an HTTP API or a Tha
 | AI gateway: versioned prompt, mock and Claude providers | `app/llm/` | Working (see above) |
 | Error monitoring | `app/observability/` | Sentry errors, degraded-AI warnings and Runner recoveries |
 | Scorecard: 61 synthetic labelled cases (EN + TH) | `app/eval/` | Runs in CI; mock scores test the pipeline, not AI accuracy |
-| Intake API, durable job queue, single Runner with crash recovery, Thai web page | `app/api/`, `app/persistence/`, `app/services/`, `app/web/`, `app/serve.py` | Working (round 2), tested offline and as a container in CI; **not deployed yet** (host: Render) |
+| Intake API, durable job queue, single Runner with crash recovery, Thai web page | `app/api/`, `app/persistence/`, `app/services/`, `app/web/`, `app/serve.py` | Working (round 2), tested offline and as a container in CI; live on Render's free plan since 2026-11-01 |
 | Human-review decisions, n8n intake, reviewer notifications | — | **Not built yet** (Milestone C in [architecture](docs/architecture.md)) |
 
 ## Try it
 
 **Online, on Render:** `render.yaml` describes the whole service, so setup is New → Blueprint in the Render
 Dashboard; the step-by-step guide is in [intake_queue.md](docs/intake_queue.md) (in Thai). Render generates
-the access key (`NEURON_FLOW_ACCESS_KEY`) and deploys `main` only when the GitHub checks pass. The free plan
-forgets its cases when it sleeps; a paid plan with a disk keeps them.
+the access key (`NEURON_FLOW_ACCESS_KEY`) and deploys `main` only when the GitHub checks pass. A merge that
+changes only docs, tests or CI files does not redeploy (`buildFilter` in `render.yaml`). The free plan
+forgets its cases when it sleeps or redeploys; a paid plan with a disk keeps them.
 
 **On GitHub, no local setup needed:**
 - *Actions → Core logic tests* runs every test on Python 3.10 and 3.12, plus both demos and the scorecard.

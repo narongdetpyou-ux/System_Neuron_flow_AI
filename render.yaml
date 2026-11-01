@@ -21,6 +21,20 @@ services:
     branch: main
     autoDeployTrigger: checksPass
     healthCheckPath: /healthz
+    # Merges that change only these files do not redeploy: none of them changes the running service (the
+    # image holds README.md, but nothing reads it), and on the free plan every deploy wipes the queue.
+    # A merge that also changes any other file still deploys. Render reads changes to render.yaml itself
+    # whatever this says. CI checks that no file the image is built from is ignored
+    # (.github/scripts/check_render_blueprint.py).
+    buildFilter:
+      ignoredPaths:
+        - "*.md"
+        - "**/*.md"
+        - docs/**
+        - tests/**
+        - examples/**
+        - .github/**
+        - .claude/**
     # No maxShutdownDelaySeconds: Render refuses it on free web services. Its default wait after SIGTERM is
     # 30 seconds, and the launcher stops the Runner within 25 (app/serve.py), so the default is enough.
     envVars:

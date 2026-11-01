@@ -165,6 +165,7 @@ Dockerfile, render.yaml        the container and the Render Blueprint (railway.j
 examples/                      case_triage_demo, case_triage_shadow_demo, sentry_smoke_test, service_smoke_test
 tests/                         98 tests: core, triage v1/v2, AI gateway, scorecard, Sentry, API, queue, Runner, HTTP
 .github/workflows/             core-tests, service-container, sentry-smoke, shadow-eval-claude (manual)
+.github/scripts/               check_render_blueprint.py: render.yaml structure, build filter, Render's schema
 planned: review ledger and artifact store, app/domains/study_guide/
 ```
 
@@ -233,7 +234,7 @@ dashboard.
 | A | case_triage v1 rules, synthetic demo, tests | Done |
 | A2 | AI gateway, v2 shadow mode, scorecard, Sentry reporting | Done (PR #8, #9); real Claude not yet run |
 | P1-fix | Neutral telemetry phase names | Open |
-| B | Admission queue, single Runner, reconciliation, thin API, web page | Built (PR #11); not deployed yet (host: Render) |
+| B | Admission queue, single Runner, reconciliation, thin API, web page | Done (PR #11); live on Render's free plan since 2026-11-01 |
 | C | Two-phase review, decision ledger, n8n notifications | Open |
 | D | OpenTelemetry tracing, eval gates in CI | Partly done: CI scorecard and Sentry exist; tracing is open |
 | E | Planner pattern (B), MCP server, second domain with zero Core changes | Open |
