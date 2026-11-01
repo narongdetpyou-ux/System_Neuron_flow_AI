@@ -5,6 +5,10 @@ QUEUE_FOR = {"access": "access_review", "upload": "upload_review",
              "billing": "billing_review", "other": "general_review"}
 CONFIDENCE_LEVELS = ("low", "medium", "high")
 
+# Case text length, counted after trimming spaces at both ends (checked before any agent runs).
+SUMMARY_MIN_CHARS = 8
+SUMMARY_MAX_CHARS = 500
+
 # Why a case is flagged for the reviewer (shown in the proposal).
 REVIEW_REASONS = ("rules_llm_disagree", "llm_low_confidence", "llm_unavailable", "rules_no_keyword_match")
 

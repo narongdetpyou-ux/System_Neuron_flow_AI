@@ -1,8 +1,10 @@
 # System Neuron Flow AI — Architecture
 
-**Current as of 2026-11-01** (`main` @ `59c6889`). This file replaces "Architecture Review & Revised
-Architecture v2" (31 Oct 2026). That review's dated code observations were re-checked against the current
-code and folded into §3. The AI design comes from the v3 roadmap, and its round 1 is now built (§4).
+**Current as of 2026-11-01** (round 2, PR #11, on top of `main` @ `59c6889`). This file replaces
+"Architecture Review & Revised Architecture v2" (31 Oct 2026). That review's dated code observations were
+re-checked against the current code and folded into §3. The AI design comes from the v3 roadmap, and its
+round 1 is built (§4). Round 2 adds the intake API, the durable job queue, the single Runner with crash
+reconciliation and a web page (§5, §6; details in [intake_queue.md](intake_queue.md)).
 
 ## 1. Design philosophy
 
@@ -22,13 +24,14 @@ Every decision below serves the owner's philosophy ([full text, mostly Thai](des
 flowchart TD
     U[People: plain-language requests] --> L4
     subgraph L4[Layer 4: Interfaces]
-      GH[GitHub Actions workflows - built: the current test interface]
-      API[HTTP API / n8n intake / web page - planned]
+      GH[GitHub Actions workflows - built]
+      API[HTTP API + web page app/api, app/web - built in round 2]
+      N8N[n8n intake + reviewer notifications - planned]
     end
     subgraph L3[Layer 3: Application services]
       EV[Scorecard app/eval - built]
       OBS[Sentry reporting app/observability - built]
-      Q[Admission queue + single Runner + reconciliation - planned]
+      Q[Admission queue + single Runner + reconciliation app/persistence, app/services - built in round 2]
       REV[Review ledger + linked phase-B jobs - planned]
     end
     subgraph L2[Layer 2: Domains, agents, AI gateway]
@@ -47,8 +50,8 @@ flowchart TD
 |---|---|---|---|
 | 1 Core `neuron_flow/` | Spec validation, static DAG scheduling, bounded child processes, retries, recovery, events, verified receipts, integrity, case memory, candidate gate. No HTTP, business rules, credentials or user authorisation. | All of it, unchanged since commit `09100f7` | P1 telemetry fix only (§3) |
 | 2 Domains & agents `app/domains/`, `app/llm/` | Input contracts, trusted agent registry, fixed DAG templates, validators, AI calls | case_triage v1 and v2, AI gateway | `study_guide.v1`, a second unrelated domain |
-| 3 Application services | Admission, idempotency, the only Runtime owner, crash reconciliation, review decisions, results, measurement, monitoring | Scorecard (`app/eval/`), Sentry reporting (`app/observability/`) | Queue, Runner, reconciliation, review ledger, artifact store (Milestones B–C) |
-| 4 Interfaces | Authentication, request validation, status pages, human decisions | GitHub Actions workflows (tests, scorecard, Sentry check, manual Claude run) | HTTP API, n8n intake and notifications, a simple web page |
+| 3 Application services | Admission, idempotency, the only Runtime owner, crash reconciliation, review decisions, results, measurement, monitoring | Scorecard (`app/eval/`), Sentry reporting (`app/observability/`), admission queue (`app/persistence/`), admission, Runner with reconciliation, results (`app/services/`) | Review ledger, artifact store (Milestone C) |
+| 4 Interfaces | Authentication, request validation, status pages, human decisions | GitHub Actions workflows (tests, scorecard, Sentry check, container check, manual Claude run); HTTP API and web page (`app/api/`, `app/web/`) behind one shared access key, started by `app/serve.py` in one container for Railway | n8n intake and notifications, per-reviewer identity, review decisions |
 
 **Dependency rule:** Interface → Services → Domain → Core. Core never imports `app.*`. A domain builds specs
 and registers agents. It never re-implements retries or scheduling, and it never writes to Core SQLite.
@@ -106,29 +109,39 @@ Each row was re-checked against the current code.
   - B: a planner step that produces a plan, validated and run as a new linked job.
   - C: a dynamic DAG inside Core is **not** recommended.
 
-## 5. Target job lifecycle (Milestones B–C; not built)
+## 5. Job lifecycle (steps 1–3 and 5 built in round 2; step 4 is Milestone C)
 
-1. `POST /v1/jobs` validates the caller and the input, assigns a `job_id`, and stores `idempotency_key` +
-   request fingerprint in the application queue. It replies `202 QUEUED`.
-2. The single Runner claims the work, opens `Runtime(workspace, agents=…)`, then calls `submit` and `run`.
-   It writes the Core outcome back into the application's job record.
-3. If the result needs approval, the application marks it `REVIEW_REQUIRED`. The Core job itself has already
-   finished.
-4. An authenticated reviewer sends a versioned decision. **Approve** creates one linked phase-B job;
-   **reject** ends at `REJECTED`.
-5. After a Runner restart, every claimed job is reconciled with Core state. A different spec is never
-   re-submitted under an existing `job_id`.
+1. **Built.** `POST /v1/jobs` checks the access key and the input, assigns a `job_id`, and stores
+   `idempotency_key` + request fingerprint in the application queue (`<data>/app/queue.sqlite3`). It replies
+   `202 QUEUED` only after the commit.
+2. **Built.** The single Runner claims the oldest job, freezes the exact Core spec in the queue *before*
+   submitting it, then calls `submit` and `run` on its `Runtime(<data>/core, agents=…)`. It writes a
+   path-free summary of the Core outcome back into the job record.
+3. **Built.** A proposal that needs approval marks the job `REVIEW_REQUIRED`. The Core job itself has
+   already finished.
+4. *Milestone C.* An authenticated reviewer sends a versioned decision. **Approve** creates one linked
+   phase-B job; **reject** ends at `REJECTED`.
+5. **Built.** After a Runner restart, every job still `RUNNING` in the queue is reconciled with Core state,
+   always with its frozen spec. A job whose spec would now be built differently (model, prompt or code
+   changed) fails as `configuration_changed`; a job claimed `max_claims` times fails as
+   `runner_attempts_exhausted`. A different spec is never submitted under an existing `job_id`.
 
-Application states: `QUEUED → RUNNING → COMPLETED | REVIEW_REQUIRED | FAILED | DELIVERY_FAILED`, then
-`REVIEW_REQUIRED → APPROVED → (linked phase-B QUEUED)` or `REJECTED`.
+Application states: `QUEUED → RUNNING → COMPLETED | REVIEW_REQUIRED | FAILED | DELIVERY_FAILED` (built), then
+`REVIEW_REQUIRED → APPROVED → (linked phase-B QUEUED)` or `REJECTED` (Milestone C).
 
-## 6. API contract (design, not implemented)
+## 6. API contract
 
+Built in round 2 (full reference in [intake_queue.md](intake_queue.md)):
 - `POST /v1/jobs` with `{"workflow_type": "case_triage.v2", "idempotency_key": "…", "input": {"case_id": "…", "summary": "…"}}`
-  replies `202 {"job_id": "…", "status": "QUEUED"}`.
-- `GET /v1/jobs/{job_id}` returns status, the review summary and a result digest. It never returns internal
-  paths or credentials.
-- `GET /v1/jobs/{job_id}/events?after=<cursor>&limit=100` returns bounded pages.
+  replies `202 {"job_id": "…", "status": "QUEUED", …}`; the same key and request again replies `200` with the
+  same job; the same key with another request replies `409`.
+- `GET /v1/jobs/{job_id}` returns status, the review summary, a step timeline, AI provenance and the receipt
+  hash. It never returns internal paths or credentials.
+- `GET /v1/jobs/{job_id}/events?after=<cursor>&limit=1-100` returns bounded pages.
+- `GET /v1/jobs?limit=&before=` lists jobs newest first; `GET /v1/status` shows the Runner heartbeat, queue
+  counts, AI mode and storage; `GET /healthz` is the unauthenticated liveness check.
+
+Planned (Milestone C):
 - `POST /v1/reviews/{review_id}/decisions` takes `APPROVE`/`REJECT`, the reviewer from the authenticated
   session, a reason and the expected version.
 - `GET /v1/artifacts/{artifact_id}` is authorised access by id, never by a user-supplied path.
@@ -142,21 +155,26 @@ neuron_flow/                   Core runtime (unchanged)
 app/domains/case_triage/       v1 rules (agents.py, workflow.py), contracts.py, v2 shadow_agents.py, shadow_workflow.py
 app/llm/                       config, errors, gateway, prompts, prompt_library/, providers/{mock, anthropic}
 app/eval/                      triage_shadow_eval.py, golden/case_triage_synthetic_v1.json (61 cases)
-app/observability/             sentry.py
-examples/                      case_triage_demo, case_triage_shadow_demo, sentry_smoke_test
-tests/                         53 tests: core, triage v1/v2, AI gateway, scorecard, Sentry
-.github/workflows/             core-tests, sentry-smoke, shadow-eval-claude (manual)
-planned: app/api/, app/services/ (admission, runner, reconciliation, review, results),
-         app/persistence/ (queue, review, artifact stores), app/domains/study_guide/
+app/observability/             sentry.py (step failures, degraded AI, Runner recoveries)
+app/persistence/               queue_store.py: the application job queue, events and Runner heartbeat (SQLite)
+app/services/                  workflows.py (catalog), admission.py, runner.py (with reconciliation), results.py
+app/api/                       routes.py (ApiApp), server.py (standard-library HTTP server), limits.py
+app/web/                       index.html, app.css, app.js: the Thai web page
+app/settings.py, app/serve.py  environment settings; the launcher (API + supervised Runner in one container)
+Dockerfile, railway.json       the container Railway builds
+examples/                      case_triage_demo, case_triage_shadow_demo, sentry_smoke_test, service_smoke_test
+tests/                         98 tests: core, triage v1/v2, AI gateway, scorecard, Sentry, API, queue, Runner, HTTP
+.github/workflows/             core-tests, service-container, sentry-smoke, shadow-eval-claude (manual)
+planned: review ledger and artifact store, app/domains/study_guide/
 ```
 
 ## 8. Architecture decisions (ADRs)
 
 | ADR | Decision | Status |
 |---|---|---|
-| 001 | One controller per workspace; only the Runner opens Runtime | Accepted; applies when the Runner is built |
-| 002 | Durable admission before execution; reply 202 only after commit | Accepted; Milestone B |
-| 003 | Single machine first; no Redis, Postgres or distributed claims | In force |
+| 001 | One controller per workspace; only the Runner opens Runtime | In force; the API never opens it, and a second Runner fails with `WorkspaceBusy` |
+| 002 | Durable admission before execution; reply 202 only after commit | In force |
+| 003 | Single machine first; no Redis, Postgres or distributed claims | In force: SQLite queue on one Railway volume |
 | 004 | Two-phase human review as linked jobs | Accepted; Milestone C |
 | 005 | Trusted agents only; versions frozen per job | In force |
 | 006 | Large artifacts stay outside Core messages | Accepted; not needed yet |
@@ -167,6 +185,9 @@ planned: app/api/, app/services/ (admission, runner, reconciliation, review, res
 | 011 | The prompt and answer schema are one versioned file; its hash is part of agent identity | In force |
 | 012 | Provider hiccups degrade gracefully; setup errors fail loudly | In force |
 | 013 | Secrets come only from the environment at call time | In force; tested by scanning every stored file |
+| 014 | API and Runner run in one container on one volume; the launcher supervises the Runner, and Railway stops the old deployment before the new one mounts the volume | In force (round 2) |
+| 015 | Interrupted jobs resume only under the spec frozen at their first claim; any drift fails them as `configuration_changed` | In force (round 2) |
+| 016 | Until reviewer identity exists (Milestone C), the API is protected by one shared access key, with per-client limits on wrong keys | In force (round 2); to be replaced |
 
 ## 9. Acceptance gates
 
@@ -179,21 +200,24 @@ planned: app/api/, app/services/ (admission, runner, reconciliation, review, res
 - Redirects cannot carry the key elsewhere.
 - Tests pass on Python 3.10–3.13.
 
-**P0, before the first API release (not yet met):**
+**P0 for the first API release, met in round 2 (automated; tests listed in [intake_queue.md](intake_queue.md)):**
 - Concurrent identical requests produce one job, and a mismatched payload produces a conflict.
 - Admission stays responsive while jobs run, and only one Runner holds the lock.
 - Killing the Runner mid-step reconciles correctly within the retry budget.
 - Invalid input is rejected before any agent runs.
 - A failed validator blocks only the dependent steps.
-- A review decision applies once per version, unauthorised reviews are denied, and approval creates exactly
-  one phase-B job.
 - Delivery conflicts get their own status.
-- Side-effect agents need an idempotency contract.
-- Hash checks catch changed artifacts.
+- The container runs without root, keeps its data across a restart and stops cleanly (CI container job).
+
+**P0 still open:**
+- A review decision applies once per version, unauthorised reviews are denied, and approval creates exactly
+  one phase-B job (Milestone C).
+- Side-effect agents need an idempotency contract (none exist yet).
+- Hash checks catch changed artifacts (no artifact store yet).
 
 **P1:**
 - The telemetry phase fix (§3).
-- Event pagination.
+- Event pagination: done for the API (`limit` 1–100 with a cursor).
 - Phase metrics, retention and backup/restore drills.
 - Correlation IDs in logs.
 - API authentication hardening.
@@ -209,7 +233,7 @@ dashboard.
 | A | case_triage v1 rules, synthetic demo, tests | Done |
 | A2 | AI gateway, v2 shadow mode, scorecard, Sentry reporting | Done (PR #8, #9); real Claude not yet run |
 | P1-fix | Neutral telemetry phase names | Open |
-| B | Admission queue, single Runner, reconciliation, thin API | Open |
+| B | Admission queue, single Runner, reconciliation, thin API, web page | Built (PR #11); not deployed yet (host: Railway) |
 | C | Two-phase review, decision ledger, n8n notifications | Open |
 | D | OpenTelemetry tracing, eval gates in CI | Partly done: CI scorecard and Sentry exist; tracing is open |
 | E | Planner pattern (B), MCP server, second domain with zero Core changes | Open |
@@ -219,6 +243,8 @@ dashboard.
 
 - This is a single-machine runtime. Its child processes isolate failures; they are **not** a sandbox for
   untrusted code.
+- The HTTP server is Python's standard-library server with request, connection and time limits. It suits a
+  single-owner pilot, not public traffic. One shared access key is not per-person authentication.
 - All data is synthetic, and mock-AI scores test the pipeline, not accuracy.
 - Live Claude results, security review, benchmarks and user studies do not exist yet. No document should
   claim them.

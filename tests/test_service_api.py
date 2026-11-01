@@ -1,0 +1,284 @@
+"""Intake API: admission rules, access control, limits and the read routes (no sockets needed)."""
+
+import json
+import tempfile
+import threading
+import unittest
+from pathlib import Path
+
+from app.api.routes import MAX_BODY_BYTES, ApiApp, Request
+from app.persistence import QueueStore
+from app.services.runner import Runner
+from tests.service_fixtures import KEY, case_body, settings
+
+AUTH = {"authorization": f"Bearer {KEY}"}
+JSON = {"content-type": "application/json", **AUTH}
+
+
+def post(app, body, *, headers=None, client="tester", raw=None):
+    data = raw if raw is not None else json.dumps(body).encode("utf-8")
+    return app.handle(Request("POST", "/v1/jobs", {}, dict(JSON if headers is None else headers), data, client))
+
+
+def get(app, path, query=None, *, headers=None, client="tester", method="GET"):
+    return app.handle(Request(method, path, query or {}, dict(AUTH if headers is None else headers), b"", client))
+
+
+def body_of(response):
+    return json.loads(response.body)
+
+
+class ApiTestCase(unittest.TestCase):
+    def setUp(self):
+        self._temp = tempfile.TemporaryDirectory()
+        self.data_dir = Path(self._temp.name)
+        self.settings = settings(self.data_dir)
+        self.store = QueueStore(self.settings.queue_db)
+        self.store.migrate()
+        self.app = ApiApp(self.settings, self.store)
+
+    def tearDown(self):
+        self._temp.cleanup()
+
+    def jobs_in_store(self):
+        return self.store.list_jobs(limit=100)[0]
+
+
+class AdmissionTests(ApiTestCase):
+    def test_a_valid_request_is_stored_before_the_202_reply(self):
+        response = post(self.app, case_body("key-0000001", summary="  I cannot upload an attachment  "))
+        self.assertEqual(response.status, 202)
+        job = body_of(response)
+        self.assertEqual((job["status"], job["created"], job["queue_position"]), ("QUEUED", True, 1))
+        self.assertIn(("Location", f"/v1/jobs/{job['job_id']}"), response.headers)
+        stored = self.store.get(job["job_id"])
+        self.assertEqual(stored["status"], "QUEUED")
+        self.assertEqual(stored["input"]["summary"], "I cannot upload an attachment")  # normalized
+
+    def test_the_same_key_and_request_returns_the_same_job(self):
+        first = body_of(post(self.app, case_body("key-0000002")))
+        again = post(self.app, case_body("key-0000002"))
+        self.assertEqual(again.status, 200)
+        self.assertEqual((body_of(again)["job_id"], body_of(again)["created"]), (first["job_id"], False))
+        self.assertEqual(len(self.jobs_in_store()), 1)
+
+    def test_the_same_key_with_a_different_request_is_a_conflict(self):
+        first = body_of(post(self.app, case_body("key-0000003")))
+        conflict = post(self.app, case_body("key-0000003", summary="A different problem entirely"))
+        self.assertEqual(conflict.status, 409)
+        self.assertEqual(body_of(conflict)["error"], "idempotency_conflict")
+        self.assertEqual(body_of(conflict)["job_id"], first["job_id"])
+        self.assertEqual(len(self.jobs_in_store()), 1)
+
+    def test_concurrent_identical_requests_create_exactly_one_job(self):
+        barrier = threading.Barrier(16)
+        statuses, job_ids = [], set()
+        lock = threading.Lock()
+
+        def submit():
+            barrier.wait()
+            response = post(self.app, case_body("key-concurrent"))
+            with lock:
+                statuses.append(response.status)
+                job_ids.add(body_of(response)["job_id"])
+
+        threads = [threading.Thread(target=submit) for _ in range(16)]
+        for thread in threads:
+            thread.start()
+        for thread in threads:
+            thread.join()
+        self.assertEqual(sorted(statuses), [200] * 15 + [202])
+        self.assertEqual(len(job_ids), 1)
+        self.assertEqual(len(self.jobs_in_store()), 1)
+
+    def test_concurrent_mismatched_requests_get_conflicts_not_new_jobs(self):
+        barrier = threading.Barrier(8)
+        statuses = []
+        lock = threading.Lock()
+
+        def submit(index):
+            barrier.wait()
+            response = post(self.app, case_body("key-mismatch", summary=f"Problem number {index} happened"))
+            with lock:
+                statuses.append(response.status)
+
+        threads = [threading.Thread(target=submit, args=(index,)) for index in range(8)]
+        for thread in threads:
+            thread.start()
+        for thread in threads:
+            thread.join()
+        self.assertEqual(sorted(statuses), [202] + [409] * 7)
+        self.assertEqual(len(self.jobs_in_store()), 1)
+
+    def test_invalid_requests_are_refused_before_any_job_exists(self):
+        cases = {
+            "invalid_input": case_body("key-0000004", summary="short"),
+            "invalid_fields": {**case_body("key-0000005"), "steps": [{"id": "x", "agent": "triage.classify"}]},
+            "unknown_workflow_type": case_body("key-0000006", workflow_type="shell.exec"),
+            "invalid_idempotency_key": case_body("short"),
+        }
+        bad_case_id = case_body("key-0000007")
+        bad_case_id["input"]["case_id"] = "../etc/passwd"
+        cases["invalid_input_case_id"] = bad_case_id
+        extra_input = case_body("key-0000008")
+        extra_input["input"]["agent"] = "app.evil:run"
+        cases["invalid_input_extra"] = extra_input
+        for label, body in cases.items():
+            response = post(self.app, body)
+            self.assertEqual(response.status, 400, label)
+            self.assertEqual(body_of(response)["error"], label.split("_case_id")[0].split("_extra")[0], label)
+        self.assertEqual(post(self.app, None, raw=b"{not json").status, 400)
+        duplicated = b'{"workflow_type":"case_triage.v2","workflow_type":"case_triage.v1"}'
+        self.assertEqual(body_of(post(self.app, None, raw=duplicated))["error"], "invalid_json")
+        self.assertEqual(self.jobs_in_store(), [])
+
+    def test_wrong_content_type_and_oversized_bodies(self):
+        plain = {"content-type": "text/plain", **AUTH}
+        self.assertEqual(post(self.app, case_body("key-0000009"), headers=plain).status, 415)
+        huge = json.dumps(case_body("key-0000010", summary="x" * (MAX_BODY_BYTES + 10))).encode()
+        self.assertEqual(post(self.app, None, raw=huge).status, 413)
+        self.assertEqual(self.jobs_in_store(), [])
+
+    def test_submissions_are_rate_limited_per_client(self):
+        app = ApiApp(settings(self.data_dir, submit_per_minute=3), self.store)
+        statuses = [post(app, case_body(f"key-rate-{n:04d}"), client="busy").status for n in range(4)]
+        self.assertEqual(statuses, [202, 202, 202, 429])
+        limited = post(app, case_body("key-rate-9999"), client="busy")
+        self.assertIn("Retry-After", dict(limited.headers))
+        self.assertEqual(post(app, case_body("key-rate-other"), client="calm").status, 202)
+
+    def test_a_full_queue_refuses_new_jobs_but_still_answers_duplicates(self):
+        app = ApiApp(settings(self.data_dir, max_queued=2), self.store)
+        self.assertEqual(post(app, case_body("key-full-0001")).status, 202)
+        self.assertEqual(post(app, case_body("key-full-0002")).status, 202)
+        full = post(app, case_body("key-full-0003"))
+        self.assertEqual((full.status, body_of(full)["error"]), (503, "queue_full"))
+        self.assertEqual(post(app, case_body("key-full-0001")).status, 200)
+
+
+class AccessTests(ApiTestCase):
+    def test_every_v1_route_needs_the_key(self):
+        for path in ("/v1/status", "/v1/jobs", "/v1/jobs/job_000000000000000000000000", "/v1/nothing"):
+            self.assertEqual(get(self.app, path, headers={}).status, 401, path)
+            wrong = get(self.app, path, headers={"authorization": "Bearer wrong-key-but-long-enough"}, client=path)
+            self.assertEqual(wrong.status, 401, path)
+        self.assertEqual(post(self.app, case_body("key-0000011"), headers={"content-type": "application/json"}).status, 401)
+        self.assertEqual(self.jobs_in_store(), [])
+
+    def test_repeated_wrong_keys_are_slowed_down_per_client(self):
+        wrong = {"authorization": "Bearer wrong-key-but-long-enough"}
+        statuses = [get(self.app, "/v1/status", headers=wrong, client="guesser").status for _ in range(11)]
+        self.assertEqual(statuses, [401] * 10 + [429])
+        self.assertEqual(get(self.app, "/v1/status", client="guesser").status, 429)  # even the right key waits
+        self.assertEqual(get(self.app, "/v1/status", client="owner").status, 200)
+
+    def test_without_a_configured_key_the_api_explains_what_to_do(self):
+        app = ApiApp(settings(self.data_dir, access_key=None, access_key_problem="missing"), self.store)
+        response = get(app, "/v1/status")
+        self.assertEqual(response.status, 503)
+        self.assertEqual((body_of(response)["error"], body_of(response)["problem"]), ("access_key_not_configured", "missing"))
+        health = get(app, "/healthz", headers={})
+        self.assertEqual((health.status, body_of(health)), (200, {"ok": True, "access_key": "not_configured"}))
+        self.assertEqual(body_of(get(self.app, "/healthz", headers={}))["access_key"], "configured")
+        self.assertEqual(get(app, "/", headers={}).status, 200)
+
+    def test_the_key_is_never_in_a_response_or_a_stored_file(self):
+        job = body_of(post(self.app, case_body("key-0000012")))
+        Runner(self.settings, store=self.store).drain()
+        responses = [get(self.app, "/v1/status"), get(self.app, "/v1/jobs"), get(self.app, f"/v1/jobs/{job['job_id']}"),
+                     get(self.app, f"/v1/jobs/{job['job_id']}/events"), get(self.app, "/", headers={})]
+        for response in responses:
+            self.assertNotIn(KEY.encode(), response.body)
+        for path in self.data_dir.rglob("*"):
+            if path.is_file():
+                self.assertNotIn(KEY.encode(), path.read_bytes(), str(path))
+        self.assertNotIn(KEY, repr(self.settings))
+
+
+class ReadRouteTests(ApiTestCase):
+    def test_job_detail_after_the_runner_has_no_internal_paths(self):
+        job = body_of(post(self.app, case_body("key-0000013", summary="อัปโหลดไฟล์แนบไม่ได้ ค้างที่ 99%")))
+        Runner(self.settings, store=self.store).drain()
+        response = get(self.app, f"/v1/jobs/{job['job_id']}")
+        self.assertEqual(response.status, 200)
+        detail = body_of(response)
+        self.assertEqual(detail["status"], "REVIEW_REQUIRED")
+        review = detail["result"]["review"]
+        self.assertEqual((review["decision"], review["review_required"]), ("PENDING_HUMAN_REVIEW", True))
+        self.assertEqual((review["agreement"], review["review_priority"]), ("disagree", "elevated"))
+        self.assertEqual(detail["result"]["ai"]["provider"], "mock")
+        self.assertEqual(set(detail["result"]["receipt"]), {"sha256", "bytes"})
+        self.assertNotIn(str(self.data_dir).encode(), response.body)
+        self.assertNotIn(b"/reports/", response.body)
+
+    def test_listing_is_newest_first_with_a_cursor(self):
+        ids = [body_of(post(self.app, case_body(f"key-list-{n:04d}", case_id=f"C-{n}")))["job_id"] for n in range(5)]
+        seen, before = [], None
+        while True:
+            query = {"limit": ["2"]} if before is None else {"limit": ["2"], "before": [str(before)]}
+            page = body_of(get(self.app, "/v1/jobs", query))
+            seen += [job["job_id"] for job in page["jobs"]]
+            self.assertTrue(all("input" not in job and "summary_preview" in job for job in page["jobs"]))
+            before = page["next_before"]
+            if before is None:
+                break
+        self.assertEqual(seen, list(reversed(ids)))
+
+    def test_events_come_in_bounded_pages(self):
+        job = body_of(post(self.app, case_body("key-0000014")))
+        Runner(self.settings, store=self.store).drain()
+        kinds, after = [], 0
+        while True:
+            page = body_of(get(self.app, f"/v1/jobs/{job['job_id']}/events", {"after": [str(after)], "limit": ["2"]}))
+            self.assertLessEqual(len(page["events"]), 2)
+            kinds += [event["kind"] for event in page["events"]]
+            after = page["next_after"]
+            if not page["has_more"]:
+                break
+        self.assertEqual(kinds[:2], ["job.queued", "job.claimed"])
+        self.assertEqual(kinds[-1], "job.review_required")
+        self.assertEqual(kinds.count("step.succeeded"), 4)
+        for bad in ({"limit": ["0"]}, {"limit": ["101"]}, {"after": ["-1"]}, {"limit": ["ten"]}):
+            self.assertEqual(get(self.app, f"/v1/jobs/{job['job_id']}/events", bad).status, 400, bad)
+
+    def test_unknown_jobs_routes_and_methods(self):
+        self.assertEqual(get(self.app, "/v1/jobs/job_000000000000000000000000").status, 404)
+        self.assertEqual(get(self.app, "/v1/jobs/../../etc/passwd").status, 404)
+        self.assertEqual(get(self.app, "/nothing", headers={}).status, 404)
+        not_allowed = get(self.app, "/v1/status", method="POST")
+        self.assertEqual(not_allowed.status, 405)
+        self.assertIn(("Allow", "GET, HEAD"), not_allowed.headers)
+        self.assertEqual(get(self.app, "/v1/jobs", method="DELETE").status, 405)
+
+    def test_status_reports_runner_queue_ai_and_storage(self):
+        before = body_of(get(self.app, "/v1/status"))
+        self.assertEqual((before["runner"]["alive"], before["runner"]["state"]), (False, "unknown"))
+        post(self.app, case_body("key-0000015"))
+        Runner(self.settings, store=self.store).drain()
+        status = body_of(get(self.app, "/v1/status"))
+        self.assertEqual(status["runner"]["state"], "stopped")
+        self.assertFalse(status["runner"]["alive"])
+        self.assertEqual(status["queue"]["REVIEW_REQUIRED"], 1)
+        self.assertEqual((status["ai"]["provider"], status["ai"]["simulated"]), ("mock", True))
+        self.assertEqual(status["storage"], {"kind": "configured", "persistent": True})
+        self.assertEqual(status["default_workflow"], "case_triage.v2")
+
+    def test_page_and_assets_carry_security_headers(self):
+        page = get(self.app, "/", headers={})
+        headers = dict(page.headers)
+        self.assertEqual(page.status, 200)
+        self.assertIn("script-src 'self'", headers["Content-Security-Policy"])
+        self.assertNotIn("unsafe-inline", headers["Content-Security-Policy"])
+        self.assertEqual(headers["X-Content-Type-Options"], "nosniff")
+        self.assertEqual(headers["X-Frame-Options"], "DENY")
+        self.assertIn(b"Neuron Flow", page.body)
+        for path, kind in (("/static/app.js", "text/javascript"), ("/static/app.css", "text/css")):
+            asset = get(self.app, path, headers={})
+            self.assertEqual(asset.status, 200)
+            self.assertTrue(dict(asset.headers)["Content-Type"].startswith(kind))
+        self.assertEqual(get(self.app, "/static/../routes.py", headers={}).status, 404)
+        self.assertEqual(dict(get(self.app, "/v1/status").headers)["Cache-Control"], "no-store")
+
+
+if __name__ == "__main__":
+    unittest.main()

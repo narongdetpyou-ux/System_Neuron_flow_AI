@@ -1,0 +1,10 @@
+.git
+.github
+**/__pycache__
+*.py[cod]
+neuron_workspace
+batch_workspace
+.venv
+tests
+examples
+docs

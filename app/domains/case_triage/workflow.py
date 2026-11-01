@@ -3,6 +3,7 @@
 import re
 from neuron_flow import AgentDefinition, SpecError
 from . import agents
+from .contracts import SUMMARY_MAX_CHARS, SUMMARY_MIN_CHARS
 
 _CASE_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]{0,79}$")
 
@@ -27,8 +28,8 @@ def build_workflow(job_id, case):
     summary = case["summary"]
     if not isinstance(case_id, str) or _CASE_ID.fullmatch(case_id) is None:
         raise SpecError("case_id must be a valid identifier")
-    if not isinstance(summary, str) or not 8 <= len(summary.strip()) <= 500:
-        raise SpecError("summary must contain 8–500 non-whitespace characters")
+    if not isinstance(summary, str) or not SUMMARY_MIN_CHARS <= len(summary.strip()) <= SUMMARY_MAX_CHARS:
+        raise SpecError(f"summary must contain {SUMMARY_MIN_CHARS}–{SUMMARY_MAX_CHARS} non-whitespace characters")
     return {
         "job_id": job_id,
         "input": {"case_id": case_id, "summary": summary.strip()},

@@ -73,9 +73,16 @@ with Runtime(workspace, agents=registry()) as runtime:
     snapshot = run_job(runtime, spec["job_id"])   # same return value as runtime.run
 ```
 
-The future Runner (Milestone B) should call `run_job` instead of `runtime.run`, and
-report reconciliation anomalies (e.g. queue says RUNNING but Core says SUCCEEDED) with
-the same reporter so recovery problems are visible.
+The Runner (`app/services/runner.py`, Milestone B) calls `run_job` for every job. When it starts
+and finds a job that a stopped Runner left unfinished, it also calls `report_recovery`:
+
+| Outcome | Level | Meaning |
+|---|---|---|
+| `resumed` | warning | The job continues; Core retries the interrupted step within its retry budget |
+| `runner_attempts_exhausted` | error | The job stopped the Runner too many times and was failed |
+| `configuration_changed` | error | The model, prompt or code changed while the job was interrupted, so it was failed instead of re-run under other settings |
+
+Only the job id, the outcome code and the claim count are sent.
 
 ## Limits
 
