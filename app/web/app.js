@@ -327,11 +327,22 @@
 
   // ---------- one job ----------------------------------------------------------------------
 
-  async function selectJob(jobId) {
+  async function selectJob(jobId, reveal) {
     state.selectedId = jobId;
     renderQueue();
     clearTimeout(state.jobTimer);
     await loadJob();
+    if (reveal) revealJob();
+  }
+
+  function revealJob() {
+    // On narrow screens the job card sits far from the form and the queue: bring it into view.
+    const card = $("job-card");
+    const top = card.getBoundingClientRect().top;
+    if (top < 0 || top > window.innerHeight * 0.6) {
+      const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      card.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" });
+    }
   }
 
   async function loadJob() {
@@ -596,7 +607,7 @@
         $("case-retry").hidden = false;
         if (!isRepeat) $("case-id").value = "";
         await refreshQueue();
-        await selectJob(job.job_id);
+        await selectJob(job.job_id, true);
         return;
       }
       const code = result.data.error;
@@ -671,7 +682,7 @@
     }
     $("queue").addEventListener("click", (event) => {
       const row = event.target.closest("button.row");
-      if (row) selectJob(row.dataset.id);
+      if (row) selectJob(row.dataset.id, true);
     });
     $("queue-more").addEventListener("click", () => refreshQueue(true));
     document.addEventListener("visibilitychange", () => { if (!document.hidden) refreshAll(); });
