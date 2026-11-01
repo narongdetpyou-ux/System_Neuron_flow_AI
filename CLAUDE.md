@@ -177,7 +177,9 @@ Notes for cloud sessions (claude.ai/code):
   overwrites dashboard edits that conflict with the file. Secrets (`ANTHROPIC_API_KEY`, `SENTRY_DSN`) go in
   the dashboard's Environment tab, never in a file.
 - **Free plan limits.** The service sleeps after 15 idle minutes and has no disk, so the queue is lost on
-  every sleep, restart and deploy.
+  every sleep, restart and deploy. Render also refuses some settings on free web services even though its
+  schema allows them, for example a disk and `maxShutdownDelaySeconds`. The *Service container* check
+  catches those two. If Render reports another one, remove it from `render.yaml` and add it to that check.
 - **Paid upgrade.** The `0.5c-512mb` plan, a 1 GB disk at `/var/data` and `NEURON_FLOW_DATA_DIR` are
   already written in `render.yaml`, commented out. Switching is an owner decision (D1).
 - **Render connector.** When it is available, it can list services, deploys, logs, events and metrics, and

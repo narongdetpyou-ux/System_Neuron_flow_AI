@@ -108,8 +108,9 @@ For every job the queue still shows as `RUNNING`:
 
 In `case_triage.v2` only the AI step has a second attempt; the rule, compare and prepare steps take
 milliseconds and have one. A planned stop is graceful: on SIGTERM the Runner finishes its current job
-first, and the host waits 30 seconds before it stops the container (`maxShutdownDelaySeconds` in
-`render.yaml`, `drainingSeconds` in `railway.json`).
+first, and the host waits 30 seconds before it stops the container (Render's default, which its free
+plan does not let `render.yaml` change; `drainingSeconds` in `railway.json`). The launcher gives the Runner
+25 of those seconds.
 
 ## API reference
 
