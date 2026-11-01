@@ -163,6 +163,23 @@ class SentryReporter:
                 context={"job_id": snapshot.get("job_id"), **fields}))
         return [event_id for event_id in sent if event_id]
 
+    def report_recovery(self, job_id, *, outcome, claims):
+        """A Runner start found a job that a stopped Runner left unfinished.
+
+        ``outcome`` is ``resumed`` (a warning: work continues within the retry budget), or
+        ``runner_attempts_exhausted`` / ``configuration_changed`` (errors: the job was failed).
+        Only the job id, the outcome code and the claim count are sent.
+        """
+        if not self.active:
+            return None
+        outcome = outcome if isinstance(outcome, str) and _CODE.fullmatch(outcome) else "unspecified"
+        return self._send(
+            f"Neuron Flow job recovered after a Runner stop ({outcome})",
+            level="warning" if outcome == "resumed" else "error",
+            fingerprint=["neuron-flow", "job-recovered", outcome],
+            tags={"neuron_flow.event": "job_recovered", "neuron_flow.recovery_outcome": outcome},
+            context={"job_id": job_id, "claims": claims, "outcome": outcome})
+
     def capture_exception(self, exc, *, job_id=None):
         """Report an exception raised by Runtime itself (e.g. agent version drift)."""
         if not self.active:
