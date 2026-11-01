@@ -66,13 +66,15 @@ differs, this file and architecture.md win.
 Done before this plan: A (v1 rules), A2 (AI gateway, shadow mode, scorecard, Sentry), B (intake API, queue,
 Runner, web page), the docs refresh and the Claude Code session hook.
 
+Marks: ✅ done · 🟡 built or partly checked (the status says what is left) · ⬜ not started.
+
 | ID | Work package | Status | Needs |
 |---|---|---|---|
-| 0.1 | Put round 2 online on Render | ⬜ owner | — |
+| 0.1 | Put round 2 online on Render | 🟡 live since 2026-11-01; the owner's resend check is still open | — |
 | 0.2 | Free or paid hosting | ⬜ owner decision D1 | 0.1 |
 | 0.3 | First scorecard run with real Claude | ⬜ owner (API key, D2) | — |
 | 0.4 | Claude for the online page | ⬜ optional | 0.1, 0.3 |
-| 0.5 | Skip Render deploys for docs-only commits | ⬜ | 0.1 |
+| 0.5 | Skip Render deploys for docs-only commits | 🟡 built; confirm in Render's events after the merge | 0.1 |
 | 0.6 | Open Dependabot PRs #1–#5 | ⬜ | — |
 | 1.1 | Neutral telemetry phase names (the one planned Core change) | ⬜ | — |
 | 1.2 | Request ids to follow a request through the logs | ⬜ | — |
@@ -140,6 +142,12 @@ decisions would vanish on every sleep.
   3. กด "ส่งซ้ำ" ต้องได้เลขงานเดิม
   4. ทิ้งไว้ 20 นาทีแล้วเปิดใหม่ หน้าเว็บจะรอประมาณ 1 นาที และเคสเก่าจะหายตามที่ป้ายเตือนไว้ (แผนฟรี)
 - **Don't:** paste the access key into chat, issues, docs or commits, or change the plan in the dashboard.
+- **Status (2026-11-01, read through the Render connector):**
+  - The owner created `neuron-flow` from the Blueprint. The first deploy (commit `8695ad0`) is Live at
+    https://neuron-flow.onrender.com, and Render's `/healthz` checks return 200.
+  - The logs show the Runner starting with the mock AI, the page polling `/v1/status`, and one case going
+    from `POST /v1/jobs 202` to `REVIEW_REQUIRED`.
+  - Still open: the owner's resend check ("ส่งซ้ำ" returns the same job). It is not in the logs yet.
 
 ### 0.2 Free or paid hosting (owner decision D1)
 
@@ -213,6 +221,18 @@ decisions would vanish on every sleep.
      `Dockerfile` and the code included.
   3. The *Service container* job validates the file against Render's schema.
 - **Done when:** a docs-only merge shows as skipped in Render's events, and a code merge still deploys.
+- **Status (2026-11-01):** built. `render.yaml` sets `buildFilter.ignoredPaths` to `*.md`, `**/*.md`,
+  `docs/**`, `tests/**`, `examples/**`, `.github/**` and `.claude/**`. None of these changes the running
+  service: `.dockerignore` keeps them out of the image, except `README.md`, which the `Dockerfile` copies
+  but nothing reads. Tests, demos and CI are skipped as well as the docs, for the same reason.
+  - `.github/scripts/check_render_blueprint.py` (the *Service container* job) fails if any tracked file
+    under `app/`, `neuron_flow/`, or the `Dockerfile`, `.dockerignore` or `LICENSE` would be ignored. It
+    also fails if a docs, test or CI example would still deploy, or if Render's schema stops listing
+    `buildFilter.ignoredPaths`.
+  - Render's docs could not be read from the session (the network blocks `render.com`), so the field
+    names rest on Render's published schema, which CI applies.
+  - Left: after the merge, the next docs-only merge must show as skipped in Render's events, and the
+    next code merge must still deploy.
 
 ### 0.6 Open Dependabot PRs #1–#5
 

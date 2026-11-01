@@ -51,8 +51,9 @@ Read in this order when you need depth:
 - **Owner-only decisions.** Spending money, publishing anything, adding people and touching real personal
   data belong to the owner (see [Owner decisions](docs/ROADMAP.md#owner-decisions)). Prepare the decision
   and the steps, but do not make it.
-- **Merging.** Open a PR for every change, and merge only when the owner asks. A merge to `main` redeploys
-  Render, and on the free plan every deploy wipes the queued cases.
+- **Merging.** Open a PR for every change, and merge only when the owner asks. A merge to `main` that
+  changes code redeploys Render, and on the free plan every deploy wipes the queued cases. A merge that
+  changes only docs, tests or CI files does not redeploy (the `buildFilter` in `render.yaml`).
 - **Honesty about evidence.**
   - Mock-AI scores are not accuracy, and hashes prove bytes, not authorship.
   - There is no live-Claude measurement, security review or user study yet.
@@ -161,7 +162,7 @@ Notes for cloud sessions (claude.ai/code):
 | `app/api/`, `app/web/` | standard-library HTTP API and the Thai web page |
 | `app/settings.py`, `app/serve.py` | settings from the environment; the launcher (API + supervised Runner) |
 | `Dockerfile`, `render.yaml`, `railway.json` | the container, the Render Blueprint, the Railway config kept for later |
-| `tests/`, `examples/`, `.github/workflows/` | tests, demos and smoke tests, CI |
+| `tests/`, `examples/`, `.github/` | tests, demos and smoke tests, CI (`.github/scripts/` holds the `render.yaml` check) |
 | `.claude/` | the session-start hook for Claude Code cloud sessions |
 
 ## 7. Hosting (Render)
@@ -172,6 +173,9 @@ Notes for cloud sessions (claude.ai/code):
   - free plan, Singapore;
   - health check at `/healthz`;
   - `main` deploys only after the GitHub checks pass;
+  - a merge that changes only files the running service never reads (`*.md`, `docs/`, `tests/`,
+    `examples/`, `.github/`, `.claude/`) does not deploy (`buildFilter.ignoredPaths`). The *Service container* check fails if a file
+    the image is built from would be ignored; keep it that way when adding folders;
   - Render generates `NEURON_FLOW_ACCESS_KEY`.
 - **Where to change settings.** Change them in `render.yaml`, not in the dashboard: a Blueprint sync
   overwrites dashboard edits that conflict with the file. Secrets (`ANTHROPIC_API_KEY`, `SENTRY_DSN`) go in
@@ -195,8 +199,10 @@ Notes for cloud sessions (claude.ai/code):
   - Docs refresh and the design philosophy (PR #10).
   - B: intake API, queue, Runner and web page (PR #11).
   - The Claude Code session hook (PR #12).
+  - The Render service `neuron-flow` exists and is live at https://neuron-flow.onrender.com (free plan,
+    first deploy 2026-11-01). Use the Render connector to read its deploys, events and logs; this
+    session's network may not reach `onrender.com` or `render.com` directly.
 - **Not done yet:**
-  - The Render service may not exist yet; check before creating one.
   - Real Claude has never been run.
   - Review decisions and per-person identity (Milestone C) are not built.
   - The rest of the roadmap is open.
