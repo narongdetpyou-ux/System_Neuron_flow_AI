@@ -186,7 +186,8 @@ Notes for cloud sessions (claude.ai/code):
   tini must run as the same user as the service (`app/boot.py`). A root tini logged `[FATAL tini (1)]
   Unexpected error when forwarding signal: 'Operation not permitted'`, and every stop killed the service.
   The *Service container* job runs with `--cap-drop KILL` and fails if process 1 is root or a stop is not
-  graceful. Keep both when changing the `Dockerfile`.
+  graceful. Keep both when changing the `Dockerfile`. Since PR #16, stops on Render log `serve: stopping`
+  (first seen on a free-plan sleep on 2026-11-01).
 - **Free plan limits.** The service sleeps after 15 idle minutes and has no disk, so the queue is lost on
   every sleep, restart and deploy. Render also refuses some settings on free web services even though its
   schema allows them, for example a disk and `maxShutdownDelaySeconds`. The *Service container* check
@@ -206,6 +207,8 @@ Notes for cloud sessions (claude.ai/code):
   - Docs refresh and the design philosophy (PR #10).
   - B: intake API, queue, Runner and web page (PR #11).
   - The Claude Code session hook (PR #12).
+  - Render hardening: merges that change only docs, tests or CI do not deploy (PR #15), and tini runs as
+    the service user, so stops on Render are graceful (PR #16).
   - The Render service `neuron-flow` exists and is live at https://neuron-flow.onrender.com (free plan,
     first deploy 2026-11-01). Use the Render connector to read its deploys, events and logs; this
     session's network may not reach `onrender.com` or `render.com` directly.

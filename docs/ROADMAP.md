@@ -70,11 +70,11 @@ Marks: ✅ done · 🟡 built or partly checked (the status says what is left) �
 
 | ID | Work package | Status | Needs |
 |---|---|---|---|
-| 0.1 | Put round 2 online on Render | ✅ live since 2026-11-01 (the graceful-stop fix in the status note is confirmed on Render after its merge) | — |
+| 0.1 | Put round 2 online on Render | ✅ live since 2026-11-01; graceful stop confirmed on Render the same day | — |
 | 0.2 | Free or paid hosting | ⬜ owner decision D1 | 0.1 |
 | 0.3 | First scorecard run with real Claude | ⬜ owner (API key, D2) | — |
 | 0.4 | Claude for the online page | ⬜ optional | 0.1, 0.3 |
-| 0.5 | Skip Render deploys for docs-only commits | 🟡 built; confirm in Render's events after the merge | 0.1 |
+| 0.5 | Skip Render deploys for docs-only commits | 🟡 built; a code merge still deploys (PR #16); the docs-only skip is checked on the next docs-only merge | 0.1 |
 | 0.6 | Open Dependabot PRs #1–#5 | ⬜ | — |
 | 1.1 | Neutral telemetry phase names (the one planned Core change) | ⬜ | — |
 | 1.2 | Request ids to follow a request through the logs | ⬜ | — |
@@ -154,9 +154,17 @@ decisions would vanish on every sleep.
     forwarding signal: 'Operation not permitted'`, with no `serve: stopping` after it. Root in Render's
     containers lacks `CAP_KILL`, so a root tini could not pass SIGTERM on to the service, which runs as
     `neuron`. Every stop killed the service instead. This was reproduced in CI with `--cap-drop KILL` and
-    the real tini. It was fixed by running tini as `neuron` (`app/boot.py`); the CI job now keeps
-    `--cap-drop KILL`. To confirm on Render after the merge, the next stop (deploy, restart or sleep) must
-    log `serve: stopping` and no FATAL line.
+    the real tini. It was fixed by running tini as `neuron` (`app/boot.py`, PR #16); the CI job now keeps
+    `--cap-drop KILL`.
+  - Confirmed on Render. The old image's last stop, a free-plan sleep at 15:26:41 UTC, still logged the
+    FATAL line. The fixed image (the deploy of `23ca7df`) went to sleep at 15:43:45 UTC and logged
+    `serve: stopping (signal 15)`, then `runner: stopping after the current job (signal 15)`, with no FATAL
+    line.
+  - Measured in the same logs:
+    - the free plan put the service to sleep about 15 minutes after its last request (twice: 14 min 59 s
+      each time); Render's own `/healthz` checks every few seconds do not count as requests;
+    - the first job after a start took 9.8 s and 9.0 s (two starts); later jobs took 0.1–0.4 s. In CI the
+      same first job takes about 1 s.
 
 ### 0.2 Free or paid hosting (owner decision D1)
 
@@ -240,8 +248,9 @@ decisions would vanish on every sleep.
     `buildFilter.ignoredPaths`.
   - Render's docs could not be read from the session (the network blocks `render.com`), so the field
     names rest on Render's published schema, which CI applies.
-  - Left: after the merge, the next docs-only merge must show as skipped in Render's events, and the
-    next code merge must still deploy.
+  - A code merge still deploys: the PR #16 merge (`23ca7df`, `Dockerfile` and `app/`) deployed as usual.
+  - Left: a docs-only merge must show as skipped in Render's events. The first one is the PR that adds
+    this line, which changes only `.md` files.
 
 ### 0.6 Open Dependabot PRs #1–#5
 

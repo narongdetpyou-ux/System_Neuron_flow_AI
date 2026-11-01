@@ -211,7 +211,8 @@ planned: review ledger and artifact store, app/domains/study_guide/
 - Delivery conflicts get their own status.
 - The container runs without root, keeps its data across a restart and stops cleanly (CI container job).
   That job now runs without `CAP_KILL`, as Render does. Until `app/boot.py` (2026-11-01), process 1
-  (tini) ran as root and could not pass SIGTERM on there, so stops on Render were not clean.
+  (tini) ran as root and could not pass SIGTERM on there, so stops on Render were not clean. On Render the
+  fixed image's first stop, a free-plan sleep, logged `serve: stopping` and no FATAL line.
 
 **P0 still open:**
 - A review decision applies once per version, unauthorised reviews are denied, and approval creates exactly
