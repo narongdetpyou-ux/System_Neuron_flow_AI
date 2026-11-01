@@ -26,8 +26,12 @@ jobs:
           assert (service["type"], service["runtime"], service["healthCheckPath"]) == ("web", "docker", "/healthz"), service
           assert service["autoDeployTrigger"] == "checksPass", service
           assert {"key": "NEURON_FLOW_ACCESS_KEY", "generateValue": True} in service["envVars"], service["envVars"]
+          if service["plan"] == "free":
+              # Render's schema allows these, but Render refuses them on free web services when it reads the
+              # Blueprint ("max shutdown delay is not supported for free tier services").
+              for field in ("disk", "maxShutdownDelaySeconds"):
+                  assert field not in service, f"free web services cannot use {field}"
           if "disk" in service:
-              assert service["plan"] != "free", "free web services cannot have a disk"
               assert {"key": "NEURON_FLOW_DATA_DIR", "value": service["disk"]["mountPath"]} in service["envVars"]
           try:
               with urllib.request.urlopen("https://render.com/schema/render.yaml.json", timeout=20) as response:

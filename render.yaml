@@ -21,7 +21,8 @@ services:
     branch: main
     autoDeployTrigger: checksPass
     healthCheckPath: /healthz
-    maxShutdownDelaySeconds: 30
+    # No maxShutdownDelaySeconds: Render refuses it on free web services. Its default wait after SIGTERM is
+    # 30 seconds, and the launcher stops the Runner within 25 (app/serve.py), so the default is enough.
     envVars:
       - key: NEURON_FLOW_ACCESS_KEY
         generateValue: true  # a random 256-bit key: copy it from the Environment tab to open the page
