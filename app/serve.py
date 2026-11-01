@@ -1,9 +1,9 @@
 """Start the whole service in one container: the HTTP API in this process, and the single Runner as
-a supervised child process. Railway (and the Dockerfile) run ``python -m app.serve``.
+a supervised child process. The Dockerfile (used by Render and Railway) runs ``python -m app.serve``.
 
 Steps:
 1. read the settings (data folder, port, access key) from the environment;
-2. when started as root (Railway mounts volumes as root), give the data folder to the unprivileged
+2. when started as root (hosts may mount disks as root), give the data folder to the unprivileged
    ``neuron`` user from the image and drop root before anything else runs;
 3. create the queue database;
 4. start the Runner; if it stops unexpectedly, start it again after a short pause (its

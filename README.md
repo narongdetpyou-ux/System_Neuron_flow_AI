@@ -51,19 +51,21 @@ Since round 2, cases can also come in from outside, through an HTTP API or a Tha
 | AI gateway: versioned prompt, mock and Claude providers | `app/llm/` | Working (see above) |
 | Error monitoring | `app/observability/` | Sentry errors, degraded-AI warnings and Runner recoveries |
 | Scorecard: 61 synthetic labelled cases (EN + TH) | `app/eval/` | Runs in CI; mock scores test the pipeline, not AI accuracy |
-| Intake API, durable job queue, single Runner with crash recovery, Thai web page | `app/api/`, `app/persistence/`, `app/services/`, `app/web/`, `app/serve.py` | Working (round 2), tested offline and as a container in CI; **not deployed yet** (host: Railway) |
+| Intake API, durable job queue, single Runner with crash recovery, Thai web page | `app/api/`, `app/persistence/`, `app/services/`, `app/web/`, `app/serve.py` | Working (round 2), tested offline and as a container in CI; **not deployed yet** (host: Render) |
 | Human-review decisions, n8n intake, reviewer notifications | — | **Not built yet** (Milestone C in [architecture](docs/architecture.md)) |
 
 ## Try it
 
-**Online, on Railway:** follow the step-by-step setup in [intake_queue.md](docs/intake_queue.md) (in Thai).
-The service reads `NEURON_FLOW_ACCESS_KEY` for its access key and keeps its data on a Railway volume.
+**Online, on Render:** `render.yaml` describes the whole service, so setup is New → Blueprint in the Render
+Dashboard; the step-by-step guide is in [intake_queue.md](docs/intake_queue.md) (in Thai). Render generates
+the access key (`NEURON_FLOW_ACCESS_KEY`) and deploys `main` only when the GitHub checks pass. The free plan
+forgets its cases when it sleeps; a paid plan with a disk keeps them.
 
 **On GitHub, no local setup needed:**
 - *Actions → Core logic tests* runs every test on Python 3.10 and 3.12, plus both demos and the scorecard.
   The scorecard table appears on the run page.
-- *Actions → Service container* builds the same container as Railway, submits cases over HTTP, restarts it
-  and checks that nothing was lost.
+- *Actions → Service container* checks `render.yaml`, builds the same container as Render, submits cases
+  over HTTP, restarts it and checks that nothing was lost.
 - *Actions → Sentry smoke test* checks that error reporting reaches Sentry.
 - *Actions → Shadow eval with Claude (manual)* runs the scorecard against real Claude. It needs the
   repository secret `ANTHROPIC_API_KEY`.
@@ -95,7 +97,7 @@ most 1 MiB. The agent `version` is frozen into each job, so an old job refuses t
 | [Architecture](docs/architecture.md) | Layers, Core constraints, how AI fits, decisions (ADRs), milestones and their status |
 | [case_triage v1](docs/case_triage_pilot.md) | The deterministic keyword rules |
 | [case_triage v2 shadow mode](docs/case_triage_v2_shadow.md) | The AI second opinion: flow, failure handling, configuration, scorecard |
-| [Intake API, queue, Runner and web page](docs/intake_queue.md) | Round 2: how a case flows from outside, recovery rules, API reference, Railway setup |
+| [Intake API, queue, Runner and web page](docs/intake_queue.md) | Round 2: how a case flows from outside, recovery rules, API reference, Render setup |
 | [Sentry error reporting](docs/observability_sentry.md) | What gets reported, privacy rules, alerts |
 | [Funding readiness pack](docs/funding/README.md) | Internal evidence register; not a submitted application |
 

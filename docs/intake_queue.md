@@ -2,8 +2,10 @@
 
 **Status:** built in PR #11 and tested offline (98 tests, including killing the Runner mid-step). The
 container build is checked on every push by *Actions → Service container*. **Not deployed yet**; the
-chosen host is Railway. Synthetic data only. Review decisions (approve/reject) come with Milestone C, so
-in this round every case ends at "waiting for a person". No Core (`neuron_flow/`) file was changed.
+host is Render (`render.yaml`). Railway was the first choice, but it has paused new sign-ups since
+22 Oct 2026 after a security incident; `railway.json` stays in the repository for later. Synthetic data
+only. Review decisions (approve/reject) come with Milestone C, so in this round every case ends at
+"waiting for a person". No Core (`neuron_flow/`) file was changed.
 Design principles: [design_philosophy.md](design_philosophy.md).
 
 ## ภาพรวมการทำงาน (ภาษาไทย)
@@ -37,19 +39,25 @@ Design principles: [design_philosophy.md](design_philosophy.md).
 
 ทุกกรณีที่ระบบกู้งานหลังตัวรันงานหยุด จะส่งแจ้งเตือนเข้า Sentry ด้วย (ถ้าตั้งค่า `SENTRY_DSN` ไว้) ดู [observability_sentry.md](observability_sentry.md)
 
-### สิ่งที่ต้องทำเพื่อเปิดใช้บน Railway (ครั้งแรก)
+### สิ่งที่ต้องทำเพื่อเปิดใช้บน Render (ครั้งแรก ทำครั้งเดียว)
 
-ถ้าเชื่อมตัวเชื่อม Railway ใน claude.ai แล้ว Claude ทำขั้นที่ 3–6 ให้ได้ ถ้ายัง ให้ทำตามนี้
+ไฟล์ `render.yaml` ในโปรเจกต์บอก Render ไว้หมดแล้วว่าต้องสร้างอะไร คุณจึงแค่กดยืนยัน
 
-1. **Merge PR นี้** เข้า `main`
-2. **สมัคร Railway** ที่ railway.com → Login with GitHub (Railway จะตรวจบัญชี GitHub ถ้าผ่านจะได้ Full Trial เครดิต $5 ใช้ได้ 30 วัน)
-3. **สร้างบริการ** New Project → Deploy from GitHub repo → `System_Neuron_flow_AI` Railway เจอ `Dockerfile` และ `railway.json` แล้ว build เอง
-4. **ต่อที่เก็บถาวร** คลิกขวาที่บริการ → Attach Volume → mount path `/var/data` (ถ้าไม่ต่อ เคสจะหายทุกครั้งที่ระบบรีสตาร์ท และหน้าเว็บจะเตือน)
-5. **ตั้งรหัสเข้าใช้** แท็บ Variables → New Variable ชื่อ `NEURON_FLOW_ACCESS_KEY` ค่าเป็นข้อความสุ่มยาวอย่างน้อย 16 ตัวอักษร เก็บไว้ใช้เข้าหน้าเว็บ อย่าแชร์
-6. **เปิดลิงก์** Settings → Networking → Generate Domain (ถ้าถามพอร์ต ใส่ `8000`)
-7. **ลองใช้** เปิดลิงก์ ใส่รหัสเข้าใช้ แล้วส่งเคสแรก
+1. **Merge PR นี้** เข้า `main` (Render จะดึงโค้ดจาก `main`)
+2. **สมัคร Render** ที่ render.com ด้วยบัญชี GitHub แผนฟรีไม่ต้องใช้บัตร
+3. **สร้างจาก Blueprint** ในหน้า Dashboard กด New → Blueprint → Connect GitHub แล้วอนุญาตให้ Render เห็น repo `System_Neuron_flow_AI` → เลือก repo นี้ Render จะแสดงว่าจะสร้างบริการ `neuron-flow` แผน Free ที่ Singapore → กด **Deploy Blueprint**
+4. **รอ build** ประมาณ 3–5 นาที จนสถานะเป็น Live
+5. **คัดลอกรหัสเข้าใช้** เปิดบริการ `neuron-flow` → แท็บ Environment → ค่าของ `NEURON_FLOW_ACCESS_KEY` (Render สุ่มให้แล้ว) เก็บไว้ อย่าแชร์
+6. **ลองใช้** เปิดลิงก์ `https://neuron-flow….onrender.com` ที่หัวหน้าบริการ ใส่รหัสเข้าใช้ แล้วส่งเคสแรก
+7. **เชื่อมตัวเชื่อม Render ใน claude.ai** (ไม่บังคับแต่แนะนำ) แล้ว Claude จะดูสถานะการ deploy, log และการใช้ทรัพยากรให้ได้ ตัวเชื่อมสร้างบริการแบบ Docker เองไม่ได้ ขั้นที่ 3 จึงต้องกดเองครั้งเดียว
 
-ไม่บังคับ:
+หลังจากนี้ ทุกครั้งที่มีการ merge เข้า `main` และชุดทดสอบบน GitHub ผ่าน Render จะอัปเดตระบบให้เอง
+
+**แผนฟรีควรรู้:** ระบบหลับเมื่อไม่มีคนเข้า 15 นาที เปิดครั้งถัดไปรอประมาณ 1 นาที และไม่มีดิสก์ถาวร เคสเก่าจึงหายทุกครั้งที่ระบบหลับ รีสตาร์ท หรืออัปเดต (หน้าเว็บจะขึ้นป้ายเตือน) ระบบยังทำงานครบทุกขั้นตามปกติ
+
+**ถ้าอยากให้เคสไม่หาย:** แผน `0.5c-512mb` ($7/เดือน) + ดิสก์ 1 GB ($0.25/เดือน) ต้องผูกบัตร บอก Claude ให้แก้ `render.yaml` (เปลี่ยนแผน เปิดดิสก์ที่ `/var/data` และตั้ง `NEURON_FLOW_DATA_DIR`) แล้ว merge ห้ามแก้แผนในหน้า Dashboard เพราะ Blueprint จะเขียนทับค่าที่ขัดกับไฟล์
+
+ไม่บังคับ (เพิ่มในแท็บ Environment ได้เลย Blueprint จะไม่ลบตัวแปรที่ไฟล์ไม่ได้กำหนด):
 - ใช้ Claude จริงแทน AI จำลอง: เพิ่ม `NEURON_FLOW_LLM_PROVIDER=anthropic` และ `ANTHROPIC_API_KEY` (เสียค่า API ประมาณ 1 คำขอสั้น ๆ ต่อเคส)
 - แจ้งเตือนข้อผิดพลาด: เพิ่ม `SENTRY_DSN`
 
@@ -59,7 +67,7 @@ Design principles: [design_philosophy.md](design_philosophy.md).
 
 ```text
 browser / n8n / curl
-      │  HTTPS (Railway edge)
+      │  HTTPS (Render's edge)
       ▼
 container: tini ─► python -m app.serve
                     ├─ HTTP API + web page (app/api, app/web) ── admits, reads ──► <data>/app/queue.sqlite3
@@ -68,11 +76,13 @@ container: tini ─► python -m app.serve
                          └─ the only owner of Runtime(<data>/core): Core SQLite, reports, workspace lock
 ```
 
-- `<data>` is `NEURON_FLOW_DATA_DIR`, else Railway's `RAILWAY_VOLUME_MOUNT_PATH`, else `./neuron_workspace`.
-- The launcher starts as root only to take ownership of the volume (Railway mounts volumes as root), then
+- `<data>` is `NEURON_FLOW_DATA_DIR` (on Render, the disk's mount path), else Railway's
+  `RAILWAY_VOLUME_MOUNT_PATH`, else `./neuron_workspace` (not persistent in a container).
+- The launcher starts as root only to take ownership of the disk (hosts may mount it as root), then
   switches to the unprivileged `neuron` user before it opens anything.
-- The API never opens the Core `Runtime` (ADR-001). Railway allows no replicas on a service with a volume,
-  and it stops the old deployment before the new one mounts the volume, so two Runners never share it.
+- The API never opens the Core `Runtime` (ADR-001). A disk attaches to one instance only, and a service
+  with a disk cannot scale out, so two Runners never share it. Without a disk (Render's free plan) each
+  instance has its own throwaway data, so an overlapping deploy cannot share anything either.
 
 ### Job states
 
@@ -98,7 +108,8 @@ For every job the queue still shows as `RUNNING`:
 
 In `case_triage.v2` only the AI step has a second attempt; the rule, compare and prepare steps take
 milliseconds and have one. A planned stop is graceful: on SIGTERM the Runner finishes its current job
-first, and `railway.json` gives it 30 seconds (`drainingSeconds`) before a redeploy stops the container.
+first, and the host waits 30 seconds before it stops the container (`maxShutdownDelaySeconds` in
+`render.yaml`, `drainingSeconds` in `railway.json`).
 
 ## API reference
 
@@ -106,7 +117,7 @@ Every `/v1` route needs `Authorization: Bearer <NEURON_FLOW_ACCESS_KEY>`. Bodies
 
 | Method and path | What it does | Success | Errors |
 |---|---|---|---|
-| `GET /healthz` | Liveness for Railway (no key); also says whether an access key is set | 200 `{"ok": true, "access_key": "configured"}` | 503 |
+| `GET /healthz` | Liveness for the host's health check (no key); also says whether an access key is set | 200 `{"ok": true, "access_key": "configured"}` | 503 |
 | `GET /v1/status` | Runner heartbeat, queue counts, AI mode, storage, limits | 200 | 401, 429 |
 | `POST /v1/jobs` | Admit a job | 202 new, 200 duplicate | 400, 401, 409, 411, 413, 415, 429, 503 |
 | `GET /v1/jobs?limit=20&before=<seq>` | Newest first; `next_before` is the next cursor | 200 | 400, 401 |
@@ -114,7 +125,7 @@ Every `/v1` route needs `Authorization: Bearer <NEURON_FLOW_ACCESS_KEY>`. Bodies
 | `GET /v1/jobs/{job_id}/events?after=<seq>&limit=50` | History in bounded pages (`limit` 1–100) | 200 | 400, 401, 404 |
 
 ```bash
-curl -s https://<app>.up.railway.app/v1/jobs \
+curl -s https://<your-service>.onrender.com/v1/jobs \
   -H "Authorization: Bearer $NEURON_FLOW_ACCESS_KEY" -H "Content-Type: application/json" \
   -d '{"workflow_type": "case_triage.v2", "idempotency_key": "n8n-2026-11-01-0001",
        "input": {"case_id": "CASE-001", "summary": "อัปโหลดไฟล์แนบไม่ได้ ค้างที่ 99%"}}'
@@ -156,7 +167,7 @@ job) belong to Milestone C and are still open.
 | Variable | Default | Meaning |
 |---|---|---|
 | `NEURON_FLOW_ACCESS_KEY` | none (the API refuses `/v1`) | Shared access key, at least 16 characters |
-| `NEURON_FLOW_DATA_DIR` | Railway volume, else `./neuron_workspace` | Where the queue and Core data live |
+| `NEURON_FLOW_DATA_DIR` | Railway volume, else `./neuron_workspace` | Where the queue and Core data live; on Render, the disk's mount path (`/var/data`) |
 | `PORT` / `NEURON_FLOW_HOST` | `8000` / `0.0.0.0` | Listening address |
 | `NEURON_FLOW_LLM_PROVIDER`, `NEURON_FLOW_LLM_MODEL`, `ANTHROPIC_API_KEY` | `mock` | AI second opinion (see [case_triage_v2_shadow.md](case_triage_v2_shadow.md)) |
 | `NEURON_FLOW_MAX_QUEUED` | `100` | Admission refuses new jobs above this many waiting |
@@ -185,8 +196,9 @@ job) belong to Milestone C and are still open.
 - The HTTP server is Python's standard library server with the guards above. It suits a single-owner
   pilot; for real traffic, replace `app/api/server.py` with a production server (for example a small
   WSGI adapter around `ApiApp`, served by waitress or gunicorn).
-- One machine, SQLite, one Runner (ADR-003). Each redeploy on Railway has a short downtime while the
-  volume moves to the new deployment.
+- One machine, SQLite, one Runner (ADR-003). With a disk, each redeploy has a short downtime while the
+  disk moves to the new instance. On Render's free plan the service sleeps after 15 idle minutes and
+  forgets its cases.
 - Rate limits live in memory and reset on restart.
 - Live progress inside a running job is not shown step by step; the page shows the step timeline when the
   job finishes. Jobs with the mock AI finish in well under a second.

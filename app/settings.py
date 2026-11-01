@@ -1,7 +1,7 @@
 """Settings for the intake API, the job queue and the Runner, read from the environment.
 
 Where data lives (the first one set wins):
-1. ``NEURON_FLOW_DATA_DIR``: an explicit folder;
+1. ``NEURON_FLOW_DATA_DIR``: an explicit folder, such as the mount path of a Render disk;
 2. ``RAILWAY_VOLUME_MOUNT_PATH``: set by Railway when a volume is attached to the service;
 3. ``./neuron_workspace``: local default. Inside a container this is NOT persistent.
 

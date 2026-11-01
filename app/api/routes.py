@@ -2,7 +2,7 @@
 
   GET  /                          the web page (it holds no secrets and asks for the access key)
   GET  /static/app.css, app.js    page assets
-  GET  /healthz                   liveness for Railway: process up, queue database readable (no key)
+  GET  /healthz                   liveness for the host: process up, queue database readable (no key)
   GET  /v1/status                 Runner heartbeat, queue counts, AI mode, storage, limits
   POST /v1/jobs                   admit a job: 202 new, 200 duplicate, 400/401/409/413/415/429/503
   GET  /v1/jobs                   newest first: ?limit=1-100&before=<seq>

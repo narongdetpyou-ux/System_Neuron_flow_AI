@@ -1,6 +1,6 @@
 """The HTTP server for the API and the web page (standard library only).
 
-Python's ``http.server`` is enough for a single-owner pilot behind Railway's HTTPS edge, with these
+Python's ``http.server`` is enough for a single-owner pilot behind the host's HTTPS edge, with these
 guards:
 * a socket timeout on every read, so a stalled client cannot hold a thread for long;
 * a cap on concurrent connections (extra connections get an immediate 503);

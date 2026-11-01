@@ -1,8 +1,8 @@
 """Check a running Neuron Flow service from the outside, over HTTP (standard library only).
 
-CI runs it against the Docker container; you can point it at the Railway URL too:
+CI runs it against the Docker container; you can point it at the online service too:
 
-    python -m examples.service_smoke_test --url https://<your-app>.up.railway.app --key <access key>
+    python -m examples.service_smoke_test --url https://<your-service>.onrender.com --key <access key>
 
 First run: submit a case, check duplicates and conflicts, wait for the result, save its job id.
 With ``--after-restart``: check that the saved job is still there and that new work still runs.

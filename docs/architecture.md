@@ -51,7 +51,7 @@ flowchart TD
 | 1 Core `neuron_flow/` | Spec validation, static DAG scheduling, bounded child processes, retries, recovery, events, verified receipts, integrity, case memory, candidate gate. No HTTP, business rules, credentials or user authorisation. | All of it, unchanged since commit `09100f7` | P1 telemetry fix only (§3) |
 | 2 Domains & agents `app/domains/`, `app/llm/` | Input contracts, trusted agent registry, fixed DAG templates, validators, AI calls | case_triage v1 and v2, AI gateway | `study_guide.v1`, a second unrelated domain |
 | 3 Application services | Admission, idempotency, the only Runtime owner, crash reconciliation, review decisions, results, measurement, monitoring | Scorecard (`app/eval/`), Sentry reporting (`app/observability/`), admission queue (`app/persistence/`), admission, Runner with reconciliation, results (`app/services/`) | Review ledger, artifact store (Milestone C) |
-| 4 Interfaces | Authentication, request validation, status pages, human decisions | GitHub Actions workflows (tests, scorecard, Sentry check, container check, manual Claude run); HTTP API and web page (`app/api/`, `app/web/`) behind one shared access key, started by `app/serve.py` in one container for Railway | n8n intake and notifications, per-reviewer identity, review decisions |
+| 4 Interfaces | Authentication, request validation, status pages, human decisions | GitHub Actions workflows (tests, scorecard, Sentry check, container check, manual Claude run); HTTP API and web page (`app/api/`, `app/web/`) behind one shared access key, started by `app/serve.py` in one container for Render (`render.yaml`; Railway also configured) | n8n intake and notifications, per-reviewer identity, review decisions |
 
 **Dependency rule:** Interface → Services → Domain → Core. Core never imports `app.*`. A domain builds specs
 and registers agents. It never re-implements retries or scheduling, and it never writes to Core SQLite.
@@ -161,7 +161,7 @@ app/services/                  workflows.py (catalog), admission.py, runner.py (
 app/api/                       routes.py (ApiApp), server.py (standard-library HTTP server), limits.py
 app/web/                       index.html, app.css, app.js: the Thai web page
 app/settings.py, app/serve.py  environment settings; the launcher (API + supervised Runner in one container)
-Dockerfile, railway.json       the container Railway builds
+Dockerfile, render.yaml        the container and the Render Blueprint (railway.json kept for Railway)
 examples/                      case_triage_demo, case_triage_shadow_demo, sentry_smoke_test, service_smoke_test
 tests/                         98 tests: core, triage v1/v2, AI gateway, scorecard, Sentry, API, queue, Runner, HTTP
 .github/workflows/             core-tests, service-container, sentry-smoke, shadow-eval-claude (manual)
@@ -174,7 +174,7 @@ planned: review ledger and artifact store, app/domains/study_guide/
 |---|---|---|
 | 001 | One controller per workspace; only the Runner opens Runtime | In force; the API never opens it, and a second Runner fails with `WorkspaceBusy` |
 | 002 | Durable admission before execution; reply 202 only after commit | In force |
-| 003 | Single machine first; no Redis, Postgres or distributed claims | In force: SQLite queue on one Railway volume |
+| 003 | Single machine first; no Redis, Postgres or distributed claims | In force: SQLite queue on one disk |
 | 004 | Two-phase human review as linked jobs | Accepted; Milestone C |
 | 005 | Trusted agents only; versions frozen per job | In force |
 | 006 | Large artifacts stay outside Core messages | Accepted; not needed yet |
@@ -185,7 +185,7 @@ planned: review ledger and artifact store, app/domains/study_guide/
 | 011 | The prompt and answer schema are one versioned file; its hash is part of agent identity | In force |
 | 012 | Provider hiccups degrade gracefully; setup errors fail loudly | In force |
 | 013 | Secrets come only from the environment at call time | In force; tested by scanning every stored file |
-| 014 | API and Runner run in one container on one volume; the launcher supervises the Runner, and Railway stops the old deployment before the new one mounts the volume | In force (round 2) |
+| 014 | API and Runner run in one container on one disk; the launcher supervises the Runner. A disk attaches to a single instance, so two Runners never share it. Host: Render (Railway paused new sign-ups on 22 Oct 2026) | In force (round 2) |
 | 015 | Interrupted jobs resume only under the spec frozen at their first claim; any drift fails them as `configuration_changed` | In force (round 2) |
 | 016 | Until reviewer identity exists (Milestone C), the API is protected by one shared access key, with per-client limits on wrong keys | In force (round 2); to be replaced |
 
@@ -233,7 +233,7 @@ dashboard.
 | A | case_triage v1 rules, synthetic demo, tests | Done |
 | A2 | AI gateway, v2 shadow mode, scorecard, Sentry reporting | Done (PR #8, #9); real Claude not yet run |
 | P1-fix | Neutral telemetry phase names | Open |
-| B | Admission queue, single Runner, reconciliation, thin API, web page | Built (PR #11); not deployed yet (host: Railway) |
+| B | Admission queue, single Runner, reconciliation, thin API, web page | Built (PR #11); not deployed yet (host: Render) |
 | C | Two-phase review, decision ledger, n8n notifications | Open |
 | D | OpenTelemetry tracing, eval gates in CI | Partly done: CI scorecard and Sentry exist; tracing is open |
 | E | Planner pattern (B), MCP server, second domain with zero Core changes | Open |

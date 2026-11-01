@@ -31,7 +31,7 @@
   <main>
     <section class="gate card" id="gate" hidden aria-labelledby="gate-title">
       <h1 id="gate-title">ใส่รหัสเข้าใช้</h1>
-      <p class="lead">หน้านี้เปิดให้เฉพาะเจ้าของระบบ ใช้รหัสที่ตั้งไว้ใน Railway (Variables → <code>NEURON_FLOW_ACCESS_KEY</code>)</p>
+      <p class="lead">หน้านี้เปิดให้เฉพาะเจ้าของระบบ ใช้รหัสจากหน้าตั้งค่าของบริการ (Render: แท็บ Environment → <code>NEURON_FLOW_ACCESS_KEY</code>)</p>
       <form id="gate-form" autocomplete="off">
         <label for="gate-key">รหัสเข้าใช้ (access key)</label>
         <input id="gate-key" type="password" required minlength="16" spellcheck="false" autocapitalize="off">
@@ -42,9 +42,9 @@
       <div class="setup" id="gate-setup" hidden>
         <h2>ระบบยังไม่ได้ตั้งรหัสเข้าใช้</h2>
         <ol>
-          <li>เปิด Railway → เลือกบริการนี้ → แท็บ <b>Variables</b></li>
+          <li>เปิดหน้าตั้งค่าของบริการนี้ (Render: แท็บ <b>Environment</b>)</li>
           <li>เพิ่ม <code>NEURON_FLOW_ACCESS_KEY</code> เป็นข้อความสุ่มยาวอย่างน้อย 16 ตัวอักษร</li>
-          <li>รอระบบรีสตาร์ทเอง (ประมาณ 1 นาที) แล้วกลับมาหน้านี้</li>
+          <li>บันทึกแล้วรอระบบรีสตาร์ทเอง (ประมาณ 1–2 นาที) แล้วกลับมาหน้านี้</li>
         </ol>
       </div>
     </section>

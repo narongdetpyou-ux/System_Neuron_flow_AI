@@ -1,11 +1,50 @@
-name: Service container (same build as Railway)
-# Builds the Dockerfile that Railway uses, starts it with a data volume that is mounted as root
-# (as on Railway), submits cases over HTTP, restarts the container (like a redeploy) and checks
-# that nothing was lost. The access key below is a throwaway value used only inside this job.
+name: Service container (same build as Render)
+# Builds the Dockerfile that Render uses (render.yaml), starts it with a data disk that is mounted as
+# root, submits cases over HTTP, restarts the container (like a redeploy) and checks that nothing was
+# lost. Render deploys main only when these checks pass (autoDeployTrigger: checksPass).
+# The access key below is a throwaway value used only inside this job.
 on:
   push:
   pull_request:
 jobs:
+  blueprint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install "pyyaml>=6" "jsonschema>=4"
+      - name: Check render.yaml (and Render's published schema when it can be fetched)
+        run: |
+          python - <<'EOF'
+          import json, sys, urllib.request
+          import jsonschema, yaml
+          blueprint = yaml.safe_load(open("render.yaml", encoding="utf-8"))
+          (service,) = blueprint["services"]
+          assert (service["type"], service["runtime"], service["healthCheckPath"]) == ("web", "docker", "/healthz"), service
+          assert service["autoDeployTrigger"] == "checksPass", service
+          assert {"key": "NEURON_FLOW_ACCESS_KEY", "generateValue": True} in service["envVars"], service["envVars"]
+          if "disk" in service:
+              assert service["plan"] != "free", "free web services cannot have a disk"
+              assert {"key": "NEURON_FLOW_DATA_DIR", "value": service["disk"]["mountPath"]} in service["envVars"]
+          try:
+              with urllib.request.urlopen("https://render.com/schema/render.yaml.json", timeout=20) as response:
+                  schema = json.load(response)
+          except Exception as exc:
+              print(f"::warning::Render's schema could not be fetched ({type(exc).__name__}); checked the structure only")
+              sys.exit(0)
+          try:
+              jsonschema.validate(blueprint, schema)
+          except jsonschema.ValidationError as exc:
+              print(f"::error::render.yaml does not match Render's schema: {exc.message} (at {list(exc.absolute_path)})")
+              sys.exit(1)
+          except Exception as exc:
+              print(f"::warning::Render's schema could not be applied ({type(exc).__name__}); checked the structure only")
+              sys.exit(0)
+          print("render.yaml matches Render's published schema")
+          EOF
   container:
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -18,12 +57,12 @@ jobs:
           python-version: "3.12"
       - name: Build the image
         run: docker build -t neuron-flow:ci .
-      - name: Start the service with a volume
+      - name: Start the service with a data disk (configured as in render.yaml's paid variant)
         run: |
           docker volume create nf-data
           docker run -d --name nf -p 8000:8000 \
             -e NEURON_FLOW_ACCESS_KEY="$ACCESS_KEY" \
-            -e RAILWAY_VOLUME_MOUNT_PATH=/var/data \
+            -e NEURON_FLOW_DATA_DIR=/var/data \
             -v nf-data:/var/data neuron-flow:ci
       - name: Submit cases over HTTP and wait for the results
         run: python -m examples.service_smoke_test --url http://127.0.0.1:8000 --key "$ACCESS_KEY" --state smoke.json

@@ -1,0 +1,33 @@
+# Render Blueprint: the Neuron Flow intake service (HTTP API + web page + the single Runner, one container).
+#
+# Create it once: Render Dashboard -> New -> Blueprint -> pick this repository -> Deploy Blueprint.
+# After that Render deploys `main` by itself, but only when the GitHub checks (tests, container check) pass.
+#
+# Free plan ($0): the service sleeps after 15 minutes without visitors and takes about a minute to wake up.
+# It has no persistent disk, so cases are lost whenever it sleeps, restarts or redeploys (the page warns).
+#
+# To keep cases (about $7.25 a month, a card is needed): change `plan` to 0.5c-512mb, then uncomment the
+# NEURON_FLOW_DATA_DIR variable and the `disk` block below. Make these changes here, not in the dashboard:
+# a Blueprint sync overwrites dashboard changes that conflict with this file.
+#
+# Leave NEURON_FLOW_LLM_PROVIDER, ANTHROPIC_API_KEY and SENTRY_DSN out of this file. Add them in the
+# dashboard (Environment tab) when needed; a sync keeps variables that this file does not define.
+services:
+  - type: web
+    name: neuron-flow
+    runtime: docker
+    plan: free
+    region: singapore
+    branch: main
+    autoDeployTrigger: checksPass
+    healthCheckPath: /healthz
+    maxShutdownDelaySeconds: 30
+    envVars:
+      - key: NEURON_FLOW_ACCESS_KEY
+        generateValue: true  # a random 256-bit key: copy it from the Environment tab to open the page
+      # - key: NEURON_FLOW_DATA_DIR
+      #   value: /var/data
+    # disk:
+    #   name: neuron-flow-data
+    #   mountPath: /var/data
+    #   sizeGB: 1

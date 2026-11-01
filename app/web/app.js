@@ -253,7 +253,8 @@
     else setPill("pill-ai", "AI: " + aiLabel(ai), "ok");
     const storage = status.storage || {};
     if (storage.persistent) setPill("pill-storage", storage.kind === "railway_volume" ? "ที่เก็บถาวร: Railway volume" : "ที่เก็บถาวร", "ok");
-    else setPill("pill-storage", "ที่เก็บชั่วคราว: รีสตาร์ทแล้วเคสหาย", "warn", "ยังไม่ได้ต่อ volume");
+    else setPill("pill-storage", "ที่เก็บชั่วคราว: เคสหายเมื่อระบบหลับหรือรีสตาร์ท", "warn",
+      "ยังไม่มีดิสก์ถาวร (Render แบบฟรีไม่มีดิสก์) ระบบยังทำงานครบทุกขั้น แต่เคสเก่าจะหายเมื่อระบบหลับหรือรีสตาร์ท");
     const limits = status.limits || {};
     if (limits.summary_max_chars) $("case-summary").maxLength = limits.summary_max_chars;
     if (limits.summary_min_chars) $("summary-hint").textContent = `อย่างน้อย ${limits.summary_min_chars} ตัวอักษร`;
