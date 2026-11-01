@@ -239,6 +239,9 @@ dashboard.
 | E | Planner pattern (B), MCP server, second domain with zero Core changes | Open |
 | — | `study_guide.v1`: first-response study guide ([design_philosophy.md](design_philosophy.md)) | Proposed |
 
+The order of the remaining work, with tasks, acceptance checks and owner decisions for each step, is in
+[ROADMAP.md](ROADMAP.md).
+
 ## 11. Limits
 
 - This is a single-machine runtime. Its child processes isolate failures; they are **not** a sandbox for

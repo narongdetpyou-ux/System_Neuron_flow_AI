@@ -93,6 +93,8 @@ most 1 MiB. The agent `version` is frozen into each job, so an old job refuses t
 
 | Document | What it is for |
 |---|---|
+| [Roadmap](docs/ROADMAP.md) | What to build next, in order: tasks, acceptance checks, owner tests and owner decisions |
+| [CLAUDE.md](CLAUDE.md) | How Claude Code works on this repo: working with the owner, rules, checks, definition of done |
 | [Design philosophy](docs/design_philosophy.md) | The owner's principles, the first-response rule and study resources (mostly Thai) |
 | [Architecture](docs/architecture.md) | Layers, Core constraints, how AI fits, decisions (ADRs), milestones and their status |
 | [case_triage v1](docs/case_triage_pilot.md) | The deterministic keyword rules |
