@@ -9,8 +9,8 @@ jobs:
       matrix:
         python-version: ["3.10","3.12"]
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: ${{ matrix.python-version }}
       - run: python -m unittest discover -s tests -v
@@ -22,7 +22,7 @@ jobs:
         run: python -m app.eval.triage_shadow_eval --summary "$GITHUB_STEP_SUMMARY" --out shadow-eval-mock.json
       - name: Keep the scorecard
         if: matrix.python-version == '3.12'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: shadow-eval-mock
           path: shadow-eval-mock.json
