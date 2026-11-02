@@ -209,9 +209,10 @@ Notes for cloud sessions (claude.ai/code):
   - The Render service `neuron-flow` exists and is live at https://neuron-flow.onrender.com (free plan,
     first deploy 2026-11-01). Use the Render connector to read its deploys, events and logs; this
     session's network may not reach `onrender.com` or `render.com` directly.
-  - The web page's chat layout from the owner's "Nocturne" mockup (PR #18, roadmap 1.6). Parts of the
-    mockup that would break the rules in §3 (key and provider fields, editing steps, a "never ask" policy)
-    are shown read-only or left out on purpose; see intake_queue.md, "หน้าเว็บ: ใช้อย่างไร".
+  - The web page's chat layout from the owner's "Nocturne" mockup (PR #18, roadmap 1.6; live and
+    owner-tested on 2026-11-03). Parts of the mockup that would break the rules in §3 (key and provider
+    fields, editing steps, a "never ask" policy) are shown read-only or left out on purpose; see
+    intake_queue.md, "หน้าเว็บ: ใช้อย่างไร".
 - **Not done yet:**
   - Real Claude has never been run.
   - Review decisions and per-person identity (Milestone C) are not built.

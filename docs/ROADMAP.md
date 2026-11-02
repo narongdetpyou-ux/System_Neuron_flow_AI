@@ -82,7 +82,7 @@ Marks: ✅ done · 🟡 built or partly checked (the status says what is left) �
 | 1.3 | Cancel a job that is still queued | ⬜ | — |
 | 1.4 | Backup, restore and retention | ⬜ | D1 = paid (disk) |
 | 1.5 | Docs truth checks in CI | ⬜ optional | — |
-| 1.6 | New look for the web page from the owner's mockup: chat intake with a confirm step, Flow and Trace, read-only settings | 🟡 built in PR #18; the owner checks it on Render after the merge | — |
+| 1.6 | New look for the web page from the owner's mockup: chat intake with a confirm step, Flow and Trace, read-only settings | ✅ PR #18, merged and deployed 2026-11-03; the owner reported the owner test passed on the live page | — |
 | 2.1 | Personal access tokens and roles (replaces the shared key) | ⬜ | — |
 | 2.2 | Review ledger and decisions API | ⬜ | 2.1 |
 | 2.3 | Linked phase-B job on approval | ⬜ | 2.2 |
@@ -360,6 +360,8 @@ decisions would vanish on every sleep.
   (rules 4–7 in CLAUDE.md); free conversation and `/test`, `/eval`, `/backup` commands (Phase 4 and 1.4);
   live per-step progress (P2, see "Not now"); pause and cancel buttons (1.3 cancels queued jobs only).
 - **Done when:** the owner opens the live page after the merge and the owner test below passes.
+- **Status (2026-11-03):** done. PR #18 was merged at 01:43 Bangkok time, the checks on `main` passed at
+  01:45, and the owner reported that the owner test passed on the live page at 01:56.
 - **Owner test (ไทย):**
   1. เปิดหน้าเว็บ ใส่รหัสเข้าใช้ ต้องเห็น 3 ส่วน: รายการเคส (ซ้าย) แชท (กลาง) และ Flow (ขวา)
   2. กดตัวอย่าง "ถูกหักเงินซ้ำ" แล้วกด Enter ต้องขึ้นการ์ด "รอยืนยัน" ที่มี 4 ขั้นตอน และยังไม่มีเคสใหม่ในรายการซ้าย
@@ -821,3 +823,4 @@ workflow types.
 - 2026-11-01: first version, written before development moved to Claude Code.
 - 2026-11-03: added 1.6, the new look for the web page, because the owner asked for it with a design
   mockup; noted in 4.4 what the chat layout already covers.
+- 2026-11-03: 1.6 marked done after the owner tested the new page on Render.
