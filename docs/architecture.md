@@ -141,6 +141,8 @@ Built in round 2 (full reference in [intake_queue.md](intake_queue.md)):
 - `GET /v1/jobs?limit=&before=` lists jobs newest first; `GET /v1/status` shows the Runner heartbeat, queue
   counts, AI mode, storage and each workflow's steps (ids, agents, order, retry budget, time limit; never
   params); `GET /healthz` is the unauthenticated liveness check.
+- Every response carries `X-Request-Id` (the client's id when it is safe to log, otherwise a new one). The
+  same id ends the access log line and is stored in a new job's `job.queued` event (roadmap 1.2).
 
 Planned (Milestone C):
 - `POST /v1/reviews/{review_id}/decisions` takes `APPROVE`/`REJECT`, the reviewer from the authenticated
@@ -165,7 +167,7 @@ app/boot.py                    process 1 of the image: takes the data folder, dr
 app/settings.py, app/serve.py  environment settings; the launcher (API + supervised Runner in one container)
 Dockerfile, render.yaml        the container and the Render Blueprint (railway.json kept for Railway)
 examples/                      case_triage_demo, case_triage_shadow_demo, sentry_smoke_test, service_smoke_test
-tests/                         107 tests: core, triage v1/v2, AI gateway, scorecard, Sentry, API, queue, Runner, HTTP
+tests/                         110 tests: core, triage v1/v2, AI gateway, scorecard, Sentry, API, queue, Runner, HTTP
 .github/workflows/             core-tests, service-container, sentry-smoke, shadow-eval-claude (manual)
 .github/scripts/               check_render_blueprint.py: render.yaml structure, build filter, Render's schema
 planned: review ledger and artifact store, app/domains/study_guide/

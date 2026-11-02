@@ -161,7 +161,7 @@ class QueueStore:
     # -- admission (API) ---------------------------------------------------------------------
 
     def admit(self, *, job_id, idempotency_key, request_fingerprint, workflow_type, input, max_queued,
-              now=None):
+              request_id=None, now=None):
         """Insert a QUEUED job, or return the job that already holds this idempotency key.
 
         Returns ``(job, created)``. The caller compares fingerprints for a reused key.
@@ -179,7 +179,10 @@ class QueueStore:
                 " created_at, updated_at) VALUES(?,?,?,?,?,?,?,?)",
                 (job_id, idempotency_key, request_fingerprint, workflow_type, encode(input).decode(), QUEUED,
                  now, now))
-            self._event(db, job_id, "job.queued", {"workflow_type": workflow_type}, now)
+            queued = {"workflow_type": workflow_type}
+            if request_id:
+                queued["request_id"] = request_id
+            self._event(db, job_id, "job.queued", queued, now)
             return self._select(db, job_id), True
 
     # -- Runner ------------------------------------------------------------------------------
@@ -287,6 +290,13 @@ class QueueStore:
         events = [{"seq": row["seq"], "kind": row["kind"], "at": iso(row["at"]),
                    "payload": json.loads(row["payload"])} for row in rows[:limit]]
         return events, len(rows) > limit
+
+    def admitting_request_id(self, job_id):
+        """The request id stored in the job's ``job.queued`` event, or ``None`` (older jobs have none)."""
+        with self._connect() as db:
+            row = db.execute("SELECT payload FROM job_events WHERE job_id=? AND kind='job.queued' ORDER BY seq LIMIT 1",
+                             (job_id,)).fetchone()
+        return json.loads(row["payload"]).get("request_id") if row is not None else None
 
     def counts(self):
         with self._connect() as db:
