@@ -20,7 +20,7 @@ differs, this file and architecture.md win.
   - AI ให้ความเห็นที่สอง
   - ถ้าสองฝ่ายเห็นไม่ตรงกัน เคสจะถูกยกให้คนดูก่อน
 - ถ้าเครื่องดับกลางทาง ระบบทำต่อได้ ส่งซ้ำก็ไม่เกิดงานซ้ำ
-- ผ่านชุดทดสอบอัตโนมัติ 116 ข้อ และเปิดใช้ออนไลน์บน Render แล้ว
+- ผ่านชุดทดสอบอัตโนมัติ 119 ข้อ และเปิดใช้ออนไลน์บน Render แล้ว
 - หน้าเว็บเป็นแบบแชท: พิมพ์เคส ดูขั้นตอนก่อนส่ง กดยืนยัน แล้วติดตามใน Flow และประวัติเหตุการณ์ (ขั้น 1.6)
 
 **ลำดับต่อจากนี้** แต่ละขั้นจบด้วยสิ่งที่คุณลองเองได้
@@ -81,7 +81,7 @@ Marks: ✅ done · 🟡 built or partly checked (the status says what is left) �
 | 1.2 | Request ids to follow a request through the logs | ✅ PR #22 | — |
 | 1.3 | Cancel a job that is still queued | ✅ PR #23 | — |
 | 1.4 | Backup, restore and retention | ⬜ | D1 = paid (disk) |
-| 1.5 | Docs truth checks in CI | ⬜ optional | — |
+| 1.5 | Docs truth checks in CI | ✅ PR #24 | — |
 | 1.6 | New look for the web page from the owner's mockup: chat intake with a confirm step, Flow and Trace, read-only settings | ✅ PR #18, merged and deployed 2026-11-03; the owner reported the owner test passed on the live page | — |
 | 2.1 | Personal access tokens and roles (replaces the shared key) | ⬜ | — |
 | 2.2 | Review ledger and decisions API | ⬜ | 2.1 |
@@ -846,3 +846,5 @@ workflow types.
   replaced too, so the access-line privacy rules hold.
 - 2026-11-03: 1.3 done in PR #23. The page asks for a second click before it cancels, because a
   cancel cannot be undone; the 409 body names the current state as `job_status`.
+- 2026-11-03: 1.5 done in PR #24. Besides links and the README count, the check also covers `#anchors`
+  and the test count stated in CLAUDE.md, architecture.md, intake_queue.md and this file.

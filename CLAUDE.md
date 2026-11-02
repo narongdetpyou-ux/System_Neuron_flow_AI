@@ -105,7 +105,7 @@ If a task seems to need breaking a rule:
 ## 4. Checking your work
 
 ```bash
-python -m unittest discover -s tests -v        # all tests (116 on 2026-11-03); Python 3.10–3.13
+python -m unittest discover -s tests -v        # all tests (119 on 2026-11-03); Python 3.10–3.13
 python -m examples.case_triage_demo            # v1 rules, one synthetic case
 python -m examples.case_triage_shadow_demo     # v2 shadow mode with the offline mock AI
 python -m app.eval.triage_shadow_eval          # scorecard on 61 synthetic cases
@@ -143,6 +143,8 @@ Notes for cloud sessions (claude.ai/code):
   - the status in architecture.md (§5, §8–§10);
   - the feature doc;
   - the README (test count, docs table);
+  - the test count in every place `tests/test_docs_truth.py` lists, and working relative links: that
+    test fails CI otherwise (roadmap 1.5);
   - the status table in docs/ROADMAP.md.
   - Anything the owner uses also gets a Thai overview section.
 - **Safety.** No secrets, no real personal data, no unmeasured claims.
@@ -209,6 +211,7 @@ Notes for cloud sessions (claude.ai/code):
   - Neutral telemetry phase names, the one planned Core change (PR #21, roadmap 1.1).
   - Request ids from the access log to the job record (PR #22, roadmap 1.2).
   - Cancel a job that is still queued, from the API and the page (PR #23, roadmap 1.3).
+  - Docs truth checks: links, anchors and stated test counts are tested (PR #24, roadmap 1.5).
   - The Render service `neuron-flow` exists and is live at https://neuron-flow.onrender.com (free plan,
     first deploy 2026-11-01). Use the Render connector to read its deploys, events and logs; this
     session's network may not reach `onrender.com` or `render.com` directly.
