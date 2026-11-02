@@ -76,7 +76,7 @@ Marks: ✅ done · 🟡 built or partly checked (the status says what is left) �
 | 0.3 | First scorecard run with real Claude | ⬜ owner (API key, D2) | — |
 | 0.4 | Claude for the online page | ⬜ optional | 0.1, 0.3 |
 | 0.5 | Skip Render deploys for docs-only commits | 🟡 built; confirm in Render's events after the merge | 0.1 |
-| 0.6 | Open Dependabot PRs #1–#5 | ⬜ | — |
+| 0.6 | Open Dependabot PRs #1–#5 | 🟡 #1–#5 closed (they edit files removed in PR #6); PR #20 moves the current workflows to the Node 24 versions; done when #20 is merged | — |
 | 1.1 | Neutral telemetry phase names (the one planned Core change) | ⬜ | — |
 | 1.2 | Request ids to follow a request through the logs | ⬜ | — |
 | 1.3 | Cancel a job that is still queued | ⬜ | — |
@@ -254,6 +254,20 @@ decisions would vanish on every sleep.
   - merge them one at a time, only with the owner's OK.
 - **#5** bumps `tomli` in `requirements-build.txt`, a file that no longer exists on `main`. Close it with a
   comment.
+- **Status (2026-11-03): the plan above did not fit, so it changed.**
+  - All five PRs (opened 2026-10-30) edit files that PR #6 removed: `ci.yml`, `release.yml`,
+    `approved-publication.yml` and `requirements-build.txt`. There is no `.github/dependabot.yml` any
+    more, so Dependabot cannot rebase them onto today's workflows. They were closed with a comment.
+  - The real need was still there: CI warned that `actions/checkout@v4`, `actions/setup-python@v5` and
+    `actions/upload-artifact@v4` target the deprecated Node.js 20 and are forced onto Node.js 24.
+  - PR #20 moves all four current workflows to `checkout@v7`, `setup-python@v7` and
+    `upload-artifact@v7`. From the release notes, the breaking changes are: the Node 24 runtime (runner
+    2.327.1 or newer; GitHub-hosted runners qualify); checkout's safer defaults for `pull_request_target`
+    and `workflow_run` (not used here); setup-python v7 removed the `pip-install` input (not used here);
+    upload-artifact v7 adds optional unzipped uploads (the default is unchanged). `download-artifact` is
+    no longer used, so #1 had nothing to replace.
+  - Not done, on purpose: a new `.github/dependabot.yml`. It would bring a PR for every new action
+    version; whether to turn that on is the owner's choice.
 
 ---
 
@@ -824,3 +838,5 @@ workflow types.
 - 2026-11-03: added 1.6, the new look for the web page, because the owner asked for it with a design
   mockup; noted in 4.4 what the chat layout already covers.
 - 2026-11-03: 1.6 marked done after the owner tested the new page on Render.
+- 2026-11-03: 0.6 changed: the Dependabot PRs targeted removed files, so they were closed and replaced by
+  one PR that moves the current workflows to the Node 24 action versions.

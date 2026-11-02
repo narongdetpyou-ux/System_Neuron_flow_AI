@@ -23,8 +23,8 @@ jobs:
       LIMIT: ${{ inputs.limit }}
       ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
       - name: Check the API key is configured
@@ -40,7 +40,7 @@ jobs:
           python -m app.eval.triage_shadow_eval --summary "$GITHUB_STEP_SUMMARY" --out shadow-eval-claude.json "${ARGS[@]}"
       - name: Keep the scorecard
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: shadow-eval-claude
           path: shadow-eval-claude.json
