@@ -60,6 +60,21 @@ class CoreLogicTests(unittest.TestCase):
         self.assertTrue(candidate_gate([record],[dict(record)])["accepted"])
         self.assertFalse(candidate_gate([record],[dict(record,outcome="WRONG")])["accepted"])
         self.assertEqual(route_variant("x"),route_variant("x"))
+    def test_telemetry_phases_are_step_ids(self):
+        # Roadmap 1.1: every agent step is recorded under its own step id; no legacy names remain.
+        with tempfile.TemporaryDirectory() as temp:
+            telemetry=Telemetry()
+            with Runtime(temp,agents=registry(),telemetry=telemetry) as rt:
+                self.assertEqual(rt.run(rt.submit(workflow())["job_id"])["status"],"SUCCEEDED")
+                rt.submit({"job_id":"bad_job","input":{},"steps":[{"id":"doomed","agent":"permanent","max_attempts":2}]})
+                self.assertEqual(rt.run("bad_job")["status"],"FAILED")
+            phases=telemetry.snapshot()["phases"]
+            self.assertEqual(phases["first"]["total_count"],1)
+            self.assertEqual(phases["second"]["total_count"],1)
+            self.assertEqual((phases["doomed"]["total_count"],phases["doomed"]["errors_retained"]),(1,1))  # permanent: no retry
+            self.assertIn("contract_validation",phases)
+            self.assertNotIn("agent",phases)
+            self.assertFalse({"validation","calculation","verification"} & set(phases))
     def test_telemetry_and_manifest(self):
         telemetry=Telemetry()
         telemetry.record("generic_phase",1)

@@ -46,7 +46,7 @@ Since round 2, cases can also come in from outside, through an HTTP API or a Tha
 
 | Part | Where | Status |
 |---|---|---|
-| Core runtime: DAG workflows, bounded child processes, retries, restart recovery, verified receipts | `neuron_flow/` | Working; unchanged since extraction |
+| Core runtime: DAG workflows, bounded child processes, retries, restart recovery, verified receipts | `neuron_flow/` | Working; one planned fix since extraction (telemetry phase names, PR #21) |
 | Case triage v1: deterministic keyword rules | `app/domains/case_triage/agents.py`, `workflow.py` | Working |
 | Case triage v2: shadow mode with AI second opinion | `app/domains/case_triage/shadow_*.py` | Working with the offline mock AI; Claude path tested against a fake API, **not yet run against the real Claude API** |
 | AI gateway: versioned prompt, mock and Claude providers | `app/llm/` | Working (see above) |
@@ -74,7 +74,7 @@ forgets its cases when it sleeps or redeploys; a paid plan with a disk keeps the
 
 **Locally (Python 3.10+):**
 ```bash
-python -m unittest discover -s tests -v        # 105 tests
+python -m unittest discover -s tests -v        # 107 tests
 python -m examples.case_triage_demo            # v1 rules, one synthetic case
 python -m examples.case_triage_shadow_demo     # v2 shadow mode, three synthetic cases (offline mock AI)
 python -m app.eval.triage_shadow_eval          # scorecard on 61 synthetic cases

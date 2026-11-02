@@ -305,8 +305,9 @@ class Soma:
                 if response.get("finished", float("inf")) - busy["started"] >= step["timeout_s"]:
                     raise TimeoutError(f"Agent exceeded {step['timeout_s']} seconds")
                 if self.telemetry is not None:
-                    phase = {"csv_validate": "validation", "csv_calculate": "calculation", "csv_verify": "verification"}.get(step['agent'], 'agent')
-                    self.telemetry.record(phase, max(0, (response.get('finished', time.monotonic()) - busy['started']) * 1000),
+                    # The step id is the phase: spec validation already restricts it to model.NAME,
+                    # the same identifier rule that Telemetry.record enforces.
+                    self.telemetry.record(step["id"], max(0, (response.get('finished', time.monotonic()) - busy['started']) * 1000),
                                           'ERROR' if response.get('kind') == 'error' else 'OK')
                 if response.get("kind") == "error":
                     self._failure(spec, step, message["attempt"], response["error"], response["retryable"])

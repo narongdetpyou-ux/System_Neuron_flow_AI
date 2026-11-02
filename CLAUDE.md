@@ -68,8 +68,8 @@ Read in this order when you need depth:
 ## 3. Rules you must not break
 
 1. **Core stays unchanged.**
-   - `neuron_flow/` has not changed since commit `09100f7`. The only planned Core change is the telemetry
-     fix (ROADMAP 1.1), with tests.
+   - `neuron_flow/` has changed once since commit `09100f7`: the planned telemetry fix (ROADMAP 1.1,
+     PR #21), with tests. No other Core change is planned; any new one needs an ADR first.
    - Core never imports `app.*`. Dependencies point one way: interface → services → domain → Core.
 2. **Only the Runner opens `Runtime`** (ADR-001). The API and every other process stay away from Core and
    its SQLite files.
@@ -105,7 +105,7 @@ If a task seems to need breaking a rule:
 ## 4. Checking your work
 
 ```bash
-python -m unittest discover -s tests -v        # all tests (105 on 2026-11-03); Python 3.10–3.13
+python -m unittest discover -s tests -v        # all tests (107 on 2026-11-03); Python 3.10–3.13
 python -m examples.case_triage_demo            # v1 rules, one synthetic case
 python -m examples.case_triage_shadow_demo     # v2 shadow mode with the offline mock AI
 python -m app.eval.triage_shadow_eval          # scorecard on 61 synthetic cases
@@ -206,6 +206,7 @@ Notes for cloud sessions (claude.ai/code):
   - Docs refresh and the design philosophy (PR #10).
   - B: intake API, queue, Runner and web page (PR #11).
   - The Claude Code session hook (PR #12).
+  - Neutral telemetry phase names, the one planned Core change (PR #21, roadmap 1.1).
   - The Render service `neuron-flow` exists and is live at https://neuron-flow.onrender.com (free plan,
     first deploy 2026-11-01). Use the Render connector to read its deploys, events and logs; this
     session's network may not reach `onrender.com` or `render.com` directly.
