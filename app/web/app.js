@@ -1057,7 +1057,7 @@
     const p = event.payload || {};
     const kind = event.kind || "";
     const base = { t: clockTime(event.at), raw: `${kind} ${JSON.stringify(p)}` };
-    if (kind === "job.queued") return { ...base, lv: "info", msg: "รับเข้าคิว", k: p.workflow_type };
+    if (kind === "job.queued") return { ...base, lv: "info", msg: "รับเข้าคิว", k: [p.workflow_type, p.request_id].filter(Boolean).join(" · ") };
     if (kind === "job.claimed") return { ...base, lv: "run", msg: `ตัวรันงานหยิบเคส (ครั้งที่ ${p.claim})` };
     if (kind === "job.recovering") return { ...base, lv: "warn", msg: `ทำต่อหลังระบบเปิดใหม่ (ครั้งที่ ${p.claim})` };
     if (kind.startsWith("step.")) {
