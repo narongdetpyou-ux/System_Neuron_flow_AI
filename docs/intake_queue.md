@@ -1,6 +1,6 @@
 # Intake API, job queue, Runner and web page (round 2, Milestone B)
 
-**Status:** built in PR #11 and tested offline (110 tests on 2026-11-03, including killing the Runner
+**Status:** built in PR #11 and tested offline (116 tests on 2026-11-03, including killing the Runner
 mid-step). The container build is checked on every push by *Actions → Service container*. Live on
 Render's free plan since 2026-11-01 (`render.yaml`). Railway was the first choice, but it has paused new
 sign-ups since 22 Oct 2026 after a security incident; `railway.json` stays in the repository for later.
@@ -59,16 +59,17 @@ Design principles: [design_philosophy.md](design_philosophy.md).
 1. **พิมพ์เคส** ปัญหาของลูกค้าเป็นภาษาธรรมดาในช่องด้านล่าง (หรือกดตัวอย่าง) แล้วกด Enter หรือปุ่ม "ส่ง" (Shift+Enter = ขึ้นบรรทัดใหม่) อยากตั้งรหัสเคสเองให้กด "# รหัสเคส" ไม่ใส่ระบบตั้งให้
 2. **ดูก่อนส่ง** ระบบยังไม่ส่ง แต่แสดงการ์ด "รอยืนยัน" ว่าจะทำขั้นตอนอะไรบ้าง แต่ละขั้นรอได้นานเท่าไร และลองได้กี่ครั้ง
 3. **ยืนยัน** กด "ยืนยันและส่ง" เคสจึงเข้าคิว ("แก้ข้อความ" เอาข้อความกลับไปแก้, "ยกเลิก" ทิ้งร่างนี้)
-4. **ระหว่างทำงาน** หน้าเว็บบอกว่า "กำลังทำงาน" ทั้งเคส เพราะแกนระบบ (Core) ยังไม่ส่งความคืบหน้าทีละขั้น เมื่อเสร็จ ทุกขั้นจะขึ้น ✓ หรือ ✕ พร้อมจำนวนครั้งที่ลอง
-5. **อ่านผล** ระบบเสนอคิวไหน ความสำคัญ ความเห็นของกฎและของ AI และเหตุผลที่บอกคนตรวจ ผลสุดท้ายคือ "รอคนตรวจ" เสมอ
-6. **กลับมาดูทีหลัง** ลิงก์ในแถบที่อยู่มีรหัสงาน (`#job_…`) เปิดลิงก์เดิมจะกลับมาที่เคสนั้น (ถ้าเคสยังไม่ถูกล้าง)
+4. **เปลี่ยนใจก่อนเริ่มทำ** ระหว่างที่เคสยัง "รอคิว" จะมีปุ่ม "ยกเลิกเคสนี้" กดแล้วระบบถามยืนยันอีกครั้ง ("ยืนยันยกเลิก" หรือ "ไม่ยกเลิก") เพราะยกเลิกแล้วเอาคืนไม่ได้ เคสที่ยกเลิกจะขึ้น "ยกเลิกแล้ว" ไม่มีขั้นไหนถูกรัน และ AI ไม่ได้เห็นเคสนั้น ถ้าตัวรันงานหยิบเคสไปทำแล้ว ปุ่มจะหายไป (แกนระบบหยุดงานกลางทางไม่ได้) ถ้าต้องการส่งเคสเดิมอีก ให้ส่งเป็นเคสใหม่
+5. **ระหว่างทำงาน** หน้าเว็บบอกว่า "กำลังทำงาน" ทั้งเคส เพราะแกนระบบ (Core) ยังไม่ส่งความคืบหน้าทีละขั้น เมื่อเสร็จ ทุกขั้นจะขึ้น ✓ หรือ ✕ พร้อมจำนวนครั้งที่ลอง
+6. **อ่านผล** ระบบเสนอคิวไหน ความสำคัญ ความเห็นของกฎและของ AI และเหตุผลที่บอกคนตรวจ ผลสุดท้ายคือ "รอคนตรวจ" เสมอ
+7. **กลับมาดูทีหลัง** ลิงก์ในแถบที่อยู่มีรหัสงาน (`#job_…`) เปิดลิงก์เดิมจะกลับมาที่เคสนั้น (ถ้าเคสยังไม่ถูกล้าง)
 
 แท็บ "ตั้งค่า" **ดูอย่างเดียว**: ขั้นตอนและตัวทำงาน (agent) ของแต่ละประเภทงาน, AI ที่ใช้อยู่และวิธีเปลี่ยนใน Render, กติกาการตัดสิน, ที่เก็บข้อมูลและขีดจำกัด หน้าเว็บแก้ค่าเหล่านี้ไม่ได้โดยตั้งใจ: คีย์อยู่ใน Render เท่านั้น ตัวทำงานเปลี่ยนได้ผ่าน PR เท่านั้น และคนต้องเป็นผู้ตัดสินเสมอ
 
 ส่วนที่อยู่ในแบบ (mockup) แต่ยังไม่มีในระบบ:
 - ช่องคุยถาม-ตอบทั่วไป และคำสั่ง `/test` `/eval` `/backup` → ขั้น 4 และ 1.4 ในแผน (ตอนนี้ช่องแชทรับเฉพาะข้อความเคส)
 - ไฟบอกว่ากำลังทำขั้นไหนระหว่างรัน → ยังไม่อยู่ในแผนตอนนี้ (P2) จะพิจารณาอีกครั้งพร้อมระบบติดตามเส้นทางงาน (ขั้น 5)
-- ปุ่มหยุด/ยกเลิกงาน → ขั้น 1.3 (ยกเลิกได้เฉพาะเคสที่ยังรอคิว), ปุ่มอนุมัติ/ไม่อนุมัติ → ขั้น 2.4
+- ปุ่มหยุดงานที่กำลังทำอยู่ → ทำไม่ได้ เพราะแกนระบบหยุดงานกลางทางไม่ได้ (ยกเลิกได้เฉพาะเคสที่ยังรอคิว ทำแล้วในขั้น 1.3), ปุ่มอนุมัติ/ไม่อนุมัติ → ขั้น 2.4
 - ช่องใส่ API key, เปลี่ยน AI, ตั้งจำนวนครั้งลองใหม่, ตัวเลือก "ไม่ต้องถาม" และปุ่ม "แก้ไข JSON" → จะไม่ทำ เพราะขัดกฎของโปรเจกต์ (CLAUDE.md ข้อ 4–7)
 
 ### สิ่งที่ต้องทำเพื่อเปิดใช้บน Render (ครั้งแรก ทำครั้งเดียว)
@@ -157,10 +158,17 @@ container: app.boot (root) ─becomes─► tini ─► python -m app.serve
 
 ```text
 QUEUED ──► RUNNING ──► REVIEW_REQUIRED      the proposal waits for a person (every case_triage job)
-                  ├──► COMPLETED            a workflow without a review step
-                  ├──► FAILED               see failure.reason
-                  └──► DELIVERY_FAILED      all steps done, but the report conflicted with an existing one
+   │              ├──► COMPLETED            a workflow without a review step
+   │              ├──► FAILED               see failure.reason
+   │              └──► DELIVERY_FAILED      all steps done, but the report conflicted with an existing one
+   └──► CANCELLED                           withdrawn before the Runner claimed it; never reached Core
 ```
+
+`CANCELLED` (roadmap 1.3) is reachable only from `QUEUED`. The check and the update run in one
+`BEGIN IMMEDIATE` transaction, the same lock `claim_next` takes, so a claim and a cancel of the same job can
+never both win. A cancelled job keeps its idempotency key: sending the same submission again returns the
+cancelled job, not a new one. The `job.cancelled` event stores the request id of the cancel request. Core
+cannot pause or stop a running job, so `RUNNING` jobs cannot be cancelled.
 
 `failure.reason` is one of `step_failed`, `configuration_changed`, `runner_attempts_exhausted`,
 `runtime_error`, `delivery_failed`, `unknown_workflow_type`.
@@ -205,6 +213,7 @@ app runs, carries an `X-Request-Id` header:
 | `GET /v1/jobs?limit=20&before=<seq>` | Newest first; `next_before` is the next cursor | 200 | 400, 401 |
 | `GET /v1/jobs/{job_id}` | Status, the step plan frozen at claim (`plan`, `null` while queued), reviewer proposal, step timeline, AI provenance, receipt hash, the admitting `request_id` | 200 | 401, 404 |
 | `GET /v1/jobs/{job_id}/events?after=<seq>&limit=50` | History in bounded pages (`limit` 1–100) | 200 | 400, 401, 404 |
+| `POST /v1/jobs/{job_id}/cancel` | Withdraw a job that is still `QUEUED`. The body is empty or `{}`. Returns the job view plus `changed` (`false` when it was already cancelled) | 200 | 400, 401, 404, 409 `not_cancellable` (with `job_status`), 415 |
 
 ```bash
 curl -s https://<your-service>.onrender.com/v1/jobs \
@@ -227,7 +236,7 @@ Error bodies look like `{"error": "<code>", "message": "<English text>"}`. Codes
 `idempotency_conflict` (with the existing `job_id`), `queue_full`, `rate_limited` and
 `too_many_attempts` (with `retry_after_s` and a `Retry-After` header), `unauthorized`,
 `access_key_not_configured`, `body_too_large`, `unsupported_media_type`, `length_required`,
-`invalid_parameter`, `job_not_found`, `method_not_allowed`, `not_found`, `internal_error`.
+`invalid_parameter`, `job_not_found`, `not_cancellable`, `method_not_allowed`, `not_found`, `internal_error`.
 
 ## What proves it (P0 gates for Milestone B)
 
@@ -242,6 +251,7 @@ Error bodies look like `{"error": "<code>", "message": "<English text>"}`. Codes
 | Delivery conflicts get their own status | `test_a_delivery_conflict_gets_its_own_status` |
 | Changed settings never finish an interrupted job silently | `test_changed_ai_settings_never_finish_an_interrupted_job_silently` |
 | One request can be followed from the access line to the job record; unsafe client ids are replaced and never logged (roadmap 1.2) | `test_service_http`: `test_request_id_round_trips_and_follows_a_job`, `test_every_response_gets_a_fresh_id_when_none_is_sent`, `test_unsafe_request_ids_are_replaced_and_never_logged` |
+| A queued job can be withdrawn; a claim and a cancel never both win; a cancelled job never reaches Core (roadmap 1.3) | `test_service_api.CancelTests` (6 tests, including 150 claim-versus-cancel races) |
 | The access key never appears in responses, stored files or logs | `test_the_key_is_never_in_a_response_or_a_stored_file`, `test_the_service_starts_works_and_stops_cleanly`, CI container job |
 | The container runs without root, keeps data across a restart and stops cleanly | *Actions → Service container* (`examples/service_smoke_test.py`) |
 

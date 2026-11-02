@@ -11,14 +11,14 @@
  * the page knows only that it is running; each step's result appears when the case finishes. */
 (function () {
   const KEY_STORAGE = "neuronflow.accessKey";
-  const TERMINAL = new Set(["REVIEW_REQUIRED", "COMPLETED", "FAILED", "DELIVERY_FAILED"]);
+  const TERMINAL = new Set(["REVIEW_REQUIRED", "COMPLETED", "FAILED", "DELIVERY_FAILED", "CANCELLED"]);
   const CASE_ID = /^[A-Za-z0-9][A-Za-z0-9_-]{0,79}$/;
   const JOB_ID = /^job_[0-9a-f]{24}$/;
   const SVG_NS = "http://www.w3.org/2000/svg";
 
   const STATUS = {
     QUEUED: "รอคิว", RUNNING: "กำลังทำงาน", REVIEW_REQUIRED: "รอคนตรวจ", COMPLETED: "เสร็จแล้ว",
-    FAILED: "ไม่สำเร็จ", DELIVERY_FAILED: "บันทึกรายงานไม่สำเร็จ",
+    FAILED: "ไม่สำเร็จ", DELIVERY_FAILED: "บันทึกรายงานไม่สำเร็จ", CANCELLED: "ยกเลิกแล้ว",
   };
   const CATEGORY = { access: "เข้าระบบ / บัญชี", upload: "อัปโหลดไฟล์", billing: "การเงิน / การชำระเงิน", other: "เรื่องอื่น ๆ" };
   const QUEUE = {
@@ -122,6 +122,8 @@
     selectedId: null, job: null,
     draft: null,     // a case typed but not yet confirmed: { id, autoId, body, sending, error }
     last: null,      // the last case sent from this tab: { jobId, body } (for the "send again" test)
+    cancelAsk: null, // job id whose "cancel this case" button was pressed once and now asks to confirm
+    cancelling: false,
     trace: { jobId: null, events: [], after: 0, loading: false },
     traceFilter: "all",
     techOpen: false, howOpen: false,
@@ -367,6 +369,7 @@
       ["ไม่สำเร็จ", (queue.FAILED || 0) + (queue.DELIVERY_FAILED || 0), (queue.FAILED || queue.DELIVERY_FAILED) ? "err" : ""],
     ];
     if (queue.COMPLETED) items.push(["เสร็จแล้ว", queue.COMPLETED, ""]);
+    if (queue.CANCELLED) items.push(["ยกเลิกแล้ว", queue.CANCELLED, ""]);
     $("counts").replaceChildren(...items.map(([label, n, kind]) =>
       el("span", {}, [label + " ", el("span", { class: "n" + (kind ? " " + kind : ""), text: String(n || 0) })])));
   }
@@ -399,6 +402,7 @@
       return job.review_priority === "elevated" ? ["st-elevated", "รอคนตรวจ · ยกให้ดูก่อน", false] : ["st-review", "รอคนตรวจ", false];
     }
     if (job.status === "COMPLETED") return ["st-done", "เสร็จแล้ว", false];
+    if (job.status === "CANCELLED") return ["st-cancelled", "ยกเลิกแล้ว", false];
     return ["st-failed", STATUS[job.status] || job.status, false];
   }
 
@@ -604,7 +608,7 @@
 
   function statusTag(job) {
     const kind = { QUEUED: "tag-neutral", RUNNING: "tag-accent", REVIEW_REQUIRED: "tag-warn", COMPLETED: "tag-ok",
-      FAILED: "tag-err", DELIVERY_FAILED: "tag-err" }[job.status] || "tag-neutral";
+      FAILED: "tag-err", DELIVERY_FAILED: "tag-err", CANCELLED: "tag-neutral" }[job.status] || "tag-neutral";
     return el("span", { class: "tag " + kind }, [job.status === "RUNNING" ? el("span", { class: "dot blink" }) : null,
       STATUS[job.status] || job.status]);
   }
@@ -655,7 +659,7 @@
     if (state.job) {
       const job = state.job;
       return JSON.stringify([job.status, job.queue_position, job.claims, job.updated_at,
-        Boolean(state.last && state.last.jobId === job.job_id)]);
+        Boolean(state.last && state.last.jobId === job.job_id), state.cancelAsk === job.job_id, state.cancelling]);
     }
     const status = state.status || {};
     return JSON.stringify([status.storage, status.ai, defaultWorkflow(), Boolean(workflowInfo(defaultWorkflow()))]);
@@ -774,6 +778,7 @@
       case "REVIEW_REQUIRED": return "ทำครบทุกขั้นแล้ว ข้อเสนอด้านล่างรอคนตรวจ — AI ไม่มีสิทธิ์ตัดสินเอง";
       case "COMPLETED": return "ทำครบทุกขั้นแล้ว";
       case "DELIVERY_FAILED": return "ทำครบทุกขั้น แต่บันทึกรายงานไม่สำเร็จ";
+      case "CANCELLED": return "เคสนี้ถูกยกเลิกก่อนตัวรันงานหยิบไปทำ จึงไม่มีขั้นไหนถูกรัน และ AI ไม่ได้เห็นเคสนี้";
       default: return "เคสนี้ทำไม่สำเร็จ ดูเหตุผลด้านล่าง";
     }
   }
@@ -781,6 +786,7 @@
   function jobFoot(job) {
     if (job.status === "QUEUED") return [el("span", { class: "ok", text: "✓ บันทึกถาวรแล้ว" }), el("span", { class: "right", text: `รอลำดับที่ ${job.queue_position || "-"}` })];
     if (job.status === "RUNNING") return [el("span", { class: "ok", text: "✓ บันทึกถาวรแล้ว" }), el("span", { class: "right", text: "กำลังทำงาน…" })];
+    if (job.status === "CANCELLED") return [el("span", { text: `ยกเลิกเมื่อ ${clockTime(job.finished_at)}` }), el("span", { class: "right", text: "ไม่ได้รัน" })];
     const took = job.started_at && job.finished_at ? seconds(job.started_at, job.finished_at) : null;
     const done = job.status === "REVIEW_REQUIRED" || job.status === "COMPLETED";
     return [
@@ -872,6 +878,7 @@
         "กฎเดิมกับ AI กำลังวิเคราะห์คู่กัน ผลของแต่ละขั้นจะขึ้นเมื่อเคสเสร็จ หน้านี้อัปเดตเอง"]));
     }
     body.push(verdict(job), facts(job));
+    if (job.status === "QUEUED") body.push(cancelActions(job));
     if (state.last && state.last.jobId === job.job_id) {
       body.push(el("div", { class: "msg-actions" }, [
         el("button", { type: "button", class: "btn btn-secondary", dataset: { action: "resend" }, text: "ส่งซ้ำ (ทดสอบว่าไม่เกิดงานซ้ำ)" }),
@@ -886,6 +893,54 @@
     ];
   }
 
+  /* Cancelling cannot be undone, so the first press only asks; the second press sends it. Only a case that
+   * is still waiting has the button: once the Runner takes it, Core cannot stop it part-way. */
+  function cancelActions(job) {
+    if (state.cancelAsk !== job.job_id) {
+      return el("div", { class: "msg-actions" }, [
+        el("button", { type: "button", class: "btn btn-quiet", dataset: { action: "cancel-job" }, text: "ยกเลิกเคสนี้" }),
+        el("span", { class: "hint", text: "ยกเลิกได้เฉพาะตอนที่ยังรอคิว" }),
+      ]);
+    }
+    return el("div", { class: "msg-actions" }, [
+      el("span", { class: "hint", text: "ยกเลิกแล้วเอากลับคืนไม่ได้ ถ้าต้องการส่งเคสนี้อีก ให้ส่งเป็นเคสใหม่" }),
+      el("button", { type: "button", class: "btn btn-danger", dataset: { action: "cancel-job-confirm" }, disabled: state.cancelling,
+        text: state.cancelling ? "กำลังยกเลิก…" : "ยืนยันยกเลิก" }),
+      el("button", { type: "button", class: "btn btn-ghost", dataset: { action: "cancel-job-keep" }, disabled: state.cancelling, text: "ไม่ยกเลิก" }),
+    ]);
+  }
+
+  async function cancelJob() {
+    const job = state.job;
+    if (!job || state.cancelling) return;
+    state.cancelling = true;
+    renderThread();
+    let result;
+    try {
+      result = await call("POST", `/v1/jobs/${encodeURIComponent(job.job_id)}/cancel`, {});
+    } catch (_) {
+      result = null;
+    }
+    state.cancelling = false;
+    state.cancelAsk = null;
+    if (result && handleAccessProblem(result)) return;
+    if (result && result.status === 200) {
+      if (state.selectedId === job.job_id) state.job = result.data;  // no second "finished" toast from polling
+      toast(`ยกเลิกเคส ${job.case_id} แล้ว`);
+      refreshStatus();
+      await refreshQueue();
+    } else if (result && result.status === 409) {
+      toast("ตัวรันงานหยิบเคสนี้ไปทำแล้ว จึงยกเลิกไม่ได้ ระบบจะทำเคสนี้ต่อจนจบ");
+    } else {
+      toast("ยกเลิกไม่สำเร็จ ลองอีกครั้ง");
+    }
+    renderAll();
+    if (state.selectedId === job.job_id) {
+      clearTimeout(state.jobTimer);
+      await loadJob();
+    }
+  }
+
   // ---------- render: flow and trace (right) -----------------------------------------------
 
   function terminalTone(job, end) {
@@ -898,6 +953,7 @@
       case "COMPLETED": return ["done", "เสร็จแล้ว"];
       case "FAILED": return ["fail", "ไม่มีข้อเสนอ (ไม่สำเร็จ)"];
       case "DELIVERY_FAILED": return ["fail", "บันทึกรายงานไม่สำเร็จ"];
+      case "CANCELLED": return ["", "ยกเลิกแล้ว · ไม่มีขั้นไหนถูกรัน"];
       default: return ["", "คนตัดสิน · AI ไม่มีสิทธิ์ตัดสินเอง"];
     }
   }
@@ -961,6 +1017,7 @@
     scheduleEdges();
     if (!job) note.textContent = workflow ? "ขั้นตอนที่จะรันเมื่อกดยืนยัน" : `ขั้นตอนที่จะรันเมื่อส่งเคส (${defaultWorkflow()})`;
     else if (job.status === "QUEUED") note.textContent = "บันทึกถาวรแล้ว รอตัวรันงานหยิบไปทำตามลำดับ";
+    else if (job.status === "CANCELLED") note.textContent = "ยกเลิกก่อนเริ่มทำ ไม่มีขั้นไหนถูกรัน";
     else if (job.status === "RUNNING") note.textContent = "กำลังทำงาน — ระบบยังไม่ส่งความคืบหน้าทีละขั้นระหว่างรัน ผลของทุกขั้นจะขึ้นเมื่อเคสเสร็จ";
     else note.textContent = job.claims > 1 ? `ตัวรันงานหยิบเคสนี้ ${job.claims} ครั้ง (ทำต่อหลังระบบเปิดใหม่)` : "";
     renderStrip(plan, states);
@@ -979,7 +1036,7 @@
     const box = graph.getBoundingClientRect();
     if (!box.width || !box.height) return;
     const { nodes, edges, states } = state.graph;
-    const lit = (id) => id === "__start" ? Boolean(state.graph.job && state.graph.job.status !== "QUEUED")
+    const lit = (id) => id === "__start" ? Boolean(state.graph.job && state.graph.job.started_at)
       : Boolean(states && states.get(id) && states.get(id).state === "done");
     const paths = [];
     for (const [from, to] of edges) {
@@ -1004,6 +1061,7 @@
     let text = "";
     if (job && job.started_at) text = stopwatch(seconds(job.started_at, job.finished_at));
     else if (job && job.status === "QUEUED") text = "รอคิว";
+    else if (job && job.status === "CANCELLED") text = "ยกเลิกแล้ว";
     $("flow-time").textContent = text;
   }
 
@@ -1058,6 +1116,7 @@
     const kind = event.kind || "";
     const base = { t: clockTime(event.at), raw: `${kind} ${JSON.stringify(p)}` };
     if (kind === "job.queued") return { ...base, lv: "info", msg: "รับเข้าคิว", k: [p.workflow_type, p.request_id].filter(Boolean).join(" · ") };
+    if (kind === "job.cancelled") return { ...base, lv: "warn", msg: "ยกเลิกก่อนตัวรันงานหยิบไปทำ" };
     if (kind === "job.claimed") return { ...base, lv: "run", msg: `ตัวรันงานหยิบเคส (ครั้งที่ ${p.claim})` };
     if (kind === "job.recovering") return { ...base, lv: "warn", msg: `ทำต่อหลังระบบเปิดใหม่ (ครั้งที่ ${p.claim})` };
     if (kind.startsWith("step.")) {
@@ -1505,6 +1564,9 @@
       else if (action === "edit") editDraft();
       else if (action === "cancel") cancelDraft();
       else if (action === "resend") resend();
+      else if (action === "cancel-job") { state.cancelAsk = state.job ? state.job.job_id : null; renderThread(); }
+      else if (action === "cancel-job-keep") { state.cancelAsk = null; renderThread(); }
+      else if (action === "cancel-job-confirm") cancelJob();
     });
 
     $("job-list").addEventListener("click", (event) => {

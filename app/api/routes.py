@@ -8,12 +8,15 @@
   GET  /v1/jobs                   newest first: ?limit=1-100&before=<seq>
   GET  /v1/jobs/{job_id}          status, step plan, reviewer proposal, step timeline, AI provenance
   GET  /v1/jobs/{job_id}/events   bounded pages: ?after=<seq>&limit=1-100
+  POST /v1/jobs/{job_id}/cancel   withdraw a job that is still QUEUED: 200, or 409 not_cancellable
 
 Every ``/v1`` route needs ``Authorization: Bearer <NEURON_FLOW_ACCESS_KEY>``. Responses never contain
 file paths, credentials or stack traces. Every response carries ``X-Request-Id``: a well-formed id the
 client sent, or a new random one. The same id is written in the access log line and, for a new job, in
-its ``job.queued`` event, so one request can be followed from the log to the job record. The API only reads and admits; it never opens the Core
-``Runtime`` (ADR-001).
+its ``job.queued`` event, so one request can be followed from the log to the job record.
+
+The API only reads, admits and cancels jobs that are still queued; it never opens the Core ``Runtime``
+(ADR-001).
 """
 
 from dataclasses import dataclass, field
@@ -31,7 +34,7 @@ from neuron_flow.model import SpecError, decode
 
 from app.domains.case_triage.contracts import SUMMARY_MAX_CHARS, SUMMARY_MIN_CHARS
 from app.llm import LLMConfig, LLMConfigError
-from app.persistence import QUEUED
+from app.persistence import QUEUED, StateError
 from app.persistence.queue_store import iso
 from app.services.admission import AdmissionError, admit
 from app.services.results import plan_view
@@ -42,7 +45,7 @@ from .limits import RateLimiter
 
 MAX_BODY_BYTES = 16 * 1024
 WEB_DIR = Path(__file__).resolve().parent.parent / "web"
-JOB_PATH = re.compile(r"^/v1/jobs/(job_[0-9a-f]{24})(/events)?$")
+JOB_PATH = re.compile(r"^/v1/jobs/(job_[0-9a-f]{24})(/events|/cancel)?$")
 JOB_ID_TEXT = re.compile(r"job_[0-9a-f]{24}")
 # A client may send its own id: 1-64 characters, letters, digits, '.', '_' or '-'. Nothing else reaches the logs.
 REQUEST_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$")
@@ -166,6 +169,8 @@ class ApiApp:
         match = JOB_PATH.fullmatch(path)
         if match is None:
             return error(404, "not_found", "No such API route")
+        if match.group(2) == "/cancel":
+            return self._cancel(request, match.group(1)) if method == "POST" else _not_allowed("POST")
         if not reading:
             return _not_allowed("GET, HEAD")
         job = self.store.get(match.group(1))
@@ -263,6 +268,31 @@ class ApiApp:
             return error(exc.status, exc.code, exc.message, headers=headers, **exc.extra)
         return json_response(202 if created else 200, {**self._job_view(job), "created": created},
                              [("Location", f"/v1/jobs/{job['job_id']}")])
+
+    def _cancel(self, request, job_id):
+        """Withdraw a queued job. The body may be empty or ``{}``; nothing in it changes the outcome.
+
+        Core cannot pause or stop a running job, so only QUEUED jobs can be cancelled. Cancelling an
+        already cancelled job is a no-op that returns the same record (200, ``changed: false``).
+        """
+        if request.body.strip():
+            content_type = request.headers.get("content-type", "").split(";", 1)[0].strip().lower()
+            if content_type != "application/json":
+                return error(415, "unsupported_media_type", "Send JSON with Content-Type: application/json")
+            try:
+                body = decode(request.body)
+            except SpecError:
+                return error(400, "invalid_json", "The body is not valid JSON, or it repeats a field")
+            if body != {}:
+                return error(400, "invalid_fields", "A cancel request takes no fields; send {} or nothing")
+        try:
+            job, changed = self.store.cancel(job_id, request_id=request.request_id)
+        except KeyError:
+            return error(404, "job_not_found", "No job with this id")
+        except StateError as exc:
+            return error(409, "not_cancellable", "Only a job that is still waiting in the queue can be cancelled",
+                         job_status=str(exc))
+        return json_response(200, {**self._job_view(job), "changed": changed})
 
     def _list(self, request):
         limit = _int_param(request, "limit", 20, 1, 100)

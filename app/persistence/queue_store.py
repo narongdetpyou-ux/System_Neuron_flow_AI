@@ -1,7 +1,7 @@
 """The durable job queue of the application layer: one SQLite file, separate from Core's.
 
 Who writes what:
-* the API admits jobs (``admit``) and reads them;
+* the API admits jobs (``admit``), cancels jobs that are still queued (``cancel``) and reads them;
 * the single Runner claims jobs, freezes the exact Core spec it submits, records outcomes and
   writes a heartbeat.
 
@@ -15,6 +15,7 @@ credentials or file paths, and events never hold case text.
 Application job states::
 
     QUEUED -> RUNNING -> REVIEW_REQUIRED | COMPLETED | FAILED | DELIVERY_FAILED
+    QUEUED -> CANCELLED   (only before the Runner claims it; a cancelled job never reaches Core)
 
 (review decisions on REVIEW_REQUIRED jobs come with Milestone C.)
 """
@@ -29,9 +30,9 @@ import time
 from neuron_flow.model import encode, fingerprint
 
 SCHEMA_VERSION = 1
-QUEUED, RUNNING = "QUEUED", "RUNNING"
-TERMINAL = ("REVIEW_REQUIRED", "COMPLETED", "FAILED", "DELIVERY_FAILED")
-STATUSES = (QUEUED, RUNNING) + TERMINAL
+QUEUED, RUNNING, CANCELLED = "QUEUED", "RUNNING", "CANCELLED"
+TERMINAL = ("REVIEW_REQUIRED", "COMPLETED", "FAILED", "DELIVERY_FAILED")  # the outcomes the Runner records
+STATUSES = (QUEUED, RUNNING) + TERMINAL + (CANCELLED,)
 _JSON_COLUMNS = ("input", "spec", "result", "failure")
 
 _SCHEMA = """
@@ -183,6 +184,28 @@ class QueueStore:
             if request_id:
                 queued["request_id"] = request_id
             self._event(db, job_id, "job.queued", queued, now)
+            return self._select(db, job_id), True
+
+    def cancel(self, job_id, *, request_id=None, now=None):
+        """Withdraw a job the Runner has not claimed yet.
+
+        Returns ``(job, changed)``: ``changed`` is False when the job was already cancelled. Raises
+        :class:`StateError` for any other state, and ``KeyError`` for an unknown job. The check and the
+        update run in one ``BEGIN IMMEDIATE`` transaction, like ``claim_next``, so a claim and a cancel
+        of the same job can never both succeed.
+        """
+        now = time.time() if now is None else now
+        with self._write() as db:
+            row = db.execute("SELECT status FROM jobs WHERE job_id=?", (job_id,)).fetchone()
+            if row is None:
+                raise KeyError(job_id)
+            if row["status"] == CANCELLED:
+                return self._select(db, job_id), False
+            if row["status"] != QUEUED:
+                raise StateError(row["status"])
+            db.execute("UPDATE jobs SET status=?, finished_at=?, updated_at=? WHERE job_id=? AND status=?",
+                       (CANCELLED, now, now, job_id, QUEUED))
+            self._event(db, job_id, "job.cancelled", {"request_id": request_id} if request_id else {}, now)
             return self._select(db, job_id), True
 
     # -- Runner ------------------------------------------------------------------------------

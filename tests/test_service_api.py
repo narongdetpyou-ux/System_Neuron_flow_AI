@@ -6,14 +6,16 @@ import threading
 import unittest
 from pathlib import Path
 
+from neuron_flow import Runtime
 from neuron_flow.model import normalize_spec
 
 from app.api.routes import MAX_BODY_BYTES, ApiApp, Request
-from app.persistence import QueueStore
+from app.llm import LLMConfig
+from app.persistence import QueueStore, StateError
+from app.services.admission import admit
 from app.services.results import plan_view
 from app.services.runner import Runner
-from app.llm import LLMConfig
-from app.services.workflows import CATALOG, WorkflowType, check_case, preview_spec
+from app.services.workflows import CATALOG, WorkflowType, agents_for, check_case, preview_spec
 from tests.service_fixtures import KEY, case_body, settings, slow_catalog
 
 AUTH = {"authorization": f"Bearer {KEY}"}
@@ -327,6 +329,113 @@ class ReadRouteTests(ApiTestCase):
             self.assertTrue(dict(asset.headers)["Content-Type"].startswith(kind))
         self.assertEqual(get(self.app, "/static/../routes.py", headers={}).status, 404)
         self.assertEqual(dict(get(self.app, "/v1/status").headers)["Cache-Control"], "no-store")
+
+
+def cancel(app, job_id, *, body=b"", headers=None):
+    return app.handle(Request("POST", f"/v1/jobs/{job_id}/cancel", {}, dict(JSON if headers is None else headers),
+                              body, "tester"))
+
+
+class CancelTests(ApiTestCase):
+    """Roadmap 1.3: withdraw a job before the Runner takes it."""
+
+    def admitted(self, key, **case):
+        return body_of(post(self.app, case_body(key, **case)))["job_id"]
+
+    def test_a_queued_job_is_cancelled_once_and_the_repeat_is_a_no_op(self):
+        job_id = self.admitted("key-cancel-01")
+        first = cancel(self.app, job_id)
+        self.assertEqual(first.status, 200)
+        view = body_of(first)
+        self.assertEqual((view["status"], view["changed"]), ("CANCELLED", True))
+        self.assertIsNotNone(view["finished_at"])
+        again = cancel(self.app, job_id, body=b"{}")
+        self.assertEqual((again.status, body_of(again)["changed"], body_of(again)["status"]), (200, False, "CANCELLED"))
+        self.assertEqual(body_of(again)["updated_at"], view["updated_at"])  # nothing was written the second time
+        events = self.store.events(job_id)[0]
+        self.assertEqual([event["kind"] for event in events], ["job.queued", "job.cancelled"])
+        self.assertRegex(events[1]["payload"]["request_id"], r"^req_[0-9a-f]{16}$")  # who cancelled (roadmap 1.2)
+        self.assertEqual(dict(first.headers)["X-Request-Id"], events[1]["payload"]["request_id"])
+        self.assertEqual(self.store.counts()["CANCELLED"], 1)
+        # The idempotency key stays taken: the same submission returns the cancelled job, never a new one.
+        repeat = post(self.app, case_body("key-cancel-01"))
+        self.assertEqual((repeat.status, body_of(repeat)["job_id"], body_of(repeat)["status"]),
+                         (200, job_id, "CANCELLED"))
+        self.assertEqual(len(self.jobs_in_store()), 1)
+
+    def test_only_queued_jobs_can_be_cancelled(self):
+        running = self.admitted("key-cancel-02")
+        self.assertEqual(self.store.claim_next("runner-test")["job_id"], running)
+        refused = cancel(self.app, running)
+        self.assertEqual((refused.status, body_of(refused)["error"], body_of(refused)["job_status"]),
+                         (409, "not_cancellable", "RUNNING"))
+        self.assertEqual(self.store.get(running)["status"], "RUNNING")
+
+    def test_a_finished_job_cannot_be_cancelled(self):
+        job_id = self.admitted("key-cancel-03")
+        Runner(self.settings, store=self.store).drain()
+        refused = cancel(self.app, job_id)
+        self.assertEqual((refused.status, body_of(refused)["job_status"]), (409, "REVIEW_REQUIRED"))
+
+    def test_bad_cancel_requests_are_refused(self):
+        job_id = self.admitted("key-cancel-04")
+        self.assertEqual(cancel(self.app, "job_0123456789abcdef01234567").status, 404)
+        self.assertEqual(cancel(self.app, job_id, body=b'{"reason": "x"}').status, 400)
+        self.assertEqual(cancel(self.app, job_id, body=b"not json").status, 400)
+        self.assertEqual(cancel(self.app, job_id, body=b"{}", headers=AUTH).status, 415)
+        self.assertEqual(cancel(self.app, job_id, headers={}).status, 401)
+        wrong_method = get(self.app, f"/v1/jobs/{job_id}/cancel")
+        self.assertEqual((wrong_method.status, dict(wrong_method.headers)["Allow"]), (405, "POST"))
+        self.assertEqual(self.store.get(job_id)["status"], "QUEUED")  # none of these changed anything
+
+    def test_a_cancelled_job_never_reaches_core(self):
+        withdrawn = self.admitted("key-cancel-05")
+        kept = self.admitted("key-cancel-06", case_id="CASE-2")
+        self.assertEqual(cancel(self.app, withdrawn).status, 200)
+        self.assertEqual(Runner(self.settings, store=self.store).drain(), 1)
+        self.assertEqual(self.store.get(kept)["status"], "REVIEW_REQUIRED")
+        job = self.store.get(withdrawn)
+        self.assertEqual((job["status"], job["claims"], job["spec"], job["started_at"]), ("CANCELLED", 0, None, None))
+        with Runtime(self.settings.core_dir, agents=agents_for(CATALOG, LLMConfig())) as runtime:
+            with self.assertRaises(KeyError):
+                runtime.status(withdrawn)
+            self.assertEqual(runtime.status(kept)["status"], "SUCCEEDED")
+
+    def test_claim_and_cancel_racing_never_both_win(self):
+        outcomes = {"claimed": 0, "cancelled": 0}
+        for round_number in range(150):
+            # Straight into the store: 150 submissions through the API would hit its rate limit.
+            job_id = admit(self.store, case_body(f"key-race-{round_number:04d}"), max_queued=10)[0]["job_id"]
+            barrier = threading.Barrier(2)
+            claim, refusal = [], []
+
+            def claimer():
+                barrier.wait()
+                claim.append(self.store.claim_next("runner-race"))
+
+            def canceller():
+                barrier.wait()
+                try:
+                    self.store.cancel(job_id)
+                except StateError as exc:
+                    refusal.append(str(exc))
+
+            threads = [threading.Thread(target=claimer), threading.Thread(target=canceller)]
+            for thread in threads:
+                thread.start()
+            for thread in threads:
+                thread.join()
+            status = self.store.get(job_id)["status"]
+            if claim[0] is not None:  # the claim won: the cancel must have been refused
+                self.assertEqual((claim[0]["job_id"], status, refusal), (job_id, "RUNNING", ["RUNNING"]))
+                outcomes["claimed"] += 1
+                self.store.finish(job_id, "FAILED", failure={"reason": "test"})  # clear the way for the next round
+            else:  # the cancel won: nothing was claimed
+                self.assertEqual((status, refusal), ("CANCELLED", []))
+                outcomes["cancelled"] += 1
+            kinds = [event["kind"] for event in self.store.events(job_id)[0]]
+            self.assertFalse("job.claimed" in kinds and "job.cancelled" in kinds, kinds)
+        self.assertEqual(sum(outcomes.values()), 150)
 
 
 class StepPlanTests(unittest.TestCase):

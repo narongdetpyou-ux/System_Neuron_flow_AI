@@ -233,6 +233,7 @@ b, strong { font-weight: 600; }
 .st-elevated { color: var(--elev); }
 .st-done { color: var(--ok); }
 .st-failed { color: var(--err); }
+.st-cancelled { color: var(--muted-2); }
 .side-empty { padding: 8px; color: var(--muted); font-size: 12.5px; }
 .more { align-self: center; }
 
@@ -356,6 +357,7 @@ b, strong { font-weight: 600; }
 .facts q { display: block; margin-top: 3px; color: var(--muted); font-size: 12.5px; quotes: "“" "”"; }
 .reasons { display: flex; flex-wrap: wrap; gap: 5px; }
 .msg-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.msg-actions .hint { color: var(--muted); font-size: 12px; }
 
 details.tech { border-radius: 10px; box-shadow: 0 0 0 1px var(--line); background: var(--surface-3); }
 details.tech summary { cursor: pointer; padding: 9px 14px; color: var(--accent-400); font-size: 13px; }
