@@ -20,7 +20,8 @@ differs, this file and architecture.md win.
   - AI ให้ความเห็นที่สอง
   - ถ้าสองฝ่ายเห็นไม่ตรงกัน เคสจะถูกยกให้คนดูก่อน
 - ถ้าเครื่องดับกลางทาง ระบบทำต่อได้ ส่งซ้ำก็ไม่เกิดงานซ้ำ
-- ผ่านชุดทดสอบอัตโนมัติ 101 ข้อ และเปิดใช้ออนไลน์บน Render แล้ว
+- ผ่านชุดทดสอบอัตโนมัติ 105 ข้อ และเปิดใช้ออนไลน์บน Render แล้ว
+- หน้าเว็บเป็นแบบแชท: พิมพ์เคส ดูขั้นตอนก่อนส่ง กดยืนยัน แล้วติดตามใน Flow และประวัติเหตุการณ์ (ขั้น 1.6)
 
 **ลำดับต่อจากนี้** แต่ละขั้นจบด้วยสิ่งที่คุณลองเองได้
 
@@ -81,6 +82,7 @@ Marks: ✅ done · 🟡 built or partly checked (the status says what is left) �
 | 1.3 | Cancel a job that is still queued | ⬜ | — |
 | 1.4 | Backup, restore and retention | ⬜ | D1 = paid (disk) |
 | 1.5 | Docs truth checks in CI | ⬜ optional | — |
+| 1.6 | New look for the web page from the owner's mockup: chat intake with a confirm step, Flow and Trace, read-only settings | 🟡 built in PR #18; the owner checks it on Render after the merge | — |
 | 2.1 | Personal access tokens and roles (replaces the shared key) | ⬜ | — |
 | 2.2 | Review ledger and decisions API | ⬜ | 2.1 |
 | 2.3 | Linked phase-B job on approval | ⬜ | 2.2 |
@@ -337,6 +339,34 @@ decisions would vanish on every sleep.
   - every relative link in `README.md`, `CLAUDE.md` and `docs/**/*.md` resolves;
   - the README's test count matches the real count.
 - It is cheap protection against the docs drifting away from the code.
+
+### 1.6 New look for the web page (owner's "Nocturne" mockup)
+
+- **Goal:** the page looks and flows like the owner's mockup (claude.ai design export, screens 1a–1c
+  desktop and 2a–2c phone), using only what the system really does.
+- **Why:** the owner asked for it on 2026-11-03. It was not in the first plan; it is added here so the
+  plan stays true (see "How to use this file", point 4).
+- **What was built (PR #18):**
+  - a chat-style intake: type a case → a confirm card lists the real steps, their time limits and tries →
+    "ยืนยันและส่ง" admits it → the result appears in the thread;
+  - a Flow panel (the workflow as a graph, each step's result when the job ends) and the job's events
+    (Trace);
+  - a read-only settings view: steps and agents per workflow, the AI in use and how to change it in
+    Render, the fixed decision rules, storage and limits;
+  - phone layout: drawers for the case list, a bottom sheet for the Flow, a step strip under the header;
+  - read-only step plans in the API (`workflows[].steps` in `/v1/status`, `plan` in the job view), so the
+    page never hard-codes a workflow's shape.
+- **Left out on purpose:** key, provider and retry fields, a "never ask" approval option and "edit JSON"
+  (rules 4–7 in CLAUDE.md); free conversation and `/test`, `/eval`, `/backup` commands (Phase 4 and 1.4);
+  live per-step progress (P2, see "Not now"); pause and cancel buttons (1.3 cancels queued jobs only).
+- **Done when:** the owner opens the live page after the merge and the owner test below passes.
+- **Owner test (ไทย):**
+  1. เปิดหน้าเว็บ ใส่รหัสเข้าใช้ ต้องเห็น 3 ส่วน: รายการเคส (ซ้าย) แชท (กลาง) และ Flow (ขวา)
+  2. กดตัวอย่าง "ถูกหักเงินซ้ำ" แล้วกด Enter ต้องขึ้นการ์ด "รอยืนยัน" ที่มี 4 ขั้นตอน และยังไม่มีเคสใหม่ในรายการซ้าย
+  3. กด "ยืนยันและส่ง" ภายในไม่กี่วินาที ทุกขั้นต้องขึ้น ✓ และผลเป็น "รอคนตรวจ" พร้อมป้าย "ยกให้ดูก่อน"
+  4. กด "ส่งซ้ำ (ทดสอบว่าไม่เกิดงานซ้ำ)" ต้องขึ้นข้อความว่าระบบรู้ว่าเป็นเคสเดิม และรายการซ้ายต้องไม่มีเคสเพิ่ม
+  5. กดแท็บ "ตั้งค่า" ต้องเห็นตาราง 4 ขั้นตอน AI ที่ใช้อยู่ และกติกา "คนตัดสินทุกเคส" โดยไม่มีช่องให้พิมพ์อะไร
+  6. เปิดบนมือถือ กด ☰ ต้องเห็นรายการเคส กดแถบขั้นตอนใต้หัว ต้องเห็น Flow เลื่อนขึ้นมาจากด้านล่าง
 
 ---
 
@@ -613,6 +643,8 @@ workflow types.
 
 ### 4.4 Chat-style page
 
+- **Already there (1.6):** the chat layout, the message box, the thread and a confirm card. Today the box
+  takes case text only and every message becomes a `case_triage` draft.
 - **The page:** a message box and a thread showing router answers, questions, confirmations, and links to
   the jobs they created. Thai comes first; English is accepted.
 - **Phase gate:**
@@ -787,3 +819,5 @@ workflow types.
 ## Change log
 
 - 2026-11-01: first version, written before development moved to Claude Code.
+- 2026-11-03: added 1.6, the new look for the web page, because the owner asked for it with a design
+  mockup; noted in 4.4 what the chat layout already covers.

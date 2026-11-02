@@ -6,6 +6,9 @@ fixed class names.
 
 Included: the reviewer proposal, a step timeline in DAG order, the AI provenance and usage of the
 second opinion, and the receipt checksum.
+
+``plan_view`` describes a spec's shape (step ids, agents, order, retry budget, time limit) for the web
+page, again without params.
 """
 
 _REVIEW_FIELDS = ("case_id", "suggested_category", "suggested_queue", "suggestion_source", "second_opinion",
@@ -13,6 +16,17 @@ _REVIEW_FIELDS = ("case_id", "suggested_category", "suggested_queue", "suggestio
 _AI_PROVENANCE = ("provider", "model", "prompt_id", "prompt_sha256")
 CORE_FINAL = ("SUCCEEDED", "FAILED", "DELIVERY_FAILED")
 CORE_DEFAULT_MAX_ATTEMPTS = 2  # neuron_flow.model.normalize_spec default
+CORE_DEFAULT_TIMEOUT_S = 5     # neuron_flow.model.normalize_spec default
+
+
+def plan_view(spec):
+    """The shape of a workflow spec, for people: which steps run, in what order, how often each may be
+    tried and for how long. Params are never included: they carry the AI settings and prompt hash today
+    and could carry anything later."""
+    return [{"id": step["id"], "agent": step["agent"], "depends_on": list(step.get("depends_on") or []),
+             "max_attempts": step.get("max_attempts", CORE_DEFAULT_MAX_ATTEMPTS),
+             "timeout_s": step.get("timeout_s", CORE_DEFAULT_TIMEOUT_S)}
+            for step in spec["steps"]]
 
 
 def review_view(output):

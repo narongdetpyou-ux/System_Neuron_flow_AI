@@ -38,8 +38,9 @@ Since round 2, cases can also come in from outside, through an HTTP API or a Tha
 2. One Runner takes the cases in order and passes each one to the Core.
 3. If the machine stops in the middle of a case, the Runner picks it up again after the restart, within the
    same retry budget, or fails it with a clear reason.
-4. The page shows each case moving through the queue and explains the result in plain language.
-   Details: [intake_queue.md](docs/intake_queue.md).
+4. The page works like a chat: type a case, check the steps it will run, confirm, then follow it in the
+   Flow panel and its event history (Trace). The result is explained in plain language, and the settings
+   are shown read-only. Details: [intake_queue.md](docs/intake_queue.md).
 
 ## What is inside
 
@@ -73,7 +74,7 @@ forgets its cases when it sleeps or redeploys; a paid plan with a disk keeps the
 
 **Locally (Python 3.10+):**
 ```bash
-python -m unittest discover -s tests -v        # 101 tests
+python -m unittest discover -s tests -v        # 105 tests
 python -m examples.case_triage_demo            # v1 rules, one synthetic case
 python -m examples.case_triage_shadow_demo     # v2 shadow mode, three synthetic cases (offline mock AI)
 python -m app.eval.triage_shadow_eval          # scorecard on 61 synthetic cases

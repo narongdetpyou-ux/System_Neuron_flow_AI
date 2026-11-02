@@ -6,10 +6,14 @@ import threading
 import unittest
 from pathlib import Path
 
+from neuron_flow.model import normalize_spec
+
 from app.api.routes import MAX_BODY_BYTES, ApiApp, Request
 from app.persistence import QueueStore
+from app.services.results import plan_view
 from app.services.runner import Runner
-from tests.service_fixtures import KEY, case_body, settings
+from app.services.workflows import CATALOG, WorkflowType, check_case
+from tests.service_fixtures import KEY, case_body, settings, slow_catalog
 
 AUTH = {"authorization": f"Bearer {KEY}"}
 JSON = {"content-type": "application/json", **AUTH}
@@ -263,6 +267,50 @@ class ReadRouteTests(ApiTestCase):
         self.assertEqual(status["storage"], {"kind": "configured", "persistent": True})
         self.assertEqual(status["default_workflow"], "case_triage.v2")
 
+    def test_status_describes_each_workflows_steps_without_params(self):
+        plans = {w["name"]: w["steps"] for w in body_of(get(self.app, "/v1/status"))["workflows"]}
+        v2 = plans["case_triage.v2"]
+        self.assertEqual([step["id"] for step in v2], ["classify_rules", "classify_llm", "compare", "prepare"])
+        self.assertEqual([step["depends_on"] for step in v2],
+                         [[], [], ["classify_rules", "classify_llm"], ["compare"]])
+        self.assertEqual([step["max_attempts"] for step in v2], [1, 2, 1, 1])
+        self.assertEqual(v2[0]["timeout_s"], 5)  # Core's default when a step names none
+        self.assertGreater(v2[1]["timeout_s"], 5)  # the AI step waits longer than its HTTP timeout
+        self.assertEqual([(step["id"], step["agent"]) for step in plans["case_triage.v1"]],
+                         [("classify", "triage.classify"), ("prepare", "triage.prepare")])
+        for steps in plans.values():
+            for step in steps:
+                self.assertEqual(set(step), {"id", "agent", "depends_on", "max_attempts", "timeout_s"})
+        self.assertEqual(self.jobs_in_store(), [])  # describing a workflow admits nothing
+
+    def test_job_detail_shows_the_plan_frozen_at_claim_without_params(self):
+        marker_dir = self.data_dir / "markers"
+        app = ApiApp(self.settings, self.store, catalog=slow_catalog(marker_dir, sleep_s=0.01))
+        job = body_of(post(app, case_body("key-0000016", workflow_type="test.slow")))
+        self.assertIsNone(body_of(get(app, f"/v1/jobs/{job['job_id']}"))["plan"])  # not frozen while queued
+        self.assertNotIn("plan", body_of(get(app, "/v1/jobs"))["jobs"][0])  # the list stays small
+        Runner(self.settings, store=self.store, catalog=slow_catalog(marker_dir, sleep_s=0.01)).drain()
+        response = get(app, f"/v1/jobs/{job['job_id']}")
+        self.assertEqual(body_of(response)["plan"], [{"id": "slow", "agent": "test.slow", "depends_on": [],
+                                                      "max_attempts": 2, "timeout_s": 30.01}])
+        # The frozen spec's params hold a folder path here; neither the params nor the path may leak.
+        self.assertNotIn(b"marker_dir", response.body)
+        self.assertNotIn(str(marker_dir).encode(), response.body)
+
+    def test_status_still_answers_when_a_workflow_cannot_be_described(self):
+        def broken(_job_id, _case, _config):
+            raise ValueError("this workflow cannot build a spec")
+
+        catalog = {"broken.v1": WorkflowType("broken.v1", "test only: cannot build", "x", check_case, broken,
+                                             lambda _config: []), **CATALOG}
+        app = ApiApp(self.settings, self.store, catalog=catalog)
+        with self.assertLogs("neuron_flow.api", level="WARNING"):
+            response = get(app, "/v1/status")
+        self.assertEqual(response.status, 200)
+        plans = {w["name"]: w["steps"] for w in body_of(response)["workflows"]}
+        self.assertIsNone(plans["broken.v1"])
+        self.assertEqual(len(plans["case_triage.v2"]), 4)
+
     def test_page_and_assets_carry_security_headers(self):
         page = get(self.app, "/", headers={})
         headers = dict(page.headers)
@@ -278,6 +326,23 @@ class ReadRouteTests(ApiTestCase):
             self.assertTrue(dict(asset.headers)["Content-Type"].startswith(kind))
         self.assertEqual(get(self.app, "/static/../routes.py", headers={}).status, 404)
         self.assertEqual(dict(get(self.app, "/v1/status").headers)["Cache-Control"], "no-store")
+
+
+class StepPlanTests(unittest.TestCase):
+    def test_the_plan_fills_in_the_same_defaults_as_core(self):
+        spec = {"job_id": "plan_check", "input": {}, "steps": [
+            {"id": "first", "agent": "test.agent"},
+            {"id": "second", "agent": "test.agent", "depends_on": ["first"], "timeout_s": 9, "max_attempts": 3,
+             "params": {"model": "kept out of the plan"}},
+        ]}
+        core = {step["id"]: step for step in normalize_spec(spec, {"test.agent"})["steps"]}
+        plan = plan_view(spec)
+        self.assertEqual([step["id"] for step in plan], ["first", "second"])
+        for step in plan:
+            self.assertEqual((step["depends_on"], step["max_attempts"], step["timeout_s"]),
+                             (core[step["id"]]["depends_on"], core[step["id"]]["max_attempts"],
+                              core[step["id"]]["timeout_s"]), step["id"])
+            self.assertNotIn("params", step)
 
 
 if __name__ == "__main__":
