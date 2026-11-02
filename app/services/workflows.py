@@ -11,6 +11,8 @@ from typing import Callable
 from app.domains.case_triage import build_shadow_workflow, build_workflow, registry, shadow_registry
 
 _CHECK_JOB_ID = "admission_check"
+_PREVIEW_JOB_ID = "workflow_preview"
+_PREVIEW_CASE = {"case_id": "PREVIEW", "summary": "Placeholder case that shows the shape of this workflow"}
 
 
 @dataclass(frozen=True)
@@ -41,6 +43,12 @@ CATALOG = {
         lambda config: registry()),
 }
 DEFAULT_WORKFLOW = "case_triage.v2"
+
+
+def preview_spec(workflow, config):
+    """The spec this workflow builds for a placeholder case. The web page shows its steps before a
+    case is sent; nothing is admitted or run."""
+    return workflow.build_spec(_PREVIEW_JOB_ID, workflow.check_input(dict(_PREVIEW_CASE)), config)
 
 
 def agents_for(catalog, config):

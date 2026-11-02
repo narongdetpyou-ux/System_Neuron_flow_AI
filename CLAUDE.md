@@ -105,7 +105,7 @@ If a task seems to need breaking a rule:
 ## 4. Checking your work
 
 ```bash
-python -m unittest discover -s tests -v        # all tests (101 on 2026-11-01); Python 3.10–3.13
+python -m unittest discover -s tests -v        # all tests (105 on 2026-11-03); Python 3.10–3.13
 python -m examples.case_triage_demo            # v1 rules, one synthetic case
 python -m examples.case_triage_shadow_demo     # v2 shadow mode with the offline mock AI
 python -m app.eval.triage_shadow_eval          # scorecard on 61 synthetic cases
@@ -159,7 +159,7 @@ Notes for cloud sessions (claude.ai/code):
 | `app/observability/sentry.py` | Sentry reporting: step failures, degraded AI, Runner recoveries |
 | `app/persistence/queue_store.py` | the application queue in its own SQLite file (`<data>/app/queue.sqlite3`) |
 | `app/services/` | workflow catalog, admission, Runner with reconciliation, result summaries |
-| `app/api/`, `app/web/` | standard-library HTTP API and the Thai web page |
+| `app/api/`, `app/web/` | standard-library HTTP API and the Thai web page (chat layout, Flow and Trace, read-only settings) |
 | `app/boot.py` | the image's process 1: takes the data folder as root, switches to `neuron`, becomes tini |
 | `app/settings.py`, `app/serve.py` | settings from the environment; the launcher (API + supervised Runner) |
 | `Dockerfile`, `render.yaml`, `railway.json` | the container, the Render Blueprint, the Railway config kept for later |
@@ -209,6 +209,9 @@ Notes for cloud sessions (claude.ai/code):
   - The Render service `neuron-flow` exists and is live at https://neuron-flow.onrender.com (free plan,
     first deploy 2026-11-01). Use the Render connector to read its deploys, events and logs; this
     session's network may not reach `onrender.com` or `render.com` directly.
+  - The web page's chat layout from the owner's "Nocturne" mockup (PR #18, roadmap 1.6). Parts of the
+    mockup that would break the rules in §3 (key and provider fields, editing steps, a "never ask" policy)
+    are shown read-only or left out on purpose; see intake_queue.md, "หน้าเว็บ: ใช้อย่างไร".
 - **Not done yet:**
   - Real Claude has never been run.
   - Review decisions and per-person identity (Milestone C) are not built.

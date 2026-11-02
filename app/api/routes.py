@@ -3,10 +3,10 @@
   GET  /                          the web page (it holds no secrets and asks for the access key)
   GET  /static/app.css, app.js    page assets
   GET  /healthz                   liveness for the host: process up, queue database readable (no key)
-  GET  /v1/status                 Runner heartbeat, queue counts, AI mode, storage, limits
+  GET  /v1/status                 Runner heartbeat, queue counts, AI mode, storage, limits, workflow steps
   POST /v1/jobs                   admit a job: 202 new, 200 duplicate, 400/401/409/413/415/429/503
   GET  /v1/jobs                   newest first: ?limit=1-100&before=<seq>
-  GET  /v1/jobs/{job_id}          status, reviewer proposal, step timeline, AI provenance
+  GET  /v1/jobs/{job_id}          status, step plan, reviewer proposal, step timeline, AI provenance
   GET  /v1/jobs/{job_id}/events   bounded pages: ?after=<seq>&limit=1-100
 
 Every ``/v1`` route needs ``Authorization: Bearer <NEURON_FLOW_ACCESS_KEY>``. Responses never contain
@@ -31,7 +31,8 @@ from app.llm import LLMConfig, LLMConfigError
 from app.persistence import QUEUED
 from app.persistence.queue_store import iso
 from app.services.admission import AdmissionError, admit
-from app.services.workflows import CATALOG, DEFAULT_WORKFLOW
+from app.services.results import plan_view
+from app.services.workflows import CATALOG, DEFAULT_WORKFLOW, preview_spec
 from app.settings import MIN_ACCESS_KEY_LENGTH
 
 from .limits import RateLimiter
@@ -99,6 +100,7 @@ class ApiApp:
         self._auth_limit = RateLimiter(10, 60)
         self._assets = {path: ((WEB_DIR / name).read_bytes(), content_type)
                         for path, (name, content_type) in _ASSETS.items()}
+        self._plans = {}  # workflow name -> step plan; the catalog and the environment are fixed per process
 
     # -- entry point ---------------------------------------------------------------------------
 
@@ -205,7 +207,8 @@ class ApiApp:
             "limits": {"max_queued": self.settings.max_queued, "submit_per_minute": self.settings.submit_per_minute,
                        "summary_min_chars": SUMMARY_MIN_CHARS, "summary_max_chars": SUMMARY_MAX_CHARS,
                        "max_body_bytes": MAX_BODY_BYTES},
-            "workflows": [{"name": w.name, "description": w.description} for w in self.catalog.values()],
+            "workflows": [{"name": w.name, "description": w.description, "steps": self._steps(w)}
+                          for w in self.catalog.values()],
             "default_workflow": DEFAULT_WORKFLOW if DEFAULT_WORKFLOW in self.catalog else next(iter(self.catalog)),
         })
 
@@ -247,6 +250,19 @@ class ApiApp:
 
     # -- views -----------------------------------------------------------------------------------
 
+    def _steps(self, workflow):
+        """The steps a new job of this workflow would run (``None`` if they cannot be described here).
+
+        Built once per workflow from a placeholder case; nothing is admitted and Core is not opened.
+        """
+        if workflow.name not in self._plans:
+            try:
+                self._plans[workflow.name] = plan_view(preview_spec(workflow, LLMConfig.from_env()))
+            except Exception:  # informational: the page then shows no preview, and admission is unaffected
+                log.warning("api: could not describe the steps of workflow %s", workflow.name, exc_info=True)
+                self._plans[workflow.name] = None
+        return self._plans[workflow.name]
+
     def _job_view(self, job, *, detail=True):
         case = job["input"]
         review = (job["result"] or {}).get("review") or {}
@@ -260,6 +276,8 @@ class ApiApp:
             view["queue_position"] = self.store.queue_position(job)
         if detail:
             view["input"] = case
+            # The plan frozen when the Runner claimed the job: what it really runs. None while queued.
+            view["plan"] = plan_view(job["spec"]) if job["spec"] else None
             view["result"] = job["result"]
         else:
             view["summary_preview"] = case.get("summary", "")[:90]

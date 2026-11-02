@@ -135,11 +135,12 @@ Built in round 2 (full reference in [intake_queue.md](intake_queue.md)):
 - `POST /v1/jobs` with `{"workflow_type": "case_triage.v2", "idempotency_key": "…", "input": {"case_id": "…", "summary": "…"}}`
   replies `202 {"job_id": "…", "status": "QUEUED", …}`; the same key and request again replies `200` with the
   same job; the same key with another request replies `409`.
-- `GET /v1/jobs/{job_id}` returns status, the review summary, a step timeline, AI provenance and the receipt
-  hash. It never returns internal paths or credentials.
+- `GET /v1/jobs/{job_id}` returns status, the step plan frozen at claim, the review summary, a step
+  timeline, AI provenance and the receipt hash. It never returns internal paths, params or credentials.
 - `GET /v1/jobs/{job_id}/events?after=<cursor>&limit=1-100` returns bounded pages.
 - `GET /v1/jobs?limit=&before=` lists jobs newest first; `GET /v1/status` shows the Runner heartbeat, queue
-  counts, AI mode and storage; `GET /healthz` is the unauthenticated liveness check.
+  counts, AI mode, storage and each workflow's steps (ids, agents, order, retry budget, time limit; never
+  params); `GET /healthz` is the unauthenticated liveness check.
 
 Planned (Milestone C):
 - `POST /v1/reviews/{review_id}/decisions` takes `APPROVE`/`REJECT`, the reviewer from the authenticated
@@ -159,12 +160,12 @@ app/observability/             sentry.py (step failures, degraded AI, Runner rec
 app/persistence/               queue_store.py: the application job queue, events and Runner heartbeat (SQLite)
 app/services/                  workflows.py (catalog), admission.py, runner.py (with reconciliation), results.py
 app/api/                       routes.py (ApiApp), server.py (standard-library HTTP server), limits.py
-app/web/                       index.html, app.css, app.js: the Thai web page
+app/web/                       index.html, app.css, app.js: the Thai web page (chat layout, Flow and Trace, read-only settings)
 app/boot.py                    process 1 of the image: takes the data folder, drops root, becomes tini
 app/settings.py, app/serve.py  environment settings; the launcher (API + supervised Runner in one container)
 Dockerfile, render.yaml        the container and the Render Blueprint (railway.json kept for Railway)
 examples/                      case_triage_demo, case_triage_shadow_demo, sentry_smoke_test, service_smoke_test
-tests/                         101 tests: core, triage v1/v2, AI gateway, scorecard, Sentry, API, queue, Runner, HTTP
+tests/                         105 tests: core, triage v1/v2, AI gateway, scorecard, Sentry, API, queue, Runner, HTTP
 .github/workflows/             core-tests, service-container, sentry-smoke, shadow-eval-claude (manual)
 .github/scripts/               check_render_blueprint.py: render.yaml structure, build filter, Render's schema
 planned: review ledger and artifact store, app/domains/study_guide/
@@ -237,7 +238,7 @@ dashboard.
 | A | case_triage v1 rules, synthetic demo, tests | Done |
 | A2 | AI gateway, v2 shadow mode, scorecard, Sentry reporting | Done (PR #8, #9); real Claude not yet run |
 | P1-fix | Neutral telemetry phase names | Open |
-| B | Admission queue, single Runner, reconciliation, thin API, web page | Done (PR #11); live on Render's free plan since 2026-11-01 |
+| B | Admission queue, single Runner, reconciliation, thin API, web page | Done (PR #11); live on Render's free plan since 2026-11-01; page redesigned as a chat layout with Flow, Trace and read-only settings (PR #18, roadmap 1.6) |
 | C | Two-phase review, decision ledger, n8n notifications | Open |
 | D | OpenTelemetry tracing, eval gates in CI | Partly done: CI scorecard and Sentry exist; tracing is open |
 | E | Planner pattern (B), MCP server, second domain with zero Core changes | Open |

@@ -1,11 +1,14 @@
 # Intake API, job queue, Runner and web page (round 2, Milestone B)
 
-**Status:** built in PR #11 and tested offline (101 tests on 2026-11-01, including killing the Runner
+**Status:** built in PR #11 and tested offline (105 tests on 2026-11-03, including killing the Runner
 mid-step). The container build is checked on every push by *Actions → Service container*. Live on
 Render's free plan since 2026-11-01 (`render.yaml`). Railway was the first choice, but it has paused new
 sign-ups since 22 Oct 2026 after a security incident; `railway.json` stays in the repository for later.
 Synthetic data only. Review decisions (approve/reject) come with Milestone C, so in this round every case
 ends at "waiting for a person". No Core (`neuron_flow/`) file was changed.
+The web page was redesigned on 2026-11-03 (PR #18, roadmap 1.6) after the owner's "Nocturne" mockup: a
+chat-style intake with a confirm step, a Flow panel and an event history (Trace), and read-only settings
+(see "หน้าเว็บ: ใช้อย่างไร" and "Web page" below).
 Design principles: [design_philosophy.md](design_philosophy.md).
 
 ## ภาพรวมการทำงาน (ภาษาไทย)
@@ -38,6 +41,32 @@ Design principles: [design_philosophy.md](design_philosophy.md).
 | ใส่รหัสเข้าใช้ผิด 10 ครั้งในหนึ่งนาที | พักการลองจากเครื่องนั้นชั่วคราว (429) | "ลองรหัสผิดหลายครั้งเกินไป" |
 
 ทุกกรณีที่ระบบกู้งานหลังตัวรันงานหยุด จะส่งแจ้งเตือนเข้า Sentry ด้วย (ถ้าตั้งค่า `SENTRY_DSN` ไว้) ดู [observability_sentry.md](observability_sentry.md)
+
+### หน้าเว็บ: ใช้อย่างไร
+
+หน้าจอแบ่งเป็น 3 ส่วน (บนมือถือ ส่วนซ้ายกับขวาซ่อนไว้ กดปุ่ม ☰ หรือแถบขั้นตอนใต้หัวเพื่อเปิด)
+
+| ส่วน | มีอะไร |
+|---|---|
+| ซ้าย | ปุ่ม "＋ เคสใหม่", จำนวนเคสตามสถานะ, รายการเคสล่าสุด (วันนี้ / เมื่อวาน), สถานะ AI ที่เก็บข้อมูล และตัวรันงาน, ปุ่ม "ล็อกหน้าจอ" |
+| กลาง (แท็บ "แชท") | ช่องพิมพ์เคส และบทสนทนาของเคสที่เลือก: ข้อความเคส → การ์ดขั้นตอน → ผลที่ระบบเสนอ |
+| ขวา ("Flow") | แผนผังขั้นตอนของเคส (เส้นบอกว่าขั้นไหนต้องรอขั้นไหน) และ "ประวัติเหตุการณ์ (Trace)" ของเคสนั้น |
+
+ลำดับการใช้งาน:
+1. **พิมพ์เคส** ปัญหาของลูกค้าเป็นภาษาธรรมดาในช่องด้านล่าง (หรือกดตัวอย่าง) แล้วกด Enter หรือปุ่ม "ส่ง" (Shift+Enter = ขึ้นบรรทัดใหม่) อยากตั้งรหัสเคสเองให้กด "# รหัสเคส" ไม่ใส่ระบบตั้งให้
+2. **ดูก่อนส่ง** ระบบยังไม่ส่ง แต่แสดงการ์ด "รอยืนยัน" ว่าจะทำขั้นตอนอะไรบ้าง แต่ละขั้นรอได้นานเท่าไร และลองได้กี่ครั้ง
+3. **ยืนยัน** กด "ยืนยันและส่ง" เคสจึงเข้าคิว ("แก้ข้อความ" เอาข้อความกลับไปแก้, "ยกเลิก" ทิ้งร่างนี้)
+4. **ระหว่างทำงาน** หน้าเว็บบอกว่า "กำลังทำงาน" ทั้งเคส เพราะแกนระบบ (Core) ยังไม่ส่งความคืบหน้าทีละขั้น เมื่อเสร็จ ทุกขั้นจะขึ้น ✓ หรือ ✕ พร้อมจำนวนครั้งที่ลอง
+5. **อ่านผล** ระบบเสนอคิวไหน ความสำคัญ ความเห็นของกฎและของ AI และเหตุผลที่บอกคนตรวจ ผลสุดท้ายคือ "รอคนตรวจ" เสมอ
+6. **กลับมาดูทีหลัง** ลิงก์ในแถบที่อยู่มีรหัสงาน (`#job_…`) เปิดลิงก์เดิมจะกลับมาที่เคสนั้น (ถ้าเคสยังไม่ถูกล้าง)
+
+แท็บ "ตั้งค่า" **ดูอย่างเดียว**: ขั้นตอนและตัวทำงาน (agent) ของแต่ละประเภทงาน, AI ที่ใช้อยู่และวิธีเปลี่ยนใน Render, กติกาการตัดสิน, ที่เก็บข้อมูลและขีดจำกัด หน้าเว็บแก้ค่าเหล่านี้ไม่ได้โดยตั้งใจ: คีย์อยู่ใน Render เท่านั้น ตัวทำงานเปลี่ยนได้ผ่าน PR เท่านั้น และคนต้องเป็นผู้ตัดสินเสมอ
+
+ส่วนที่อยู่ในแบบ (mockup) แต่ยังไม่มีในระบบ:
+- ช่องคุยถาม-ตอบทั่วไป และคำสั่ง `/test` `/eval` `/backup` → ขั้น 4 และ 1.4 ในแผน (ตอนนี้ช่องแชทรับเฉพาะข้อความเคส)
+- ไฟบอกว่ากำลังทำขั้นไหนระหว่างรัน → ยังไม่อยู่ในแผนตอนนี้ (P2) จะพิจารณาอีกครั้งพร้อมระบบติดตามเส้นทางงาน (ขั้น 5)
+- ปุ่มหยุด/ยกเลิกงาน → ขั้น 1.3 (ยกเลิกได้เฉพาะเคสที่ยังรอคิว), ปุ่มอนุมัติ/ไม่อนุมัติ → ขั้น 2.4
+- ช่องใส่ API key, เปลี่ยน AI, ตั้งจำนวนครั้งลองใหม่, ตัวเลือก "ไม่ต้องถาม" และปุ่ม "แก้ไข JSON" → จะไม่ทำ เพราะขัดกฎของโปรเจกต์ (CLAUDE.md ข้อ 4–7)
 
 ### สิ่งที่ต้องทำเพื่อเปิดใช้บน Render (ครั้งแรก ทำครั้งเดียว)
 
@@ -92,6 +121,35 @@ container: app.boot (root) ─becomes─► tini ─► python -m app.serve
   with a disk cannot scale out, so two Runners never share it. Without a disk (Render's free plan) each
   instance has its own throwaway data, so an overlapping deploy cannot share anything either.
 
+### Web page
+
+- **Files:** `app/web/index.html`, `app.css`, `app.js`. Plain HTML, CSS and JavaScript: no build step, no
+  framework, no external files. The look follows the owner's "Nocturne" mockup (claude.ai design export,
+  2026-11-02): a dark blue-grey ground, one blurple accent used as lines and glow, outlined buttons.
+- **Layout:** case list (left), chat thread and composer (middle), Flow graph and Trace (right). Below
+  1200 px the Flow panel becomes a drawer; below 900 px the case list becomes a drawer, the Flow panel a
+  bottom sheet, and a strip of steps sits under the header. The settings tab hides the Flow panel.
+- **Data:** only the `/v1` routes. The confirm card and the Flow graph read the step plan from
+  `GET /v1/status` (`workflows[].steps`, built once from the catalog with a placeholder case, never
+  admitted) and, once the Runner has claimed a job, the plan frozen with that job (`plan` in
+  `GET /v1/jobs/{job_id}`). Step results come from `result.steps`; the Trace from `/events`.
+- **Honesty:** Core runs a job as one blocking loop, so a `RUNNING` job is shown as running as a whole;
+  each step's ✓/✕ and attempt count appear when the job finishes. Nothing is animated per step.
+- **Confirm step:** client-side. Nothing is sent before "ยืนยันและส่ง". The idempotency key is made with the
+  draft, so "ส่งอีกครั้ง" after a network error cannot create a second job. "ส่งซ้ำ (ทดสอบว่าไม่เกิดงานซ้ำ)"
+  stays on the last case sent from the tab.
+- **Settings are read-only by design:** no field accepts a key, a provider, a retry budget or a policy
+  (CLAUDE.md rules 4–7). The page explains where each value is changed instead.
+- **Content-Security-Policy:** unchanged. No inline script, no style attribute; server data is inserted as
+  text. The textarea height and the graph's edges are set through the DOM (CSSOM properties, SVG
+  attributes), which the policy allows. No web fonts: the page uses the system's Inter/Thai fonts if
+  present.
+- **Links:** the selected job is kept in the URL fragment (`#job_…`), so a reload or a copied link reopens it.
+- **How it was checked (2026-11-03):** a headless-browser walkthrough of every state on desktop
+  (1280 and 1440 px), tablet (1024 px) and phone (390 px): no console errors, no CSP violations, no
+  horizontal overflow; keyboard sending, focus moves, drawers with Escape, the error paths (short text, bad
+  case id, wrong key) and "send again" returning the same job.
+
 ### Job states
 
 ```text
@@ -127,10 +185,10 @@ Every `/v1` route needs `Authorization: Bearer <NEURON_FLOW_ACCESS_KEY>`. Bodies
 | Method and path | What it does | Success | Errors |
 |---|---|---|---|
 | `GET /healthz` | Liveness for the host's health check (no key); also says whether an access key is set | 200 `{"ok": true, "access_key": "configured"}` | 503 |
-| `GET /v1/status` | Runner heartbeat, queue counts, AI mode, storage, limits | 200 | 401, 429 |
+| `GET /v1/status` | Runner heartbeat, queue counts, AI mode, storage, limits, and each workflow's steps (`workflows[].steps`) | 200 | 401, 429 |
 | `POST /v1/jobs` | Admit a job | 202 new, 200 duplicate | 400, 401, 409, 411, 413, 415, 429, 503 |
 | `GET /v1/jobs?limit=20&before=<seq>` | Newest first; `next_before` is the next cursor | 200 | 400, 401 |
-| `GET /v1/jobs/{job_id}` | Status, reviewer proposal, step timeline, AI provenance, receipt hash | 200 | 401, 404 |
+| `GET /v1/jobs/{job_id}` | Status, the step plan frozen at claim (`plan`, `null` while queued), reviewer proposal, step timeline, AI provenance, receipt hash | 200 | 401, 404 |
 | `GET /v1/jobs/{job_id}/events?after=<seq>&limit=50` | History in bounded pages (`limit` 1–100) | 200 | 400, 401, 404 |
 
 ```bash
@@ -145,6 +203,9 @@ curl -s https://<your-service>.onrender.com/v1/jobs \
 - `idempotency_key`: 8–128 characters `[A-Za-z0-9._:-]`. Use one key per real submission and reuse it
   only to retry that submission.
 - A request never carries agent names, import paths, steps, params or callbacks.
+- A step plan (in `workflows[].steps` and `plan`) is a list of
+  `{"id", "agent", "depends_on", "max_attempts", "timeout_s"}`, with Core's defaults filled in (5 seconds,
+  2 attempts). It is read-only and never includes params.
 
 Error bodies look like `{"error": "<code>", "message": "<English text>"}`. Codes: `invalid_fields`,
 `invalid_json`, `unknown_workflow_type`, `invalid_idempotency_key`, `invalid_input`,
@@ -192,8 +253,10 @@ job) belong to Milestone C and are still open.
   browser (session storage, or local storage when "remember" is ticked). There are no per-person accounts
   yet; Milestone C adds reviewer identity.
 - Ten wrong keys in a minute from one client pause that client's attempts.
-- The page loads nothing from other sites and allows no inline script (strict Content-Security-Policy).
-  Server data is always inserted as text. The API sends no CORS headers.
+- The page loads nothing from other sites and allows no inline script or style attribute (strict
+  Content-Security-Policy). Server data is always inserted as text. The API sends no CORS headers.
+- The settings view only displays configuration. No key, provider or limit can be set from the page, and
+  keys never pass through it.
 - Body cap (16 KiB, checked before reading), connection cap, socket timeouts, queue cap and rate limits.
 - Logs and Sentry events carry no case text, no query strings, no job ids in access lines and never the
   key. Responses carry no file paths.
@@ -209,6 +272,7 @@ job) belong to Milestone C and are still open.
   disk moves to the new instance. On Render's free plan the service sleeps after 15 idle minutes and
   forgets its cases.
 - Rate limits live in memory and reset on restart.
-- Live progress inside a running job is not shown step by step; the page shows the step timeline when the
-  job finishes. Jobs with the mock AI finish in well under a second.
+- Live progress inside a running job is not shown step by step: the Flow panel shows the job as running,
+  then every step's result when it finishes. Jobs with the mock AI finish in well under a second.
+- The chat box takes case text only. Plain-language conversation (the router) is roadmap Phase 4.
 - Review decisions, the n8n intake and reviewer notifications are Milestone C.
