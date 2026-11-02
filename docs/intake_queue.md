@@ -8,7 +8,8 @@ Synthetic data only. Review decisions (approve/reject) come with Milestone C, so
 ends at "waiting for a person". No Core (`neuron_flow/`) file was changed.
 The web page was redesigned on 2026-11-03 (PR #18, roadmap 1.6) after the owner's "Nocturne" mockup: a
 chat-style intake with a confirm step, a Flow panel and an event history (Trace), and read-only settings
-(see "หน้าเว็บ: ใช้อย่างไร" and "Web page" below).
+(see "หน้าเว็บ: ใช้อย่างไร" and "Web page" below). It is live on Render, and the owner reported that the
+owner test passed on the live page the same day.
 Design principles: [design_philosophy.md](design_philosophy.md).
 
 ## ภาพรวมการทำงาน (ภาษาไทย)
