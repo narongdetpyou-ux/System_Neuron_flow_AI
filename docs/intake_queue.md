@@ -120,8 +120,9 @@ container: app.boot (root) ─becomes─► tini ─► python -m app.serve
   `[FATAL tini (1)] Unexpected error when forwarding signal: 'Operation not permitted'` and exited, and the
   service was killed instead of stopped on every deploy, restart and sleep (seen on 2026-11-01; fixed by
   `app/boot.py`). Since the fix, stops on Render log `serve: stopping` and no FATAL line
-  ([evidence](evidence/2026-11-03-render-operations.md)). The *Service container* job runs the image with `--cap-drop KILL`, checks that process 1 runs
-  as `neuron`, and fails unless both its restart and its stop are graceful.
+  ([evidence](evidence/2026-11-03-render-operations.md)). The *Service container* job runs the image with
+  `--cap-drop KILL`, checks that process 1 runs as `neuron`, and fails unless both its restart and its stop
+  are graceful.
 - The API never opens the Core `Runtime` (ADR-001). A disk attaches to one instance only, and a service
   with a disk cannot scale out, so two Runners never share it. Without a disk (Render's free plan) each
   instance has its own throwaway data, so an overlapping deploy cannot share anything either.

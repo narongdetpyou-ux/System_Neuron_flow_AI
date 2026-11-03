@@ -159,10 +159,11 @@ decisions would vanish on every sleep.
     `neuron`. Every stop killed the service instead. This was reproduced in CI with `--cap-drop KILL` and
     the real tini. It was fixed by running tini as `neuron` (`app/boot.py`, PR #16); the CI job now keeps
     `--cap-drop KILL`.
-- **Confirmed on Render** ([evidence note](evidence/2026-11-03-render-operations.md)): the fixed image's first free-plan sleep (2026-11-01 15:43:45 UTC) and
-  the deploy replacements on 2026-11-03 logged `serve: stopping (signal 15)` and
-  `runner: stopping after the current job`, with no FATAL line. The same note records the free-plan sleep
-  (about 15 minutes after the last request) and the cold start (first job 9–10 s, later jobs 0.1–0.4 s).
+  - **Confirmed on Render** ([evidence note](evidence/2026-11-03-render-operations.md)): the fixed image's
+    first free-plan sleep (2026-11-01 15:43:45 UTC) and the deploy replacements on 2026-11-03 logged
+    `serve: stopping (signal 15)` and `runner: stopping after the current job`, with no FATAL line. The
+    same note records the free-plan sleep (about 15 minutes after the last request) and the cold start
+    (first job 9–10 s, later jobs 0.1–0.4 s).
 
 ### 0.2 Free or paid hosting (owner decision D1)
 
@@ -246,9 +247,9 @@ decisions would vanish on every sleep.
     `buildFilter.ignoredPaths`.
   - Render's docs could not be read from the session (the network blocks `render.com`), so the field
     names rest on Render's published schema, which CI applies.
-  - **Confirmed (2026-11-03, [evidence note](evidence/2026-11-03-render-operations.md)):** Render has no deploy for the docs or CI-only merges #19, #20 and
-    #24, and every merge that changed code (#16, #18, #21–#23) deployed. Render lists no
-    `commit_ignored` events, so the evidence is the missing deploys.
+  - **Confirmed (2026-11-03, [evidence note](evidence/2026-11-03-render-operations.md)):** Render has no
+    deploy for the docs or CI-only merges #19, #20 and #24, and every merge that changed code (#16, #18,
+    #21–#23) deployed. Render lists no `commit_ignored` events, so the evidence is the missing deploys.
 
 ### 0.6 Open Dependabot PRs #1–#5
 
