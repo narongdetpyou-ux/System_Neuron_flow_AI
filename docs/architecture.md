@@ -173,7 +173,8 @@ app/boot.py                    process 1 of the image: takes the data folder, dr
 app/settings.py, app/serve.py  environment settings; the launcher (API + supervised Runner in one container)
 Dockerfile, render.yaml        the container and the Render Blueprint (railway.json kept for Railway)
 examples/                      case_triage_demo, case_triage_shadow_demo, sentry_smoke_test, service_smoke_test
-tests/                         126 tests: core, triage v1/v2, AI gateway, scorecard, Sentry, API, queue, Runner, HTTP, metrics
+tests/                         131 tests: core, triage v1/v2, AI gateway, scorecard, eval gate, Sentry, API, queue, Runner, HTTP, metrics
+tests/baselines/               shadow_eval_mock.json: every case's answer with the mock AI (the eval gate's baseline)
 .github/workflows/             core-tests, service-container, sentry-smoke, shadow-eval-claude (manual)
 .github/scripts/               check_render_blueprint.py: render.yaml structure, build filter, Render's schema
 planned: review ledger and artifact store, app/domains/study_guide/
@@ -232,7 +233,8 @@ planned: review ledger and artifact store, app/domains/study_guide/
 **P1:**
 - Done: the telemetry phase fix (§3, PR #21); event pagination for the API (`limit` 1–100 with a cursor);
   correlation (request) ids in logs (PR #22); explicit cancellation of queued jobs (PR #23); queue and
-  run-time figures on the status page (PR #26, ROADMAP 5.3).
+  run-time figures on the status page (PR #26, ROADMAP 5.3); the eval gate in CI, which fails when any
+  per-case answer of the mock scorecard changes (PR #27, ROADMAP 5.2).
 - Open: retention and backup/restore drills (1.4, needs a disk), API authentication hardening (2.1, 7.2).
 
 **P2 (do not build early):** multi-tenancy, distributed workers, Postgres, object storage, SLAs, a hosted
@@ -247,7 +249,7 @@ dashboard.
 | P1-fix | Neutral telemetry phase names | Done (PR #21, roadmap 1.1) |
 | B | Admission queue, single Runner, reconciliation, thin API, web page | Done (PR #11); live on Render's free plan since 2026-11-01; page redesigned as a chat layout with Flow, Trace and read-only settings (PR #18, roadmap 1.6) |
 | C | Two-phase review, decision ledger, n8n notifications | Open |
-| D | OpenTelemetry tracing, eval gates in CI | Partly done: CI scorecard, Sentry, request ids and queue/run-time figures (5.3) exist; tracing and the eval gate are open |
+| D | OpenTelemetry tracing, eval gates in CI | Partly done: CI scorecard with the per-case eval gate (5.2), Sentry, request ids and queue/run-time figures (5.3) exist; tracing is open |
 | E | Planner pattern (B), MCP server, second domain with zero Core changes | Open |
 | — | `study_guide.v1`: first-response study guide ([design_philosophy.md](design_philosophy.md)) | Proposed |
 

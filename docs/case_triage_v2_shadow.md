@@ -17,6 +17,7 @@ service, public API or human-review service. No Core (`neuron_flow/`) file was c
 4. ระบบ **เทียบ** สองความเห็น ถ้าไม่ตรงกัน เคสถูกยกเป็น "ต้องดูก่อน" (priority elevated) พร้อมเหตุผล
 5. ผู้รีวิวได้รับข้อเสนอที่ **รอคนตัดสินเสมอ** (PENDING_HUMAN_REVIEW) AI ไม่มีสิทธิ์ตัดสินหรือเปลี่ยนคิวเอง
 6. ทุกคำตอบของ AI ถูกบันทึกว่ามาจากรุ่นไหน ใช้ prompt ฉบับไหน ถ้าเปลี่ยน prompt หรือรุ่น AI งานเก่าจะไม่ถูกรันซ้ำด้วยค่าใหม่โดยไม่รู้ตัว
+7. **ด่านตรวจผลรายเคส (eval gate, ขั้น 5.2)** ทุกครั้งที่มีการส่งโค้ดขึ้น GitHub ระบบรันเคสทดสอบ 61 เคสด้วย AI จำลอง แล้วเทียบคำตอบของทุกเคสกับไฟล์ต้นแบบ (`tests/baselines/shadow_eval_mock.json`) ถ้ามีเคสไหนตอบต่างจากเดิม แม้แต่ช่องเดียว (หมวดของกฎ หมวดของ AI ความมั่นใจ การเห็นตรงกัน ความสำคัญ หรือเหตุผล) ช่องตรวจ *Core logic tests* จะเป็นสีแดง และหน้าผลรันจะบอกว่าเคสไหนเปลี่ยนอะไร ถ้าตั้งใจเปลี่ยน ต้องอัปเดตไฟล์ต้นแบบใน PR เดียวกันและเขียนเหตุผลไว้ ถ้าเปลี่ยน prompt หรือรุ่น AI ต้องแนบผลรัน Claude จริงด้วย
 
 ## How one case flows
 
@@ -103,8 +104,39 @@ v2 workflow and reports each rate as numerator/denominator:
 - **Cases both got wrong.** A list worth reading.
 
 On GitHub, every push shows this table on the Actions run page, using the mock AI.
-`--compare-with old_report.json` flags **any** change in the AI's per-case answers
-(through `neuron_flow.evaluation.candidate_gate`). Run it before switching prompt or model.
+
+### The eval gate (roadmap 5.2)
+
+Every push and pull request also checks each case's answer against a committed baseline:
+
+```text
+python -m app.eval.triage_shadow_eval --compare-with tests/baselines/shadow_eval_mock.json
+```
+
+- **What is compared, per case:** the case text (its SHA-256), the label, the job status, the rules'
+  category, the AI's status, category, reason, confidence and attempts, the agreement, and the review
+  priority and reasons. Timings and token counts are left out, because they change from run to run.
+- **What else counts as a change:** a different case set (its SHA-256), prompt (id and SHA-256), or AI
+  provider and model.
+- **When something differs:** the command exits with 3, and the run page lists every difference as
+  `<case id>: <field> <before> -> <after>`. The step runs even when the unit tests failed earlier in the
+  job, so the list is always there. The unit test
+  `test_the_committed_baseline_matches_a_fresh_mock_run` runs the same check, so `python -m unittest`
+  catches it locally too.
+- **Changing answers on purpose:** regenerate the baseline in the same pull request and say why in its
+  description:
+
+  ```text
+  python -m app.eval.triage_shadow_eval --write-baseline tests/baselines/shadow_eval_mock.json
+  ```
+
+  The file has one case per line, so the pull request's diff shows exactly which cases changed. A prompt
+  or model change also needs a live run by hand (*Actions → Shadow eval with Claude*), attached to the
+  pull request.
+- **Comparing two runs:** `--compare-with` also accepts a full report written with `--out`, for example to
+  list where a Claude run differs from the mock. `compare_reports` (through
+  `neuron_flow.evaluation.candidate_gate`) still compares the AI outcomes of two reports from Python.
+- **Where the baseline lives:** in `tests/`, so a baseline-only change does not redeploy Render.
 
 The mock AI's keyword list was written alongside the synthetic case set, so its
 score is inflated by design. The mock run proves that the pipeline and the measurement work.
@@ -131,6 +163,7 @@ It does not show AI accuracy.
 | `app/domains/case_triage/shadow_agents.py` | the AI, compare and prepare agents and their validators |
 | `app/domains/case_triage/shadow_workflow.py` | trusted registry and the four-step DAG |
 | `app/eval/triage_shadow_eval.py` + `app/eval/golden/` | scorecard and 61 labelled synthetic cases (EN + TH) |
+| `tests/baselines/shadow_eval_mock.json` | every case's answer with the mock AI: the eval gate's baseline |
 | `examples/case_triage_shadow_demo.py` | three cases explained step by step |
 
 ## Limits

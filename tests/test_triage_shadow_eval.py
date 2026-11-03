@@ -1,4 +1,4 @@
-"""Shadow-mode scorecard: case file checks, metrics arithmetic, outcome-change gate, CLI."""
+"""Shadow-mode scorecard: case file checks, metrics arithmetic, outcome-change gate, eval gate, CLI."""
 import contextlib
 import io
 import json
@@ -6,10 +6,17 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from neuron_flow.model import decode
+
 from app.domains.case_triage import build_shadow_workflow
 from app.eval import triage_shadow_eval as ev
+from app.llm import LLMConfig
 
 GOLDEN = ev.load_golden()
+BASELINE = Path(__file__).resolve().parent / "baselines" / "shadow_eval_mock.json"
+UPDATE_HINT = ("If the change is on purpose, regenerate the baseline in the same pull request with\n"
+               "  python -m app.eval.triage_shadow_eval --write-baseline tests/baselines/shadow_eval_mock.json\n"
+               "and explain why in the PR description (roadmap 5.2).")
 
 
 def row(case_id, expected, rules, llm, *, language="en", priority=None, status="ok", tags=()):
@@ -114,6 +121,70 @@ class EndToEndEvalTests(unittest.TestCase):
             out.write_text(json.dumps(saved), "utf-8")
             with contextlib.redirect_stdout(io.StringIO()):
                 self.assertEqual(ev.main(["--limit", "4", "--compare-with", str(out)]), 3)
+
+
+class EvalGateTests(unittest.TestCase):
+    """Roadmap 5.2: every per-case answer is compared with the committed mock baseline."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.full = ev.evaluate(GOLDEN, LLMConfig())  # all cases, always the offline mock AI
+
+    def test_the_committed_baseline_matches_a_fresh_mock_run(self):
+        changes = ev.answer_changes(ev.as_baseline(decode(BASELINE.read_bytes())), ev.baseline_view(self.full))
+        self.assertEqual(changes, [], "Per-case answers differ from tests/baselines/shadow_eval_mock.json:\n"
+                         + "\n".join(changes) + "\n" + UPDATE_HINT)
+
+    def test_regenerating_the_baseline_gives_the_same_bytes(self):
+        # So a regenerated file differs from the committed one only on the lines whose answers changed.
+        view = ev.baseline_view(self.full)
+        if ev.answer_changes(ev.as_baseline(decode(BASELINE.read_bytes())), view):
+            self.skipTest("the answers differ; test_the_committed_baseline_matches_a_fresh_mock_run lists them")
+        self.assertEqual(ev.baseline_json(view), BASELINE.read_text("utf-8"),
+                         "Same answers, different text: the baseline was edited by hand. " + UPDATE_HINT)
+
+    def test_each_kind_of_difference_is_named(self):
+        before = ev.baseline_view(self.full)
+        after = json.loads(json.dumps(before))
+        first, second = after["cases"][0], after["cases"][1]
+        first["rules_category"] = "billing" if first["rules_category"] != "billing" else "other"
+        second["review_reasons"] = second["review_reasons"] + ["llm_low_confidence"]
+        removed = after["cases"].pop(2)["case_id"]
+        after["prompt"]["sha256"] = "0" * 64
+        changes = ev.answer_changes(before, after)
+        self.assertEqual(len(changes), 4, changes)
+        self.assertEqual(changes[0], 'prompt sha256: "%s…" -> "000000000000…"' % before["prompt"]["sha256"][:12])
+        self.assertIn(f"{removed}: in the baseline but not in this run", changes)
+        self.assertTrue(any(line.startswith(f"{first['case_id']}: rules_category ") for line in changes), changes)
+        self.assertTrue(any(line.startswith(f"{second['case_id']}: review_reasons ") for line in changes), changes)
+        self.assertEqual(ev.answer_changes(before, before), [])
+
+    def test_malformed_baselines_are_refused_and_reports_are_reduced(self):
+        good = ev.baseline_view(self.full)
+        for broken in ({"schema": "other"}, [], dict(good, extra=1), dict(good, cases=good["cases"] + good["cases"][:1]),
+                       dict(good, cases=[{**good["cases"][0], "extra": 1}])):
+            with self.assertRaises(ValueError):
+                ev.as_baseline(broken)
+        self.assertEqual(ev.as_baseline(self.full), good)  # a full report (--out) is accepted, reduced to answers
+
+    def test_command_line_writes_a_baseline_and_gates_on_it(self):
+        with tempfile.TemporaryDirectory() as folder:
+            baseline, summary = Path(folder) / "baseline.json", Path(folder) / "summary.md"
+            with contextlib.redirect_stdout(io.StringIO()):
+                self.assertEqual(ev.main(["--limit", "3", "--write-baseline", str(baseline)]), 0)
+                self.assertEqual(ev.main(["--limit", "3", "--compare-with", str(baseline), "--summary", str(summary)]), 0)
+            self.assertIn("(eval gate): ผ่าน", summary.read_text("utf-8"))
+            document = json.loads(baseline.read_text("utf-8"))
+            document["cases"][1]["llm_category"] = "nothing"
+            baseline.write_text(json.dumps(document), "utf-8")
+            with contextlib.redirect_stdout(io.StringIO()):
+                self.assertEqual(ev.main(["--limit", "3", "--compare-with", str(baseline), "--summary", str(summary)]), 3)
+            text = summary.read_text("utf-8")
+            self.assertIn("ไม่ผ่าน (1 จุดต่างจากเดิม)", text)
+            self.assertIn(f"{document['cases'][1]['case_id']}: llm_category", text)
+            self.assertIn("--write-baseline", text)
+            with self.assertRaises(FileNotFoundError):  # a missing baseline fails before any case runs
+                ev.main(["--compare-with", str(Path(folder) / "missing.json")])
 
 
 if __name__ == "__main__":
