@@ -107,7 +107,8 @@ Each row was re-checked against the current code.
 - **Shadow mode:** the rules stay official. The AI adds a second opinion, and a disagreement raises review to
   elevated. Every proposal stays `PENDING_HUMAN_REVIEW`.
 - **Monitoring:** failed steps send Sentry errors; degraded steps (`{"status": "unavailable"}`) send grouped
-  warnings.
+  warnings. With tracing on, every AI call is also a span with its model, tokens and latency (GenAI
+  semantic conventions; [observability_tracing.md](observability_tracing.md)).
 - **Agent patterns for later:**
   - A: a bounded tool loop inside one step (preferred first).
   - B: a planner step that produces a plan, validated and run as a new linked job.
@@ -167,7 +168,7 @@ neuron_flow/                   Core runtime (one change since extraction: the te
 app/domains/case_triage/       v1 rules (agents.py, workflow.py), contracts.py, v2 shadow_agents.py, shadow_workflow.py
 app/llm/                       config, errors, gateway, prompts, redaction (personal-data masking), prompt_library/, providers/{mock, anthropic}
 app/eval/                      triage_shadow_eval.py, golden/case_triage_synthetic_v1.json (61 cases)
-app/observability/             sentry.py (step failures, degraded AI, Runner recoveries)
+app/observability/             sentry.py (step failures, degraded AI, Runner recoveries); tracing.py (OTLP/JSON exporter) and job_spans.py (a job's spans)
 app/persistence/               queue_store.py: the application job queue, events and Runner heartbeat (SQLite)
 app/services/                  workflows.py (catalog), admission.py, runner.py (with reconciliation), results.py, metrics.py
 app/api/                       routes.py (ApiApp), server.py (standard-library HTTP server), limits.py
@@ -176,11 +177,12 @@ app/boot.py                    process 1 of the image: takes the data folder, dr
 app/settings.py, app/serve.py  environment settings; the launcher (API + supervised Runner in one container)
 Dockerfile, render.yaml        the container and the Render Blueprint (railway.json kept for Railway)
 examples/                      case_triage_demo, case_triage_shadow_demo, sentry_smoke_test, service_smoke_test
-tests/                         141 tests: core, triage v1/v2, AI gateway, masking, scorecard, eval gate, Sentry, API, queue, Runner, HTTP, metrics
+tests/                         169 tests: core, triage v1/v2, AI gateway, masking, scorecard, eval gate, Sentry, tracing, API, queue, Runner, HTTP, metrics
 tests/baselines/               shadow_eval_mock.json: every case's answer with the mock AI (the eval gate's baseline)
-.github/workflows/             core-tests, service-container, secret-scan, sentry-smoke, shadow-eval-claude (manual)
-.github/gitleaks.toml          secret scan rules (gitleaks defaults + Sentry DSN); .github/.gitleaksignore: reviewed findings
-.github/scripts/               check_render_blueprint.py: render.yaml structure, build filter, Render's schema
+.github/workflows/             core-tests, service-container, tracing-check, secret-scan, sentry-smoke, shadow-eval-claude (manual)
+.github/gitleaks.toml          secret scan rules (gitleaks defaults + Sentry DSN + Honeycomb keys); .github/.gitleaksignore: reviewed findings
+.github/scripts/               check_render_blueprint.py: render.yaml structure, build filter, Render's schema; check_traces.py
+.github/otel/                  collector.yaml: the OpenTelemetry Collector that the tracing check sends to
 planned: review ledger and artifact store, app/domains/study_guide/
 ```
 
@@ -204,6 +206,7 @@ planned: review ledger and artifact store, app/domains/study_guide/
 | 014 | API and Runner run in one container on one disk; the launcher supervises the Runner. A disk attaches to a single instance, so two Runners never share it. Host: Render (Railway paused new sign-ups on 22 Oct 2026) | In force (round 2) |
 | 015 | Interrupted jobs resume only under the spec frozen at their first claim; any drift fails them as `configuration_changed` | In force (round 2) |
 | 016 | Until reviewer identity exists (Milestone C), the API is protected by one shared access key, with per-client limits on wrong keys | In force (round 2); to be replaced |
+| 017 | Tracing uses a small standard-library OTLP/HTTP JSON exporter, not the OpenTelemetry SDK. Job, step and AI spans are built after the job from durable records (queue record, Core step events, the AI view); only allow-listed ASCII attributes can be sent | In force (PR #30). Trade-off: no automatic instrumentation, no metrics or logs signals, and two modules (about 700 lines with comments) to maintain. Attribute names follow the semantic conventions, so the SDK can replace it without changing the data |
 
 ## 9. Acceptance gates
 
@@ -241,7 +244,9 @@ planned: review ledger and artifact store, app/domains/study_guide/
   correlation (request) ids in logs (PR #22); explicit cancellation of queued jobs (PR #23); queue and
   run-time figures on the status page (PR #26, ROADMAP 5.3); the eval gate in CI, which fails when any
   per-case answer of the mock scorecard changes (PR #27, ROADMAP 5.2); a secret scan of every commit of
-  every branch in CI, with the Sentry DSN read only from a repository secret (PR #29, ROADMAP 7.4).
+  every branch in CI, with the Sentry DSN read only from a repository secret (PR #29, ROADMAP 7.4);
+  tracing to Honeycomb, one trace per job with its steps and AI call, with the encoding checked against the
+  OpenTelemetry Collector in CI (PR #30, ROADMAP 5.1; the look in Honeycomb itself waits for the key).
 - Open: retention and backup/restore drills (1.4, needs a disk), API authentication hardening (2.1, 7.2).
 
 **P2 (do not build early):** multi-tenancy, distributed workers, Postgres, object storage, SLAs, a hosted
@@ -256,7 +261,7 @@ dashboard.
 | P1-fix | Neutral telemetry phase names | Done (PR #21, roadmap 1.1) |
 | B | Admission queue, single Runner, reconciliation, thin API, web page | Done (PR #11); live on Render's free plan since 2026-11-01; page redesigned as a chat layout with Flow, Trace and read-only settings (PR #18, roadmap 1.6) |
 | C | Two-phase review, decision ledger, n8n notifications | Open |
-| D | OpenTelemetry tracing, eval gates in CI | Partly done: CI scorecard with the per-case eval gate (5.2), Sentry, request ids and queue/run-time figures (5.3) exist; tracing is open |
+| D | OpenTelemetry tracing, eval gates in CI | Built: the per-case eval gate (5.2), queue/run-time figures (5.3), Sentry, request ids, and tracing (5.1, PR #30). Left: seeing the first trace in Honeycomb once the key is in Render |
 | E | Planner pattern (B), MCP server, second domain with zero Core changes | Open |
 | — | `study_guide.v1`: first-response study guide ([design_philosophy.md](design_philosophy.md)) | Proposed |
 

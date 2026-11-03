@@ -13,7 +13,7 @@ trusted agents in bounded child processes, retries, recovers after a crash and w
   (shadow mode), and a person always decides;
 - an AI gateway (an offline mock or Claude);
 - a scorecard on 61 synthetic cases;
-- Sentry reporting;
+- Sentry reporting, and tracing to Honeycomb (one trace per case; off until a key is set);
 - since round 2, an HTTP API, a durable job queue, a single Runner with crash recovery and a Thai web page,
   shipped as one container for Render.
 
@@ -26,7 +26,8 @@ Read in this order when you need depth:
 3. [docs/design_philosophy.md](docs/design_philosophy.md): the owner's compass for every feature (mostly Thai).
 4. Feature docs: [intake_queue.md](docs/intake_queue.md) (API, queue, Runner, web page, Render setup),
    [case_triage_v2_shadow.md](docs/case_triage_v2_shadow.md) (the AI second opinion),
-   [observability_sentry.md](docs/observability_sentry.md).
+   [observability_sentry.md](docs/observability_sentry.md),
+   [observability_tracing.md](docs/observability_tracing.md) (traces to Honeycomb).
 
 ## 2. Working with the owner (read this first)
 
@@ -107,14 +108,14 @@ If a task seems to need breaking a rule:
 ## 4. Checking your work
 
 ```bash
-python -m unittest discover -s tests -v        # all tests (141 on 2026-11-03); Python 3.10–3.13
+python -m unittest discover -s tests -v        # all tests (169 on 2026-11-03); Python 3.10–3.13
 python -m examples.case_triage_demo            # v1 rules, one synthetic case
 python -m examples.case_triage_shadow_demo     # v2 shadow mode with the offline mock AI
 python -m app.eval.triage_shadow_eval --compare-with tests/baselines/shadow_eval_mock.json  # scorecard + eval gate
 NEURON_FLOW_ACCESS_KEY=$(python -c "import secrets; print(secrets.token_urlsafe(24))") python -m app.serve
 ```
 
-GitHub Actions (the owner can open these; the first two run on every push and pull request):
+GitHub Actions (the owner can open these; the first three run on every push and pull request):
 - *Core logic tests* (`core-tests.yml`) runs every test on Python 3.10 and 3.12, both demos and the
   scorecard, then the eval gate: it fails when any case answers differently from
   `tests/baselines/shadow_eval_mock.json` (roadmap 5.2).
@@ -123,6 +124,9 @@ GitHub Actions (the owner can open these; the first two run on every push and pu
   - builds the same container as Render and submits cases over HTTP;
   - restarts it and checks that nothing was lost;
   - checks that it runs without root and stops cleanly.
+- *Tracing check* (`tracing-check.yml`) runs the service with tracing sent to the OpenTelemetry Collector
+  (`.github/otel/collector.yaml`), submits cases, and checks with `.github/scripts/check_traces.py` that each
+  case is one trace with its steps and that no case text or key was sent (roadmap 5.1).
 - *Sentry smoke test* checks that error reporting reaches Sentry. It reads the DSN only from the repository
   secret `SENTRY_DSN` and skips with a notice when it is missing (roadmap 7.4).
 - *Secret scan* (`secret-scan.yml`) runs gitleaks over every commit of every branch on every push and pull
@@ -172,13 +176,14 @@ Notes for cloud sessions (claude.ai/code):
 | `app/llm/` | AI gateway, prompt library (prompt + answer schema, one hash), personal-data masking, mock and Claude providers |
 | `app/eval/` | scorecard and the 61 labelled synthetic cases |
 | `app/observability/sentry.py` | Sentry reporting: step failures, degraded AI, Runner recoveries |
+| `app/observability/tracing.py`, `job_spans.py` | tracing: the OTLP/JSON exporter with its attribute allow-list, and a finished job's spans (ADR-017) |
 | `app/persistence/queue_store.py` | the application queue in its own SQLite file (`<data>/app/queue.sqlite3`) |
 | `app/services/` | workflow catalog, admission, Runner with reconciliation, result summaries, queue and run-time figures |
 | `app/api/`, `app/web/` | standard-library HTTP API and the Thai web page (chat layout, Flow and Trace, read-only settings) |
 | `app/boot.py` | the image's process 1: takes the data folder as root, switches to `neuron`, becomes tini |
 | `app/settings.py`, `app/serve.py` | settings from the environment; the launcher (API + supervised Runner) |
 | `Dockerfile`, `render.yaml`, `railway.json` | the container, the Render Blueprint, the Railway config kept for later |
-| `tests/`, `examples/`, `.github/` | tests (`tests/baselines/` holds the eval gate's baseline), demos and smoke tests, CI (`.github/scripts/` holds the `render.yaml` check; `.github/gitleaks.toml` and `.github/.gitleaksignore` the secret scan's rules and reviewed findings) |
+| `tests/`, `examples/`, `.github/` | tests (`tests/baselines/` holds the eval gate's baseline), demos and smoke tests, CI (`.github/scripts/` holds the `render.yaml` and trace checks, `.github/otel/` the tracing check's collector; `.github/gitleaks.toml` and `.github/.gitleaksignore` the secret scan's rules and reviewed findings) |
 | `.claude/` | the session-start hook for Claude Code cloud sessions |
 
 ## 7. Hosting (Render)
@@ -195,8 +200,8 @@ Notes for cloud sessions (claude.ai/code):
     adding folders;
   - Render generates `NEURON_FLOW_ACCESS_KEY`.
 - **Where to change settings.** Change them in `render.yaml`, not in the dashboard: a Blueprint sync
-  overwrites dashboard edits that conflict with the file. Secrets (`ANTHROPIC_API_KEY`, `SENTRY_DSN`) go in
-  the dashboard's Environment tab, never in a file.
+  overwrites dashboard edits that conflict with the file. Secrets (`ANTHROPIC_API_KEY`, `SENTRY_DSN`,
+  `HONEYCOMB_API_KEY`) go in the dashboard's Environment tab, never in a file.
 - **No `CAP_KILL` on Render.** Root in Render's containers may not signal another user's processes, so
   tini must run as the same user as the service (`app/boot.py`). A root tini logged `[FATAL tini (1)]
   Unexpected error when forwarding signal: 'Operation not permitted'`, and every stop killed the service.
@@ -235,6 +240,9 @@ Notes for cloud sessions (claude.ai/code):
     narrowing who can read the AI key is a design note in 7.1, not built).
   - Secret scan of the whole history in CI, and the Sentry DSN only from a repository secret (PR #29,
     roadmap 7.4, the preparation part; the rest of 7.4 waits for the owner's decision D5).
+  - Tracing to Honeycomb: one trace per case, checked against the OpenTelemetry Collector in CI (PR #30,
+    roadmap 5.1). Seeing the first trace in Honeycomb itself waits for `HONEYCOMB_API_KEY` in Render; use
+    the Honeycomb connector to find it, then record an evidence note and tick 5.1.
   - The Render service `neuron-flow` exists and is live at https://neuron-flow.onrender.com (free plan,
     first deploy 2026-11-01). Use the Render connector to read its deploys, events and logs; this
     session's network may not reach `onrender.com` or `render.com` directly.
@@ -247,8 +255,9 @@ Notes for cloud sessions (claude.ai/code):
   - Review decisions and per-person identity (Milestone C) are not built.
   - The rest of the roadmap is open.
 - **Next:** [docs/ROADMAP.md](docs/ROADMAP.md), the first item that is not ✅ and whose needs are met.
-  - Waiting on the owner: 0.2 and 1.4 (D1, paid Render plan), 0.3 and 0.4 (D2, Claude API key).
-  - Buildable now without an owner decision: Phase 2 (2.1 first) and Phase 3 (3.1 first). 5.1 also
-    needs a Honeycomb key from the owner; the rest of 7.1 (who can read the AI key) needs an ADR first.
+  - Waiting on the owner: 0.2 and 1.4 (D1, paid Render plan), 0.3 and 0.4 (D2, Claude API key), and the
+    end of 5.1 (the Honeycomb key in Render).
+  - Buildable now without an owner decision: Phase 2 (2.1 first) and Phase 3 (3.1 first). The rest of 7.1
+    (who can read the AI key) needs an ADR first.
   - The owner decides which of these comes first; ask before starting a new phase.
 - Keep this section and the ROADMAP status table true in every PR.

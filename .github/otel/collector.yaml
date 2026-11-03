@@ -1,0 +1,15 @@
+# The OpenTelemetry Collector for .github/workflows/tracing-check.yml: it takes OTLP over HTTP, as Honeycomb
+# does, and writes every request it accepts to a JSON file. Nothing is forwarded anywhere.
+receivers:
+  otlp:
+    protocols:
+      http:
+        endpoint: 0.0.0.0:4318
+exporters:
+  file:
+    path: /out/traces.jsonl
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      exporters: [file]

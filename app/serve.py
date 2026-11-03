@@ -9,7 +9,8 @@ Steps:
 3. create the queue database;
 4. start the Runner; if it stops unexpectedly, start it again after a short pause (its
    reconciliation then finishes any interrupted job);
-5. serve HTTP until SIGTERM, then ask the Runner to stop after its current job.
+5. serve HTTP until SIGTERM, then ask the Runner to stop after its current job;
+6. with tracing on (``HONEYCOMB_API_KEY``), send the spans that are still queued before exiting.
 """
 
 import logging
@@ -22,7 +23,7 @@ from pathlib import Path
 
 from app.api import ApiApp, make_server
 from app.boot import RUN_AS, drop_privileges, prepare_data_folders
-from app.observability import SentryReporter, init_sentry
+from app.observability import SentryReporter, Tracing, init_sentry
 from app.persistence import QueueStore
 from app.settings import Settings
 
@@ -80,6 +81,11 @@ def main():
     store = QueueStore(settings.queue_db)
     store.migrate()
     sentry_active = init_sentry()
+    tracing = Tracing.from_env("api")
+    if tracing.enabled:
+        log.info("serve: tracing on: spans go to %s as service %s", tracing.destination, tracing.service_name)
+    elif tracing.problem != "not_configured":
+        log.warning("serve: tracing is off (%s)", tracing.problem)
     if settings.access_key is None:
         log.warning("serve: NEURON_FLOW_ACCESS_KEY is %s; the API refuses every /v1 request until it is set",
                     settings.access_key_problem)
@@ -87,7 +93,8 @@ def main():
         log.warning("serve: no persistent storage configured; jobs are lost when the container restarts")
     supervisor = RunnerSupervisor()
     supervisor.start()
-    server = make_server(settings, ApiApp(settings, store, reporter=SentryReporter() if sentry_active else None))
+    server = make_server(settings, ApiApp(settings, store, reporter=SentryReporter() if sentry_active else None,
+                                          tracing=tracing))
 
     def shutdown(signum, _frame):
         log.info("serve: stopping (signal %d)", signum)
@@ -101,6 +108,7 @@ def main():
     finally:
         supervisor.stop()
         server.server_close()
+        tracing.shutdown()  # at most two seconds, inside the host's stop window (render.yaml)
     return 0
 
 

@@ -47,6 +47,9 @@ Since round 2, cases can also come in from outside, through an HTTP API or a Tha
    access log to the job record.
 6. The page shows how many cases wait and for how long, how long cases usually take (median and slowest,
    per workflow) and why recent ones failed.
+7. With a Honeycomb key in the environment, every case also becomes one trace: the request, the queue
+   wait, each step attempt and the AI call with its tokens. No case text, prompt, AI answer or key is ever
+   sent. Details: [observability_tracing.md](docs/observability_tracing.md).
 
 ## What is inside
 
@@ -56,7 +59,7 @@ Since round 2, cases can also come in from outside, through an HTTP API or a Tha
 | Case triage v1: deterministic keyword rules | `app/domains/case_triage/agents.py`, `workflow.py` | Working |
 | Case triage v2: shadow mode with AI second opinion | `app/domains/case_triage/shadow_*.py` | Working with the offline mock AI; Claude path tested against a fake API, **not yet run against the real Claude API** |
 | AI gateway: versioned prompt, mock and Claude providers | `app/llm/` | Working (see above) |
-| Error monitoring | `app/observability/` | Sentry errors, degraded-AI warnings and Runner recoveries |
+| Error monitoring and tracing | `app/observability/` | Sentry errors, degraded-AI warnings and Runner recoveries; traces to Honeycomb (OTLP), off until a key is set and not yet seen in Honeycomb itself |
 | Scorecard: 61 synthetic labelled cases (EN + TH) | `app/eval/` | Runs in CI; mock scores test the pipeline, not AI accuracy |
 | Intake API, durable job queue, single Runner with crash recovery, Thai web page | `app/api/`, `app/persistence/`, `app/services/`, `app/web/`, `app/serve.py` | Working (round 2), tested offline and as a container in CI; live on Render's free plan since 2026-11-01 |
 | Human-review decisions, n8n intake, reviewer notifications | — | **Not built yet** (Milestone C in [architecture](docs/architecture.md)) |
@@ -84,7 +87,7 @@ forgets its cases when it sleeps or redeploys; a paid plan with a disk keeps the
 
 **Locally (Python 3.10+):**
 ```bash
-python -m unittest discover -s tests -v        # 141 tests
+python -m unittest discover -s tests -v        # 169 tests
 python -m examples.case_triage_demo            # v1 rules, one synthetic case
 python -m examples.case_triage_shadow_demo     # v2 shadow mode, three synthetic cases (offline mock AI)
 python -m app.eval.triage_shadow_eval          # scorecard on 61 synthetic cases
@@ -113,6 +116,7 @@ most 1 MiB. The agent `version` is frozen into each job, so an old job refuses t
 | [case_triage v2 shadow mode](docs/case_triage_v2_shadow.md) | The AI second opinion: flow, failure handling, configuration, scorecard |
 | [Intake API, queue, Runner and web page](docs/intake_queue.md) | Round 2: how a case flows from outside, recovery rules, API reference, Render setup |
 | [Sentry error reporting](docs/observability_sentry.md) | What gets reported, privacy rules, alerts |
+| [Tracing to Honeycomb](docs/observability_tracing.md) | One trace per case: what a span carries and never carries, setup in Render, how it is checked |
 | [Funding readiness pack](docs/funding/README.md) | Internal evidence register; not a submitted application |
 | [Evidence notes](docs/evidence/2026-11-03-render-operations.md) | Dated measurements; the first one covers Render operations (graceful stops, deploy filter, cold start) |
 

@@ -16,6 +16,7 @@ import secrets
 from neuron_flow import SpecError
 from neuron_flow.model import fingerprint
 
+from app.observability.tracing import parse_traceparent
 from app.persistence import QueueFull
 
 from .workflows import CATALOG
@@ -40,10 +41,11 @@ def request_fingerprint(workflow_type, normalized_input):
     return fingerprint({"workflow_type": workflow_type, "input": normalized_input})
 
 
-def admit(store, body, *, max_queued, catalog=CATALOG, request_id=None):
+def admit(store, body, *, max_queued, catalog=CATALOG, request_id=None, trace_parent=None):
     """Returns ``(job, created)``; raises :class:`AdmissionError` when the request is refused.
 
-    ``request_id`` (already checked by the API) is stored in the new job's first event.
+    ``request_id`` (already checked by the API) and ``trace_parent`` (the admitting request's span, made by
+    the API's tracing; only a well-formed W3C value is kept) are stored in the new job's first event.
     """
     if not isinstance(body, dict) or set(body) != _FIELDS:
         raise AdmissionError(400, "invalid_fields", "The body must contain exactly: workflow_type, idempotency_key, input")
@@ -63,7 +65,8 @@ def admit(store, body, *, max_queued, catalog=CATALOG, request_id=None):
     try:
         job, created = store.admit(job_id=new_job_id(), idempotency_key=key, request_fingerprint=digest,
                                    workflow_type=workflow.name, input=normalized, max_queued=max_queued,
-                                   request_id=request_id)
+                                   request_id=request_id,
+                                   trace_parent=trace_parent if parse_traceparent(trace_parent) else None)
     except QueueFull:
         raise AdmissionError(503, "queue_full", "The queue is full; try again in a few minutes") from None
     if not created and job["request_fingerprint"] != digest:

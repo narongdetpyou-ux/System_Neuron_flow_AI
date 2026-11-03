@@ -162,10 +162,12 @@ class QueueStore:
     # -- admission (API) ---------------------------------------------------------------------
 
     def admit(self, *, job_id, idempotency_key, request_fingerprint, workflow_type, input, max_queued,
-              request_id=None, now=None):
+              request_id=None, trace_parent=None, now=None):
         """Insert a QUEUED job, or return the job that already holds this idempotency key.
 
-        Returns ``(job, created)``. The caller compares fingerprints for a reused key.
+        Returns ``(job, created)``. The caller compares fingerprints for a reused key. ``request_id`` and
+        ``trace_parent`` (the W3C ``traceparent`` of the admitting request's span, when tracing is on) go
+        into the new job's ``job.queued`` event.
         """
         now = time.time() if now is None else now
         with self._write() as db:
@@ -183,6 +185,8 @@ class QueueStore:
             queued = {"workflow_type": workflow_type}
             if request_id:
                 queued["request_id"] = request_id
+            if trace_parent:
+                queued["trace_parent"] = trace_parent
             self._event(db, job_id, "job.queued", queued, now)
             return self._select(db, job_id), True
 
@@ -314,12 +318,17 @@ class QueueStore:
                    "payload": json.loads(row["payload"])} for row in rows[:limit]]
         return events, len(rows) > limit
 
-    def admitting_request_id(self, job_id):
-        """The request id stored in the job's ``job.queued`` event, or ``None`` (older jobs have none)."""
+    def admission(self, job_id):
+        """The payload of the job's ``job.queued`` event (workflow type, and the request id and trace parent
+        when they were recorded), or ``{}`` for an unknown job."""
         with self._connect() as db:
             row = db.execute("SELECT payload FROM job_events WHERE job_id=? AND kind='job.queued' ORDER BY seq LIMIT 1",
                              (job_id,)).fetchone()
-        return json.loads(row["payload"]).get("request_id") if row is not None else None
+        return json.loads(row["payload"]) if row is not None else {}
+
+    def admitting_request_id(self, job_id):
+        """The request id stored in the job's ``job.queued`` event, or ``None`` (older jobs have none)."""
+        return self.admission(job_id).get("request_id")
 
     def counts(self):
         with self._connect() as db:

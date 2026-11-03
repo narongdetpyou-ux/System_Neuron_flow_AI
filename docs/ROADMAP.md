@@ -21,12 +21,13 @@ differs, this file and architecture.md win.
   - ถ้าสองฝ่ายเห็นไม่ตรงกัน เคสจะถูกยกให้คนดูก่อน
 - ถ้าเครื่องดับกลางทาง ระบบทำต่อได้ ส่งซ้ำก็ไม่เกิดงานซ้ำ
 - ยกเลิกเคสที่ยังรอคิวได้ และทุกคำขอมีรหัสคำขอ (request id) ไว้ไล่ดูใน log (ขั้น 1.2, 1.3)
-- ผ่านชุดทดสอบอัตโนมัติ 141 ข้อ และเปิดใช้ออนไลน์บน Render แล้ว ระบบปิดตัวอย่างเรียบร้อย และการแก้แค่เอกสารไม่ทำให้ Render ขึ้นเวอร์ชันใหม่ (ขั้น 0.1, 0.5)
+- ผ่านชุดทดสอบอัตโนมัติ 169 ข้อ และเปิดใช้ออนไลน์บน Render แล้ว ระบบปิดตัวอย่างเรียบร้อย และการแก้แค่เอกสารไม่ทำให้ Render ขึ้นเวอร์ชันใหม่ (ขั้น 0.1, 0.5)
 - หน้าเว็บเป็นแบบแชท: พิมพ์เคส ดูขั้นตอนก่อนส่ง กดยืนยัน แล้วติดตามใน Flow และประวัติเหตุการณ์ (ขั้น 1.6)
 - หน้าเว็บบอกว่ามีเคสรอกี่เคส เคสที่รอนานสุดรอมานานเท่าไร ปกติแต่ละเคสใช้เวลาเท่าไร และเคสที่ไม่สำเร็จล้มเพราะอะไร (ขั้น 5.3)
 - ถ้ามีคนแก้กฎหรือ prompt แล้วคำตอบของเคสทดสอบเคสไหนเปลี่ยน ช่องตรวจบน GitHub จะเป็นสีแดงและบอกว่าเคสไหนเปลี่ยนอะไร (ขั้น 5.2)
 - ก่อนส่งเคสให้ AI ระบบปิดข้อมูลส่วนตัวที่จับรูปแบบได้ (อีเมล เบอร์โทร เลขบัตรประชาชน เลขแบบบัตรเครดิต ตัวเลขยาว และชื่อที่มีคำนำหน้า) AI เห็นแค่ป้ายแทน เช่น [PHONE] และหน้าเว็บบอกว่าปิดอะไรไปกี่จุด (ขั้น 7.1)
 - ทุกครั้งที่มีการส่งโค้ด GitHub สแกนหาคีย์หรือรหัสลับที่หลุดในประวัติโค้ดทั้งหมด และที่อยู่ Sentry (DSN) ไม่อยู่ในไฟล์แล้ว อ่านจากความลับ (secret) เท่านั้น (ขั้น 7.4 ส่วนเตรียมการ)
+- ส่งเส้นทางการทำงาน (trace) ของทุกเคสไป Honeycomb ได้: เห็นว่าแต่ละขั้นใช้เวลาเท่าไร ลองกี่ครั้ง และ AI ใช้ token เท่าไร โดยไม่ส่งข้อความเคสหรือคำตอบของ AI ระบบเปิดส่งเมื่อใส่ `HONEYCOMB_API_KEY` ใน Render (ขั้น 5.1)
 
 **ลำดับต่อจากนี้** แต่ละขั้นจบด้วยสิ่งที่คุณลองเองได้
 
@@ -37,7 +38,7 @@ differs, this file and architecture.md win.
 | 2 | ให้คนรีวิวได้จริง: ผู้รีวิวมีรหัสของตัวเอง กดอนุมัติหรือไม่อนุมัติได้ และ n8n แจ้งเตือน | กล่อง "รอรีวิว" บนหน้าเว็บ และข้อความแจ้งเตือน | ยังไม่เริ่ม |
 | 3 | ผู้ช่วยแนะนำแหล่งเรียน (`study_guide.v1`) ตามหลักปรัชญาของคุณ | พิมพ์เรื่องที่อยากรู้ด้วยคำธรรมดา แล้วได้แหล่งเรียนไม่เกิน 5 แหล่งพร้อมลำดับการเรียน | ยังไม่เริ่ม |
 | 4 | ช่องคุยภาษาธรรมดา: ระบบเข้าใจว่าคุณขออะไร บอกตรง ๆ เมื่อเรื่องอยู่นอกกรอบ และถามกลับ 1 คำถามเมื่อข้อมูลไม่พอ | คุยกับระบบได้เลย ไม่ต้องเลือกประเภทงานเอง | ยังไม่เริ่ม (ต้องรอขั้น 3) |
-| 5 | ติดตามเส้นทางของแต่ละงาน (เวลา token จุดที่ช้า) และด่านตรวจผลรายเคส | ตัวเลขคิวและเวลาบนหน้าเว็บ ช่องตรวจบน PR แล้วต่อด้วยเส้นทางงานใน Honeycomb | เริ่มแล้ว: 5.3 (ตัวเลขคิวและเวลา) และ 5.2 (ด่านตรวจผลรายเคส) เสร็จแล้ว ส่วน 5.1 ต้องใช้คีย์ Honeycomb ของคุณ |
+| 5 | ติดตามเส้นทางของแต่ละงาน (เวลา token จุดที่ช้า) และด่านตรวจผลรายเคส | ตัวเลขคิวและเวลาบนหน้าเว็บ ช่องตรวจบน PR แล้วต่อด้วยเส้นทางงานใน Honeycomb | 5.3 และ 5.2 เสร็จแล้ว; 5.1 (เส้นทางงานใน Honeycomb) สร้างแล้วใน PR #30 เหลือดูเส้นทางแรกใน Honeycomb หลังคุณใส่คีย์ใน Render |
 | 6 | AI วางแผนงานหลายขั้น ระบบตรวจแผนก่อนรัน และเครื่องมืออื่นเรียกใช้ผ่าน MCP ได้ | สั่งงานจากแอป Claude ได้ | ยังไม่เริ่ม (ต้องรอขั้น 2–4) |
 | 7 | เตรียมพร้อมก่อนให้คนอื่นใช้ หรือก่อนเปิด repo สาธารณะ | รายงานตรวจความปลอดภัย และรายการตรวจก่อนเปิดตัว | เริ่มแล้ว: 7.1 ปิดข้อมูลส่วนตัวก่อนส่งให้ AI ทำแล้ว ส่วนการจำกัดว่าใครเห็นคีย์ AI ได้ เขียนแผนไว้ ยังไม่ทำ; 7.4 ส่วนเตรียมการ (สแกนหาคีย์ที่หลุด และย้าย DSN ไปเป็นความลับ) ทำแล้ว ที่เหลือรอคุณตัดสินใจ (D5) |
 
@@ -104,7 +105,7 @@ Marks: ✅ done · 🟡 built or partly checked (the status says what is left) �
 | 4.2 | `intake.route.v1`: the plain-language router | ⬜ | 4.1 |
 | 4.3 | Layered answers (summary → steps → details) | ⬜ | 4.2 |
 | 4.4 | Chat-style page | ⬜ | 4.2 |
-| 5.1 | OpenTelemetry tracing to Honeycomb | ⬜ | 1.1, 1.2 |
+| 5.1 | OpenTelemetry tracing to Honeycomb | 🟡 built in PR #30 and checked against the OpenTelemetry Collector in CI; the first trace in Honeycomb waits for the key in Render | 1.1, 1.2 |
 | 5.2 | Evaluation gate in CI | ✅ PR #27 | — |
 | 5.3 | Queue and run-time metrics on the status page | ✅ PR #26 | — |
 | 6.1 | Pattern A: bounded read-only tool loop | ⬜ | 3.2 |
@@ -694,8 +695,11 @@ workflow types.
 
 ### 5.1 OpenTelemetry tracing to Honeycomb
 
-- **Form:** an optional adapter in `app/observability/`, like Sentry. The SDK is an optional extra, Core
-  stays dependency-free, and tracing is off unless it is configured.
+- **Form:** an optional adapter in `app/observability/`, like Sentry. Core stays dependency-free, and
+  tracing is off unless it is configured. *Changed when it was built:* the plan said the OpenTelemetry SDK
+  would be an optional extra; a small standard-library OTLP/HTTP JSON exporter was built instead (ADR-017),
+  because the spans are built after the job and the SDK's packages would add dependencies for features this
+  service does not use.
 - **Spans:**
   - each HTTP request (route label and status, no query string);
   - each job (queue wait, run time, status);
@@ -707,6 +711,27 @@ workflow types.
 - **Privacy:** never put case text, prompts, answers or keys in spans. A test scans the exported spans.
 - **Done when:** one job shows up in Honeycomb as one trace with its steps, and turning tracing off changes
   no result.
+- **Status (2026-11-03): built in PR #30.** Details: [observability_tracing.md](observability_tracing.md).
+  - `HONEYCOMB_API_KEY` turns it on. The API makes a span for every `/v1` request; a request that admits a
+    job stores its span in the `job.queued` event. After the outcome, the Runner builds the job's spans from
+    the queue record, Core's step events and the AI view: job → queue wait and run → one span per step
+    attempt → the AI call (GenAI attributes, tokens, latency).
+  - Only allow-listed ASCII attributes can be sent. `tests/test_tracing.py` puts sentinel text in a case
+    and scans every request body for it, the case id, the prompt, the AI rationale and both keys.
+  - Turning tracing off changes no result: a test runs the same cases with and without it and compares
+    statuses, reviews, steps, AI answers and histories.
+  - *Actions → Tracing check* sends the service's traces to the OpenTelemetry Collector (the reference
+    OTLP receiver) on every push and checks the trace of the smoke-test case. Its summary shows the trace.
+  - `/v1/status` → `tracing` and the page's settings tab show whether tracing is on, where it sends and
+    how the last export went. A job's `trace_id` is in `GET /v1/jobs/{job_id}` and the page.
+  - Left: the first trace in Honeycomb itself, once the owner has put the key in Render. Record it as an
+    evidence note, then tick this item.
+- **Owner test (ไทย):**
+  1. ใส่ `HONEYCOMB_API_KEY` ใน Render ตามขั้นตอนใน [observability_tracing.md](observability_tracing.md)
+     (หัวข้อ "เปิดใช้อย่างไร")
+  2. เปิดหน้าเว็บ → แท็บ "ตั้งค่า" กล่อง "เส้นทางงานใน Honeycomb" ต้องขึ้น "เปิด — ส่งไป api.honeycomb.io"
+  3. ส่งเคสตัวอย่าง 1 เคส รอจนขึ้น "รอคนตรวจ" แล้วกด "รายละเอียดเชิงเทคนิค" ต้องเห็นรหัสเส้นทาง (trace id)
+  4. เปิดเส้นทางนั้นใน Honeycomb ต้องเห็น 9 แถบเรียงเป็นชั้น ตั้งแต่ `POST /v1/jobs` ลงไปจนถึง `chat …`
 
 ### 5.2 Evaluation gate in CI
 
@@ -744,7 +769,7 @@ workflow types.
   - The page shows the oldest waiting age under the counts, the usual run time of a new case in the
     system box ("เวลาต่อเคส"), and a "ตัวเลขการทำงาน" panel in the settings tab. The field reference is in
     [intake_queue.md](intake_queue.md#queue-and-run-time-figures-roadmap-53).
-  - Not per step: Core runs a job as one loop, so per-step timing waits for tracing (5.1).
+  - Not per step: Core runs a job as one loop, so per-step timing is in the traces (5.1), not here.
 - **Owner test (ไทย):**
   1. เปิดหน้าเว็บ ช่อง "เวลาต่อเคส" ซ้ายล่างต้องขึ้น "ยังไม่มีข้อมูล" (ถ้าระบบเพิ่งตื่นและยังไม่มีเคส)
   2. ส่งเคสตัวอย่าง 2–3 เคส แล้วกดยืนยัน รอจนขึ้น "รอคนตรวจ" ช่อง "เวลาต่อเคส" ต้องเปลี่ยนเป็น "ปกติ … วิ"

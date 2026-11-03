@@ -6,7 +6,9 @@ guards:
 * a cap on concurrent connections (extra connections get an immediate 503);
 * a body cap checked from ``Content-Length`` before anything is read;
 * access log lines without query strings, bodies, headers or job ids; each line ends with the request id
-  that the response also carries in ``X-Request-Id``.
+  that the response also carries in ``X-Request-Id``;
+* with tracing on, one span per ``/v1`` request, timed like the log line (route template, status and
+  request id only).
 For real traffic, put a production web server in front of the same ``ApiApp`` (see
 docs/intake_queue.md).
 """
@@ -18,7 +20,7 @@ import threading
 import time
 from urllib.parse import parse_qs, urlsplit
 
-from .routes import MAX_BODY_BYTES, Request, error, finalize, route_label
+from .routes import MAX_BODY_BYTES, Request, error, finalize, route_label, route_template, traced
 
 SOCKET_TIMEOUT_S = 15
 _BUSY = (b"HTTP/1.0 503 Service Unavailable\r\nContent-Type: application/json\r\nContent-Length: 20\r\n"
@@ -62,7 +64,7 @@ class _Handler(BaseHTTPRequestHandler):
             return None, error(400, "bad_request", "The body ended early")
         return body, None
 
-    def _respond(self, split, headers, request_id):
+    def _respond(self, split, headers, request_id, trace):
         body, response = self._read_body()
         if response is not None:
             return finalize(response, request_id)
@@ -70,22 +72,29 @@ class _Handler(BaseHTTPRequestHandler):
             query = parse_qs(split.query, keep_blank_values=True, max_num_fields=20)
         except ValueError:
             return finalize(error(400, "bad_request", "Too many query parameters"), request_id)
-        request = Request(self.command, split.path or "/", query, headers, body, self._client(), request_id)
+        request = Request(self.command, split.path or "/", query, headers, body, self._client(), request_id,
+                          trace.traceparent if trace is not None else "")
         return self.server.app.handle(request)
 
     def _serve(self):
         started = time.monotonic()
         split = urlsplit(self.path)
         headers = {name.lower(): value for name, value in self.headers.items()}
-        request_id = self.server.app.request_id(headers)
+        app = self.server.app
+        request_id = app.request_id(headers)
+        # Incoming traceparent headers are ignored: every request starts its own trace, so a client cannot
+        # attach its requests to someone else's trace.
+        trace = app.tracing.start_request() if traced(split.path) else None
         try:
-            response = self._respond(split, headers, request_id)
+            response = self._respond(split, headers, request_id, trace)
         except (socket.timeout, ConnectionError):  # the client stalled or left while sending
             self.close_connection = True
             response = None
         # Log before replying, so the line never arrives after the client has its answer.
         log.info("%s %s %s %.0fms %s", self.command, route_label(split.path),
                  response.status if response is not None else "-", (time.monotonic() - started) * 1000, request_id)
+        app.tracing.finish_request(trace, method=self.command, route=route_template(split.path),
+                                   status=response.status if response is not None else None, request_id=request_id)
         if response is None:
             return
         try:

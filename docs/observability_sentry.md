@@ -3,6 +3,8 @@
 **Status:** on `main` since 2026-11-01 (PR #8; degraded-step warnings in PR #9). Optional, application layer
 only. Core (`neuron_flow/`) does not import Sentry.
 **Sentry project:** organization `neuron-flow`, project `neuron-flow-runtime` (platform: Python).
+Sentry reports what went wrong. How long each step took, and the AI's tokens, are in the traces sent to
+Honeycomb: [observability_tracing.md](observability_tracing.md).
 
 ## Why an adapter instead of plain `sentry_sdk.init()`
 
