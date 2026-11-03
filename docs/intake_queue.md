@@ -1,6 +1,6 @@
 # Intake API, job queue, Runner and web page (round 2, Milestone B)
 
-**Status:** built in PR #11 and tested offline (131 tests on 2026-11-03, including killing the Runner
+**Status:** built in PR #11 and tested offline (139 tests on 2026-11-03, including killing the Runner
 mid-step). The container build is checked on every push by *Actions → Service container*. Live on
 Render's free plan since 2026-11-01 (`render.yaml`). Railway was the first choice, but it has paused new
 sign-ups since 22 Oct 2026 after a security incident; `railway.json` stays in the repository for later.
@@ -64,7 +64,7 @@ Design principles: [design_philosophy.md](design_philosophy.md).
 3. **ยืนยัน** กด "ยืนยันและส่ง" เคสจึงเข้าคิว ("แก้ข้อความ" เอาข้อความกลับไปแก้, "ยกเลิก" ทิ้งร่างนี้)
 4. **เปลี่ยนใจก่อนเริ่มทำ** ระหว่างที่เคสยัง "รอคิว" จะมีปุ่ม "ยกเลิกเคสนี้" กดแล้วระบบถามยืนยันอีกครั้ง ("ยืนยันยกเลิก" หรือ "ไม่ยกเลิก") เพราะยกเลิกแล้วเอาคืนไม่ได้ เคสที่ยกเลิกจะขึ้น "ยกเลิกแล้ว" ไม่มีขั้นไหนถูกรัน และ AI ไม่ได้เห็นเคสนั้น ถ้าตัวรันงานหยิบเคสไปทำแล้ว ปุ่มจะหายไป (แกนระบบหยุดงานกลางทางไม่ได้) ถ้าต้องการส่งเคสเดิมอีก ให้ส่งเป็นเคสใหม่
 5. **ระหว่างทำงาน** หน้าเว็บบอกว่า "กำลังทำงาน" ทั้งเคส เพราะแกนระบบ (Core) ยังไม่ส่งความคืบหน้าทีละขั้น เมื่อเสร็จ ทุกขั้นจะขึ้น ✓ หรือ ✕ พร้อมจำนวนครั้งที่ลอง
-6. **อ่านผล** ระบบเสนอคิวไหน ความสำคัญ ความเห็นของกฎและของ AI และเหตุผลที่บอกคนตรวจ ผลสุดท้ายคือ "รอคนตรวจ" เสมอ
+6. **อ่านผล** ระบบเสนอคิวไหน ความสำคัญ ความเห็นของกฎและของ AI และเหตุผลที่บอกคนตรวจ ผลสุดท้ายคือ "รอคนตรวจ" เสมอ แถว "ปิดข้อมูลส่วนตัวก่อนส่งให้ AI" บอกว่าระบบปิดอะไรไปกี่จุดก่อน AI อ่าน (ขั้น 7.1)
 7. **กลับมาดูทีหลัง** ลิงก์ในแถบที่อยู่มีรหัสงาน (`#job_…`) เปิดลิงก์เดิมจะกลับมาที่เคสนั้น (ถ้าเคสยังไม่ถูกล้าง)
 
 แท็บ "ตั้งค่า" **ดูอย่างเดียว**: ขั้นตอนและตัวทำงาน (agent) ของแต่ละประเภทงาน, AI ที่ใช้อยู่และวิธีเปลี่ยนใน Render, กติกาการตัดสิน, ที่เก็บข้อมูลและขีดจำกัด และ "ตัวเลขการทำงาน" (ดูหัวข้อถัดไป) หน้าเว็บแก้ค่าเหล่านี้ไม่ได้โดยตั้งใจ: คีย์อยู่ใน Render เท่านั้น ตัวทำงานเปลี่ยนได้ผ่าน PR เท่านั้น และคนต้องเป็นผู้ตัดสินเสมอ
@@ -343,8 +343,9 @@ job) belong to Milestone C and are still open.
 - Logs and Sentry events carry no case text, no query strings, no job ids in access lines and never the
   key. Responses carry no file paths. A client's `X-Request-Id` reaches the log only when it matches the
   safe pattern above and is neither a job id nor the key.
-- Data is synthetic. There is no redaction of personal data before the AI call yet (gap G5), so do not
-  enter real customer information.
+- Data is synthetic. Personal data is masked before the AI call (roadmap 7.1; what is and is not detected
+  is listed in [case_triage_v2_shadow.md](case_triage_v2_shadow.md)), but the masking is pattern-based, so do
+  not enter real customer information.
 
 ## Limits
 

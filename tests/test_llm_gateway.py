@@ -12,7 +12,7 @@ from neuron_flow import PermanentAgentError, SpecError, TransientAgentError
 from neuron_flow.model import fingerprint
 from app.domains.case_triage.contracts import CATEGORIES, CONFIDENCE_LEVELS
 from app.llm import (InvalidModelOutput, LLMConfig, LLMConfigError, LLMRequestError, LLMTransientError,
-                     ModelDeclined, load_prompt, structured_answer)
+                     ModelDeclined, load_prompt, mask, structured_answer)
 from app.llm import prompts as prompts_module
 from app.llm.gateway import TEXT_LIMIT, parse_answer
 from app.llm.providers import mock
@@ -89,12 +89,13 @@ class PromptAndConfigTests(unittest.TestCase):
         tag = LLMConfig().version_tag(PROMPT)
         self.assertIn("llm=mock/mock-keyword-1", tag)
         self.assertIn(PROMPT.sha256, tag)
+        self.assertTrue(tag.endswith(";redaction=redact-v1"))  # the masking rules are part of the version
         self.assertNotEqual(tag, LLMConfig(model="mock-keyword-2").version_tag(PROMPT))
 
 
 class MockSimulationTests(unittest.TestCase):
     def ask(self, text, scenario=None, attempt=1):
-        return structured_answer(LLMConfig(), PROMPT, text, attempt=attempt, scenario=scenario)
+        return structured_answer(LLMConfig(), PROMPT, mask(text), attempt=attempt, scenario=scenario)
 
     def test_keyword_simulation_in_english_and_thai(self):
         self.assertEqual(self.ask("I cannot upload an attachment")["answer"]["category"], "upload")
@@ -156,7 +157,7 @@ class ClaudeHttpTests(unittest.TestCase):
 
     def test_request_follows_current_api_guidance(self):
         with FakeAnthropic([(200, message(GOOD))]) as fake:
-            result = structured_answer(claude(fake.base_url, effort="low"), PROMPT, 'Upload "fails"')
+            result = structured_answer(claude(fake.base_url, effort="low"), PROMPT, mask('Upload "fails"'))
         self.assertEqual(result["answer"], GOOD)
         self.assertEqual(result["usage"], {"input_tokens": 125, "output_tokens": 30, "estimated": False})
         self.assertEqual(result["served_model"], "claude-haiku-5-5-20261001")
@@ -182,7 +183,7 @@ class ClaudeHttpTests(unittest.TestCase):
         for reply, expected in cases:
             with FakeAnthropic([reply]) as fake:
                 with self.assertRaises(expected) as caught:
-                    structured_answer(claude(fake.base_url), PROMPT, "upload fails")
+                    structured_answer(claude(fake.base_url), PROMPT, mask("upload fails"))
             text = str(caught.exception)
             self.assertIn(f"HTTP {reply[0]}", text)
             self.assertIn(reply[1]["error"]["type"], text)
@@ -194,7 +195,7 @@ class ClaudeHttpTests(unittest.TestCase):
                 hop = (status, {}, 0, {"location": elsewhere.base_url + "/v1/messages"})
                 with FakeAnthropic([hop]) as fake:
                     with self.assertRaisesRegex(LLMRequestError, f"HTTP {status}"):
-                        structured_answer(claude(fake.base_url), PROMPT, "upload fails")
+                        structured_answer(claude(fake.base_url), PROMPT, mask("upload fails"))
             self.assertEqual(elsewhere.requests, [])
 
     def test_unusable_replies(self):
@@ -205,25 +206,25 @@ class ClaudeHttpTests(unittest.TestCase):
                                 ((200, message({**GOOD, "category": "vip"})), InvalidModelOutput)):
             with FakeAnthropic([reply]) as fake:
                 with self.assertRaises(expected):
-                    structured_answer(claude(fake.base_url), PROMPT, "upload fails")
+                    structured_answer(claude(fake.base_url), PROMPT, mask("upload fails"))
 
     def test_timeouts_and_unreachable_hosts_are_temporary(self):
         with FakeAnthropic([(200, message(GOOD), 1.5)]) as fake:
             with self.assertRaises(LLMTransientError):
-                structured_answer(claude(fake.base_url, request_timeout_s=0.3), PROMPT, "upload fails")
+                structured_answer(claude(fake.base_url, request_timeout_s=0.3), PROMPT, mask("upload fails"))
         with socket.socket() as probe:
             probe.bind(("127.0.0.1", 0))
             port = probe.getsockname()[1]
         with self.assertRaises(LLMTransientError):
-            structured_answer(claude(f"http://127.0.0.1:{port}"), PROMPT, "upload fails")
+            structured_answer(claude(f"http://127.0.0.1:{port}"), PROMPT, mask("upload fails"))
 
     def test_missing_key_and_mock_scenarios_are_setup_errors(self):
         with FakeAnthropic([(200, message(GOOD))]) as fake:
             with patch.patch.dict(os.environ, {"ANTHROPIC_API_KEY": ""}):
                 with self.assertRaisesRegex(LLMConfigError, "ANTHROPIC_API_KEY"):
-                    structured_answer(claude(fake.base_url), PROMPT, "upload fails")
+                    structured_answer(claude(fake.base_url), PROMPT, mask("upload fails"))
             with self.assertRaises(LLMConfigError):
-                structured_answer(claude(fake.base_url), PROMPT, "x", scenario={"kind": "keyword"})
+                structured_answer(claude(fake.base_url), PROMPT, mask("x"), scenario={"kind": "keyword"})
             self.assertEqual(fake.requests, [])
 
 

@@ -146,13 +146,15 @@ class ShadowSafetyTests(unittest.TestCase):
         tampered = [{**good, "queue": "billing_review"}, {**good, "decision": "APPROVED"},
                     {**good, "provenance": {**good["provenance"], "model": "mock-other"}}, {**good, "attempt": 2},
                     {**good, "confidence": "certain"}, {**good, "rationale": "x" * 500},
+                    {**good, "masked": {"phone": 0}}, {**good, "masked": {"address": 1}}, {**good, "masked": {"phone": "1"}},
+                    {**good, "provenance": {**good["provenance"], "redaction": "none"}},
                     {"status": "unavailable", "reason": "provider_unavailable", "error_type": "LLMTransientError",
-                     "provenance": good["provenance"], "attempt": 1}]
+                     "provenance": good["provenance"], "attempt": 1, "masked": {}}]
         for output in tampered:
             with self.assertRaises(ValueError, msg=str(output)[:80]):
                 shadow_agents.validate_llm_classification(msg, output)
         declined = {"status": "unavailable", "reason": "model_declined", "error_type": "ModelDeclined",
-                    "provenance": good["provenance"], "attempt": 1}
+                    "provenance": good["provenance"], "attempt": 1, "masked": {}}
         shadow_agents.validate_llm_classification(msg, declined)  # allowed on any attempt
 
         rules = agents.classify({"input": spec["input"]})
@@ -171,6 +173,8 @@ class ShadowSafetyTests(unittest.TestCase):
 
         with self.assertRaisesRegex(LLMConfigError, "prompt file changed"):
             shadow_agents.classify_llm({**msg, "params": {**params, "prompt": {**params["prompt"], "sha256": "0" * 64}}})
+        with self.assertRaisesRegex(LLMConfigError, "masking rules changed"):
+            shadow_agents.classify_llm({**msg, "params": {**params, "redaction": "redact-v0"}})
 
     def test_unsafe_setups_are_refused_before_any_job_runs(self):
         claude = LLMConfig(provider="anthropic", model="claude-haiku-5-5")

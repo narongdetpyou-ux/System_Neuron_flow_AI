@@ -14,6 +14,7 @@ from typing import Optional
 from urllib.parse import urlsplit
 
 from .errors import LLMConfigError
+from .redaction import REDACTION_VERSION
 
 PROVIDERS = ("mock", "anthropic")
 DEFAULT_MODELS = {"mock": "mock-keyword-1", "anthropic": "claude-haiku-5-5"}
@@ -93,9 +94,9 @@ class LLMConfig:
         return cls(**data)
 
     def version_tag(self, prompt):
-        """Agent version string: changing model, prompt or answer budget means a new version."""
+        """Agent version string: changing model, prompt, answer budget or masking rules means a new version."""
         return (f"llm={self.provider}/{self.model};prompt={prompt.id}@sha256:{prompt.sha256};"
-                f"max_tokens={self.max_tokens};effort={self.effort or 'default'}")
+                f"max_tokens={self.max_tokens};effort={self.effort or 'default'};redaction={REDACTION_VERSION}")
 
     def check_ready(self, environ=None):
         """Fail before any job is submitted when a real provider has no key."""

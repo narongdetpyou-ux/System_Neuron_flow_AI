@@ -30,6 +30,8 @@ The working example is support-case triage in **shadow mode** (case_triage v2):
 4. When rules and AI disagree, the case is raised to **elevated** review priority, with the reasons.
 5. A human reviewer always decides (`PENDING_HUMAN_REVIEW`). Failures and degraded AI answers are reported
    to Sentry.
+6. Before the AI sees a case, recognisable personal data (e-mail, phone, ID, card and long numbers, names
+   after a title) is replaced with placeholders such as `[PHONE]`.
 
 Since round 2, cases can also come in from outside, through an HTTP API or a Thai web page:
 
@@ -79,7 +81,7 @@ forgets its cases when it sleeps or redeploys; a paid plan with a disk keeps the
 
 **Locally (Python 3.10+):**
 ```bash
-python -m unittest discover -s tests -v        # 131 tests
+python -m unittest discover -s tests -v        # 139 tests
 python -m examples.case_triage_demo            # v1 rules, one synthetic case
 python -m examples.case_triage_shadow_demo     # v2 shadow mode, three synthetic cases (offline mock AI)
 python -m app.eval.triage_shadow_eval          # scorecard on 61 synthetic cases
@@ -118,6 +120,7 @@ most 1 MiB. The agent `version` is frozen into each job, so an old job refuses t
   public traffic).
 - Agent child processes isolate failures; they are **not** a security sandbox.
 - All test data is synthetic. Mock AI scores are inflated by design and are not evidence of AI accuracy.
+- Masking personal data before AI calls is pattern-based; it lowers the risk but does not make real data safe.
 - The real Claude API has not been called yet, so there are no accuracy, latency or cost claims for Claude.
 
 ## Origin

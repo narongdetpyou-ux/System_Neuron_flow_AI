@@ -7,7 +7,7 @@ project.
 ## What exists
 
 - **Core runtime** (`neuron_flow/`). Since its extraction on 2026-10-31 it has changed once, for the planned telemetry fix (PR #21).
-- **131 automated tests** passing on Python 3.10 and 3.12 in CI, and on 3.13 in a development session
+- **139 automated tests** passing on Python 3.10 and 3.12 in CI, and on 3.13 in a development session
   (3.11 was last checked on 2026-11-01, at 53 tests).
   - Last pinned green run on `main` (`0b03735`, 119 tests): https://github.com/narongdetpyou-ux/System_Neuron_flow_AI/actions/runs/41550257103
 - **Support-case triage domain:**

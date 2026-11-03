@@ -1,8 +1,9 @@
 """The single place that asks an AI provider a question and checks the answer's shape.
 
 Flow for one call:
-1. pick the provider named in the frozen job configuration (mock or anthropic);
-2. send the versioned prompt plus the untrusted case text (as a JSON string);
+1. refuse text that did not go through ``redaction.mask`` (personal data is masked before every AI call);
+2. pick the provider named in the frozen job configuration (mock or anthropic), and send the versioned
+   prompt plus the masked case text (as a JSON string);
 3. treat a refusal as ``ModelDeclined`` and a cut-off answer as ``InvalidModelOutput``;
 4. parse the JSON answer and check it against the prompt's answer schema
    (every field present, no extra fields, fixed choices respected);
@@ -16,6 +17,7 @@ from neuron_flow.model import decode
 
 from .errors import InvalidModelOutput, ModelDeclined
 from .providers import anthropic, mock
+from .redaction import MaskedText
 
 TEXT_LIMIT = 200
 _CUT_OFF = {"max_tokens", "model_context_window_exceeded"}
@@ -24,9 +26,13 @@ _PROVIDERS = {"mock": mock, "anthropic": anthropic}
 
 
 def structured_answer(config, prompt, case_text, *, attempt=1, scenario=None):
+    """Ask the provider. ``case_text`` must be a :class:`MaskedText` from ``redaction.mask``."""
+    if not isinstance(case_text, MaskedText):
+        raise TypeError("structured_answer() takes text from app.llm.redaction.mask(): "
+                        "personal data is masked before every AI call")
     provider = _PROVIDERS[config.provider]
     started = time.monotonic()
-    raw = provider.complete(config, prompt, case_text, attempt=attempt, scenario=scenario)
+    raw = provider.complete(config, prompt, case_text.text, attempt=attempt, scenario=scenario)
     latency_ms = round((time.monotonic() - started) * 1000, 3)
     if raw["stop_reason"] == "refusal":
         raise ModelDeclined("The model declined to answer")

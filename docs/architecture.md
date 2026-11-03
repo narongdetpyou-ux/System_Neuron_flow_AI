@@ -84,6 +84,9 @@ Each row was re-checked against the current code.
     parameters, so the client sends neither.
   - The client refuses HTTP redirects, so the key cannot travel to another host.
   - The API key is read from the environment at call time. It never appears in a job, an output or a log.
+  - Personal data is masked before every call (`app/llm/redaction.py`, roadmap 7.1): the gateway accepts
+    only text from `mask()`, the AI sees placeholders such as `[PHONE]`, and the AI step records how many
+    items of each kind it masked. The masking version is part of the agent version.
 - **The error class decides what Core does:**
 
   | Error | Examples | What happens |
@@ -99,8 +102,8 @@ Each row was re-checked against the current code.
   - Invariants: the queue matches the category, and the provenance matches the frozen job settings.
   - Policy: there is never an automatic decision.
 - **Provenance:** the agent version is
-  `llm=<provider>/<model>;prompt=<id>@sha256:<hash>;max_tokens=…;effort=…`. Changing the model or the prompt
-  therefore creates a new version, and an old job refuses to run on it.
+  `llm=<provider>/<model>;prompt=<id>@sha256:<hash>;max_tokens=…;effort=…;redaction=<version>`. Changing the
+  model, the prompt or the masking rules therefore creates a new version, and an old job refuses to run on it.
 - **Shadow mode:** the rules stay official. The AI adds a second opinion, and a disagreement raises review to
   elevated. Every proposal stays `PENDING_HUMAN_REVIEW`.
 - **Monitoring:** failed steps send Sentry errors; degraded steps (`{"status": "unavailable"}`) send grouped
@@ -162,7 +165,7 @@ Requests never carry agent import paths, code, tenant ids or callbacks.
 ```text
 neuron_flow/                   Core runtime (one change since extraction: the telemetry fix)
 app/domains/case_triage/       v1 rules (agents.py, workflow.py), contracts.py, v2 shadow_agents.py, shadow_workflow.py
-app/llm/                       config, errors, gateway, prompts, prompt_library/, providers/{mock, anthropic}
+app/llm/                       config, errors, gateway, prompts, redaction (personal-data masking), prompt_library/, providers/{mock, anthropic}
 app/eval/                      triage_shadow_eval.py, golden/case_triage_synthetic_v1.json (61 cases)
 app/observability/             sentry.py (step failures, degraded AI, Runner recoveries)
 app/persistence/               queue_store.py: the application job queue, events and Runner heartbeat (SQLite)
@@ -173,7 +176,7 @@ app/boot.py                    process 1 of the image: takes the data folder, dr
 app/settings.py, app/serve.py  environment settings; the launcher (API + supervised Runner in one container)
 Dockerfile, render.yaml        the container and the Render Blueprint (railway.json kept for Railway)
 examples/                      case_triage_demo, case_triage_shadow_demo, sentry_smoke_test, service_smoke_test
-tests/                         131 tests: core, triage v1/v2, AI gateway, scorecard, eval gate, Sentry, API, queue, Runner, HTTP, metrics
+tests/                         139 tests: core, triage v1/v2, AI gateway, masking, scorecard, eval gate, Sentry, API, queue, Runner, HTTP, metrics
 tests/baselines/               shadow_eval_mock.json: every case's answer with the mock AI (the eval gate's baseline)
 .github/workflows/             core-tests, service-container, sentry-smoke, shadow-eval-claude (manual)
 .github/scripts/               check_render_blueprint.py: render.yaml structure, build filter, Render's schema
@@ -210,6 +213,8 @@ planned: review ledger and artifact store, app/domains/study_guide/
 - An AI outage still lets the case reach review.
 - The API key is absent from every stored file.
 - Redirects cannot carry the key elsewhere.
+- Personal data that the masking rules recognise never reaches the provider (roadmap 7.1; tested with Thai
+  and English samples against the fake Claude API).
 - Tests pass on Python 3.10–3.13.
 
 **P0 for the first API release, met in round 2 (automated; tests listed in [intake_queue.md](intake_queue.md)):**
@@ -262,6 +267,9 @@ The order of the remaining work, with tasks, acceptance checks and owner decisio
   untrusted code.
 - The HTTP server is Python's standard-library server with request, connection and time limits. It suits a
   single-owner pilot, not public traffic. One shared access key is not per-person authentication.
-- All data is synthetic, and mock-AI scores test the pipeline, not accuracy.
+- All data is synthetic, and mock-AI scores test the pipeline, not accuracy. Masking before AI calls is
+  pattern-based and misses names without a title, addresses and more, so it does not make real data safe.
+- Every process in the container (API, Runner, Core workers) runs as one user with one environment, so each
+  of them could read the AI key once it is set. Options and a recommendation are in ROADMAP 7.1.
 - Live Claude results, security review, benchmarks and user studies do not exist yet. No document should
   claim them.

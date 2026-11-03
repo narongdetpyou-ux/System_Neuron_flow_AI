@@ -2,7 +2,8 @@
 
 Flow of one case:
 1. ``classify_rules`` (the unchanged v1 keyword rules) makes the official suggestion.
-2. ``classify_llm`` asks the AI for its own category, in parallel with step 1.
+2. ``classify_llm`` masks personal data in the case text (``app.llm.redaction``), then asks the AI for its
+   own category, in parallel with step 1. The output records how many items of each kind were masked.
    * provider hiccup or off-contract answer -> Core retries once;
    * still failing on the last attempt, or the model declines -> ``unavailable``,
      so the case still reaches a reviewer with the rules suggestion;
@@ -18,26 +19,28 @@ matches the frozen job settings) and policy (no automatic decisions).
 
 import math
 
-from app.llm import (InvalidModelOutput, LLMConfig, LLMConfigError, LLMTransientError, ModelDeclined,
-                     load_prompt, structured_answer)
+from app.llm import (REDACTION_VERSION, InvalidModelOutput, LLMConfig, LLMConfigError, LLMTransientError,
+                     ModelDeclined, load_prompt, mask, structured_answer)
 from app.llm.gateway import TEXT_LIMIT
+from app.llm.redaction import KINDS as MASKED_KINDS
 
 from .contracts import (CATEGORIES, CONFIDENCE_LEVELS, FINAL_ATTEMPT_REASONS, QUEUE_FOR, REVIEW_REASONS,
                         UNAVAILABLE_REASONS)
 
 _OK_KEYS = {"status", "category", "queue", "confidence", "rationale", "provenance", "usage",
-            "latency_ms", "served_model", "attempt"}
-_UNAVAILABLE_KEYS = {"status", "reason", "error_type", "provenance", "attempt"}
+            "latency_ms", "served_model", "attempt", "masked"}
+_UNAVAILABLE_KEYS = {"status", "reason", "error_type", "provenance", "attempt", "masked"}
 
 
 def _provenance(params):
     return {"provider": params["llm"]["provider"], "model": params["llm"]["model"],
-            "prompt_id": params["prompt"]["id"], "prompt_sha256": params["prompt"]["sha256"]}
+            "prompt_id": params["prompt"]["id"], "prompt_sha256": params["prompt"]["sha256"],
+            "redaction": params["redaction"]}
 
 
-def _unavailable(reason, params, attempt, error_type):
+def _unavailable(reason, params, attempt, error_type, masked):
     return {"status": "unavailable", "reason": reason, "error_type": error_type,
-            "provenance": _provenance(params), "attempt": attempt}
+            "provenance": _provenance(params), "attempt": attempt, "masked": masked.counts}
 
 
 def classify_llm(message):
@@ -47,22 +50,25 @@ def classify_llm(message):
     prompt = load_prompt(params["prompt"]["id"])
     if prompt.sha256 != params["prompt"]["sha256"]:
         raise LLMConfigError("The prompt file changed after this job was submitted")
+    if params["redaction"] != REDACTION_VERSION:
+        raise LLMConfigError("The personal-data masking rules changed after this job was submitted")
+    masked = mask(message["input"]["summary"])  # the AI sees placeholders, never the masked values
     try:
-        result = structured_answer(config, prompt, message["input"]["summary"], attempt=attempt,
-                                   scenario=params.get("mock_scenario"))
+        result = structured_answer(config, prompt, masked, attempt=attempt, scenario=params.get("mock_scenario"))
     except ModelDeclined:
-        return _unavailable("model_declined", params, attempt, "ModelDeclined")
+        return _unavailable("model_declined", params, attempt, "ModelDeclined", masked)
     except (LLMTransientError, InvalidModelOutput) as exc:
         if attempt < params["max_attempts"]:
             raise  # Core waits retry_delay_s and tries again
         reason = "invalid_model_output" if isinstance(exc, InvalidModelOutput) else "provider_unavailable"
-        return _unavailable(reason, params, attempt, type(exc).__name__)
+        return _unavailable(reason, params, attempt, type(exc).__name__, masked)
     answer = result["answer"]
     category = answer["category"]
     return {"status": "ok", "category": category, "queue": QUEUE_FOR[category],
             "confidence": answer["confidence"], "rationale": answer["rationale"],
             "provenance": _provenance(params), "usage": result["usage"],
-            "latency_ms": result["latency_ms"], "served_model": result["served_model"], "attempt": attempt}
+            "latency_ms": result["latency_ms"], "served_model": result["served_model"], "attempt": attempt,
+            "masked": masked.counts}
 
 
 def _require(condition, problem):
@@ -103,6 +109,9 @@ def validate_llm_classification(message, output):
             _require(output["attempt"] >= params["max_attempts"], "gave up before the last allowed attempt")
     else:
         _require(False, "unknown status")
+    masked = output["masked"]
+    _require(isinstance(masked, dict) and set(masked) <= set(MASKED_KINDS)
+             and all(type(n) is int and n > 0 for n in masked.values()), "invalid masked-data counts")
     _require(output["provenance"] == _provenance(params), "provenance differs from the frozen job settings")
     _require(output["attempt"] == message["attempt"], "attempt number mismatch")
 

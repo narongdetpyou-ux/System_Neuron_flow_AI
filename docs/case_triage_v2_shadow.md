@@ -10,7 +10,7 @@ service, public API or human-review service. No Core (`neuron_flow/`) file was c
 
 1. มีเคสลูกค้าเข้ามา 1 เคส (รหัสเคส + ข้อความ)
 2. **กฎเดิม** (คำสำคัญภาษาอังกฤษ) เสนอคิวที่ควรส่งไป ข้อเสนอนี้คือ "ข้อเสนอหลัก" เหมือนเดิม
-3. พร้อมกันนั้น **AI** อ่านเคสเดียวกันแล้วเสนอหมวดของตัวเอง (ความเห็นที่สอง)
+3. พร้อมกันนั้น **AI** อ่านเคสเดียวกันแล้วเสนอหมวดของตัวเอง (ความเห็นที่สอง) ก่อนส่ง ระบบปิดข้อมูลส่วนตัวที่จับรูปแบบได้ (อีเมล เบอร์โทร เลขบัตร ตัวเลขยาว ชื่อที่มีคำนำหน้า) AI จึงเห็นแค่ป้ายแทน เช่น [PHONE] (ขั้น 7.1)
    - ถ้า AI ติดขัดชั่วคราว ระบบลองใหม่ 1 ครั้ง
    - ถ้ายังไม่ได้ หรือ AI ปฏิเสธที่จะตอบ ระบบเดินต่อโดยใช้ข้อเสนอของกฎ และแจ้งผู้รีวิวว่า "AI ใช้งานไม่ได้"
    - ถ้าตั้งค่าผิด (เช่น API key ผิด) ระบบหยุดเคสนั้นและแจ้งเตือนทาง Sentry/อีเมล
@@ -30,8 +30,8 @@ case ──► classify_rules (v1 keywords) ──┐
    the AI settings (provider, model, prompt id and SHA-256) into the job.
 2. Core runs `classify_rules` and `classify_llm` **in parallel**. They are independent
    branches, so a problem in the AI branch never stops the rules branch.
-3. `classify_llm` sends the versioned prompt, with the case text wrapped as a JSON
-   string. The provider's structured output limits the answer to
+3. `classify_llm` masks personal data in the case text (`app/llm/redaction.py`), then sends the
+   versioned prompt, with the masked text wrapped as a JSON string. The provider's structured output limits the answer to
    `{category, confidence, rationale}` with fixed choices. Our code checks the answer again.
 4. `compare` lines the two up:
    - `agree`: normal priority.
@@ -68,6 +68,13 @@ they were degraded quietly, a broken setup could go unnoticed.
 - **Case text is untrusted.** It is sent as a JSON string, and the prompt says to ignore instructions inside it.
   Answers are limited to fixed choices, first by the API and then again by our code. The tests include
   injected instructions in English and Thai.
+- **Personal data is masked before the AI sees the case** (roadmap 7.1). E-mail addresses, phone numbers,
+  Thai ID numbers (check digit verified), card-like numbers (Luhn), other runs of 9+ digits, and names after
+  a title or label (Mr/Ms/Dr, "my name is", `Name:`; นาย, นาง, นางสาว, น.ส., ด.ช., ด.ญ., นามสกุล, คุณ + an
+  English name) become `[EMAIL]`, `[PHONE]`, `[THAI_ID]`, `[CARD]`, `[NUMBER]`, `[NAME]`. The gateway refuses
+  text that did not go through `mask()`. The output's `masked` field counts each kind, never the values.
+  Not detected: names without a title or label, Thai surnames after a given name, addresses, short numbers,
+  mixed letter-and-digit identifiers. The keywords the rules and the AI need stay readable.
 - **The API key is never stored.** It is read from `ANTHROPIC_API_KEY` at call time, never placed in the job,
   and the tests scan every stored file to confirm it is absent. Provider error messages are not copied
   (only the HTTP status and error type).
@@ -169,6 +176,8 @@ It does not show AI accuracy.
 ## Limits
 
 - Synthetic cases labelled by the developer. These are not real customer data and not independent ground truth.
+- Masking is pattern-based (see "Safety rules built in"). It lowers the risk; it does not make real
+  personal data safe to send.
 - The real Claude path has not been run live yet, so there are no accuracy, latency or cost claims for Claude.
 - Token counts cover answered calls only. No money estimate is made, because prices change.
 - Shadow mode does not reduce reviewer work. It orders that work and explains it.
