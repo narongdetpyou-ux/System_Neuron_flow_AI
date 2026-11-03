@@ -20,7 +20,7 @@ differs, this file and architecture.md win.
   - AI ให้ความเห็นที่สอง
   - ถ้าสองฝ่ายเห็นไม่ตรงกัน เคสจะถูกยกให้คนดูก่อน
 - ถ้าเครื่องดับกลางทาง ระบบทำต่อได้ ส่งซ้ำก็ไม่เกิดงานซ้ำ
-- ผ่านชุดทดสอบอัตโนมัติ 105 ข้อ และเปิดใช้ออนไลน์บน Render แล้ว
+- ผ่านชุดทดสอบอัตโนมัติ 107 ข้อ และเปิดใช้ออนไลน์บน Render แล้ว
 - หน้าเว็บเป็นแบบแชท: พิมพ์เคส ดูขั้นตอนก่อนส่ง กดยืนยัน แล้วติดตามใน Flow และประวัติเหตุการณ์ (ขั้น 1.6)
 
 **ลำดับต่อจากนี้** แต่ละขั้นจบด้วยสิ่งที่คุณลองเองได้
@@ -77,7 +77,7 @@ Marks: ✅ done · 🟡 built or partly checked (the status says what is left) �
 | 0.4 | Claude for the online page | ⬜ optional | 0.1, 0.3 |
 | 0.5 | Skip Render deploys for docs-only commits | 🟡 built; confirm in Render's events after the merge | 0.1 |
 | 0.6 | Open Dependabot PRs #1–#5 | 🟡 #1–#5 closed (they edit files removed in PR #6); PR #20 moves the current workflows to the Node 24 versions; done when #20 is merged | — |
-| 1.1 | Neutral telemetry phase names (the one planned Core change) | ⬜ | — |
+| 1.1 | Neutral telemetry phase names (the one planned Core change) | ✅ PR #21 | — |
 | 1.2 | Request ids to follow a request through the logs | ⬜ | — |
 | 1.3 | Cancel a job that is still queued | ⬜ | — |
 | 1.4 | Backup, restore and retention | ⬜ | D1 = paid (disk) |
@@ -840,3 +840,5 @@ workflow types.
 - 2026-11-03: 1.6 marked done after the owner tested the new page on Render.
 - 2026-11-03: 0.6 changed: the Dependabot PRs targeted removed files, so they were closed and replaced by
   one PR that moves the current workflows to the Node 24 action versions.
+- 2026-11-03: 1.1 done in PR #21. Core now records each step under its step id; a test keeps catalog
+  step ids away from Core's own phase names (`contract_validation`, `delivery`).

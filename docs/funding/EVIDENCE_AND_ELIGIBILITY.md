@@ -13,7 +13,7 @@ eligibility can change, so recheck every original program page on the day of app
 | Automated tests pass | 53 tests in `tests/`; green CI on `main` @ `59c6889` (Python 3.10, 3.12): https://github.com/narongdetpyou-ux/System_Neuron_flow_AI/actions/runs/41236673003 | Synthetic tests; not production evidence |
 | Architecture documented | `docs/architecture.md` | Layers 1–2 implemented; queue, Runner, API and review service are design only |
 | Case-triage domain, v1 rules and v2 AI shadow mode | `app/domains/case_triage/`, `examples/`, `tests/test_case_triage*.py` | Synthetic data. The AI path was tested offline with a mock and a fake API server; **no live model has been run** |
-| No Core changes needed for new domain versions | `git diff 09100f7 main -- neuron_flow/` is empty | Shows the no-Core-change rule so far; a second unrelated domain is still to come |
+| No Core changes needed for new domain versions | `git diff 09100f7 main -- neuron_flow/` shows only the planned telemetry fix (PR #21, not driven by a domain) | Shows the no-Core-change rule so far; a second unrelated domain is still to come |
 | Error monitoring works end to end | Sentry project `neuron-flow-runtime` received CI smoke-test events | Integration check only |
 | Measurement harness exists | `app/eval/` scorecard, 61 synthetic labelled cases (EN + TH), shown on the CI run page | Mock scores are inflated by design; no AI accuracy claim |
 | Open-source deployment | Repository currently **private** | Not demonstrated. GPL license alone is insufficient to claim public distribution |

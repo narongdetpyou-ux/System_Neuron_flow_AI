@@ -39,7 +39,7 @@ flowchart TD
       LLM[app/llm gateway: prompt library, mock + Claude - built]
       SG[study_guide.v1 - proposed]
     end
-    subgraph L1[Layer 1: Core neuron_flow - unchanged since extraction]
+    subgraph L1[Layer 1: Core neuron_flow - one planned fix since extraction]
       CORE[Dendrite -> Synapse -> Axon -> Soma -> AxonTerminal]
     end
     L4 --> L3 --> L2 --> L1
@@ -48,7 +48,7 @@ flowchart TD
 
 | Layer | Responsibility | Built | Planned |
 |---|---|---|---|
-| 1 Core `neuron_flow/` | Spec validation, static DAG scheduling, bounded child processes, retries, recovery, events, verified receipts, integrity, case memory, candidate gate. No HTTP, business rules, credentials or user authorisation. | All of it, unchanged since commit `09100f7` | P1 telemetry fix only (§3) |
+| 1 Core `neuron_flow/` | Spec validation, static DAG scheduling, bounded child processes, retries, recovery, events, verified receipts, integrity, case memory, candidate gate. No HTTP, business rules, credentials or user authorisation. | All of it; changed once since commit `09100f7`: the telemetry fix (roadmap 1.1, PR #21) | No further Core change planned |
 | 2 Domains & agents `app/domains/`, `app/llm/` | Input contracts, trusted agent registry, fixed DAG templates, validators, AI calls | case_triage v1 and v2, AI gateway | `study_guide.v1`, a second unrelated domain |
 | 3 Application services | Admission, idempotency, the only Runtime owner, crash reconciliation, review decisions, results, measurement, monitoring | Scorecard (`app/eval/`), Sentry reporting (`app/observability/`), admission queue (`app/persistence/`), admission, Runner with reconciliation, results (`app/services/`) | Review ledger, artifact store (Milestone C) |
 | 4 Interfaces | Authentication, request validation, status pages, human decisions | GitHub Actions workflows (tests, scorecard, Sentry check, container check, manual Claude run); HTTP API and web page (`app/api/`, `app/web/`) behind one shared access key, started by `app/serve.py` in one container for Render (`render.yaml`; Railway also configured) | n8n intake and notifications, per-reviewer identity, review decisions |
@@ -71,7 +71,7 @@ Each row was re-checked against the current code.
 | Interrupted `RUNNING` steps are retried and count against `max_attempts` | External side effects are not exactly-once; they need their own idempotency |
 | `events_for` returns every event after a cursor, with no page size | A public API needs a bounded, paginated adapter |
 | Receipts and manifests verify bytes with SHA-256 | Checksums do not prove who wrote something, so review identity needs authentication |
-| Telemetry still maps legacy agent names `csv_validate/csv_calculate/csv_verify` (`engine.py`) | **P1 fix:** use neutral or agent-declared phase names |
+| Telemetry records each agent step under its own step id, next to Core's own phases `contract_validation` and `delivery` (fixed in PR #21; the legacy `csv_*` mapping is gone) | Step ids in the catalog must not reuse those two names; a test checks it |
 | `CaseMemory` needs six profile dimensions and caller-declared review evidence; `candidate_gate` flags any changed outcome | These detect regressions; they are not accuracy proof and not automatic decision makers |
 
 ## 4. AI inside the architecture (built in round 1, PR #9)
@@ -152,7 +152,7 @@ Requests never carry agent import paths, code, tenant ids or callbacks.
 ## 7. Code organisation
 
 ```text
-neuron_flow/                   Core runtime (unchanged)
+neuron_flow/                   Core runtime (one change since extraction: the telemetry fix)
 app/domains/case_triage/       v1 rules (agents.py, workflow.py), contracts.py, v2 shadow_agents.py, shadow_workflow.py
 app/llm/                       config, errors, gateway, prompts, prompt_library/, providers/{mock, anthropic}
 app/eval/                      triage_shadow_eval.py, golden/case_triage_synthetic_v1.json (61 cases)
@@ -165,7 +165,7 @@ app/boot.py                    process 1 of the image: takes the data folder, dr
 app/settings.py, app/serve.py  environment settings; the launcher (API + supervised Runner in one container)
 Dockerfile, render.yaml        the container and the Render Blueprint (railway.json kept for Railway)
 examples/                      case_triage_demo, case_triage_shadow_demo, sentry_smoke_test, service_smoke_test
-tests/                         105 tests: core, triage v1/v2, AI gateway, scorecard, Sentry, API, queue, Runner, HTTP
+tests/                         107 tests: core, triage v1/v2, AI gateway, scorecard, Sentry, API, queue, Runner, HTTP
 .github/workflows/             core-tests, service-container, sentry-smoke, shadow-eval-claude (manual)
 .github/scripts/               check_render_blueprint.py: render.yaml structure, build filter, Render's schema
 planned: review ledger and artifact store, app/domains/study_guide/
@@ -237,7 +237,7 @@ dashboard.
 |---|---|---|
 | A | case_triage v1 rules, synthetic demo, tests | Done |
 | A2 | AI gateway, v2 shadow mode, scorecard, Sentry reporting | Done (PR #8, #9); real Claude not yet run |
-| P1-fix | Neutral telemetry phase names | Open |
+| P1-fix | Neutral telemetry phase names | Done (PR #21, roadmap 1.1) |
 | B | Admission queue, single Runner, reconciliation, thin API, web page | Done (PR #11); live on Render's free plan since 2026-11-01; page redesigned as a chat layout with Flow, Trace and read-only settings (PR #18, roadmap 1.6) |
 | C | Two-phase review, decision ledger, n8n notifications | Open |
 | D | OpenTelemetry tracing, eval gates in CI | Partly done: CI scorecard and Sentry exist; tracing is open |

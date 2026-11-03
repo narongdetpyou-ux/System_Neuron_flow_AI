@@ -12,7 +12,8 @@ from app.api.routes import MAX_BODY_BYTES, ApiApp, Request
 from app.persistence import QueueStore
 from app.services.results import plan_view
 from app.services.runner import Runner
-from app.services.workflows import CATALOG, WorkflowType, check_case
+from app.llm import LLMConfig
+from app.services.workflows import CATALOG, WorkflowType, check_case, preview_spec
 from tests.service_fixtures import KEY, case_body, settings, slow_catalog
 
 AUTH = {"authorization": f"Bearer {KEY}"}
@@ -343,6 +344,14 @@ class StepPlanTests(unittest.TestCase):
                              (core[step["id"]]["depends_on"], core[step["id"]]["max_attempts"],
                               core[step["id"]]["timeout_s"]), step["id"])
             self.assertNotIn("params", step)
+
+    def test_catalog_step_ids_do_not_reuse_core_phase_names(self):
+        # Core records each step under its step id (roadmap 1.1) next to its own phases.
+        # A step with one of those names would merge two different timings into one figure.
+        core_phases = {"contract_validation", "delivery"}
+        for name, workflow in CATALOG.items():
+            steps = {step["id"] for step in preview_spec(workflow, LLMConfig())["steps"]}
+            self.assertFalse(steps & core_phases, name)
 
 
 if __name__ == "__main__":
