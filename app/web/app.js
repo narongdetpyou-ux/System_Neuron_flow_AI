@@ -26,6 +26,10 @@
     billing_review: "คิวตรวจเรื่องการเงิน", general_review: "คิวตรวจทั่วไป",
   };
   const CONFIDENCE = { high: "สูง", medium: "กลาง", low: "ต่ำ" };
+  const MASKED = {
+    email: "อีเมล", thai_id: "เลขบัตรประชาชน", card: "เลขแบบบัตรเครดิต", phone: "เบอร์โทร",
+    number: "ตัวเลขยาว (เช่น เลขบัญชี)", name: "ชื่อ",
+  };
   const REASON = {
     rules_llm_disagree: "กฎกับ AI เห็นไม่ตรงกัน",
     llm_low_confidence: "AI ไม่ค่อยมั่นใจ",
@@ -831,6 +835,12 @@
         second.rationale ? el("q", { text: second.rationale }) : null,
       ])]);
     } else rows.push([`ความเห็นที่สอง (${who})`, "ใช้งานไม่ได้: " + (UNAVAILABLE[second.reason] || second.reason)]);
+    const masked = (result.ai || {}).masked;
+    if (masked && typeof masked === "object") {
+      const found = Object.entries(masked).map(([kind, n]) => `${MASKED[kind] || kind} ${n}`);
+      rows.push(["ปิดข้อมูลส่วนตัวก่อนส่งให้ AI", found.length
+        ? `${found.join(" · ")} — AI เห็นเป็นป้ายแทน เช่น [PHONE]` : "ไม่พบรูปแบบที่ระบบปิดได้"]);
+    }
     const agreement = {
       agree: "ตรงกัน ความสำคัญปกติ",
       disagree: "ไม่ตรงกัน ระบบจึงยกให้คนดูก่อน (ข้อเสนอหลักยังเป็นของกฎ)",
@@ -856,6 +866,7 @@
     if (ai) {
       kv.push(["AI ที่ใช้", `${ai.provider}/${ai.model}` + (ai.served_model && ai.served_model !== ai.model ? ` (ตอบโดย ${ai.served_model})` : "")]);
       kv.push(["prompt", `${ai.prompt_id}@${String(ai.prompt_sha256 || "").slice(0, 12)}`]);
+      if (ai.redaction) kv.push(["กฎปิดข้อมูลส่วนตัว (redaction)", ai.redaction]);
       if (ai.usage) kv.push(["token (เข้า/ออก)", `${ai.usage.input_tokens}/${ai.usage.output_tokens}` + (ai.usage.estimated ? " (ประมาณ)" : "")]);
       if (typeof ai.latency_ms === "number") kv.push(["เวลาที่ AI ตอบ", `${Math.round(ai.latency_ms)} ms`]);
     }

@@ -93,7 +93,9 @@ Read in this order when you need depth:
    - Core has no dependencies. The app's only dependency is the optional `sentry-sdk`.
    - A new dependency needs a reason in the PR, should be optional where possible, and is added to the
      `Dockerfile`, `pyproject.toml` and `.claude/hooks/session-start.sh` together.
-9. **Synthetic data only** until personal data is masked before AI calls (gap G5, ROADMAP 7.1).
+9. **Synthetic data only.** Personal data is masked before every AI call (ROADMAP 7.1, `app/llm/redaction.py`),
+   but the masking is pattern-based and misses names without a title, addresses and more. Real data waits
+   for the owner's decision D4, after 7.2 and 7.3.
 10. **Do not build P2 items early.** That means multi-tenancy, distributed workers, Postgres, object
     storage, SLAs, a hosted dashboard, and DAGs that change shape inside Core.
 
@@ -105,7 +107,7 @@ If a task seems to need breaking a rule:
 ## 4. Checking your work
 
 ```bash
-python -m unittest discover -s tests -v        # all tests (119 on 2026-11-03); Python 3.10–3.13
+python -m unittest discover -s tests -v        # all tests (127 on 2026-11-03); Python 3.10–3.13
 python -m examples.case_triage_demo            # v1 rules, one synthetic case
 python -m examples.case_triage_shadow_demo     # v2 shadow mode with the offline mock AI
 python -m app.eval.triage_shadow_eval          # scorecard on 61 synthetic cases
@@ -156,7 +158,7 @@ Notes for cloud sessions (claude.ai/code):
 |---|---|
 | `neuron_flow/` | Core (rule 1) |
 | `app/domains/case_triage/` | v1 rules, the input contract, the v2 shadow agents and workflow |
-| `app/llm/` | AI gateway, prompt library (prompt + answer schema, one hash), mock and Claude providers |
+| `app/llm/` | AI gateway, prompt library (prompt + answer schema, one hash), personal-data masking, mock and Claude providers |
 | `app/eval/` | scorecard and the 61 labelled synthetic cases |
 | `app/observability/sentry.py` | Sentry reporting: step failures, degraded AI, Runner recoveries |
 | `app/persistence/queue_store.py` | the application queue in its own SQLite file (`<data>/app/queue.sqlite3`) |
@@ -216,6 +218,8 @@ Notes for cloud sessions (claude.ai/code):
   - Request ids from the access log to the job record (PR #22, roadmap 1.2).
   - Cancel a job that is still queued, from the API and the page (PR #23, roadmap 1.3).
   - Docs truth checks: links, anchors and stated test counts are tested (PR #24, roadmap 1.5).
+  - Personal data masked before every AI call; the AI step records what it masked (PR #28, roadmap 7.1;
+    narrowing who can read the AI key is a design note in 7.1, not built).
   - The Render service `neuron-flow` exists and is live at https://neuron-flow.onrender.com (free plan,
     first deploy 2026-11-01). Use the Render connector to read its deploys, events and logs; this
     session's network may not reach `onrender.com` or `render.com` directly.
@@ -230,6 +234,7 @@ Notes for cloud sessions (claude.ai/code):
 - **Next:** [docs/ROADMAP.md](docs/ROADMAP.md), the first item that is not ✅ and whose needs are met.
   - Waiting on the owner: 0.2 and 1.4 (D1, paid Render plan), 0.3 and 0.4 (D2, Claude API key).
   - Buildable now without an owner decision: Phase 2 (2.1 first), Phase 3 (3.1 first), and from later
-    phases 5.2, 5.3 and 7.1. 5.1 also needs a Honeycomb key from the owner.
+    phases 5.2 and 5.3. 5.1 also needs a Honeycomb key from the owner; the rest of 7.1 (who can read
+    the AI key) needs an ADR first.
   - The owner decides which of these comes first; ask before starting a new phase.
 - Keep this section and the ROADMAP status table true in every PR.

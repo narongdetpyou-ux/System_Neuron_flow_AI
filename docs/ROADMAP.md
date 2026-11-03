@@ -21,8 +21,9 @@ differs, this file and architecture.md win.
   - ถ้าสองฝ่ายเห็นไม่ตรงกัน เคสจะถูกยกให้คนดูก่อน
 - ถ้าเครื่องดับกลางทาง ระบบทำต่อได้ ส่งซ้ำก็ไม่เกิดงานซ้ำ
 - ยกเลิกเคสที่ยังรอคิวได้ และทุกคำขอมีรหัสคำขอ (request id) ไว้ไล่ดูใน log (ขั้น 1.2, 1.3)
-- ผ่านชุดทดสอบอัตโนมัติ 119 ข้อ และเปิดใช้ออนไลน์บน Render แล้ว ระบบปิดตัวอย่างเรียบร้อย และการแก้แค่เอกสารไม่ทำให้ Render ขึ้นเวอร์ชันใหม่ (ขั้น 0.1, 0.5)
+- ผ่านชุดทดสอบอัตโนมัติ 127 ข้อ และเปิดใช้ออนไลน์บน Render แล้ว ระบบปิดตัวอย่างเรียบร้อย และการแก้แค่เอกสารไม่ทำให้ Render ขึ้นเวอร์ชันใหม่ (ขั้น 0.1, 0.5)
 - หน้าเว็บเป็นแบบแชท: พิมพ์เคส ดูขั้นตอนก่อนส่ง กดยืนยัน แล้วติดตามใน Flow และประวัติเหตุการณ์ (ขั้น 1.6)
+- ก่อนส่งเคสให้ AI ระบบปิดข้อมูลส่วนตัวที่จับรูปแบบได้ (อีเมล เบอร์โทร เลขบัตรประชาชน เลขแบบบัตรเครดิต ตัวเลขยาว และชื่อที่มีคำนำหน้า) AI เห็นแค่ป้ายแทน เช่น [PHONE] และหน้าเว็บบอกว่าปิดอะไรไปกี่จุด (ขั้น 7.1)
 
 **ลำดับต่อจากนี้** แต่ละขั้นจบด้วยสิ่งที่คุณลองเองได้
 
@@ -35,7 +36,7 @@ differs, this file and architecture.md win.
 | 4 | ช่องคุยภาษาธรรมดา: ระบบเข้าใจว่าคุณขออะไร บอกตรง ๆ เมื่อเรื่องอยู่นอกกรอบ และถามกลับ 1 คำถามเมื่อข้อมูลไม่พอ | คุยกับระบบได้เลย ไม่ต้องเลือกประเภทงานเอง | ยังไม่เริ่ม (ต้องรอขั้น 3) |
 | 5 | ติดตามเส้นทางของแต่ละงาน (เวลา token จุดที่ช้า) | ดูเส้นทางงานใน Honeycomb | ยังไม่เริ่ม (ของที่ต้องมีก่อน คือ 1.1 และ 1.2 เสร็จแล้ว) |
 | 6 | AI วางแผนงานหลายขั้น ระบบตรวจแผนก่อนรัน และเครื่องมืออื่นเรียกใช้ผ่าน MCP ได้ | สั่งงานจากแอป Claude ได้ | ยังไม่เริ่ม (ต้องรอขั้น 2–4) |
-| 7 | เตรียมพร้อมก่อนให้คนอื่นใช้ หรือก่อนเปิด repo สาธารณะ | รายงานตรวจความปลอดภัย และรายการตรวจก่อนเปิดตัว | ยังไม่เริ่ม |
+| 7 | เตรียมพร้อมก่อนให้คนอื่นใช้ หรือก่อนเปิด repo สาธารณะ | รายงานตรวจความปลอดภัย และรายการตรวจก่อนเปิดตัว | เริ่มแล้ว: 7.1 ปิดข้อมูลส่วนตัวก่อนส่งให้ AI ทำแล้ว ส่วนการจำกัดว่าใครเห็นคีย์ AI ได้ เขียนแผนไว้ ยังไม่ทำ |
 
 **เรื่องที่คุณต้องตัดสินใจเอง** อยู่ในตาราง [Owner decisions](#owner-decisions) ข้างล่าง เช่น
 - จะจ่ายค่า Render เพื่อให้เคสไม่หายหรือไม่
@@ -106,7 +107,7 @@ Marks: ✅ done · 🟡 built or partly checked (the status says what is left) �
 | 6.1 | Pattern A: bounded read-only tool loop | ⬜ | 3.2 |
 | 6.2 | Pattern B: planner → checked plan → linked job | ⬜ | 2.2, 4.2 |
 | 6.3 | MCP server (submit, get, list; never review decisions) | ⬜ | 2.1 |
-| 7.1 | Mask personal data before AI calls; narrow key exposure | ⬜ | before any real data |
+| 7.1 | Mask personal data before AI calls; narrow key exposure | 🟡 masking built in PR #28; key exposure: design note only | before any real data |
 | 7.2 | Production HTTP server and authentication hardening | ⬜ | before other users |
 | 7.3 | Independent security review | ⬜ owner | 7.1, 7.2 |
 | 7.4 | Public-release checklist | ⬜ owner decision D5 | — |
@@ -763,6 +764,41 @@ workflow types.
 - **Key exposure:** today every Core worker inherits the same environment, so every worker can see
   `ANTHROPIC_API_KEY`. Find the smallest way to give the key only to AI steps. This may need a Core design
   note; do not change Core without an ADR.
+- **Status (2026-11-03): masking built in PR #28; key exposure written up below, not built.**
+  - `app/llm/redaction.py` masks e-mail addresses, phone numbers (Thai and `+` formats), Thai ID numbers
+    (check digit verified), card-like numbers (Luhn), other runs of 9 or more digits (bank accounts and
+    the like), and names after a title or a label (Mr/Ms/Dr, "my name is", `Name:`; นาย, นาง, นางสาว,
+    น.ส., ด.ช., ด.ญ., นามสกุล, and คุณ + an English name). Thai digits count as digits.
+  - The gateway accepts only text that went through `mask()`, so no AI call can skip it. The AI step
+    records how many items of each kind it masked (never the values); the job view and the page show them.
+  - `redact-v1` is part of the AI agent's version and of the frozen job params, like the prompt hash:
+    changing the rules is a new version, and an interrupted job fails as `configuration_changed`.
+  - Not detected, and written in the module: names without a title or label (คุณสมชาย, where คุณ may also
+    mean "you"), Thai surnames after a given name, a given name run into the next word, addresses, numbers
+    of fewer than 9 digits, identifiers that mix letters and digits. Real data therefore still waits for
+    D4, after 7.2 and 7.3; rule 9 in CLAUDE.md says so.
+  - The scorecard's 61 synthetic cases contain nothing the rules mask; all 61 answers stay the same.
+  - **Key exposure, design note.** Every process in the container runs as the same user, `neuron`, and
+    inherits one environment: the HTTP API, the Runner and every Core worker. Any of them can read the
+    key, from its own environment or from `/proc/<pid>/environ` of the others. Removing it from the API's
+    `os.environ` would not help: `/proc/<pid>/environ` keeps the environment the process started with.
+    Options, smallest first:
+    1. Spend limit on the key (owner, D2): limits the damage of a leak; no code. Do it when the key is made.
+    2. Per-agent environments in Core (worker pools that only pass the key to AI agents): a Core change
+       that needs an ADR, and it would not protect the key from the API process, which runs as the same
+       user.
+    3. An AI broker process under its own user, the only holder of the key: AI agents send the masked
+       request over a local socket and get the answer back; the API, the Runner and the workers never see
+       the key. No Core change, but a second user in the image, a small protocol and its tests, and an
+       ADR because it changes the process layout of ADR-014.
+
+    Recommendation: 1 now (with D2), 3 before 7.2 or any real data. Until then, the only AI code is the
+    trusted agents in this repository, and the service on Render runs the mock AI, which needs no key.
+- **Owner test (ไทย):**
+  1. เปิดหน้าเว็บ พิมพ์เคส "อัปโหลดไฟล์แนบไม่ได้ ติดต่อกลับ 081-234-5678 หรือ somchai@example.com" แล้วกดยืนยัน
+  2. เมื่อเคสขึ้น "รอคนตรวจ" ในรายละเอียดผลต้องมีแถว "ปิดข้อมูลส่วนตัวก่อนส่งให้ AI" ที่บอกว่า "อีเมล 1 · เบอร์โทร 1"
+  3. ความเห็นของ AI จำลองยังต้องเป็น "อัปโหลดไฟล์" เพราะคำสำคัญไม่ถูกปิด
+  4. กด "รายละเอียดเชิงเทคนิค" ต้องเห็น "กฎปิดข้อมูลส่วนตัว (redaction): redact-v1"
 
 ### 7.2 Production HTTP server and authentication hardening
 
@@ -859,3 +895,6 @@ workflow types.
 - 2026-11-03: status cleanup. 0.1, 0.5 and 0.6 marked done with evidence read from Render and CI
   (`docs/evidence/2026-11-03-render-operations.md`, which also carries the measurements from the closed
   PR #17). The owner summary got a status column.
+- 2026-11-03: 7.1 split. Masking is built in PR #28. Narrowing key exposure turned out to need either a
+  Core change or a new process under its own user (both need an ADR), so it is written up as a design note
+  in 7.1 and left for before 7.2.

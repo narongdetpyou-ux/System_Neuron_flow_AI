@@ -9,7 +9,7 @@ No Core file is changed: the domain only builds a spec and registers agents.
 
 from neuron_flow import AgentDefinition, SpecError
 
-from app.llm import LLMConfig, load_prompt
+from app.llm import REDACTION_VERSION, LLMConfig, load_prompt
 from app.llm.providers import mock
 
 from . import agents, shadow_agents
@@ -43,7 +43,7 @@ def build_shadow_workflow(job_id, case, llm_config=None, *, mock_scenario=None):
     config = llm_config or LLMConfig.from_env()
     prompt = load_prompt(PROMPT_ID)
     llm_params = {"llm": config.to_params(), "prompt": {"id": prompt.id, "sha256": prompt.sha256},
-                  "max_attempts": LLM_MAX_ATTEMPTS}
+                  "redaction": REDACTION_VERSION, "max_attempts": LLM_MAX_ATTEMPTS}
     if mock_scenario is not None:
         if config.provider != "mock":
             raise SpecError("mock_scenario is only allowed with the mock provider")

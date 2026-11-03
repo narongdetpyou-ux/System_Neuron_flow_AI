@@ -5,7 +5,8 @@ messages (an agent or validator could echo case text). Error *types* are kept, b
 fixed class names.
 
 Included: the reviewer proposal, a step timeline in DAG order, the AI provenance and usage of the
-second opinion, and the receipt checksum.
+second opinion, how many personal-data items were masked before the AI saw the case (counts per kind,
+never the values), and the receipt checksum.
 
 ``plan_view`` describes a spec's shape (step ids, agents, order, retry budget, time limit) for the web
 page, again without params.
@@ -13,7 +14,7 @@ page, again without params.
 
 _REVIEW_FIELDS = ("case_id", "suggested_category", "suggested_queue", "suggestion_source", "second_opinion",
                   "agreement", "review_required", "review_priority", "review_reasons", "decision", "mode")
-_AI_PROVENANCE = ("provider", "model", "prompt_id", "prompt_sha256")
+_AI_PROVENANCE = ("provider", "model", "prompt_id", "prompt_sha256", "redaction")
 CORE_FINAL = ("SUCCEEDED", "FAILED", "DELIVERY_FAILED")
 CORE_DEFAULT_MAX_ATTEMPTS = 2  # neuron_flow.model.normalize_spec default
 CORE_DEFAULT_TIMEOUT_S = 5     # neuron_flow.model.normalize_spec default
@@ -47,7 +48,7 @@ def ai_view(output):
     if not isinstance(output, dict) or output.get("status") not in {"ok", "unavailable"}:
         return None
     view = {"status": output["status"], **{key: (output.get("provenance") or {}).get(key) for key in _AI_PROVENANCE},
-            "attempt": output.get("attempt")}
+            "attempt": output.get("attempt"), "masked": output.get("masked")}
     if output["status"] == "ok":
         view.update(served_model=output.get("served_model"), usage=output.get("usage"),
                     latency_ms=output.get("latency_ms"))
