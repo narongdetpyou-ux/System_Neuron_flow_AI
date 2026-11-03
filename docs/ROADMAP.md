@@ -21,8 +21,9 @@ differs, this file and architecture.md win.
   - ถ้าสองฝ่ายเห็นไม่ตรงกัน เคสจะถูกยกให้คนดูก่อน
 - ถ้าเครื่องดับกลางทาง ระบบทำต่อได้ ส่งซ้ำก็ไม่เกิดงานซ้ำ
 - ยกเลิกเคสที่ยังรอคิวได้ และทุกคำขอมีรหัสคำขอ (request id) ไว้ไล่ดูใน log (ขั้น 1.2, 1.3)
-- ผ่านชุดทดสอบอัตโนมัติ 119 ข้อ และเปิดใช้ออนไลน์บน Render แล้ว ระบบปิดตัวอย่างเรียบร้อย และการแก้แค่เอกสารไม่ทำให้ Render ขึ้นเวอร์ชันใหม่ (ขั้น 0.1, 0.5)
+- ผ่านชุดทดสอบอัตโนมัติ 124 ข้อ และเปิดใช้ออนไลน์บน Render แล้ว ระบบปิดตัวอย่างเรียบร้อย และการแก้แค่เอกสารไม่ทำให้ Render ขึ้นเวอร์ชันใหม่ (ขั้น 0.1, 0.5)
 - หน้าเว็บเป็นแบบแชท: พิมพ์เคส ดูขั้นตอนก่อนส่ง กดยืนยัน แล้วติดตามใน Flow และประวัติเหตุการณ์ (ขั้น 1.6)
+- ถ้ามีคนแก้กฎหรือ prompt แล้วคำตอบของเคสทดสอบเคสไหนเปลี่ยน ช่องตรวจบน GitHub จะเป็นสีแดงและบอกว่าเคสไหนเปลี่ยนอะไร (ขั้น 5.2)
 
 **ลำดับต่อจากนี้** แต่ละขั้นจบด้วยสิ่งที่คุณลองเองได้
 
@@ -33,7 +34,7 @@ differs, this file and architecture.md win.
 | 2 | ให้คนรีวิวได้จริง: ผู้รีวิวมีรหัสของตัวเอง กดอนุมัติหรือไม่อนุมัติได้ และ n8n แจ้งเตือน | กล่อง "รอรีวิว" บนหน้าเว็บ และข้อความแจ้งเตือน | ยังไม่เริ่ม |
 | 3 | ผู้ช่วยแนะนำแหล่งเรียน (`study_guide.v1`) ตามหลักปรัชญาของคุณ | พิมพ์เรื่องที่อยากรู้ด้วยคำธรรมดา แล้วได้แหล่งเรียนไม่เกิน 5 แหล่งพร้อมลำดับการเรียน | ยังไม่เริ่ม |
 | 4 | ช่องคุยภาษาธรรมดา: ระบบเข้าใจว่าคุณขออะไร บอกตรง ๆ เมื่อเรื่องอยู่นอกกรอบ และถามกลับ 1 คำถามเมื่อข้อมูลไม่พอ | คุยกับระบบได้เลย ไม่ต้องเลือกประเภทงานเอง | ยังไม่เริ่ม (ต้องรอขั้น 3) |
-| 5 | ติดตามเส้นทางของแต่ละงาน (เวลา token จุดที่ช้า) | ดูเส้นทางงานใน Honeycomb | ยังไม่เริ่ม (ของที่ต้องมีก่อน คือ 1.1 และ 1.2 เสร็จแล้ว) |
+| 5 | ติดตามเส้นทางของแต่ละงาน (เวลา token จุดที่ช้า) และด่านตรวจผลรายเคส | ช่องตรวจบน PR และเส้นทางงานใน Honeycomb | เริ่มแล้ว: 5.2 (ด่านตรวจผลรายเคส) เสร็จแล้ว ส่วน 5.1 ต้องใช้คีย์ Honeycomb ของคุณ |
 | 6 | AI วางแผนงานหลายขั้น ระบบตรวจแผนก่อนรัน และเครื่องมืออื่นเรียกใช้ผ่าน MCP ได้ | สั่งงานจากแอป Claude ได้ | ยังไม่เริ่ม (ต้องรอขั้น 2–4) |
 | 7 | เตรียมพร้อมก่อนให้คนอื่นใช้ หรือก่อนเปิด repo สาธารณะ | รายงานตรวจความปลอดภัย และรายการตรวจก่อนเปิดตัว | ยังไม่เริ่ม |
 
@@ -101,7 +102,7 @@ Marks: ✅ done · 🟡 built or partly checked (the status says what is left) �
 | 4.3 | Layered answers (summary → steps → details) | ⬜ | 4.2 |
 | 4.4 | Chat-style page | ⬜ | 4.2 |
 | 5.1 | OpenTelemetry tracing to Honeycomb | ⬜ | 1.1, 1.2 |
-| 5.2 | Evaluation gate in CI | ⬜ | — |
+| 5.2 | Evaluation gate in CI | ✅ PR #27 | — |
 | 5.3 | Queue and run-time metrics on the status page | ⬜ | — |
 | 6.1 | Pattern A: bounded read-only tool loop | ⬜ | 3.2 |
 | 6.2 | Pattern B: planner → checked plan → linked job | ⬜ | 2.2, 4.2 |
@@ -709,6 +710,22 @@ workflow types.
 - **How it works:** commit the mock scorecard as a baseline. CI runs `--compare-with` and fails when any
   per-case answer changes, unless the same PR updates the baseline and explains why.
 - **Prompt or model changes** also attach a live run made by hand (the 0.3 workflow).
+- **Status (2026-11-03): built in PR #27.**
+  - The baseline is `tests/baselines/shadow_eval_mock.json`: every case's answer with the mock AI, one case
+    per line, plus the case set, prompt and model that produced it. It sits in `tests/`, so a
+    baseline-only change does not redeploy Render.
+  - "Any per-case answer" means more than the AI outcome that `candidate_gate` compares: the rules'
+    category, the AI's status, category, reason, confidence and attempts, the agreement, the review
+    priority and reasons, the job status and the case text. A changed case set, prompt or model also fails.
+  - *Core logic tests* runs `--compare-with` on every push and pull request, after the unit tests and even
+    when they failed, so the run page always lists the differences. The unit test
+    `test_the_committed_baseline_matches_a_fresh_mock_run` makes the same check locally.
+  - `--write-baseline` regenerates the file. CI cannot check that a pull request explains why; that rule
+    is in CLAUDE.md §5 (definition of done).
+  - Details: [case_triage_v2_shadow.md](case_triage_v2_shadow.md#the-eval-gate-roadmap-52).
+- **Owner test (ไทย):**
+  1. เปิด PR #27 บน GitHub แล้วกดแท็บ Checks → *Core logic tests* (3.12)
+  2. กด Summary ของรันนั้น เลื่อนลงล่างสุด ต้องเห็นหัวข้อ "ด่านตรวจผลรายเคส (eval gate): ผ่าน" และบอกว่าทั้ง 61 เคสตอบเหมือนเดิม
 
 ### 5.3 Queue and run-time metrics
 
@@ -859,3 +876,6 @@ workflow types.
 - 2026-11-03: status cleanup. 0.1, 0.5 and 0.6 marked done with evidence read from Render and CI
   (`docs/evidence/2026-11-03-render-operations.md`, which also carries the measurements from the closed
   PR #17). The owner summary got a status column.
+- 2026-11-03: 5.2 done in PR #27. The gate compares every per-case answer, not only the AI outcome, so a
+  change to the rules turns it red too. The baseline lives in `tests/` to keep baseline-only merges from
+  redeploying Render.

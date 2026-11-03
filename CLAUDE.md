@@ -105,16 +105,17 @@ If a task seems to need breaking a rule:
 ## 4. Checking your work
 
 ```bash
-python -m unittest discover -s tests -v        # all tests (119 on 2026-11-03); Python 3.10–3.13
+python -m unittest discover -s tests -v        # all tests (124 on 2026-11-03); Python 3.10–3.13
 python -m examples.case_triage_demo            # v1 rules, one synthetic case
 python -m examples.case_triage_shadow_demo     # v2 shadow mode with the offline mock AI
-python -m app.eval.triage_shadow_eval          # scorecard on 61 synthetic cases
+python -m app.eval.triage_shadow_eval --compare-with tests/baselines/shadow_eval_mock.json  # scorecard + eval gate
 NEURON_FLOW_ACCESS_KEY=$(python -c "import secrets; print(secrets.token_urlsafe(24))") python -m app.serve
 ```
 
 GitHub Actions (the owner can open these; the first two run on every push and pull request):
 - *Core logic tests* (`core-tests.yml`) runs every test on Python 3.10 and 3.12, both demos and the
-  scorecard.
+  scorecard, then the eval gate: it fails when any case answers differently from
+  `tests/baselines/shadow_eval_mock.json` (roadmap 5.2).
 - *Service container* (`service-container.yml`):
   - checks `render.yaml` against Render's schema;
   - builds the same container as Render and submits cases over HTTP;
@@ -147,6 +148,10 @@ Notes for cloud sessions (claude.ai/code):
     test fails CI otherwise (roadmap 1.5);
   - the status table in docs/ROADMAP.md.
   - Anything the owner uses also gets a Thai overview section.
+- **Eval gate.** If the scorecard's per-case answers change on purpose (rules, prompt, model, cases),
+  regenerate `tests/baselines/shadow_eval_mock.json` in the same PR
+  (`python -m app.eval.triage_shadow_eval --write-baseline tests/baselines/shadow_eval_mock.json`) and say
+  why in the description. A prompt or model change also attaches a live Claude run (roadmap 0.3).
 - **Safety.** No secrets, no real personal data, no unmeasured claims.
 - **Owner test.** The PR ends with the owner's test steps, in Thai.
 
@@ -165,7 +170,7 @@ Notes for cloud sessions (claude.ai/code):
 | `app/boot.py` | the image's process 1: takes the data folder as root, switches to `neuron`, becomes tini |
 | `app/settings.py`, `app/serve.py` | settings from the environment; the launcher (API + supervised Runner) |
 | `Dockerfile`, `render.yaml`, `railway.json` | the container, the Render Blueprint, the Railway config kept for later |
-| `tests/`, `examples/`, `.github/` | tests, demos and smoke tests, CI (`.github/scripts/` holds the `render.yaml` check) |
+| `tests/`, `examples/`, `.github/` | tests (`tests/baselines/` holds the eval gate's baseline), demos and smoke tests, CI (`.github/scripts/` holds the `render.yaml` check) |
 | `.claude/` | the session-start hook for Claude Code cloud sessions |
 
 ## 7. Hosting (Render)
@@ -216,6 +221,7 @@ Notes for cloud sessions (claude.ai/code):
   - Request ids from the access log to the job record (PR #22, roadmap 1.2).
   - Cancel a job that is still queued, from the API and the page (PR #23, roadmap 1.3).
   - Docs truth checks: links, anchors and stated test counts are tested (PR #24, roadmap 1.5).
+  - The eval gate: CI fails when any per-case answer of the mock scorecard changes (PR #27, roadmap 5.2).
   - The Render service `neuron-flow` exists and is live at https://neuron-flow.onrender.com (free plan,
     first deploy 2026-11-01). Use the Render connector to read its deploys, events and logs; this
     session's network may not reach `onrender.com` or `render.com` directly.
@@ -230,6 +236,6 @@ Notes for cloud sessions (claude.ai/code):
 - **Next:** [docs/ROADMAP.md](docs/ROADMAP.md), the first item that is not ✅ and whose needs are met.
   - Waiting on the owner: 0.2 and 1.4 (D1, paid Render plan), 0.3 and 0.4 (D2, Claude API key).
   - Buildable now without an owner decision: Phase 2 (2.1 first), Phase 3 (3.1 first), and from later
-    phases 5.2, 5.3 and 7.1. 5.1 also needs a Honeycomb key from the owner.
+    phases 5.3 and 7.1. 5.1 also needs a Honeycomb key from the owner.
   - The owner decides which of these comes first; ask before starting a new phase.
 - Keep this section and the ROADMAP status table true in every PR.
