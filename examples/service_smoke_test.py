@@ -86,6 +86,14 @@ def wait_for_runner(client, timeout_s):
     raise SystemExit(f"FAILED: the Runner did not report alive in {timeout_s}s")
 
 
+def finished_v2_jobs(client):
+    """How many finished case_triage.v2 jobs the status figures count, if they also carry a run time."""
+    status, info = client.call("GET", "/v1/status")
+    timing = ((info.get("metrics") or {}).get("workflows") or {}).get("case_triage.v2") or {}
+    run = timing.get("run_s") or {}
+    return timing.get("jobs", 0) if status == 200 and run.get("max", -1) >= 0 else 0
+
+
 def first_run(client, state_file, timeout_s):
     status, _ = client.call("GET", "/", key=False)
     check(status == 200, "the web page loads")
@@ -114,6 +122,7 @@ def first_run(client, state_file, timeout_s):
     status, events = client.call("GET", f"/v1/jobs/{job['job_id']}/events?limit=100")
     kinds = [event["kind"] for event in events.get("events", [])]
     check(kinds[:2] == ["job.queued", "job.claimed"] and kinds[-1] == "job.review_required", "the job history is complete")
+    check(finished_v2_jobs(client) >= 1, "the status figures count the finished case and its run time (roadmap 5.3)")
     if state_file:
         Path(state_file).write_text(json.dumps({"job_id": job["job_id"]}), encoding="utf-8")
 
@@ -129,6 +138,7 @@ def after_restart(client, state_file, timeout_s):
     check(status == 202, "a new case is admitted after the restart")
     result = wait_for_result(client, fresh["job_id"], timeout_s)
     check(result["status"] == "REVIEW_REQUIRED", "the restarted Runner finishes new work")
+    check(finished_v2_jobs(client) >= 2, "the status figures still count the case from before the restart")
 
 
 def main(argv=None):

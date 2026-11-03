@@ -1,6 +1,6 @@
 # Intake API, job queue, Runner and web page (round 2, Milestone B)
 
-**Status:** built in PR #11 and tested offline (124 tests on 2026-11-03, including killing the Runner
+**Status:** built in PR #11 and tested offline (131 tests on 2026-11-03, including killing the Runner
 mid-step). The container build is checked on every push by *Actions → Service container*. Live on
 Render's free plan since 2026-11-01 (`render.yaml`). Railway was the first choice, but it has paused new
 sign-ups since 22 Oct 2026 after a security incident; `railway.json` stays in the repository for later.
@@ -10,6 +10,9 @@ The web page was redesigned on 2026-11-03 (PR #18, roadmap 1.6) after the owner'
 chat-style intake with a confirm step, a Flow panel and an event history (Trace), and read-only settings
 (see "หน้าเว็บ: ใช้อย่างไร" and "Web page" below). It is live on Render, and the owner reported that the
 owner test passed on the live page the same day.
+Queue and run-time figures (roadmap 5.3, PR #26): `GET /v1/status` and the page show how many cases wait,
+how long the oldest has waited, the median and slowest wait and run times per workflow over the newest 100
+finished jobs, and failures by reason (see "ตัวเลขคิวและเวลา" and "Queue and run-time figures" below).
 Design principles: [design_philosophy.md](design_philosophy.md).
 
 ## ภาพรวมการทำงาน (ภาษาไทย)
@@ -51,7 +54,7 @@ Design principles: [design_philosophy.md](design_philosophy.md).
 
 | ส่วน | มีอะไร |
 |---|---|
-| ซ้าย | ปุ่ม "＋ เคสใหม่", จำนวนเคสตามสถานะ, รายการเคสล่าสุด (วันนี้ / เมื่อวาน), สถานะ AI ที่เก็บข้อมูล และตัวรันงาน, ปุ่ม "ล็อกหน้าจอ" |
+| ซ้าย | ปุ่ม "＋ เคสใหม่", จำนวนเคสตามสถานะ (เมื่อมีเคสรอ จะบอกด้วยว่าเคสที่รอนานสุดรอมานานเท่าไร), รายการเคสล่าสุด (วันนี้ / เมื่อวาน), สถานะ AI ที่เก็บข้อมูล ตัวรันงาน และ "เวลาต่อเคส" (ปกติใช้เวลาเท่าไร), ปุ่ม "ล็อกหน้าจอ" |
 | กลาง (แท็บ "แชท") | ช่องพิมพ์เคส และบทสนทนาของเคสที่เลือก: ข้อความเคส → การ์ดขั้นตอน → ผลที่ระบบเสนอ |
 | ขวา ("Flow") | แผนผังขั้นตอนของเคส (เส้นบอกว่าขั้นไหนต้องรอขั้นไหน) และ "ประวัติเหตุการณ์ (Trace)" ของเคสนั้น |
 
@@ -64,7 +67,26 @@ Design principles: [design_philosophy.md](design_philosophy.md).
 6. **อ่านผล** ระบบเสนอคิวไหน ความสำคัญ ความเห็นของกฎและของ AI และเหตุผลที่บอกคนตรวจ ผลสุดท้ายคือ "รอคนตรวจ" เสมอ
 7. **กลับมาดูทีหลัง** ลิงก์ในแถบที่อยู่มีรหัสงาน (`#job_…`) เปิดลิงก์เดิมจะกลับมาที่เคสนั้น (ถ้าเคสยังไม่ถูกล้าง)
 
-แท็บ "ตั้งค่า" **ดูอย่างเดียว**: ขั้นตอนและตัวทำงาน (agent) ของแต่ละประเภทงาน, AI ที่ใช้อยู่และวิธีเปลี่ยนใน Render, กติกาการตัดสิน, ที่เก็บข้อมูลและขีดจำกัด หน้าเว็บแก้ค่าเหล่านี้ไม่ได้โดยตั้งใจ: คีย์อยู่ใน Render เท่านั้น ตัวทำงานเปลี่ยนได้ผ่าน PR เท่านั้น และคนต้องเป็นผู้ตัดสินเสมอ
+แท็บ "ตั้งค่า" **ดูอย่างเดียว**: ขั้นตอนและตัวทำงาน (agent) ของแต่ละประเภทงาน, AI ที่ใช้อยู่และวิธีเปลี่ยนใน Render, กติกาการตัดสิน, ที่เก็บข้อมูลและขีดจำกัด และ "ตัวเลขการทำงาน" (ดูหัวข้อถัดไป) หน้าเว็บแก้ค่าเหล่านี้ไม่ได้โดยตั้งใจ: คีย์อยู่ใน Render เท่านั้น ตัวทำงานเปลี่ยนได้ผ่าน PR เท่านั้น และคนต้องเป็นผู้ตัดสินเสมอ
+
+### ตัวเลขคิวและเวลา (ขั้น 5.3)
+
+ระบบนับตัวเลขเหล่านี้ใหม่ทุกครั้งที่หน้าเว็บถามสถานะ (ทุก 4 วินาที) จากคิวงานโดยตรง จึงไม่ต้องเก็บอะไรเพิ่ม
+
+| ตัวเลข | ความหมาย | ดูได้ที่ |
+|---|---|---|
+| รอคิวตอนนี้ | มีกี่เคสที่ยังรอตัวรันงาน และเคสที่รอนานสุดรอมานานเท่าไร | ซ้าย ใต้จำนวนเคส (ขึ้นเมื่อมีเคสรอ) และแท็บ "ตั้งค่า" |
+| เวลารอคิว | ตั้งแต่รับเข้าคิวจนตัวรันงานหยิบไปทำ | แท็บ "ตั้งค่า" |
+| เวลาทำงาน | ตั้งแต่ตัวรันงานหยิบไปทำจนได้ผล นับเคสที่ไม่สำเร็จด้วย | ซ้าย ("เวลาต่อเคส" ของงานแบบที่หน้าเว็บใช้) และแท็บ "ตั้งค่า" |
+| ปกติ / นานสุด | "ปกติ" คือค่ากลาง (median) ครึ่งหนึ่งของเคสใช้เวลาไม่เกินนี้ "นานสุด" คือเคสที่ช้าที่สุด | แท็บ "ตั้งค่า" แยกตามประเภทงาน |
+| หยุดกลางคัน | เคสที่ตัวรันงานหยุดระหว่างทำ แล้วตัวใหม่ทำต่อ เวลาทำงานของเคสนั้นรวมช่วงที่รอตัวใหม่ด้วย | แท็บ "ตั้งค่า" |
+| สาเหตุที่ไม่สำเร็จ | นับตามสาเหตุ เช่น "มีขั้นตอนที่ไม่สำเร็จ" หรือ "ตั้งค่าเปลี่ยนหลังรับเคส" | แท็บ "ตั้งค่า" |
+
+ข้อควรรู้:
+- นับจาก 100 เคสล่าสุดที่ทำจบเท่านั้น เคสที่ยกเลิกไม่นับ เพราะไม่ได้รัน
+- แผนฟรีของ Render ล้างคิวทุกครั้งที่ระบบหลับ รีสตาร์ท หรืออัปเดต ตัวเลขจึงเริ่มนับใหม่ทุกครั้ง
+- ตัวเลขมีแค่เวลา จำนวน ชื่อประเภทงาน และรหัสสาเหตุ ไม่มีข้อความเคสหรือรหัสงาน
+- ตอนนี้ระบบใช้ AI จำลอง เวลาที่เห็นจึงยังไม่ใช่เวลาของ Claude จริง
 
 ส่วนที่อยู่ในแบบ (mockup) แต่ยังไม่มีในระบบ:
 - ช่องคุยถาม-ตอบทั่วไป และคำสั่ง `/test` `/eval` `/backup` → ขั้น 4 และ 1.4 ในแผน (ตอนนี้ช่องแชทรับเฉพาะข้อความเคส)
@@ -210,7 +232,7 @@ app runs, carries an `X-Request-Id` header:
 | Method and path | What it does | Success | Errors |
 |---|---|---|---|
 | `GET /healthz` | Liveness for the host's health check (no key); also says whether an access key is set | 200 `{"ok": true, "access_key": "configured"}` | 503 |
-| `GET /v1/status` | Runner heartbeat, queue counts, AI mode, storage, limits, and each workflow's steps (`workflows[].steps`) | 200 | 401, 429 |
+| `GET /v1/status` | Runner heartbeat, queue counts, queue and run-time figures (`metrics`, below), AI mode, storage, limits, and each workflow's steps (`workflows[].steps`) | 200 | 401, 429 |
 | `POST /v1/jobs` | Admit a job | 202 new, 200 duplicate | 400, 401, 409, 411, 413, 415, 429, 503 |
 | `GET /v1/jobs?limit=20&before=<seq>` | Newest first; `next_before` is the next cursor | 200 | 400, 401 |
 | `GET /v1/jobs/{job_id}` | Status, the step plan frozen at claim (`plan`, `null` while queued), reviewer proposal, step timeline, AI provenance, receipt hash, the admitting `request_id` | 200 | 401, 404 |
@@ -239,6 +261,38 @@ Error bodies look like `{"error": "<code>", "message": "<English text>"}`. Codes
 `too_many_attempts` (with `retry_after_s` and a `Retry-After` header), `unauthorized`,
 `access_key_not_configured`, `body_too_large`, `unsupported_media_type`, `length_required`,
 `invalid_parameter`, `job_not_found`, `not_cancellable`, `method_not_allowed`, `not_found`, `internal_error`.
+
+### Queue and run-time figures (roadmap 5.3)
+
+`GET /v1/status` includes `metrics`, computed from the queue database on each request
+(`app/services/metrics.py`; no extra state). Its shape, with made-up values:
+
+```json
+"metrics": {
+  "waiting": {"count": 1, "oldest_age_s": 12.0},
+  "window": {"limit": 100, "jobs": 4},
+  "workflows": {"case_triage.v2": {"jobs": 4, "recovered": 1,
+                                   "wait_s": {"median": 1.0, "max": 2.0},
+                                   "run_s": {"median": 1.5, "max": 16.0}}},
+  "failures": {"step_failed": 1}
+}
+```
+
+- `waiting`: jobs still `QUEUED`, and the age of the oldest in seconds (`null` when none wait).
+- `window`: the figures below cover the newest `limit` jobs (by admission order) that ran to an outcome
+  (`REVIEW_REQUIRED`, `COMPLETED`, `FAILED`, `DELIVERY_FAILED`). Cancelled jobs never ran and are left out.
+- `workflows`, per workflow type: `jobs` in the window; `wait_s` (admitted → first claim) and `run_s`
+  (first claim → outcome) as median and maximum, rounded to milliseconds (`null` without values);
+  `recovered`, the jobs a new Runner took over after a stop. Their `run_s` includes the time until the take-over.
+  Failed jobs count, because they ran.
+- `failures`: the window's `FAILED` and `DELIVERY_FAILED` jobs by `failure.reason` (`unknown` if none was
+  recorded), the most frequent first, ties in name order.
+- Privacy: timings, workflow names, counts and reason codes only; no case text, case ids or job ids.
+- Cost: two small read-only queries per request. The window query walks the table backwards by `seq`
+  (`NOT INDEXED`) and stops after `limit` rows, instead of sorting every finished job.
+- On Render's free plan the queue, and so every figure, starts again after each sleep, restart and deploy.
+- Tests: `tests/test_service_metrics.py` (hand-checked medians and maxima, the window, ordering, a clock that
+  stepped back, and a real run through the Runner with no case text or ids in the figures).
 
 ## What proves it (P0 gates for Milestone B)
 

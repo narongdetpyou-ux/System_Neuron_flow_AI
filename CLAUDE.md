@@ -105,7 +105,7 @@ If a task seems to need breaking a rule:
 ## 4. Checking your work
 
 ```bash
-python -m unittest discover -s tests -v        # all tests (124 on 2026-11-03); Python 3.10–3.13
+python -m unittest discover -s tests -v        # all tests (131 on 2026-11-03); Python 3.10–3.13
 python -m examples.case_triage_demo            # v1 rules, one synthetic case
 python -m examples.case_triage_shadow_demo     # v2 shadow mode with the offline mock AI
 python -m app.eval.triage_shadow_eval --compare-with tests/baselines/shadow_eval_mock.json  # scorecard + eval gate
@@ -165,7 +165,7 @@ Notes for cloud sessions (claude.ai/code):
 | `app/eval/` | scorecard and the 61 labelled synthetic cases |
 | `app/observability/sentry.py` | Sentry reporting: step failures, degraded AI, Runner recoveries |
 | `app/persistence/queue_store.py` | the application queue in its own SQLite file (`<data>/app/queue.sqlite3`) |
-| `app/services/` | workflow catalog, admission, Runner with reconciliation, result summaries |
+| `app/services/` | workflow catalog, admission, Runner with reconciliation, result summaries, queue and run-time figures |
 | `app/api/`, `app/web/` | standard-library HTTP API and the Thai web page (chat layout, Flow and Trace, read-only settings) |
 | `app/boot.py` | the image's process 1: takes the data folder as root, switches to `neuron`, becomes tini |
 | `app/settings.py`, `app/serve.py` | settings from the environment; the launcher (API + supervised Runner) |
@@ -221,6 +221,7 @@ Notes for cloud sessions (claude.ai/code):
   - Request ids from the access log to the job record (PR #22, roadmap 1.2).
   - Cancel a job that is still queued, from the API and the page (PR #23, roadmap 1.3).
   - Docs truth checks: links, anchors and stated test counts are tested (PR #24, roadmap 1.5).
+  - Queue and run-time figures in `/v1/status` and on the page (PR #26, roadmap 5.3).
   - The eval gate: CI fails when any per-case answer of the mock scorecard changes (PR #27, roadmap 5.2).
   - The Render service `neuron-flow` exists and is live at https://neuron-flow.onrender.com (free plan,
     first deploy 2026-11-01). Use the Render connector to read its deploys, events and logs; this
@@ -235,7 +236,7 @@ Notes for cloud sessions (claude.ai/code):
   - The rest of the roadmap is open.
 - **Next:** [docs/ROADMAP.md](docs/ROADMAP.md), the first item that is not ✅ and whose needs are met.
   - Waiting on the owner: 0.2 and 1.4 (D1, paid Render plan), 0.3 and 0.4 (D2, Claude API key).
-  - Buildable now without an owner decision: Phase 2 (2.1 first), Phase 3 (3.1 first), and from later
-    phases 5.3 and 7.1. 5.1 also needs a Honeycomb key from the owner.
+  - Buildable now without an owner decision: Phase 2 (2.1 first), Phase 3 (3.1 first), and 7.1 from
+    Phase 7. 5.1 also needs a Honeycomb key from the owner.
   - The owner decides which of these comes first; ask before starting a new phase.
 - Keep this section and the ROADMAP status table true in every PR.
