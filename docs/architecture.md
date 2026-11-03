@@ -170,7 +170,7 @@ app/boot.py                    process 1 of the image: takes the data folder, dr
 app/settings.py, app/serve.py  environment settings; the launcher (API + supervised Runner in one container)
 Dockerfile, render.yaml        the container and the Render Blueprint (railway.json kept for Railway)
 examples/                      case_triage_demo, case_triage_shadow_demo, sentry_smoke_test, service_smoke_test
-tests/                         116 tests: core, triage v1/v2, AI gateway, scorecard, Sentry, API, queue, Runner, HTTP
+tests/                         119 tests: core, triage v1/v2, AI gateway, scorecard, Sentry, API, queue, Runner, HTTP
 .github/workflows/             core-tests, service-container, sentry-smoke, shadow-eval-claude (manual)
 .github/scripts/               check_render_blueprint.py: render.yaml structure, build filter, Render's schema
 planned: review ledger and artifact store, app/domains/study_guide/

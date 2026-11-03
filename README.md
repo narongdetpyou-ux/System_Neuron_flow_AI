@@ -74,7 +74,7 @@ forgets its cases when it sleeps or redeploys; a paid plan with a disk keeps the
 
 **Locally (Python 3.10+):**
 ```bash
-python -m unittest discover -s tests -v        # 116 tests
+python -m unittest discover -s tests -v        # 119 tests
 python -m examples.case_triage_demo            # v1 rules, one synthetic case
 python -m examples.case_triage_shadow_demo     # v2 shadow mode, three synthetic cases (offline mock AI)
 python -m app.eval.triage_shadow_eval          # scorecard on 61 synthetic cases
