@@ -605,6 +605,13 @@ class TracedServiceTests(unittest.TestCase):
         self.assertEqual(chat["parentSpanId"], named["step classify_llm"][0]["spanId"])
         self.assertEqual(attributes_of(chat)["gen_ai.usage.input_tokens"],
                          view["result"]["ai"]["usage"]["input_tokens"])
+        # Each step carries its agent's version, which Core records on submit (the queue's spec has none);
+        # the first live trace in Honeycomb lacked it (docs/evidence/2026-11-03-first-trace-honeycomb.md).
+        versions = {name: attributes_of(items[0]).get("neuron_flow.agent.version")
+                    for name, items in named.items() if name.startswith("step ")}
+        self.assertEqual((versions["step classify_rules"], versions["step compare"], versions["step prepare"]),
+                         ("1", "shadow-1", "shadow-1"))
+        self.assertTrue(versions["step classify_llm"].startswith("llm=mock/mock-keyword-1;prompt="), versions)
         # Reading the job was a request of its own: its own trace, with the route template, not the path.
         reads = [item for spans in self.traces().values() for item in spans if item["name"] == "GET /v1/jobs/{job_id}"]
         self.assertEqual(len(reads), 1)

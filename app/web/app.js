@@ -1341,7 +1341,7 @@
     invalid_environment: "ปิดอยู่ — ค่า NEURON_FLOW_ENVIRONMENT ใช้ไม่ได้",
   };
   const EXPORT_ERROR = {
-    http_401: "คีย์ไม่ถูกต้อง (401) — ตรวจว่าใส่ Ingest key ครบทั้งตัว",
+    http_401: "Honeycomb ไม่รู้จักคีย์นี้ (401) — ต้องใช้ค่าเต็ม 64 ตัวที่แสดงตอนสร้างคีย์ ไม่ใช่ Key ID ที่ยาว 32 ตัว",
     http_403: "คีย์ไม่มีสิทธิ์ (403) — ตรวจว่าเป็น Ingest key และติ๊ก Can create services/datasets",
     http_404: "ที่อยู่ปลายทางผิด (404)",
     http_429: "ส่งถี่เกินโควตาของ Honeycomb (429)",
@@ -1389,7 +1389,7 @@
       el("p", { class: "lead", text: "ทุกเคสกลายเป็นเส้นทาง 1 เส้น (trace): รับเข้าคิว → รอคิว → แต่ละขั้น → การเรียก AI พร้อมเวลาและจำนวน token ระบบส่งแค่เวลา สถานะ รหัสงาน รุ่น AI และจำนวน ไม่ส่งข้อความเคส prompt คำตอบของ AI หรือคีย์" }),
       el("ol", { class: "steps-howto" }, [
         el("li", { text: "เปิด Render → บริการ neuron-flow → แท็บ Environment" }),
-        el("li", {}, ["เพิ่ม ", el("code", { text: "HONEYCOMB_API_KEY" }), " = Ingest key จาก Honeycomb (ขึ้นต้นด้วย hcaik_) แล้วกด Save"]),
+        el("li", {}, ["เพิ่มเป็นแถวใหม่ ", el("code", { text: "HONEYCOMB_API_KEY" }), " = ค่าเต็มของ Ingest key ที่ Honeycomb แสดงครั้งเดียวตอนสร้าง (ยาว 64 ตัว คือ Key ID ต่อด้วยรหัสลับ ไม่ใช่ Key ID อย่างเดียว) แล้วกด Save อย่าแก้แถว ", el("code", { text: "NEURON_FLOW_ACCESS_KEY" })]),
         el("li", { text: "รอระบบรีสตาร์ท 1–2 นาที (แผนฟรี: เคสเก่าจะหาย) แล้วกลับมาหน้านี้ ช่องสถานะต้องขึ้นว่า \"เปิด\"" }),
         el("li", {}, ["จะปิดชั่วคราวโดยไม่ลบคีย์: เพิ่ม ", el("code", { text: "NEURON_FLOW_TRACING" }), " = ", el("code", { text: "off" })]),
       ]),

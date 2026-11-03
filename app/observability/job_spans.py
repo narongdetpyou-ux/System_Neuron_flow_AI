@@ -45,6 +45,10 @@ def _error_type(error):
     return value if isinstance(value, str) and _TYPE.fullmatch(value) else ("Unknown" if error else None)
 
 
+def _printable(value):
+    return isinstance(value, str) and bool(value) and value.isascii() and value.isprintable()
+
+
 def _ms(start, end):
     return round(max(0.0, end - start) * 1000, 3)
 
@@ -144,12 +148,14 @@ def job_spans(job, admission, core_events, *, ai_step):
     for attempt in step_attempts(core_events, end_ns=end_ns):
         definition = definitions.get(attempt["step_id"], {})
         agent = definition.get("agent")
-        version = (versions.get(agent) or {}).get("version") if agent else None
+        identity = versions.get(agent) if agent else None  # Core's {"entrypoint": ..., "version": ...}
+        version = identity.get("version") if isinstance(identity, dict) else None
         step_attributes = {**ids, "neuron_flow.step.id": attempt["step_id"], "neuron_flow.step.agent": agent,
                            "neuron_flow.step.attempt": attempt["attempt"] if type(attempt["attempt"]) is int else None,
                            "neuron_flow.step.max_attempts": definition.get("max_attempts"),
                            "neuron_flow.step.outcome": attempt["outcome"],
-                           "neuron_flow.agent.version": version if isinstance(version, str) else None,
+                           # A version that is not printable ASCII is left out rather than losing the trace.
+                           "neuron_flow.agent.version": version if _printable(version) else None,
                            "error.type": attempt["error_type"]}
         answered = (ai is not None and attempt["step_id"] == ai_step and attempt["outcome"] == "SUCCEEDED"
                     and attempt["attempt"] == ai.get("attempt"))
