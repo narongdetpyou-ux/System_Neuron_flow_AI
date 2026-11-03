@@ -49,6 +49,7 @@
     step_failed: "มีขั้นตอนที่ไม่สำเร็จ", configuration_changed: "ตั้งค่าเปลี่ยนหลังรับเคส",
     runner_attempts_exhausted: "ตัวรันงานหยุดกลางคันหลายครั้ง", runtime_error: "ระบบขัดข้อง",
     delivery_failed: "บันทึกรายงานไม่สำเร็จ", unknown_workflow_type: "ไม่รู้จักประเภทงาน",
+    unknown: "ไม่ได้บันทึกสาเหตุ",
   };
   const STEP = {
     classify_rules: "กฎเดิมจัดหมวด", classify_llm: "AI ให้ความเห็นที่สอง", compare: "เทียบสองความเห็น",
@@ -164,6 +165,21 @@
     if (typeof timeout !== "number") return "";
     if (timeout < 60) return `${Number(timeout.toFixed(2))} วิ`;
     return `${Number((timeout / 60).toFixed(1))} นาที`;
+  }
+  /* A measured duration in plain Thai: "0.31 วิ", "4.2 วิ", "12 วิ", "3 นาที 5 วิ", "2 ชม. 10 นาที". */
+  function durationText(total) {
+    if (typeof total !== "number" || !Number.isFinite(total)) return "—";
+    if (total < 0.01) return "ไม่ถึง 0.01 วิ";
+    if (total < 10) return `${Number(total.toFixed(total < 1 ? 2 : 1))} วิ`;
+    if (total < 60) return `${Math.floor(total)} วิ`;
+    const minutes = Math.floor(total / 60);
+    if (total < 3600) {
+      const rest = Math.floor(total % 60);
+      return rest ? `${minutes} นาที ${rest} วิ` : `${minutes} นาที`;
+    }
+    const hours = Math.floor(total / 3600);
+    const rest = Math.floor((total % 3600) / 60);
+    return rest ? `${hours} ชม. ${rest} นาที` : `${hours} ชม.`;
   }
   function dayLabel(iso) {
     const day = new Date(iso);
@@ -359,7 +375,25 @@
     $("summary-hint").textContent = `อย่างน้อย ${min} ตัวอักษร`;
     updateCounter();
     renderCounts(status.queue || {});
+    renderTimes(status.metrics || {});
     if (state.view === "settings") renderSettings();
+  }
+
+  /* Left column: how long the oldest waiting case has waited, and the usual run time of a new case. */
+  function renderTimes(metrics) {
+    const waiting = metrics.waiting || {};
+    const age = $("queue-age");
+    const waits = waiting.count > 0 && typeof waiting.oldest_age_s === "number";
+    age.hidden = !waits;
+    age.textContent = waits ? `เคสที่รอนานสุด รอมา ${durationText(waiting.oldest_age_s)}` : "";
+    age.className = "queue-age" + (waits && waiting.oldest_age_s >= 60 ? " warn" : "");
+    const timing = (metrics.workflows || {})[defaultWorkflow()];
+    if (timing && timing.run_s) {
+      setSys("sys-time", `ปกติ ${durationText(timing.run_s.median)}`, "",
+        `ค่ากลางของเวลาทำงาน จาก ${timing.jobs} เคสล่าสุดที่ทำจบ · ช้าสุด ${durationText(timing.run_s.max)} · ดูเพิ่มในแท็บ "ตั้งค่า"`);
+    } else {
+      setSys("sys-time", "ยังไม่มีข้อมูล", "", "จะขึ้นตัวเลขเมื่อมีเคสที่ทำจบแล้ว");
+    }
   }
 
   function renderCounts(queue) {
@@ -1237,20 +1271,77 @@
     ]);
   }
 
+  /* Measured on the server from the newest cases that ran (roadmap 5.3); see app/services/metrics.py. */
+  function metricsPanel(status) {
+    const metrics = status.metrics || {};
+    const waiting = metrics.waiting || {};
+    const counted = metrics.window || {};
+    const workflows = Object.entries(metrics.workflows || {});
+    const failures = Object.entries(metrics.failures || {});
+    const spread = (value) => value ? [el("span", { class: "metric-item", text: `ปกติ ${durationText(value.median)}` }),
+      el("span", { class: "metric-item muted", text: `นานสุด ${durationText(value.max)}` })] : "—";
+    const waitingText = waiting.count
+      ? `${waiting.count} เคส · เคสที่รอนานสุด รอมา ${durationText(waiting.oldest_age_s)}` : "ไม่มีเคสรอ";
+    // A span of block-level spans, so the .rows grid keeps its label/value pairs (and stays valid HTML).
+    const failureList = el("span", { class: "metric-list" }, failures.length
+      ? failures.map(([reason, n]) => el("span", { class: "metric-item" }, [
+        `${FAILURE_SHORT[reason] || reason} · ${n} เคส `, el("span", { class: "mono muted", text: reason })]))
+      : "ไม่มี");
+    const table = workflows.length ? el("div", { class: "table-wrap" }, el("table", { class: "table" }, [
+      el("thead", {}, el("tr", {}, ["ประเภทงาน", "เคส", "เวลารอคิว", "เวลาทำงาน", "หยุดกลางคัน"]
+        .map((h) => el("th", { scope: "col", text: h })))),
+      el("tbody", {}, workflows.map(([name, timing]) => el("tr", {}, [
+        el("td", {}, [WORKFLOW[name] || name, el("div", { class: "mono", text: name })]),
+        el("td", { text: String(timing.jobs) }),
+        el("td", {}, spread(timing.wait_s)),
+        el("td", {}, spread(timing.run_s)),
+        el("td", { text: timing.recovered ? `${timing.recovered} เคส` : "ไม่มี" }),
+      ]))),
+    ])) : el("p", { class: "lead", text: "ยังไม่มีเคสที่ทำจบ ลองส่งเคสในแท็บ \"แชท\" แล้วกลับมาดูที่นี่" });
+    const notes = [
+      "ปกติ = ค่ากลาง (median): ครึ่งหนึ่งของเคสใช้เวลาไม่เกินนี้ · นานสุด = เคสที่ช้าที่สุด",
+      "เวลารอคิว = ตั้งแต่รับเข้าคิวจนตัวรันงานหยิบไปทำ · เวลาทำงาน = ตั้งแต่หยิบไปทำจนได้ผล นับเคสที่ไม่สำเร็จด้วย",
+      "หยุดกลางคัน = เคสที่ตัวรันงานหยุดระหว่างทำ แล้วตัวรันงานตัวใหม่ทำต่อ เวลาทำงานของเคสนั้นจึงรวมช่วงที่รอตัวใหม่ด้วย",
+      "เคสที่ยกเลิกไม่นับ เพราะไม่ได้รัน",
+    ];
+    if (!(status.storage || {}).persistent) notes.push("ที่เก็บข้อมูลเป็นแบบชั่วคราว ตัวเลขจึงเริ่มนับใหม่ทุกครั้งที่ระบบหลับ รีสตาร์ท หรืออัปเดต");
+    const node = panel("ตัวเลขการทำงาน (metrics)", [
+      el("div", { class: "rows" }, [
+        el("span", { text: "รอคิวตอนนี้" }), el("span", { text: waitingText }),
+        el("span", { text: "นับจาก" }), el("span", { text: `${counted.jobs || 0} เคสล่าสุดที่ทำจบ (นับสูงสุด ${counted.limit || "—"} เคส)` }),
+        el("span", { text: "สาเหตุที่ไม่สำเร็จ" }), failureList,
+      ]),
+      table,
+      ...notes.map((text) => el("p", { class: "lead", text })),
+    ]);
+    node.id = "metrics-panel";
+    return node;
+  }
+
   function renderSettings() {
     const status = state.status || {};
     const view = $("view-settings");
     const runner = status.runner || {};
     const key = JSON.stringify([status.ai, status.storage, status.limits, status.workflows, status.default_workflow,
       runner.state, runner.alive, Math.round((runner.heartbeat_age_s || 0) / 10), status.version]);
-    if (view.dataset.key === key) return;
-    view.dataset.key = key;
-    view.replaceChildren(
-      el("p", { class: "settings-intro", text: "ดูอย่างเดียว — ค่าเหล่านี้มาจากโค้ด (ผ่านการทดสอบและ PR) และจากแท็บ Environment ของ Render หน้าเว็บแก้ไม่ได้โดยตั้งใจ เพื่อไม่ให้ใครเปลี่ยนตัวทำงาน AI หรือคีย์จากหน้าเว็บ" }),
-      agentsPanel(status),
-      el("div", { class: "panel-grid" }, [aiPanel(status.ai || {}), approvalPanel()]),
-      systemPanel(status),
-    );
+    if (view.dataset.key !== key) {
+      view.dataset.key = key;
+      view.dataset.metrics = JSON.stringify(status.metrics || null);
+      view.replaceChildren(
+        el("p", { class: "settings-intro", text: "ดูอย่างเดียว — ค่าเหล่านี้มาจากโค้ด (ผ่านการทดสอบและ PR) และจากแท็บ Environment ของ Render หน้าเว็บแก้ไม่ได้โดยตั้งใจ เพื่อไม่ให้ใครเปลี่ยนตัวทำงาน AI หรือคีย์จากหน้าเว็บ" }),
+        agentsPanel(status),
+        el("div", { class: "panel-grid" }, [aiPanel(status.ai || {}), approvalPanel()]),
+        systemPanel(status),
+        metricsPanel(status),
+      );
+      return;
+    }
+    // Only the figures changed: redraw that one panel, so the rest of the view (and its scroll) stays put.
+    const metricsKey = JSON.stringify(status.metrics || null);
+    if (view.dataset.metrics === metricsKey) return;
+    view.dataset.metrics = metricsKey;
+    const old = $("metrics-panel");
+    if (old) old.replaceWith(metricsPanel(status));
   }
 
   // ---------- views and panels -------------------------------------------------------------
