@@ -75,13 +75,16 @@ forgets its cases when it sleeps or redeploys; a paid plan with a disk keeps the
   `tests/baselines/shadow_eval_mock.json` and fails on any change.
 - *Actions → Service container* checks `render.yaml`, builds the same container as Render, submits cases
   over HTTP, restarts it and checks that nothing was lost.
-- *Actions → Sentry smoke test* checks that error reporting reaches Sentry.
+- *Actions → Sentry smoke test* checks that error reporting reaches Sentry. It needs the repository secret
+  `SENTRY_DSN`; without it, it skips with a notice.
+- *Actions → Secret scan* checks every commit of every branch for keys and tokens (gitleaks) on every push
+  and pull request.
 - *Actions → Shadow eval with Claude (manual)* runs the scorecard against real Claude. It needs the
   repository secret `ANTHROPIC_API_KEY`.
 
 **Locally (Python 3.10+):**
 ```bash
-python -m unittest discover -s tests -v        # 139 tests
+python -m unittest discover -s tests -v        # 141 tests
 python -m examples.case_triage_demo            # v1 rules, one synthetic case
 python -m examples.case_triage_shadow_demo     # v2 shadow mode, three synthetic cases (offline mock AI)
 python -m app.eval.triage_shadow_eval          # scorecard on 61 synthetic cases

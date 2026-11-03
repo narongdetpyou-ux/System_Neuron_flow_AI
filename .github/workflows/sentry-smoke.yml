@@ -1,7 +1,8 @@
 name: Sentry smoke test
 # Sends one synthetic step failure to the neuron-flow-runtime Sentry project.
-# The DSN can only submit events (it cannot read data) and is rate-limited to
-# 200 events/hour in Sentry. A repository secret SENTRY_DSN, if set, takes priority.
+# The DSN comes only from the repository secret SENTRY_DSN (roadmap 7.4): Settings -> Secrets and
+# variables -> Actions. Without it, a push skips the test with a notice, and a manual run fails and says
+# how to add it. A DSN can only submit events; it still belongs in a secret, not in a file.
 on:
   workflow_dispatch:
   push:
@@ -13,13 +14,30 @@ jobs:
   smoke:
     runs-on: ubuntu-latest
     env:
-      SENTRY_DSN: ${{ secrets.SENTRY_DSN || 'https://c9fe6f2bab4b5413589b8bea048d35cb@o4512352375603200.ingest.us.sentry.io/4512352394674176' }}
+      SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
       SENTRY_ENVIRONMENT: ci
       SENTRY_RELEASE: neuron-flow@${{ github.sha }}
     steps:
+      - name: Check that the SENTRY_DSN secret is set
+        id: dsn
+        run: |
+          if [ -n "$SENTRY_DSN" ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "present=false" >> "$GITHUB_OUTPUT"
+          if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
+            echo "::error::Add the repository secret SENTRY_DSN (Settings -> Secrets and variables -> Actions), then run again."
+            exit 1
+          fi
+          echo "::notice::Skipped: the repository secret SENTRY_DSN is not set (Settings -> Secrets and variables -> Actions)."
       - uses: actions/checkout@v7
+        if: steps.dsn.outputs.present == 'true'
       - uses: actions/setup-python@v7
+        if: steps.dsn.outputs.present == 'true'
         with:
           python-version: "3.12"
-      - run: pip install "sentry-sdk>=2.0"
-      - run: python -m examples.sentry_smoke_test
+      - if: steps.dsn.outputs.present == 'true'
+        run: pip install "sentry-sdk>=2.0"
+      - if: steps.dsn.outputs.present == 'true'
+        run: python -m examples.sentry_smoke_test

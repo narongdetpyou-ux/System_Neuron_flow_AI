@@ -1,0 +1,8 @@
+# Findings in the git history that were reviewed and accepted, one gitleaks fingerprint per line
+# (commit:file:rule:line). A new finding is never added here without a reason and the owner's knowledge.
+#
+# 1. Sentry DSN of the neuron-flow-runtime project ("CI and development" client key), written into the
+#    Sentry smoke workflow in commit 683f963 and removed in roadmap 7.4. A DSN can only submit events (it
+#    cannot read data) and that key is rate-limited to 200 events an hour. It stays in the history, so the
+#    key must be revoked in Sentry before the repository is made public (ROADMAP 7.4 checklist).
+683f96363cd49ccd5a127f9537d5827225a4a78d:.github/workflows/sentry-smoke.yml:sentry-dsn:16

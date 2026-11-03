@@ -107,7 +107,7 @@ If a task seems to need breaking a rule:
 ## 4. Checking your work
 
 ```bash
-python -m unittest discover -s tests -v        # all tests (139 on 2026-11-03); Python 3.10–3.13
+python -m unittest discover -s tests -v        # all tests (141 on 2026-11-03); Python 3.10–3.13
 python -m examples.case_triage_demo            # v1 rules, one synthetic case
 python -m examples.case_triage_shadow_demo     # v2 shadow mode with the offline mock AI
 python -m app.eval.triage_shadow_eval --compare-with tests/baselines/shadow_eval_mock.json  # scorecard + eval gate
@@ -123,7 +123,11 @@ GitHub Actions (the owner can open these; the first two run on every push and pu
   - builds the same container as Render and submits cases over HTTP;
   - restarts it and checks that nothing was lost;
   - checks that it runs without root and stops cleanly.
-- *Sentry smoke test* checks that error reporting reaches Sentry.
+- *Sentry smoke test* checks that error reporting reaches Sentry. It reads the DSN only from the repository
+  secret `SENTRY_DSN` and skips with a notice when it is missing (roadmap 7.4).
+- *Secret scan* (`secret-scan.yml`) runs gitleaks over every commit of every branch on every push and pull
+  request, with the rules in `.github/gitleaks.toml`. Reviewed findings are listed with a reason in
+  `.github/.gitleaksignore`; a second pass fails if an entry there is no longer found.
 - *Shadow eval with Claude (manual)* runs the scorecard against real Claude and needs the repository secret
   `ANTHROPIC_API_KEY`.
 
@@ -154,7 +158,9 @@ Notes for cloud sessions (claude.ai/code):
   regenerate `tests/baselines/shadow_eval_mock.json` in the same PR
   (`python -m app.eval.triage_shadow_eval --write-baseline tests/baselines/shadow_eval_mock.json`) and say
   why in the description. A prompt or model change also attaches a live Claude run (roadmap 0.3).
-- **Safety.** No secrets, no real personal data, no unmeasured claims.
+- **Safety.** No secrets, no real personal data, no unmeasured claims. `tests/test_no_secrets.py` and
+  *Secret scan* enforce the first. Never add an entry to `.github/.gitleaksignore` without a reason in the
+  file and the owner's knowledge.
 - **Owner test.** The PR ends with the owner's test steps, in Thai.
 
 ## 6. Where things are
@@ -172,7 +178,7 @@ Notes for cloud sessions (claude.ai/code):
 | `app/boot.py` | the image's process 1: takes the data folder as root, switches to `neuron`, becomes tini |
 | `app/settings.py`, `app/serve.py` | settings from the environment; the launcher (API + supervised Runner) |
 | `Dockerfile`, `render.yaml`, `railway.json` | the container, the Render Blueprint, the Railway config kept for later |
-| `tests/`, `examples/`, `.github/` | tests (`tests/baselines/` holds the eval gate's baseline), demos and smoke tests, CI (`.github/scripts/` holds the `render.yaml` check) |
+| `tests/`, `examples/`, `.github/` | tests (`tests/baselines/` holds the eval gate's baseline), demos and smoke tests, CI (`.github/scripts/` holds the `render.yaml` check; `.github/gitleaks.toml` and `.github/.gitleaksignore` the secret scan's rules and reviewed findings) |
 | `.claude/` | the session-start hook for Claude Code cloud sessions |
 
 ## 7. Hosting (Render)
@@ -227,6 +233,8 @@ Notes for cloud sessions (claude.ai/code):
   - The eval gate: CI fails when any per-case answer of the mock scorecard changes (PR #27, roadmap 5.2).
   - Personal data masked before every AI call; the AI step records what it masked (PR #28, roadmap 7.1;
     narrowing who can read the AI key is a design note in 7.1, not built).
+  - Secret scan of the whole history in CI, and the Sentry DSN only from a repository secret (PR #29,
+    roadmap 7.4, the preparation part; the rest of 7.4 waits for the owner's decision D5).
   - The Render service `neuron-flow` exists and is live at https://neuron-flow.onrender.com (free plan,
     first deploy 2026-11-01). Use the Render connector to read its deploys, events and logs; this
     session's network may not reach `onrender.com` or `render.com` directly.
