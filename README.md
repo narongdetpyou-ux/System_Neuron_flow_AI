@@ -41,6 +41,8 @@ Since round 2, cases can also come in from outside, through an HTTP API or a Tha
 4. The page works like a chat: type a case, check the steps it will run, confirm, then follow it in the
    Flow panel and its event history (Trace). The result is explained in plain language, and the settings
    are shown read-only. Details: [intake_queue.md](docs/intake_queue.md).
+5. A case that is still waiting can be cancelled, and every request carries a request id that links the
+   access log to the job record.
 
 ## What is inside
 
@@ -104,6 +106,7 @@ most 1 MiB. The agent `version` is frozen into each job, so an old job refuses t
 | [Intake API, queue, Runner and web page](docs/intake_queue.md) | Round 2: how a case flows from outside, recovery rules, API reference, Render setup |
 | [Sentry error reporting](docs/observability_sentry.md) | What gets reported, privacy rules, alerts |
 | [Funding readiness pack](docs/funding/README.md) | Internal evidence register; not a submitted application |
+| [Evidence notes](docs/evidence/2026-11-03-render-operations.md) | Dated measurements; the first one covers Render operations (graceful stops, deploy filter, cold start) |
 
 ## Scope and limits
 

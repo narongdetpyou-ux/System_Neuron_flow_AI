@@ -1,7 +1,7 @@
 # Internal technical project brief — System Neuron Flow AI
 
 **Status:** Internal working brief. Not a completed funder application.
-**Date:** 2026-10-31; implementation section updated 2026-11-01 (`main` @ `59c6889`).
+**Date:** 2026-10-31; implementation section updated 2026-11-03 (`main` @ `0b03735`).
 **Applicant:** Independent developer (name, legal status and country-specific
 eligibility to be supplied and confirmed by the applicant).
 **Code:** https://github.com/narongdetpyou-ux/System_Neuron_flow_AI
@@ -48,7 +48,7 @@ yet been benchmarked or validated with prospective users.
   - v2 adds an AI second opinion in shadow mode. The rules stay the official
     suggestion and every proposal waits for a human; nothing is approved
     automatically.
-  - Both versions run on the unchanged Core.
+  - Both versions run on the same Core; its only change since extraction is a planned telemetry fix.
 - AI gateway in `app/llm/` (offline mock + Claude provider). It handles
   outages, off-contract answers, prompt injection and secrets as documented.
   This was tested offline only: **no live model has been called yet**.
@@ -56,10 +56,11 @@ yet been benchmarked or validated with prospective users.
   - A scorecard over 61 synthetic labelled cases in English and Thai runs in
     CI. Its mock scores test the pipeline, not accuracy.
   - Sentry error monitoring, with live smoke-test events received.
-  - 53 automated tests.
+  - 119 automated tests.
 - Architecture: [architecture](../architecture.md) covers the layers, decisions
-  and milestone status, including the planned admission queue, single Runner,
-  API and two-phase human review. **Those services are not implemented.**
+  and milestone status. The admission queue, single Runner, API and a Thai web
+  page are implemented and online with synthetic data (Render free plan).
+  **Two-phase human review is planned, not implemented.**
 
 ## Intended beneficiaries (to validate, not asserted customers)
 

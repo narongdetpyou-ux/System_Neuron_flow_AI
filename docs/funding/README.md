@@ -1,14 +1,15 @@
 # Funding readiness — internal evidence pack
 
-**As of:** 2026-11-01 (`main` @ `59c6889`). **Use:** planning, technical due diligence, and an honest evidence
+**As of:** 2026-11-03 (`main` @ `0b03735`). **Use:** planning, technical due diligence, and an honest evidence
 register. **Not:** a completed grant application, or an assertion that any grant program will accept this
 project.
 
 ## What exists
 
 - **Core runtime** (`neuron_flow/`). Since its extraction on 2026-10-31 it has changed once, for the planned telemetry fix (PR #21).
-- **53 automated tests** passing on Python 3.10 and 3.12 in CI, and also checked on 3.11 and 3.13.
-  - Latest green run on `main`: https://github.com/narongdetpyou-ux/System_Neuron_flow_AI/actions/runs/41236673003
+- **119 automated tests** passing on Python 3.10 and 3.12 in CI, and on 3.13 in a development session
+  (3.11 was last checked on 2026-11-01, at 53 tests).
+  - Latest green run on `main`: https://github.com/narongdetpyou-ux/System_Neuron_flow_AI/actions/runs/41550257103
 - **Support-case triage domain:**
   - v1: deterministic keyword rules.
   - v2: shadow mode, where an AI gives a second opinion. Rules stay official and a human always decides.
@@ -16,6 +17,10 @@ project.
   against a local fake API, and **no live model has been called yet**.
 - **Scorecard** (`app/eval/`) with 61 synthetic, developer-labelled cases in English and Thai.
 - **Sentry error monitoring.** CI smoke-test events have been received by the Sentry project.
+- **Intake service (Milestone B)**: HTTP API, durable job queue, a single Runner with crash recovery and a
+  Thai web page, online on Render's free plan since 2026-11-01 with synthetic data only. Queued cases can
+  be cancelled, and request ids link the access log to each job. Operational observations are in
+  [the Render evidence note](../evidence/2026-11-03-render-operations.md); there are no real users yet.
 - **Documentation:**
   - [Design philosophy](../design_philosophy.md)
   - [Architecture](../architecture.md): layers, constraints, decisions and milestone status
@@ -66,8 +71,8 @@ These facts do **not** imply any of the following:
 1. ✅ Domain proof confirmed in CI, with link and SHA recorded above.
 2. Run the scorecard once against the real Claude API (*Actions → Shadow eval with Claude*). Record the run
    link, the model and the results, including failures.
-3. Build the durable admission, single Runner and recovery slice (Milestone B), and test controller crashes
-   and idempotency.
+3. ✅ Build the durable admission, single Runner and recovery slice (Milestone B), and test controller
+   crashes and idempotency (PR #11; tested in CI; online on Render since 2026-11-01).
 4. Verify identity-bound review and artifacts (Milestone C), then get an independent review.
 5. Publish an approved public code snapshot if the chosen fund requires it.
 6. Collect genuine third-party feedback and scope-specific cost quotations.

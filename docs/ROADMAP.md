@@ -20,21 +20,22 @@ differs, this file and architecture.md win.
   - AI ให้ความเห็นที่สอง
   - ถ้าสองฝ่ายเห็นไม่ตรงกัน เคสจะถูกยกให้คนดูก่อน
 - ถ้าเครื่องดับกลางทาง ระบบทำต่อได้ ส่งซ้ำก็ไม่เกิดงานซ้ำ
-- ผ่านชุดทดสอบอัตโนมัติ 119 ข้อ และเปิดใช้ออนไลน์บน Render แล้ว
+- ยกเลิกเคสที่ยังรอคิวได้ และทุกคำขอมีรหัสคำขอ (request id) ไว้ไล่ดูใน log (ขั้น 1.2, 1.3)
+- ผ่านชุดทดสอบอัตโนมัติ 119 ข้อ และเปิดใช้ออนไลน์บน Render แล้ว ระบบปิดตัวอย่างเรียบร้อย และการแก้แค่เอกสารไม่ทำให้ Render ขึ้นเวอร์ชันใหม่ (ขั้น 0.1, 0.5)
 - หน้าเว็บเป็นแบบแชท: พิมพ์เคส ดูขั้นตอนก่อนส่ง กดยืนยัน แล้วติดตามใน Flow และประวัติเหตุการณ์ (ขั้น 1.6)
 
 **ลำดับต่อจากนี้** แต่ละขั้นจบด้วยสิ่งที่คุณลองเองได้
 
-| ขั้น | ทำอะไร | คุณจะได้ลองอะไร |
-|---|---|---|
-| 0 | เปิดใช้ออนไลน์บน Render และวัดผล Claude จริงครั้งแรก | ใส่เคสบนหน้าเว็บจริง และอ่านผลวัดของ Claude |
-| 1 | เก็บงานเล็ก ๆ ให้ระบบแน่นขึ้น | ยกเลิกเคสที่ยังรอคิวได้ |
-| 2 | ให้คนรีวิวได้จริง: ผู้รีวิวมีรหัสของตัวเอง กดอนุมัติหรือไม่อนุมัติได้ และ n8n แจ้งเตือน | กล่อง "รอรีวิว" บนหน้าเว็บ และข้อความแจ้งเตือน |
-| 3 | ผู้ช่วยแนะนำแหล่งเรียน (`study_guide.v1`) ตามหลักปรัชญาของคุณ | พิมพ์เรื่องที่อยากรู้ด้วยคำธรรมดา แล้วได้แหล่งเรียนไม่เกิน 5 แหล่งพร้อมลำดับการเรียน |
-| 4 | ช่องคุยภาษาธรรมดา: ระบบเข้าใจว่าคุณขออะไร บอกตรง ๆ เมื่อเรื่องอยู่นอกกรอบ และถามกลับ 1 คำถามเมื่อข้อมูลไม่พอ | คุยกับระบบได้เลย ไม่ต้องเลือกประเภทงานเอง |
-| 5 | ติดตามเส้นทางของแต่ละงาน (เวลา token จุดที่ช้า) | ดูเส้นทางงานใน Honeycomb |
-| 6 | AI วางแผนงานหลายขั้น ระบบตรวจแผนก่อนรัน และเครื่องมืออื่นเรียกใช้ผ่าน MCP ได้ | สั่งงานจากแอป Claude ได้ |
-| 7 | เตรียมพร้อมก่อนให้คนอื่นใช้ หรือก่อนเปิด repo สาธารณะ | รายงานตรวจความปลอดภัย และรายการตรวจก่อนเปิดตัว |
+| ขั้น | ทำอะไร | คุณจะได้ลองอะไร | สถานะ (3 พ.ย. 2026) |
+|---|---|---|---|
+| 0 | เปิดใช้ออนไลน์บน Render และวัดผล Claude จริงครั้งแรก | ใส่เคสบนหน้าเว็บจริง และอ่านผลวัดของ Claude | ออนไลน์แล้ว ที่เหลือรอคุณตัดสินใจเรื่องเงิน (D1 แผน Render, D2 API key ของ Claude) |
+| 1 | เก็บงานเล็ก ๆ ให้ระบบแน่นขึ้น | ยกเลิกเคสที่ยังรอคิวได้ | เสร็จ ยกเว้น 1.4 (สำรองข้อมูล) ที่ต้องใช้แผน Render แบบเสียเงิน |
+| 2 | ให้คนรีวิวได้จริง: ผู้รีวิวมีรหัสของตัวเอง กดอนุมัติหรือไม่อนุมัติได้ และ n8n แจ้งเตือน | กล่อง "รอรีวิว" บนหน้าเว็บ และข้อความแจ้งเตือน | ยังไม่เริ่ม |
+| 3 | ผู้ช่วยแนะนำแหล่งเรียน (`study_guide.v1`) ตามหลักปรัชญาของคุณ | พิมพ์เรื่องที่อยากรู้ด้วยคำธรรมดา แล้วได้แหล่งเรียนไม่เกิน 5 แหล่งพร้อมลำดับการเรียน | ยังไม่เริ่ม |
+| 4 | ช่องคุยภาษาธรรมดา: ระบบเข้าใจว่าคุณขออะไร บอกตรง ๆ เมื่อเรื่องอยู่นอกกรอบ และถามกลับ 1 คำถามเมื่อข้อมูลไม่พอ | คุยกับระบบได้เลย ไม่ต้องเลือกประเภทงานเอง | ยังไม่เริ่ม (ต้องรอขั้น 3) |
+| 5 | ติดตามเส้นทางของแต่ละงาน (เวลา token จุดที่ช้า) | ดูเส้นทางงานใน Honeycomb | ยังไม่เริ่ม (ของที่ต้องมีก่อน คือ 1.1 และ 1.2 เสร็จแล้ว) |
+| 6 | AI วางแผนงานหลายขั้น ระบบตรวจแผนก่อนรัน และเครื่องมืออื่นเรียกใช้ผ่าน MCP ได้ | สั่งงานจากแอป Claude ได้ | ยังไม่เริ่ม (ต้องรอขั้น 2–4) |
+| 7 | เตรียมพร้อมก่อนให้คนอื่นใช้ หรือก่อนเปิด repo สาธารณะ | รายงานตรวจความปลอดภัย และรายการตรวจก่อนเปิดตัว | ยังไม่เริ่ม |
 
 **เรื่องที่คุณต้องตัดสินใจเอง** อยู่ในตาราง [Owner decisions](#owner-decisions) ข้างล่าง เช่น
 - จะจ่ายค่า Render เพื่อให้เคสไม่หายหรือไม่
@@ -71,12 +72,12 @@ Marks: ✅ done · 🟡 built or partly checked (the status says what is left) �
 
 | ID | Work package | Status | Needs |
 |---|---|---|---|
-| 0.1 | Put round 2 online on Render | ✅ live since 2026-11-01 (the graceful-stop fix in the status note is confirmed on Render after its merge) | — |
+| 0.1 | Put round 2 online on Render | ✅ live since 2026-11-01; graceful stops confirmed on Render ([evidence note](evidence/2026-11-03-render-operations.md)) | — |
 | 0.2 | Free or paid hosting | ⬜ owner decision D1 | 0.1 |
 | 0.3 | First scorecard run with real Claude | ⬜ owner (API key, D2) | — |
 | 0.4 | Claude for the online page | ⬜ optional | 0.1, 0.3 |
-| 0.5 | Skip Render deploys for docs-only commits | 🟡 built; confirm in Render's events after the merge | 0.1 |
-| 0.6 | Open Dependabot PRs #1–#5 | 🟡 #1–#5 closed (they edit files removed in PR #6); PR #20 moves the current workflows to the Node 24 versions; done when #20 is merged | — |
+| 0.5 | Skip Render deploys for docs-only commits | ✅ PR #15; merges #19, #20 and #24 did not deploy, code merges did ([evidence note](evidence/2026-11-03-render-operations.md)) | 0.1 |
+| 0.6 | Open Dependabot PRs #1–#5 | ✅ #1–#5 closed (they edit files removed in PR #6); PR #20 moved the workflows to the Node 24 action versions, and CI no longer warns about Node.js 20 | — |
 | 1.1 | Neutral telemetry phase names (the one planned Core change) | ✅ PR #21 | — |
 | 1.2 | Request ids to follow a request through the logs | ✅ PR #22 | — |
 | 1.3 | Cancel a job that is still queued | ✅ PR #23 | — |
@@ -156,9 +157,12 @@ decisions would vanish on every sleep.
     forwarding signal: 'Operation not permitted'`, with no `serve: stopping` after it. Root in Render's
     containers lacks `CAP_KILL`, so a root tini could not pass SIGTERM on to the service, which runs as
     `neuron`. Every stop killed the service instead. This was reproduced in CI with `--cap-drop KILL` and
-    the real tini. It was fixed by running tini as `neuron` (`app/boot.py`); the CI job now keeps
-    `--cap-drop KILL`. To confirm on Render after the merge, the next stop (deploy, restart or sleep) must
-    log `serve: stopping` and no FATAL line.
+    the real tini. It was fixed by running tini as `neuron` (`app/boot.py`, PR #16); the CI job now keeps
+    `--cap-drop KILL`.
+- **Confirmed on Render** ([evidence note](evidence/2026-11-03-render-operations.md)): the fixed image's first free-plan sleep (2026-11-01 15:43:45 UTC) and
+  the deploy replacements on 2026-11-03 logged `serve: stopping (signal 15)` and
+  `runner: stopping after the current job`, with no FATAL line. The same note records the free-plan sleep
+  (about 15 minutes after the last request) and the cold start (first job 9–10 s, later jobs 0.1–0.4 s).
 
 ### 0.2 Free or paid hosting (owner decision D1)
 
@@ -242,8 +246,9 @@ decisions would vanish on every sleep.
     `buildFilter.ignoredPaths`.
   - Render's docs could not be read from the session (the network blocks `render.com`), so the field
     names rest on Render's published schema, which CI applies.
-  - Left: after the merge, the next docs-only merge must show as skipped in Render's events, and the
-    next code merge must still deploy.
+  - **Confirmed (2026-11-03, [evidence note](evidence/2026-11-03-render-operations.md)):** Render has no deploy for the docs or CI-only merges #19, #20 and
+    #24, and every merge that changed code (#16, #18, #21–#23) deployed. Render lists no
+    `commit_ignored` events, so the evidence is the missing deploys.
 
 ### 0.6 Open Dependabot PRs #1–#5
 
@@ -266,6 +271,8 @@ decisions would vanish on every sleep.
     and `workflow_run` (not used here); setup-python v7 removed the `pip-install` input (not used here);
     upload-artifact v7 adds optional unzipped uploads (the default is unchanged). `download-artifact` is
     no longer used, so #1 had nothing to replace.
+  - **Confirmed after the merge:** CI on `main` no longer warns that actions target Node.js 20. The only
+    notice left is GitHub's own: the `ubuntu-latest` label is moving to Ubuntu 26, and CI is green on it.
   - Not done, on purpose: a new `.github/dependabot.yml`. It would bring a PR for every new action
     version; whether to turn that on is the owner's choice.
 
@@ -848,3 +855,6 @@ workflow types.
   cancel cannot be undone; the 409 body names the current state as `job_status`.
 - 2026-11-03: 1.5 done in PR #24. Besides links and the README count, the check also covers `#anchors`
   and the test count stated in CLAUDE.md, architecture.md, intake_queue.md and this file.
+- 2026-11-03: status cleanup. 0.1, 0.5 and 0.6 marked done with evidence read from Render and CI
+  (`docs/evidence/2026-11-03-render-operations.md`, which also carries the measurements from the closed
+  PR #17). The owner summary got a status column.
