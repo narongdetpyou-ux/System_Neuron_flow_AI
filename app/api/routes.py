@@ -3,7 +3,7 @@
   GET  /                          the web page (it holds no secrets and asks for the access key)
   GET  /static/app.css, app.js    page assets
   GET  /healthz                   liveness for the host: process up, queue database readable (no key)
-  GET  /v1/status                 Runner heartbeat, queue counts and timings, AI mode, storage, limits, workflow steps
+  GET  /v1/status                 Runner heartbeat, queue counts and timings, AI mode, tracing, storage, limits, steps
   POST /v1/jobs                   admit a job: 202 new, 200 duplicate, 400/401/409/413/415/429/503
   GET  /v1/jobs                   newest first: ?limit=1-100&before=<seq>
   GET  /v1/jobs/{job_id}          status, step plan, reviewer proposal, step timeline, AI provenance
@@ -14,6 +14,10 @@ Every ``/v1`` route needs ``Authorization: Bearer <NEURON_FLOW_ACCESS_KEY>``. Re
 file paths, credentials or stack traces. Every response carries ``X-Request-Id``: a well-formed id the
 client sent, or a new random one. The same id is written in the access log line and, for a new job, in
 its ``job.queued`` event, so one request can be followed from the log to the job record.
+
+When tracing is on (``app.observability.tracing``), every ``/v1`` request also becomes one span, and a job
+that a request admits records that span as its parent, so the Runner's spans of the job join the same
+trace. The page files and ``/healthz`` are not traced.
 
 The API only reads, admits and cancels jobs that are still queued; it never opens the Core ``Runtime``
 (ADR-001).
@@ -34,6 +38,7 @@ from neuron_flow.model import SpecError, decode
 
 from app.domains.case_triage.contracts import SUMMARY_MAX_CHARS, SUMMARY_MIN_CHARS
 from app.llm import LLMConfig, LLMConfigError
+from app.observability.tracing import Tracing, parse_traceparent
 from app.persistence import QUEUED, StateError
 from app.persistence.queue_store import iso
 from app.services.admission import AdmissionError, admit
@@ -69,6 +74,7 @@ class Request:
     body: bytes = b""
     client: str = "local"
     request_id: str = ""                          # set by ApiApp.request_id(); empty means "not yet"
+    trace_parent: str = ""                        # the request's span as a W3C traceparent; empty when not traced
 
 
 @dataclass
@@ -104,12 +110,13 @@ def new_request_id():
 
 
 class ApiApp:
-    def __init__(self, settings, store, *, catalog=None, clock=time.time, reporter=None):
+    def __init__(self, settings, store, *, catalog=None, clock=time.time, reporter=None, tracing=None):
         self.settings = settings
         self.store = store
         self.catalog = CATALOG if catalog is None else catalog
         self.clock = clock
         self.reporter = reporter
+        self.tracing = tracing if tracing is not None else Tracing.off()
         key = settings.access_key
         self._key_digest = hashlib.sha256(key.encode("utf-8")).digest() if key else None
         self._submit_limit = RateLimiter(settings.submit_per_minute, 60, total_capacity=settings.submit_per_minute * 4)
@@ -239,6 +246,7 @@ class ApiApp:
             "runner": runner_view, "queue": self.store.counts(),
             "metrics": queue_metrics(self.store, now),
             "ai": {**llm, "simulated": llm.get("provider") == "mock", "problem": problem},
+            "tracing": self.tracing.status(),
             "storage": {"kind": self.settings.storage, "persistent": self.settings.persistent},
             "limits": {"max_queued": self.settings.max_queued, "submit_per_minute": self.settings.submit_per_minute,
                        "summary_min_chars": SUMMARY_MIN_CHARS, "summary_max_chars": SUMMARY_MAX_CHARS,
@@ -264,7 +272,7 @@ class ApiApp:
             return error(400, "invalid_json", "The body is not valid JSON, or it repeats a field")
         try:
             job, created = admit(self.store, body, max_queued=self.settings.max_queued, catalog=self.catalog,
-                                 request_id=request.request_id)
+                                 request_id=request.request_id, trace_parent=request.trace_parent)
         except AdmissionError as exc:
             headers = [("Retry-After", "60")] if exc.status == 503 else []
             return error(exc.status, exc.code, exc.message, headers=headers, **exc.extra)
@@ -338,7 +346,11 @@ class ApiApp:
             view["queue_position"] = self.store.queue_position(job)
         if detail:
             view["input"] = case
-            view["request_id"] = self.store.admitting_request_id(job["job_id"])
+            admission = self.store.admission(job["job_id"])
+            view["request_id"] = admission.get("request_id")
+            # The trace in Honeycomb that holds this job's spans (recorded only when tracing was on).
+            trace = parse_traceparent(admission.get("trace_parent"))
+            view["trace_id"] = trace[0] if trace else None
             # The plan frozen when the Runner claimed the job: what it really runs. None while queued.
             view["plan"] = plan_view(job["spec"]) if job["spec"] else None
             view["result"] = job["result"]
@@ -367,3 +379,18 @@ def _int_param(request, name, default, low, high):
 def route_label(path):
     """Path for log lines, with job ids replaced, so logs stay short and comparable."""
     return re.sub(r"job_[0-9a-f]{24}", "{job_id}", path)[:100]
+
+
+def traced(path):
+    """Only API requests become spans: the page files and the health check carry no work."""
+    return path.startswith("/v1/")
+
+
+def route_template(path):
+    """The route of an API path as a fixed template (``/v1/jobs/{job_id}``), or ``None`` for an unknown path.
+
+    Spans carry this, never the path itself, so a path a client made up cannot carry text into a trace."""
+    if path in ("/v1/status", "/v1/jobs"):
+        return path
+    match = JOB_PATH.fullmatch(path)
+    return "/v1/jobs/{job_id}" + (match.group(2) or "") if match else None

@@ -896,6 +896,7 @@
       ["ตัวรันงานหยิบเคสนี้", `${job.claims} ครั้ง`], ["รับเข้าคิว", fullTime(job.created_at)],
       ["เริ่มทำ", fullTime(job.started_at)], ["เสร็จ", fullTime(job.finished_at)]];
     if (job.request_id) kv.splice(1, 0, ["รหัสคำขอที่ส่งเคสนี้ (request id)", job.request_id]);
+    if (job.trace_id) kv.splice(job.request_id ? 2 : 1, 0, ["รหัสเส้นทางใน Honeycomb (trace id)", job.trace_id]);
     const ai = result.ai;
     if (ai) {
       kv.push(["AI ที่ใช้", `${ai.provider}/${ai.model}` + (ai.served_model && ai.served_model !== ai.model ? ` (ตอบโดย ${ai.served_model})` : "")]);
@@ -1329,30 +1330,102 @@
     return node;
   }
 
+  /* Tracing to Honeycomb (roadmap 5.1). The export figures are those of the part that answers this page (the
+   * API); the Runner sends each case's spans the same way, to the same place. */
+  const TRACING_OFF = {
+    not_configured: "ปิดอยู่ — ยังไม่ได้ใส่ HONEYCOMB_API_KEY ใน Render",
+    switched_off: "ปิดอยู่ — ตั้ง NEURON_FLOW_TRACING = off ไว้",
+    invalid_switch: "ปิดอยู่ — ค่า NEURON_FLOW_TRACING ต้องเป็น on หรือ off",
+    invalid_endpoint: "ปิดอยู่ — ที่อยู่ HONEYCOMB_API_ENDPOINT ใช้ไม่ได้ (ต้องเป็น https)",
+    invalid_service_name: "ปิดอยู่ — ชื่อ OTEL_SERVICE_NAME ใช้ไม่ได้",
+    invalid_environment: "ปิดอยู่ — ค่า NEURON_FLOW_ENVIRONMENT ใช้ไม่ได้",
+  };
+  const EXPORT_ERROR = {
+    http_401: "คีย์ไม่ถูกต้อง (401) — ตรวจว่าใส่ Ingest key ครบทั้งตัว",
+    http_403: "คีย์ไม่มีสิทธิ์ (403) — ตรวจว่าเป็น Ingest key และติ๊ก Can create services/datasets",
+    http_404: "ที่อยู่ปลายทางผิด (404)",
+    http_429: "ส่งถี่เกินโควตาของ Honeycomb (429)",
+    network: "ติดต่อ Honeycomb ไม่ได้ (เครือข่าย)",
+    key_missing: "ไม่พบคีย์ตอนส่ง",
+    spans_rejected: "Honeycomb รับไว้ไม่ครบทุกช่วง",
+  };
+
+  function tracingSetup(tracing) {
+    const t = tracing || {};
+    return [t.enabled, t.problem, t.destination, t.service_name];
+  }
+
+  function tracingFigures(tracing) {
+    const t = tracing || {};
+    return [t.exported_spans, t.dropped_spans, t.last_ok_at, t.last_error];
+  }
+
+  function exportErrorText(code) {
+    if (EXPORT_ERROR[code]) return EXPORT_ERROR[code];
+    const http = /^http_(\d+)$/.exec(code || "");
+    if (http && Number(http[1]) >= 500) return `Honeycomb มีปัญหาชั่วคราว (${http[1]})`;
+    return http ? `Honeycomb ตอบ HTTP ${http[1]}` : code;
+  }
+
+  function tracingPanel(status) {
+    const t = status.tracing || {};
+    const rows = [
+      el("span", { text: "สถานะ" }),
+      t.enabled ? el("span", { class: "st-done", text: `เปิด — ส่งไป ${t.destination}` })
+        : el("span", { text: TRACING_OFF[t.problem] || "ปิดอยู่" }),
+    ];
+    if (t.enabled) {
+      const last = t.last_error ? el("span", { class: "st-review", text: "ส่งไม่สำเร็จ: " + exportErrorText(t.last_error) })
+        : t.last_ok_at ? el("span", { class: "st-done", text: `สำเร็จ · ล่าสุด ${clockTime(t.last_ok_at)}` })
+          : el("span", { text: "ยังไม่ได้ส่ง (ส่งทุก 2 วินาทีเมื่อมีการใช้งาน)" });
+      rows.push(
+        el("span", { text: "การส่งล่าสุด" }), last,
+        el("span", { text: "ส่งแล้ว / ทิ้งไป" }), el("span", { text: `${t.exported_spans || 0} / ${t.dropped_spans || 0} ช่วง (span)` }),
+        el("span", { text: "ชื่อบริการใน Honeycomb" }), el("span", { class: "mono", text: t.service_name || "—" }),
+      );
+    }
+    const node = panel("เส้นทางงานใน Honeycomb (tracing)", [
+      el("div", { class: "rows" }, rows),
+      el("p", { class: "lead", text: "ทุกเคสกลายเป็นเส้นทาง 1 เส้น (trace): รับเข้าคิว → รอคิว → แต่ละขั้น → การเรียก AI พร้อมเวลาและจำนวน token ระบบส่งแค่เวลา สถานะ รหัสงาน รุ่น AI และจำนวน ไม่ส่งข้อความเคส prompt คำตอบของ AI หรือคีย์" }),
+      el("ol", { class: "steps-howto" }, [
+        el("li", { text: "เปิด Render → บริการ neuron-flow → แท็บ Environment" }),
+        el("li", {}, ["เพิ่ม ", el("code", { text: "HONEYCOMB_API_KEY" }), " = Ingest key จาก Honeycomb (ขึ้นต้นด้วย hcaik_) แล้วกด Save"]),
+        el("li", { text: "รอระบบรีสตาร์ท 1–2 นาที (แผนฟรี: เคสเก่าจะหาย) แล้วกลับมาหน้านี้ ช่องสถานะต้องขึ้นว่า \"เปิด\"" }),
+        el("li", {}, ["จะปิดชั่วคราวโดยไม่ลบคีย์: เพิ่ม ", el("code", { text: "NEURON_FLOW_TRACING" }), " = ", el("code", { text: "off" })]),
+      ]),
+    ]);
+    node.id = "tracing-panel";
+    return node;
+  }
+
   function renderSettings() {
     const status = state.status || {};
     const view = $("view-settings");
     const runner = status.runner || {};
     const key = JSON.stringify([status.ai, status.storage, status.limits, status.workflows, status.default_workflow,
-      runner.state, runner.alive, Math.round((runner.heartbeat_age_s || 0) / 10), status.version]);
+      runner.state, runner.alive, Math.round((runner.heartbeat_age_s || 0) / 10), status.version,
+      tracingSetup(status.tracing)]);
+    const figures = JSON.stringify([status.metrics || null, tracingFigures(status.tracing)]);
     if (view.dataset.key !== key) {
       view.dataset.key = key;
-      view.dataset.metrics = JSON.stringify(status.metrics || null);
+      view.dataset.figures = figures;
       view.replaceChildren(
         el("p", { class: "settings-intro", text: "ดูอย่างเดียว — ค่าเหล่านี้มาจากโค้ด (ผ่านการทดสอบและ PR) และจากแท็บ Environment ของ Render หน้าเว็บแก้ไม่ได้โดยตั้งใจ เพื่อไม่ให้ใครเปลี่ยนตัวทำงาน AI หรือคีย์จากหน้าเว็บ" }),
         agentsPanel(status),
         el("div", { class: "panel-grid" }, [aiPanel(status.ai || {}), approvalPanel()]),
         systemPanel(status),
         metricsPanel(status),
+        tracingPanel(status),
       );
       return;
     }
-    // Only the figures changed: redraw that one panel, so the rest of the view (and its scroll) stays put.
-    const metricsKey = JSON.stringify(status.metrics || null);
-    if (view.dataset.metrics === metricsKey) return;
-    view.dataset.metrics = metricsKey;
-    const old = $("metrics-panel");
-    if (old) old.replaceWith(metricsPanel(status));
+    // Only the figures changed: redraw those panels, so the rest of the view (and its scroll) stays put.
+    if (view.dataset.figures === figures) return;
+    view.dataset.figures = figures;
+    for (const [id, build] of [["metrics-panel", metricsPanel], ["tracing-panel", tracingPanel]]) {
+      const old = $(id);
+      if (old) old.replaceWith(build(status));
+    }
   }
 
   // ---------- views and panels -------------------------------------------------------------

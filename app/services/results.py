@@ -15,6 +15,7 @@ page, again without params.
 _REVIEW_FIELDS = ("case_id", "suggested_category", "suggested_queue", "suggestion_source", "second_opinion",
                   "agreement", "review_required", "review_priority", "review_reasons", "decision", "mode")
 _AI_PROVENANCE = ("provider", "model", "prompt_id", "prompt_sha256", "redaction")
+AI_STEP = "classify_llm"       # the step whose output becomes the result's AI view
 CORE_FINAL = ("SUCCEEDED", "FAILED", "DELIVERY_FAILED")
 CORE_DEFAULT_MAX_ATTEMPTS = 2  # neuron_flow.model.normalize_spec default
 CORE_DEFAULT_TIMEOUT_S = 5     # neuron_flow.model.normalize_spec default
@@ -79,7 +80,7 @@ def summarize(snapshot, spec, workflow):
     result = {"core_status": core_status, "steps": steps,
               "receipt": {"sha256": receipt["sha256"], "bytes": receipt["bytes"]} if receipt else None,
               "review": None, "ai": None, "output": None}
-    llm_state = snapshot["steps"].get("classify_llm")
+    llm_state = snapshot["steps"].get(AI_STEP)
     if llm_state and llm_state.get("status") == "SUCCEEDED":
         result["ai"] = ai_view(llm_state.get("output"))
     if core_status == "DELIVERY_FAILED":

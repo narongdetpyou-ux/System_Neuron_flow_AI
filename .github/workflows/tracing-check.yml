@@ -1,0 +1,57 @@
+name: Tracing check (OpenTelemetry Collector)
+# Runs the service with tracing on, but pointed at the OpenTelemetry Collector (the reference OTLP receiver)
+# instead of Honeycomb. The collector writes what it accepts to a file and forwards nothing. The smoke test
+# then submits cases over HTTP, and check_traces.py reads the file: one trace per case with its steps and the
+# AI call, and no case text or key anywhere (roadmap 5.1). Both keys below are throwaway values.
+on:
+  push:
+  pull_request:
+jobs:
+  otlp:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      ACCESS_KEY: ci-throwaway-access-key-0123456789
+      HONEYCOMB_API_KEY: placeholder
+      # Pinned by digest; a newer collector reads the same OTLP.
+      COLLECTOR_IMAGE: otel/opentelemetry-collector-contrib:0.152.1@sha256:fa1f6ea8dabd3042fabf4411eed7fa52f253edd8940140bec89a573e62a24eb7
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - name: Start the OpenTelemetry Collector (OTLP over HTTP in, a JSON file out)
+        run: |
+          mkdir -p otel-out && chmod 777 otel-out
+          docker run -d --name otelcol -p 127.0.0.1:4318:4318 \
+            -v "$PWD/.github/otel/collector.yaml:/etc/otelcol-contrib/config.yaml:ro" \
+            -v "$PWD/otel-out:/out" "$COLLECTOR_IMAGE"
+          for attempt in $(seq 1 30); do
+            if curl -s -o /dev/null http://127.0.0.1:4318/v1/traces; then exit 0; fi
+            sleep 1
+          done
+          docker logs otelcol
+          exit 1
+      - name: Start the service with tracing sent to the collector
+        run: |
+          NEURON_FLOW_ACCESS_KEY="$ACCESS_KEY" HONEYCOMB_API_ENDPOINT=http://127.0.0.1:4318 \
+            NEURON_FLOW_DATA_DIR="$RUNNER_TEMP/nf-data" nohup python -m app.serve > service.log 2>&1 &
+          echo $! > service.pid
+      - name: Submit cases over HTTP and wait for the results
+        run: python -m examples.service_smoke_test --url http://127.0.0.1:8000 --key "$ACCESS_KEY" --state smoke.json
+      - name: Stop the service (it sends the spans still queued as it stops), then the collector
+        run: |
+          pid="$(cat service.pid)"
+          kill -TERM "$pid"
+          for attempt in $(seq 1 60); do kill -0 "$pid" 2>/dev/null || break; sleep 0.5; done
+          if kill -0 "$pid" 2>/dev/null; then echo "::error::the service did not stop within 30 seconds"; exit 1; fi
+          grep -q "serve: tracing on" service.log || { echo "::error::the service did not turn tracing on"; exit 1; }
+          sleep 2  # the collector writes its file every second
+          docker stop -t 10 otelcol
+      - name: Check the traces the collector received
+        run: python .github/scripts/check_traces.py otel-out/traces.jsonl smoke.json
+      - name: Logs
+        if: always()
+        run: |
+          tail -n 60 service.log || true
+          docker logs otelcol 2>&1 | tail -n 40 || true

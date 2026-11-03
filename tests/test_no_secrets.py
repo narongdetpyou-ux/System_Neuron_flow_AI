@@ -3,9 +3,9 @@
 *Actions → Secret scan* runs gitleaks over every commit of every branch in CI. This test is the quick local
 check of the files as they are now, with the standard library only, so a cloud session catches a pasted key
 before it is pushed. It covers the formats this project could meet: Anthropic, OpenAI, GitHub, AWS, Slack,
-Google, Stripe and Render keys, private keys, Sentry DSNs and URLs that carry a password. The fake keys the
-tests use on purpose (``sk-ant-test-…``) do not match. Findings name the file, the line and the kind, never
-the value.
+Google, Stripe, Render and Honeycomb keys, private keys, Sentry DSNs and URLs that carry a password. The
+fake keys the tests use on purpose (``sk-ant-test-…``) do not match. Findings name the file, the line and
+the kind, never the value.
 """
 
 from pathlib import Path
@@ -23,6 +23,8 @@ PATTERNS = {
     "Google API key": re.compile(r"\bAIza[0-9A-Za-z_-]{35}"),
     "Stripe key": re.compile(r"\b(?:sk|rk)_live_[0-9A-Za-z]{20,}"),
     "Render API key": re.compile(r"\brnd_[A-Za-z0-9]{20,}"),
+    # Ingest keys are the key id and its secret run together; management keys put a colon between them.
+    "Honeycomb key": re.compile(r"\bhc[a-z](?:ik_[A-Za-z0-9]{58}|mk_[A-Za-z0-9]{26}:[A-Za-z0-9]{32})\b"),
     "private key": re.compile(r"-----BEGIN (?:RSA |EC |OPENSSH |DSA |PGP |ENCRYPTED )?PRIVATE KEY-----"),
     "Sentry DSN": re.compile(r"https?://[0-9a-f]{32}(?::[0-9a-f]{32})?@[A-Za-z0-9.-]*sentry\.io/\d+"),
     "URL with a password": re.compile(r"\b[a-z][a-z0-9+.-]*://[^\s/:@'\"]+:[^\s/@'\"]{6,}@[A-Za-z0-9.-]+"),
@@ -55,6 +57,7 @@ class NoSecretsTests(unittest.TestCase):
             "Google API key": "AI" + "za" + "Sy" + "A1b2c3" * 5 + "d4e",
             "Stripe key": "sk" + "_live_" + "a1B2c3D4" * 3,
             "Render API key": "rn" + "d_" + "AbCd1234" * 3,
+            "Honeycomb key": "hc" + "aik_" + "01hq7v3k" * 7 + "ab",
             "private key": "-----BEGIN " + "RSA PRIVATE KEY" + "-----",
             "Sentry DSN": "https://" + "0123456789abcdef" * 2 + "@o1.ingest.us." + "sentry.io/42",
             "URL with a password": "postgres://admin:" + "hunter2hunter2" + "@db.internal",

@@ -11,7 +11,9 @@ What it does, in order:
    differently because the model, prompt or code changed while it was interrupted
    (``configuration_changed``: it is never finished silently under other settings);
 3. claims the oldest QUEUED job, freezes its spec, submits and runs it, and records the outcome;
-4. writes a heartbeat every few seconds, shown on the status page.
+4. writes a heartbeat every few seconds, shown on the status page;
+5. with tracing on, turns each finished job into spans (``app.observability.job_spans``) and hands them to
+   the exporter. Building or sending a trace can never change a job's outcome.
 
 If the AI settings cannot work (for example ``anthropic`` without an API key), the Runner starts no
 jobs. It stays up, reports ``blocked_config`` with the reason, and queued jobs wait until the
@@ -34,11 +36,11 @@ from neuron_flow.model import fingerprint
 from neuron_flow.storage import WorkspaceBusy
 
 from app.llm import LLMConfig, LLMConfigError
-from app.observability import SentryReporter, init_sentry, run_job
-from app.persistence import QueueStore
+from app.observability import SentryReporter, Tracing, init_sentry, job_spans, run_job
+from app.persistence import TERMINAL, QueueStore
 from app.settings import Settings
 
-from .results import CORE_FINAL, step_events, summarize
+from .results import AI_STEP, CORE_FINAL, step_events, summarize
 from .workflows import CATALOG, agents_for
 
 HEARTBEAT_S = 2.0
@@ -47,12 +49,13 @@ log = logging.getLogger("neuron_flow.runner")
 
 
 class Runner:
-    def __init__(self, settings, *, store=None, catalog=None, llm_config=None, reporter=None):
+    def __init__(self, settings, *, store=None, catalog=None, llm_config=None, reporter=None, tracing=None):
         self.settings = settings
         self.store = store or QueueStore(settings.queue_db)
         self.catalog = CATALOG if catalog is None else catalog
         self.llm_config = llm_config
         self.reporter = reporter or SentryReporter()
+        self.tracing = tracing if tracing is not None else Tracing.off()
         self.runner_id = f"runner-{os.getpid()}-{secrets.token_hex(3)}"
         self.started_at = time.time()
         self.stop_event = threading.Event()
@@ -170,7 +173,21 @@ class Runner:
             except Exception:
                 log.exception("runner: could not record the failure of %s; it will be reconciled", job_id)
         finally:
+            self._trace(runtime, job_id)
             self._set("idle")
+
+    def _trace(self, runtime, job_id):
+        """Hand the spans of a job that has an outcome to the exporter. Off: nothing is read at all."""
+        if not self.tracing.enabled:
+            return
+        try:
+            job = self.store.get(job_id)
+            if job is None or job["status"] not in TERMINAL:
+                return  # not recorded yet (it will be reconciled, and traced then)
+            events = runtime.synapse.events_for("monitor", job_id) if job["spec"] is not None else []
+            self.tracing.export(job_spans(job, self.store.admission(job_id), events, ai_step=AI_STEP))
+        except Exception as exc:  # tracing never changes a job; only the type is logged, never a message
+            log.warning("runner: could not build the trace of %s (%s)", job_id, type(exc).__name__)
 
     def _configuration_changed(self, job, error_type):
         log.warning("runner: %s was admitted under other settings; failing it instead of re-running it", job["job_id"])
@@ -213,7 +230,8 @@ def main():
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s", stream=sys.stdout)
     settings = Settings.from_env()
     init_sentry()  # no-op unless SENTRY_DSN is set and sentry-sdk is installed
-    runner = Runner(settings)
+    tracing = Tracing.from_env("runner")  # off unless HONEYCOMB_API_KEY is set
+    runner = Runner(settings, tracing=tracing)
 
     def stop(signum, _frame):
         log.info("runner: stopping after the current job (signal %d)", signum)
@@ -226,6 +244,8 @@ def main():
     except WorkspaceBusy:
         log.error("runner: another Runner holds the workspace lock; exiting")
         return EXIT_BUSY
+    finally:
+        tracing.shutdown()  # sends what is queued, for at most two seconds
     return 0
 
 
