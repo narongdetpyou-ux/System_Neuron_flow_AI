@@ -10,6 +10,14 @@ Flow:
 Run: ``python -m app.eval.triage_shadow_eval --summary summary.md --out report.json``
 Labels are synthetic unless a different case file is given; the mock provider is
 a keyword simulation, so its numbers test the pipeline, not AI accuracy.
+
+Eval gate (roadmap 5.2): ``--compare-with <baseline or report>`` fails (exit 3) when any case's answer
+differs: the rules' category, the AI's status, category, reason, confidence and attempts, the agreement,
+the review priority and reasons, the job status, or the case text; and when the case set, the prompt or
+the AI model differs. CI compares every push with the committed mock baseline
+(``tests/baselines/shadow_eval_mock.json``). To change the answers on purpose, regenerate it in the same
+pull request with ``--write-baseline`` and say why; a prompt or model change also needs a live run by hand
+(*Actions → Shadow eval with Claude*).
 """
 
 import argparse
@@ -187,6 +195,102 @@ def compare_reports(reference, candidate, **limits):
     return candidate_gate(gate_rows(reference), gate_rows(candidate), **limits)
 
 
+# -- eval gate (roadmap 5.2): every per-case answer against a committed baseline ------------------
+
+BASELINE_SCHEMA = "neuron-flow-shadow-eval-baseline-v1"
+REPORT_SCHEMA = "neuron-flow-shadow-eval-v1"
+# What a case "answered". Timings and token counts are left out: they change from run to run.
+ANSWER_FIELDS = ("source_sha256", "expected", "job_status", "rules_category", "llm_status", "llm_category",
+                 "llm_reason", "llm_confidence", "llm_attempts", "agreement", "review_priority", "review_reasons")
+_IDENTITY = (("golden", "case set"), ("llm", "AI"), ("prompt", "prompt"))
+MAX_LISTED_CHANGES = 40
+
+
+def baseline_view(report):
+    """A run's per-case answers and what produced them (case set, AI, prompt): the part the gate compares."""
+    p = report["provenance"]
+    return {"schema": BASELINE_SCHEMA,
+            "golden": {key: p["golden"][key] for key in ("name", "sha256", "cases")},
+            "llm": {"provider": p["llm"]["provider"], "model": p["llm"]["model"]},
+            "prompt": {"id": p["prompt"]["id"], "sha256": p["prompt"]["sha256"]},
+            "cases": [{"case_id": r["case_id"], **{field: r[field] for field in ANSWER_FIELDS}}
+                      for r in report["cases"]]}
+
+
+def as_baseline(document):
+    """Accept a baseline file or a full report (``--out``); refuse anything else."""
+    if isinstance(document, dict) and document.get("schema") == REPORT_SCHEMA:
+        return baseline_view(document)
+    if not isinstance(document, dict) or document.get("schema") != BASELINE_SCHEMA:
+        raise ValueError("Compare with a scorecard report or a baseline file")
+    cases = document.get("cases")
+    if (set(document) != {"schema", "golden", "llm", "prompt", "cases"} or not isinstance(cases, list)
+            or any(not isinstance(c, dict) or set(c) != {"case_id", *ANSWER_FIELDS} for c in cases)
+            or len({c["case_id"] for c in cases}) != len(cases)):
+        raise ValueError("The baseline file is malformed or repeats a case")
+    return document
+
+
+def baseline_json(baseline):
+    """Stable text, one case per line, so a pull request's diff shows exactly which cases changed."""
+    import json
+    head = {key: baseline[key] for key in ("schema", "golden", "llm", "prompt")}
+    lines = ["{"]
+    for key, value in head.items():
+        lines.append(f"  {json.dumps(key)}: {json.dumps(value, ensure_ascii=False, sort_keys=True)},")
+    lines.append('  "cases": [')
+    # case_id first, then the answer fields in a fixed order (not sorted), so each line reads left to right.
+    rows = [json.dumps({"case_id": case["case_id"], **{field: case[field] for field in ANSWER_FIELDS}},
+                       ensure_ascii=False) for case in baseline["cases"]]
+    lines += [f"    {row}," for row in rows[:-1]] + [f"    {row}" for row in rows[-1:]]
+    lines += ["  ]", "}"]
+    return "\n".join(lines) + "\n"
+
+
+def _brief(value):
+    import json
+    if isinstance(value, str) and len(value) == 64 and all(ch in "0123456789abcdef" for ch in value):
+        value = value[:12] + "…"  # a SHA-256: the first 12 characters tell two versions apart
+    text = json.dumps(value, ensure_ascii=False, sort_keys=True)
+    return text if len(text) <= 80 else text[:77] + "..."
+
+
+def answer_changes(reference, candidate):
+    """Every difference between two baselines, one short English line each; empty when nothing changed."""
+    changes = []
+    for key, label in _IDENTITY:  # what produced the answers: one line per differing part
+        old, new = reference[key], candidate[key]
+        changes += [f"{label} {part}: {_brief(old.get(part))} -> {_brief(new.get(part))}"
+                    for part in sorted(set(old) | set(new)) if old.get(part) != new.get(part)]
+    before = {case["case_id"]: case for case in reference["cases"]}
+    after = {case["case_id"]: case for case in candidate["cases"]}
+    changes += [f"{case_id}: in the baseline but not in this run" for case_id in before if case_id not in after]
+    changes += [f"{case_id}: new in this run, not in the baseline" for case_id in after if case_id not in before]
+    for case_id, old in before.items():
+        new = after.get(case_id)
+        if new is not None:
+            changes += [f"{case_id}: {field} {_brief(old[field])} -> {_brief(new[field])}"
+                        for field in ANSWER_FIELDS if old[field] != new[field]]
+    return changes
+
+
+def gate_markdown(changes, compared_with, cases):
+    """The gate's verdict for the run page (Thai first), with how to proceed when it fails."""
+    if not changes:
+        return (f"### ด่านตรวจผลรายเคส (eval gate): ผ่าน\n\nทั้ง {cases} เคสตอบเหมือนใน `{compared_with}` ทุกช่อง "
+                f"(Every case answered exactly as in the baseline.)\n")
+    lines = [f"### ด่านตรวจผลรายเคส (eval gate): ไม่ผ่าน ({len(changes)} จุดต่างจากเดิม)", "",
+             f"เทียบกับ `{compared_with}` (Per-case answers differ from the baseline.)", ""]
+    lines += [f"- `{line}`" for line in changes[:MAX_LISTED_CHANGES]]
+    if len(changes) > MAX_LISTED_CHANGES:
+        lines.append(f"- … และอีก {len(changes) - MAX_LISTED_CHANGES} จุด")
+    lines += ["", "- **ถ้าไม่ได้ตั้งใจ:** แก้โค้ดจนผลกลับมาเหมือนเดิม",
+              f"- **ถ้าตั้งใจเปลี่ยน:** อัปเดต baseline ใน PR เดียวกัน "
+              f"(`python -m app.eval.triage_shadow_eval --write-baseline {compared_with}`) และเขียนเหตุผลไว้ในคำอธิบาย PR "
+              "ถ้าเปลี่ยน prompt หรือรุ่น AI ให้แนบผลรัน Claude จริงด้วย (Actions → Shadow eval with Claude)", ""]
+    return "\n".join(lines)
+
+
 def _fmt(rate):
     if not rate["denominator"]:
         return "–"
@@ -247,21 +351,29 @@ def main(argv=None):
     parser.add_argument("--limit", type=int, default=None, help="only the first N cases")
     parser.add_argument("--out", help="write the full JSON report here")
     parser.add_argument("--summary", help="append the markdown summary here (e.g. $GITHUB_STEP_SUMMARY)")
-    parser.add_argument("--compare-with", help="earlier JSON report; fail if any AI outcome changed")
+    parser.add_argument("--compare-with",
+                        help="baseline file or earlier JSON report; exit 3 if any per-case answer differs")
+    parser.add_argument("--write-baseline", help="write this run's per-case answers as a baseline file")
     args = parser.parse_args(argv)
+    # Read the reference first, so a missing or broken file fails before the run, not after it.
+    reference = as_baseline(decode(Path(args.compare_with).read_bytes())) if args.compare_with else None
     report = evaluate(load_golden(args.golden), limit=args.limit)
     text = summary_markdown(report)
     print(text)
     if args.out:
         Path(args.out).write_text(_json(report), encoding="utf-8")
+    if args.write_baseline:
+        Path(args.write_baseline).write_text(baseline_json(baseline_view(report)), encoding="utf-8")
+    code = 0 if report["metrics"]["jobs_completed"]["rate"] == 1 else 1
+    if reference is not None:
+        changes = answer_changes(reference, baseline_view(report))
+        verdict = gate_markdown(changes, args.compare_with, len(report["cases"]))
+        print(verdict)
+        text += "\n" + verdict
+        code = code or (3 if changes else 0)
     if args.summary:
         with open(args.summary, "a", encoding="utf-8") as stream:
             stream.write(text)
-    code = 0 if report["metrics"]["jobs_completed"]["rate"] == 1 else 1
-    if args.compare_with:
-        gate = compare_reports(decode(Path(args.compare_with).read_bytes()), report)
-        print(f"Outcome change check: {'no change' if gate['accepted'] else ', '.join(gate['failure_reasons'])}")
-        code = code or (0 if gate["accepted"] else 3)
     return code
 
 

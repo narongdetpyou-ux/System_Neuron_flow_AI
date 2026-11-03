@@ -45,6 +45,8 @@ Since round 2, cases can also come in from outside, through an HTTP API or a Tha
    are shown read-only. Details: [intake_queue.md](docs/intake_queue.md).
 5. A case that is still waiting can be cancelled, and every request carries a request id that links the
    access log to the job record.
+6. The page shows how many cases wait and for how long, how long cases usually take (median and slowest,
+   per workflow) and why recent ones failed.
 
 ## What is inside
 
@@ -69,7 +71,8 @@ forgets its cases when it sleeps or redeploys; a paid plan with a disk keeps the
 
 **On GitHub, no local setup needed:**
 - *Actions → Core logic tests* runs every test on Python 3.10 and 3.12, plus both demos and the scorecard.
-  The scorecard table appears on the run page.
+  The scorecard table appears on the run page. The eval gate then compares every case's answer with
+  `tests/baselines/shadow_eval_mock.json` and fails on any change.
 - *Actions → Service container* checks `render.yaml`, builds the same container as Render, submits cases
   over HTTP, restarts it and checks that nothing was lost.
 - *Actions → Sentry smoke test* checks that error reporting reaches Sentry.
@@ -78,7 +81,7 @@ forgets its cases when it sleeps or redeploys; a paid plan with a disk keeps the
 
 **Locally (Python 3.10+):**
 ```bash
-python -m unittest discover -s tests -v        # 127 tests
+python -m unittest discover -s tests -v        # 139 tests
 python -m examples.case_triage_demo            # v1 rules, one synthetic case
 python -m examples.case_triage_shadow_demo     # v2 shadow mode, three synthetic cases (offline mock AI)
 python -m app.eval.triage_shadow_eval          # scorecard on 61 synthetic cases
