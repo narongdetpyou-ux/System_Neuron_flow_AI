@@ -188,7 +188,8 @@ Notes for cloud sessions (claude.ai/code):
   tini must run as the same user as the service (`app/boot.py`). A root tini logged `[FATAL tini (1)]
   Unexpected error when forwarding signal: 'Operation not permitted'`, and every stop killed the service.
   The *Service container* job runs with `--cap-drop KILL` and fails if process 1 is root or a stop is not
-  graceful. Keep both when changing the `Dockerfile`.
+  graceful. Keep both when changing the `Dockerfile`. On Render, stops have been graceful since PR #16
+  (`docs/evidence/2026-11-03-render-operations.md`).
 - **Free plan limits.** The service sleeps after 15 idle minutes and has no disk, so the queue is lost on
   every sleep, restart and deploy. Render also refuses some settings on free web services even though its
   schema allows them, for example a disk and `maxShutdownDelaySeconds`. The *Service container* check
@@ -208,6 +209,9 @@ Notes for cloud sessions (claude.ai/code):
   - Docs refresh and the design philosophy (PR #10).
   - B: intake API, queue, Runner and web page (PR #11).
   - The Claude Code session hook (PR #12).
+  - Render hardening: docs, tests and CI-only merges do not deploy (PR #15) and stops are graceful
+    (PR #16); both confirmed on Render (roadmap 0.1, 0.5).
+  - CI on the Node 24 action versions (PR #20, roadmap 0.6).
   - Neutral telemetry phase names, the one planned Core change (PR #21, roadmap 1.1).
   - Request ids from the access log to the job record (PR #22, roadmap 1.2).
   - Cancel a job that is still queued, from the API and the page (PR #23, roadmap 1.3).
@@ -223,5 +227,9 @@ Notes for cloud sessions (claude.ai/code):
   - Real Claude has never been run.
   - Review decisions and per-person identity (Milestone C) are not built.
   - The rest of the roadmap is open.
-- **Next:** [docs/ROADMAP.md](docs/ROADMAP.md), Phase 0, the first item that is not ✅.
+- **Next:** [docs/ROADMAP.md](docs/ROADMAP.md), the first item that is not ✅ and whose needs are met.
+  - Waiting on the owner: 0.2 and 1.4 (D1, paid Render plan), 0.3 and 0.4 (D2, Claude API key).
+  - Buildable now without an owner decision: Phase 2 (2.1 first), Phase 3 (3.1 first), and from later
+    phases 5.2, 5.3 and 7.1. 5.1 also needs a Honeycomb key from the owner.
+  - The owner decides which of these comes first; ask before starting a new phase.
 - Keep this section and the ROADMAP status table true in every PR.

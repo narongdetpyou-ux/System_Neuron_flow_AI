@@ -29,6 +29,9 @@ TEST_COUNT_CLAIMS = {
     "docs/architecture.md": re.compile(r"^tests/\s+(\d+) tests:", re.MULTILINE),
     "docs/intake_queue.md": re.compile(r"\((\d+) tests on \d{4}-\d{2}-\d{2}"),
     "docs/ROADMAP.md": re.compile(r"ผ่านชุดทดสอบอัตโนมัติ (\d+) ข้อ"),
+    "docs/funding/README.md": re.compile(r"\*\*(\d+) automated tests\*\*"),
+    "docs/funding/INTERNAL_PROJECT_BRIEF.md": re.compile(r"^  - (\d+) automated tests\.$", re.MULTILINE),
+    "docs/funding/METRICS_PLAN.md": re.compile(r"\*\*Current baseline \([^)]*\):\*\* (\d+) automated tests"),
 }
 
 

@@ -1,6 +1,7 @@
 # System Neuron Flow AI — Architecture
 
-**Current as of 2026-11-01** (round 2, PR #11, on top of `main` @ `59c6889`). This file replaces
+**Current as of 2026-11-03** (`main` @ `0b03735`, after roadmap Phase 1 in PRs #21–#24; first written for
+round 2, PR #11, on top of `59c6889`). This file replaces
 "Architecture Review & Revised Architecture v2" (31 Oct 2026). That review's dated code observations were
 re-checked against the current code and folded into §3. The AI design comes from the v3 roadmap, and its
 round 1 is built (§4). Round 2 adds the intake API, the durable job queue, the single Runner with crash
@@ -217,7 +218,8 @@ planned: review ledger and artifact store, app/domains/study_guide/
 - Delivery conflicts get their own status.
 - The container runs without root, keeps its data across a restart and stops cleanly (CI container job).
   That job now runs without `CAP_KILL`, as Render does. Until `app/boot.py` (2026-11-01), process 1
-  (tini) ran as root and could not pass SIGTERM on there, so stops on Render were not clean.
+  (tini) ran as root and could not pass SIGTERM on there, so stops on Render were not clean. On Render,
+  stops have been graceful since then ([evidence](evidence/2026-11-03-render-operations.md)).
 
 **P0 still open:**
 - A review decision applies once per version, unauthorised reviews are denied, and approval creates exactly
@@ -226,12 +228,10 @@ planned: review ledger and artifact store, app/domains/study_guide/
 - Hash checks catch changed artifacts (no artifact store yet).
 
 **P1:**
-- The telemetry phase fix (§3).
-- Event pagination: done for the API (`limit` 1–100 with a cursor).
-- Phase metrics, retention and backup/restore drills.
-- Correlation IDs in logs.
-- API authentication hardening.
-- Explicit cancellation.
+- Done: the telemetry phase fix (§3, PR #21); event pagination for the API (`limit` 1–100 with a cursor);
+  correlation (request) ids in logs (PR #22); explicit cancellation of queued jobs (PR #23).
+- Open: phase metrics (ROADMAP 5.3), retention and backup/restore drills (1.4, needs a disk), API
+  authentication hardening (2.1, 7.2).
 
 **P2 (do not build early):** multi-tenancy, distributed workers, Postgres, object storage, SLAs, a hosted
 dashboard.
@@ -245,7 +245,7 @@ dashboard.
 | P1-fix | Neutral telemetry phase names | Done (PR #21, roadmap 1.1) |
 | B | Admission queue, single Runner, reconciliation, thin API, web page | Done (PR #11); live on Render's free plan since 2026-11-01; page redesigned as a chat layout with Flow, Trace and read-only settings (PR #18, roadmap 1.6) |
 | C | Two-phase review, decision ledger, n8n notifications | Open |
-| D | OpenTelemetry tracing, eval gates in CI | Partly done: CI scorecard and Sentry exist; tracing is open |
+| D | OpenTelemetry tracing, eval gates in CI | Partly done: CI scorecard, Sentry and request ids exist; tracing and the eval gate are open |
 | E | Planner pattern (B), MCP server, second domain with zero Core changes | Open |
 | — | `study_guide.v1`: first-response study guide ([design_philosophy.md](design_philosophy.md)) | Proposed |
 
