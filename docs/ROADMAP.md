@@ -27,7 +27,7 @@ differs, this file and architecture.md win.
 - ถ้ามีคนแก้กฎหรือ prompt แล้วคำตอบของเคสทดสอบเคสไหนเปลี่ยน ช่องตรวจบน GitHub จะเป็นสีแดงและบอกว่าเคสไหนเปลี่ยนอะไร (ขั้น 5.2)
 - ก่อนส่งเคสให้ AI ระบบปิดข้อมูลส่วนตัวที่จับรูปแบบได้ (อีเมล เบอร์โทร เลขบัตรประชาชน เลขแบบบัตรเครดิต ตัวเลขยาว และชื่อที่มีคำนำหน้า) AI เห็นแค่ป้ายแทน เช่น [PHONE] และหน้าเว็บบอกว่าปิดอะไรไปกี่จุด (ขั้น 7.1)
 - ทุกครั้งที่มีการส่งโค้ด GitHub สแกนหาคีย์หรือรหัสลับที่หลุดในประวัติโค้ดทั้งหมด และที่อยู่ Sentry (DSN) ไม่อยู่ในไฟล์แล้ว อ่านจากความลับ (secret) เท่านั้น (ขั้น 7.4 ส่วนเตรียมการ)
-- ส่งเส้นทางการทำงาน (trace) ของทุกเคสไป Honeycomb ได้: เห็นว่าแต่ละขั้นใช้เวลาเท่าไร ลองกี่ครั้ง และ AI ใช้ token เท่าไร โดยไม่ส่งข้อความเคสหรือคำตอบของ AI ระบบเปิดส่งเมื่อใส่ `HONEYCOMB_API_KEY` ใน Render (ขั้น 5.1)
+- ส่งเส้นทางการทำงาน (trace) ของทุกเคสไป Honeycomb แล้ว: เห็นว่าแต่ละขั้นใช้เวลาเท่าไร ลองกี่ครั้ง และ AI ใช้ token เท่าไร โดยไม่ส่งข้อความเคสหรือคำตอบของ AI เปิดใช้บน Render แล้ว และเห็นเส้นทางแรกใน Honeycomb เมื่อ 4 พ.ย. 00:23 น. (ขั้น 5.1)
 
 **ลำดับต่อจากนี้** แต่ละขั้นจบด้วยสิ่งที่คุณลองเองได้
 
@@ -38,7 +38,7 @@ differs, this file and architecture.md win.
 | 2 | ให้คนรีวิวได้จริง: ผู้รีวิวมีรหัสของตัวเอง กดอนุมัติหรือไม่อนุมัติได้ และ n8n แจ้งเตือน | กล่อง "รอรีวิว" บนหน้าเว็บ และข้อความแจ้งเตือน | ยังไม่เริ่ม |
 | 3 | ผู้ช่วยแนะนำแหล่งเรียน (`study_guide.v1`) ตามหลักปรัชญาของคุณ | พิมพ์เรื่องที่อยากรู้ด้วยคำธรรมดา แล้วได้แหล่งเรียนไม่เกิน 5 แหล่งพร้อมลำดับการเรียน | ยังไม่เริ่ม |
 | 4 | ช่องคุยภาษาธรรมดา: ระบบเข้าใจว่าคุณขออะไร บอกตรง ๆ เมื่อเรื่องอยู่นอกกรอบ และถามกลับ 1 คำถามเมื่อข้อมูลไม่พอ | คุยกับระบบได้เลย ไม่ต้องเลือกประเภทงานเอง | ยังไม่เริ่ม (ต้องรอขั้น 3) |
-| 5 | ติดตามเส้นทางของแต่ละงาน (เวลา token จุดที่ช้า) และด่านตรวจผลรายเคส | ตัวเลขคิวและเวลาบนหน้าเว็บ ช่องตรวจบน PR แล้วต่อด้วยเส้นทางงานใน Honeycomb | 5.3 และ 5.2 เสร็จแล้ว; 5.1 (เส้นทางงานใน Honeycomb) สร้างแล้วใน PR #30 เหลือดูเส้นทางแรกใน Honeycomb หลังคุณใส่คีย์ใน Render |
+| 5 | ติดตามเส้นทางของแต่ละงาน (เวลา token จุดที่ช้า) และด่านตรวจผลรายเคส | ตัวเลขคิวและเวลาบนหน้าเว็บ ช่องตรวจบน PR แล้วต่อด้วยเส้นทางงานใน Honeycomb | เสร็จแล้วทั้ง 5.1, 5.2 และ 5.3; เส้นทางงานแรกเข้า Honeycomb เมื่อ 4 พ.ย. 00:23 น. |
 | 6 | AI วางแผนงานหลายขั้น ระบบตรวจแผนก่อนรัน และเครื่องมืออื่นเรียกใช้ผ่าน MCP ได้ | สั่งงานจากแอป Claude ได้ | ยังไม่เริ่ม (ต้องรอขั้น 2–4) |
 | 7 | เตรียมพร้อมก่อนให้คนอื่นใช้ หรือก่อนเปิด repo สาธารณะ | รายงานตรวจความปลอดภัย และรายการตรวจก่อนเปิดตัว | เริ่มแล้ว: 7.1 ปิดข้อมูลส่วนตัวก่อนส่งให้ AI ทำแล้ว ส่วนการจำกัดว่าใครเห็นคีย์ AI ได้ เขียนแผนไว้ ยังไม่ทำ; 7.4 ส่วนเตรียมการ (สแกนหาคีย์ที่หลุด และย้าย DSN ไปเป็นความลับ) ทำแล้ว ที่เหลือรอคุณตัดสินใจ (D5) |
 
@@ -105,7 +105,7 @@ Marks: ✅ done · 🟡 built or partly checked (the status says what is left) �
 | 4.2 | `intake.route.v1`: the plain-language router | ⬜ | 4.1 |
 | 4.3 | Layered answers (summary → steps → details) | ⬜ | 4.2 |
 | 4.4 | Chat-style page | ⬜ | 4.2 |
-| 5.1 | OpenTelemetry tracing to Honeycomb | 🟡 built in PR #30 and checked against the OpenTelemetry Collector in CI; the first trace in Honeycomb waits for the key in Render | 1.1, 1.2 |
+| 5.1 | OpenTelemetry tracing to Honeycomb | ✅ PR #30; the first trace seen in Honeycomb on 2026-11-03 ([evidence note](evidence/2026-11-03-first-trace-honeycomb.md)), and the gap it found (steps' agent versions) fixed after it | 1.1, 1.2 |
 | 5.2 | Evaluation gate in CI | ✅ PR #27 | — |
 | 5.3 | Queue and run-time metrics on the status page | ✅ PR #26 | — |
 | 6.1 | Pattern A: bounded read-only tool loop | ⬜ | 3.2 |
@@ -724,8 +724,16 @@ workflow types.
     OTLP receiver) on every push and checks the trace of the smoke-test case. Its summary shows the trace.
   - `/v1/status` → `tracing` and the page's settings tab show whether tracing is on, where it sends and
     how the last export went. A job's `trace_id` is in `GET /v1/jobs/{job_id}` and the page.
-  - Left: the first trace in Honeycomb itself, once the owner has put the key in Render. Record it as an
-    evidence note, then tick this item.
+  - **Confirmed in Honeycomb (2026-11-03,
+    [evidence note](evidence/2026-11-03-first-trace-honeycomb.md)):** the owner's first case on Render
+    arrived as one trace of 9 spans with the designed parent links, from both processes, and the dataset's
+    52 columns hold no case text, prompt, answer or key. The first case after a restart took 10.5 s, almost
+    all of it inside the first two step attempts.
+  - Found by that check and fixed after it: no step carried its agent version, because the queue's spec
+    lacks the `agent_versions` Core records on submit. The Runner now reads them from Core, and the
+    end-to-end test checks them. The key setup steps were also unclear (the 32-character Key ID was
+    pasted instead of the full 64-character key, and Honeycomb answered 401); the page and
+    observability_tracing.md now say which value to copy.
 - **Owner test (ไทย):**
   1. ใส่ `HONEYCOMB_API_KEY` ใน Render ตามขั้นตอนใน [observability_tracing.md](observability_tracing.md)
      (หัวข้อ "เปิดใช้อย่างไร")
@@ -989,3 +997,6 @@ workflow types.
   is built from source in CI, so the Go checksum database verifies it and no download hash is pinned; its
   defaults miss Sentry DSNs, so one rule was added. Publishing and the rest of the checklist stay with the
   owner (D5).
+- 2026-11-03: 5.1 built in PR #30 with a small standard-library exporter instead of the OpenTelemetry SDK
+  (ADR-017), and ticked after the first trace was seen in Honeycomb on Render. That check found that steps
+  carried no agent version and that the key instructions were unclear; both were fixed in the follow-up PR.

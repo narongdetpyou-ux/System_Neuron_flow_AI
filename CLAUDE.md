@@ -202,6 +202,13 @@ Notes for cloud sessions (claude.ai/code):
 - **Where to change settings.** Change them in `render.yaml`, not in the dashboard: a Blueprint sync
   overwrites dashboard edits that conflict with the file. Secrets (`ANTHROPIC_API_KEY`, `SENTRY_DSN`,
   `HONEYCOMB_API_KEY`) go in the dashboard's Environment tab, never in a file.
+- **When the owner edits the Environment tab,** tell them to add each new secret as a new row and to leave
+  `NEURON_FLOW_ACCESS_KEY` alone. On 2026-11-03 it went missing while a key was added: the API answered
+  503 to every `/v1` request (`serve: NEURON_FLOW_ACCESS_KEY is missing` in the log) until it was set
+  again, and once a Blueprint sync re-created it with a new value (`generateValue: true`), so the key saved
+  in the page stopped working. Check the app log after such edits.
+- **Honeycomb's Ingest key** is the full 64-character value shown once at creation (key ID followed by the
+  secret). The 32-character key ID alone gets 401; the page's tracing panel says so.
 - **No `CAP_KILL` on Render.** Root in Render's containers may not signal another user's processes, so
   tini must run as the same user as the service (`app/boot.py`). A root tini logged `[FATAL tini (1)]
   Unexpected error when forwarding signal: 'Operation not permitted'`, and every stop killed the service.
@@ -241,8 +248,9 @@ Notes for cloud sessions (claude.ai/code):
   - Secret scan of the whole history in CI, and the Sentry DSN only from a repository secret (PR #29,
     roadmap 7.4, the preparation part; the rest of 7.4 waits for the owner's decision D5).
   - Tracing to Honeycomb: one trace per case, checked against the OpenTelemetry Collector in CI (PR #30,
-    roadmap 5.1). Seeing the first trace in Honeycomb itself waits for `HONEYCOMB_API_KEY` in Render; use
-    the Honeycomb connector to find it, then record an evidence note and tick 5.1.
+    roadmap 5.1). On since `HONEYCOMB_API_KEY` went into Render; the first trace was seen in Honeycomb on
+    2026-11-03 (`docs/evidence/2026-11-03-first-trace-honeycomb.md`). The Honeycomb connector reads it:
+    environment `test`, dataset `neuron-flow` (`get_workspace_context` gives the team).
   - The Render service `neuron-flow` exists and is live at https://neuron-flow.onrender.com (free plan,
     first deploy 2026-11-01). Use the Render connector to read its deploys, events and logs; this
     session's network may not reach `onrender.com` or `render.com` directly.
@@ -255,8 +263,7 @@ Notes for cloud sessions (claude.ai/code):
   - Review decisions and per-person identity (Milestone C) are not built.
   - The rest of the roadmap is open.
 - **Next:** [docs/ROADMAP.md](docs/ROADMAP.md), the first item that is not ✅ and whose needs are met.
-  - Waiting on the owner: 0.2 and 1.4 (D1, paid Render plan), 0.3 and 0.4 (D2, Claude API key), and the
-    end of 5.1 (the Honeycomb key in Render).
+  - Waiting on the owner: 0.2 and 1.4 (D1, paid Render plan), 0.3 and 0.4 (D2, Claude API key).
   - Buildable now without an owner decision: Phase 2 (2.1 first) and Phase 3 (3.1 first). The rest of 7.1
     (who can read the AI key) needs an ADR first.
   - The owner decides which of these comes first; ask before starting a new phase.

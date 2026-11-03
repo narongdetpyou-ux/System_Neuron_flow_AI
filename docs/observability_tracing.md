@@ -2,8 +2,11 @@
 
 **Status:** built in PR #30 and tested offline (28 tests in `tests/test_tracing.py`). On every push,
 *Actions → Tracing check* runs the service with tracing pointed at the OpenTelemetry Collector and checks
-what arrives. Seeing a trace in Honeycomb itself needs the owner's Ingest key in Render (steps below);
-until then tracing is off. No Core (`neuron_flow/`) file was changed and no dependency was added (ADR-017).
+what arrives. On Render it is on since the owner's Ingest key went in, and the first case's trace was seen
+in Honeycomb on 2026-11-03 with all 9 spans
+([evidence note](evidence/2026-11-03-first-trace-honeycomb.md)). That check found one gap: no step carried
+its agent version, because the queue's copy of the spec lacks the versions Core records. The Runner now
+reads them from Core. No Core (`neuron_flow/`) file was changed and no dependency was added (ADR-017).
 
 ## สรุปสำหรับเจ้าของโปรเจกต์ (ภาษาไทย)
 
@@ -31,9 +34,14 @@ until then tracing is off. No Core (`neuron_flow/`) file was changed and no depe
 
 1. ที่ [ui.honeycomb.io](https://ui.honeycomb.io): Team Settings → Environments → กดเฟืองของพื้นที่ `test` →
    API Keys → **Create Ingest API Key** → ตั้งชื่อ → ติ๊ก **Can create services/datasets** → Create →
-   คัดลอกคีย์ทันที (ขึ้นต้นด้วย `hcaik_` และดูซ้ำไม่ได้)
-2. ที่ Render: บริการ `neuron-flow` → แท็บ Environment → Add → ชื่อ `HONEYCOMB_API_KEY` → วางคีย์ → Save
-   (อย่าวางคีย์ในแชท ไฟล์ หรือ issue)
+   ในหน้าต่างที่เด้งขึ้น กดคัดลอก **ค่าเต็มของคีย์** ทันที ค่านี้ยาว 64 ตัว และแสดงครั้งเดียว
+   - **อย่าใช้รหัสประจำคีย์ (Key ID) อย่างเดียว** Key ID ยาวแค่ 32 ตัวและขึ้นต้นเหมือนกัน ถ้าใส่ Key ID
+     Honeycomb จะตอบว่าไม่รู้จักคีย์ (401) ค่าเต็มคือ Key ID ต่อด้วยรหัสลับ (secret) โดยไม่เว้นวรรค
+   - ถ้าปิดหน้าต่างไปแล้ว ให้สร้างคีย์ใหม่ เพราะดูค่าเต็มซ้ำไม่ได้
+2. ที่ Render: บริการ `neuron-flow` → แท็บ Environment → เพิ่มเป็น **แถวใหม่** ชื่อ `HONEYCOMB_API_KEY` → วางค่าเต็ม
+   → Save (อย่าวางคีย์ในแชท ไฟล์ หรือ issue)
+   - **อย่าแก้ชื่อหรือค่าของแถว `NEURON_FLOW_ACCESS_KEY`** ถ้าแถวนั้นหาย หน้าเว็บจะใช้ไม่ได้ (503) และเมื่อ Render
+     สร้างรหัสให้ใหม่ ต้องคัดลอกรหัสใหม่ไปใส่ในหน้าเว็บ
 3. รอระบบรีสตาร์ท 1–2 นาที (แผนฟรี: เคสเก่าในคิวจะหาย) แล้วเปิดหน้าเว็บ → แท็บ "ตั้งค่า" →
    กล่อง "เส้นทางงานใน Honeycomb" ต้องขึ้น **"เปิด — ส่งไป api.honeycomb.io"**
 4. ถ้าบัญชี Honeycomb อยู่ฝั่งยุโรป (ที่อยู่เว็บเป็น `ui.eu1.honeycomb.io`) ให้เพิ่ม
@@ -140,7 +148,7 @@ as in Sentry events, so a job's spans can be found; access log lines still carry
 
 | Variable | Default | Meaning |
 |---|---|---|
-| `HONEYCOMB_API_KEY` | none (tracing off) | Honeycomb Ingest key; set it in Render's Environment tab, never in a file |
+| `HONEYCOMB_API_KEY` | none (tracing off) | Honeycomb Ingest key, the full value (key ID followed by the secret, 64 characters; the 32-character key ID alone gets 401); set it in Render's Environment tab, never in a file |
 | `HONEYCOMB_API_ENDPOINT` | `https://api.honeycomb.io` | EU: `https://api.eu1.honeycomb.io`. Any OTLP/HTTP receiver works; plain `http` only on this machine |
 | `OTEL_SERVICE_NAME` | `neuron-flow` | The service, and the dataset name in Honeycomb |
 | `NEURON_FLOW_TRACING` | on when the key is set | `off` turns tracing off without removing the key |
@@ -165,7 +173,7 @@ page shows it in the case's technical details.
 
 | Check | Where |
 |---|---|
-| One job is one trace: request → job → queue wait and run → each step → AI call, linked parent to child | `tests/test_tracing.py`: `test_one_job_is_one_trace_with_its_steps_and_the_ai_call`; CI *Tracing check* with the OpenTelemetry Collector |
+| One job is one trace: request → job → queue wait and run → each step (with its agent version) → AI call, linked parent to child | `tests/test_tracing.py`: `test_one_job_is_one_trace_with_its_steps_and_the_ai_call`; CI *Tracing check* with the OpenTelemetry Collector; seen in Honeycomb on Render ([evidence note](evidence/2026-11-03-first-trace-honeycomb.md)) |
 | Turning tracing off changes no result (same cases, same statuses, reviews, steps, AI answers and history) | `test_turning_tracing_off_changes_no_result` |
 | Nothing private is sent: sentinels in the case text (Thai text, an e-mail address, a phone number, a Thai ID number), the case id, the AI rationale, the prompt and both keys are absent from every request body | `test_nothing_private_is_ever_sent`; CI *Tracing check* (the smoke test's cases) |
 | Only listed, typed, ASCII attributes can be sent | `test_only_listed_short_ascii_attributes_are_accepted` |
@@ -175,8 +183,9 @@ page shows it in the case's technical details.
 
 ## Limits
 
-- **Not measured in Honeycomb yet.** The Collector check proves the format, not that Honeycomb shows the
-  trace as described. That check happens once the key is in Render; record it as an evidence note.
+- **Seen in Honeycomb once.** One case's trace was checked in Honeycomb on 2026-11-03, with the mock AI
+  ([evidence note](evidence/2026-11-03-first-trace-honeycomb.md)). Traces with real Claude, retries or
+  recoveries have only been checked offline and against the Collector.
 - **Per step, not inside a step.** A step's span covers the whole attempt, including the worker start; what
   the agent does inside (masking, the provider's own retries) is not broken down.
 - **No metrics or logs signals**, and no sampling: every span is sent. At this volume the free plan is

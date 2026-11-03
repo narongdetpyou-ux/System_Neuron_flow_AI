@@ -246,7 +246,8 @@ planned: review ledger and artifact store, app/domains/study_guide/
   per-case answer of the mock scorecard changes (PR #27, ROADMAP 5.2); a secret scan of every commit of
   every branch in CI, with the Sentry DSN read only from a repository secret (PR #29, ROADMAP 7.4);
   tracing to Honeycomb, one trace per job with its steps and AI call, with the encoding checked against the
-  OpenTelemetry Collector in CI (PR #30, ROADMAP 5.1; the look in Honeycomb itself waits for the key).
+  OpenTelemetry Collector in CI (PR #30, ROADMAP 5.1) and seen in Honeycomb on Render on 2026-11-03
+  (`docs/evidence/2026-11-03-first-trace-honeycomb.md`).
 - Open: retention and backup/restore drills (1.4, needs a disk), API authentication hardening (2.1, 7.2).
 
 **P2 (do not build early):** multi-tenancy, distributed workers, Postgres, object storage, SLAs, a hosted
@@ -261,7 +262,7 @@ dashboard.
 | P1-fix | Neutral telemetry phase names | Done (PR #21, roadmap 1.1) |
 | B | Admission queue, single Runner, reconciliation, thin API, web page | Done (PR #11); live on Render's free plan since 2026-11-01; page redesigned as a chat layout with Flow, Trace and read-only settings (PR #18, roadmap 1.6) |
 | C | Two-phase review, decision ledger, n8n notifications | Open |
-| D | OpenTelemetry tracing, eval gates in CI | Built: the per-case eval gate (5.2), queue/run-time figures (5.3), Sentry, request ids, and tracing (5.1, PR #30). Left: seeing the first trace in Honeycomb once the key is in Render |
+| D | OpenTelemetry tracing, eval gates in CI | Done: the per-case eval gate (5.2), queue/run-time figures (5.3), Sentry, request ids, and tracing (5.1, PR #30), with the first trace seen in Honeycomb on 2026-11-03 |
 | E | Planner pattern (B), MCP server, second domain with zero Core changes | Open |
 | — | `study_guide.v1`: first-response study guide ([design_philosophy.md](design_philosophy.md)) | Proposed |
 

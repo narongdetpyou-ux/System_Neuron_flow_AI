@@ -48,6 +48,20 @@ EXIT_BUSY = 3
 log = logging.getLogger("neuron_flow.runner")
 
 
+def _with_core_versions(runtime, job_id, spec):
+    """The frozen spec with the agent versions Core recorded when it accepted the job.
+
+    Core adds ``agent_versions`` to its own copy of the spec on submit; the queue keeps the spec as the
+    Runner built it, without them. Only the trace reads this. When Core never saw the job, or its copy
+    cannot be read, the queue's spec is returned unchanged and the step spans carry no version.
+    """
+    try:
+        versions = runtime.store.job(job_id)["spec"].get("agent_versions")
+    except Exception:  # KeyError: Core never saw the job; anything else: the trace must not fail
+        return spec
+    return dict(spec, agent_versions=versions) if isinstance(versions, dict) else spec
+
+
 class Runner:
     def __init__(self, settings, *, store=None, catalog=None, llm_config=None, reporter=None, tracing=None):
         self.settings = settings
@@ -184,7 +198,10 @@ class Runner:
             job = self.store.get(job_id)
             if job is None or job["status"] not in TERMINAL:
                 return  # not recorded yet (it will be reconciled, and traced then)
-            events = runtime.synapse.events_for("monitor", job_id) if job["spec"] is not None else []
+            events = []
+            if job["spec"] is not None:
+                events = runtime.synapse.events_for("monitor", job_id)
+                job = dict(job, spec=_with_core_versions(runtime, job_id, job["spec"]))
             self.tracing.export(job_spans(job, self.store.admission(job_id), events, ai_step=AI_STEP))
         except Exception as exc:  # tracing never changes a job; only the type is logged, never a message
             log.warning("runner: could not build the trace of %s (%s)", job_id, type(exc).__name__)
