@@ -43,6 +43,8 @@ Since round 2, cases can also come in from outside, through an HTTP API or a Tha
    are shown read-only. Details: [intake_queue.md](docs/intake_queue.md).
 5. A case that is still waiting can be cancelled, and every request carries a request id that links the
    access log to the job record.
+6. The page shows how many cases wait and for how long, how long cases usually take (median and slowest,
+   per workflow) and why recent ones failed.
 
 ## What is inside
 
@@ -76,7 +78,7 @@ forgets its cases when it sleeps or redeploys; a paid plan with a disk keeps the
 
 **Locally (Python 3.10+):**
 ```bash
-python -m unittest discover -s tests -v        # 119 tests
+python -m unittest discover -s tests -v        # 126 tests
 python -m examples.case_triage_demo            # v1 rules, one synthetic case
 python -m examples.case_triage_shadow_demo     # v2 shadow mode, three synthetic cases (offline mock AI)
 python -m app.eval.triage_shadow_eval          # scorecard on 61 synthetic cases

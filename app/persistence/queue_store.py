@@ -328,6 +328,36 @@ class QueueStore:
         result.update({row["status"]: row["n"] for row in rows})
         return result
 
+    def waiting(self):
+        """``(count, oldest_created_at)`` of the jobs still QUEUED; the time is ``None`` when none wait."""
+        with self._connect() as db:
+            row = db.execute("SELECT COUNT(*) AS n, MIN(created_at) AS oldest FROM jobs WHERE status=?",
+                             (QUEUED,)).fetchone()
+        return row["n"], row["oldest"]
+
+    def recent_outcomes(self, limit):
+        """The newest ``limit`` jobs that ran to an outcome, newest first (cancelled jobs never ran).
+
+        Only what the run-time figures need: the workflow type, the outcome, the claim count, the three
+        timestamps and the failure reason. Never the case text. ``NOT INDEXED`` makes SQLite walk the
+        table backwards by ``seq`` and stop after ``limit`` rows, instead of sorting every finished job
+        on each status request.
+        """
+        marks = ",".join("?" * len(TERMINAL))
+        with self._connect() as db:
+            rows = db.execute(
+                "SELECT workflow_type, status, claims, created_at, started_at, finished_at, failure"
+                f" FROM jobs NOT INDEXED WHERE status IN ({marks}) ORDER BY seq DESC LIMIT ?",
+                (*TERMINAL, limit)).fetchall()
+        outcomes = []
+        for row in rows:
+            failure = json.loads(row["failure"]) if row["failure"] is not None else None
+            outcomes.append({"workflow_type": row["workflow_type"], "status": row["status"], "claims": row["claims"],
+                             "created_at": row["created_at"], "started_at": row["started_at"],
+                             "finished_at": row["finished_at"],
+                             "reason": failure.get("reason") if isinstance(failure, dict) else None})
+        return outcomes
+
     def runner(self):
         with self._connect() as db:
             row = db.execute("SELECT * FROM runner WHERE slot=1").fetchone()

@@ -3,7 +3,7 @@
   GET  /                          the web page (it holds no secrets and asks for the access key)
   GET  /static/app.css, app.js    page assets
   GET  /healthz                   liveness for the host: process up, queue database readable (no key)
-  GET  /v1/status                 Runner heartbeat, queue counts, AI mode, storage, limits, workflow steps
+  GET  /v1/status                 Runner heartbeat, queue counts and timings, AI mode, storage, limits, workflow steps
   POST /v1/jobs                   admit a job: 202 new, 200 duplicate, 400/401/409/413/415/429/503
   GET  /v1/jobs                   newest first: ?limit=1-100&before=<seq>
   GET  /v1/jobs/{job_id}          status, step plan, reviewer proposal, step timeline, AI provenance
@@ -37,6 +37,7 @@ from app.llm import LLMConfig, LLMConfigError
 from app.persistence import QUEUED, StateError
 from app.persistence.queue_store import iso
 from app.services.admission import AdmissionError, admit
+from app.services.metrics import queue_metrics
 from app.services.results import plan_view
 from app.services.workflows import CATALOG, DEFAULT_WORKFLOW, preview_spec
 from app.settings import MIN_ACCESS_KEY_LENGTH
@@ -236,6 +237,7 @@ class ApiApp:
         return json_response(200, {
             "service": "neuron-flow", "version": __version__,
             "runner": runner_view, "queue": self.store.counts(),
+            "metrics": queue_metrics(self.store, now),
             "ai": {**llm, "simulated": llm.get("provider") == "mock", "problem": problem},
             "storage": {"kind": self.settings.storage, "persistent": self.settings.persistent},
             "limits": {"max_queued": self.settings.max_queued, "submit_per_minute": self.settings.submit_per_minute,

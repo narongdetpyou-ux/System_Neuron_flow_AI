@@ -143,8 +143,10 @@ Built in round 2 (full reference in [intake_queue.md](intake_queue.md)):
 - `POST /v1/jobs/{job_id}/cancel` withdraws a job that is still `QUEUED` (`409 not_cancellable` otherwise;
   repeating it on a cancelled job returns `200` with the same record).
 - `GET /v1/jobs?limit=&before=` lists jobs newest first; `GET /v1/status` shows the Runner heartbeat, queue
-  counts, AI mode, storage and each workflow's steps (ids, agents, order, retry budget, time limit; never
-  params); `GET /healthz` is the unauthenticated liveness check.
+  counts, queue and run-time figures (waiting count and oldest age; median and slowest wait and run times
+  per workflow over the newest 100 finished jobs; failures by reason; roadmap 5.3), AI mode, storage and
+  each workflow's steps (ids, agents, order, retry budget, time limit; never params); `GET /healthz` is the
+  unauthenticated liveness check.
 - Every response carries `X-Request-Id` (the client's id when it is safe to log, otherwise a new one). The
   same id ends the access log line and is stored in a new job's `job.queued` event (roadmap 1.2).
 
@@ -164,14 +166,14 @@ app/llm/                       config, errors, gateway, prompts, prompt_library/
 app/eval/                      triage_shadow_eval.py, golden/case_triage_synthetic_v1.json (61 cases)
 app/observability/             sentry.py (step failures, degraded AI, Runner recoveries)
 app/persistence/               queue_store.py: the application job queue, events and Runner heartbeat (SQLite)
-app/services/                  workflows.py (catalog), admission.py, runner.py (with reconciliation), results.py
+app/services/                  workflows.py (catalog), admission.py, runner.py (with reconciliation), results.py, metrics.py
 app/api/                       routes.py (ApiApp), server.py (standard-library HTTP server), limits.py
 app/web/                       index.html, app.css, app.js: the Thai web page (chat layout, Flow and Trace, read-only settings)
 app/boot.py                    process 1 of the image: takes the data folder, drops root, becomes tini
 app/settings.py, app/serve.py  environment settings; the launcher (API + supervised Runner in one container)
 Dockerfile, render.yaml        the container and the Render Blueprint (railway.json kept for Railway)
 examples/                      case_triage_demo, case_triage_shadow_demo, sentry_smoke_test, service_smoke_test
-tests/                         119 tests: core, triage v1/v2, AI gateway, scorecard, Sentry, API, queue, Runner, HTTP
+tests/                         126 tests: core, triage v1/v2, AI gateway, scorecard, Sentry, API, queue, Runner, HTTP, metrics
 .github/workflows/             core-tests, service-container, sentry-smoke, shadow-eval-claude (manual)
 .github/scripts/               check_render_blueprint.py: render.yaml structure, build filter, Render's schema
 planned: review ledger and artifact store, app/domains/study_guide/
@@ -229,9 +231,9 @@ planned: review ledger and artifact store, app/domains/study_guide/
 
 **P1:**
 - Done: the telemetry phase fix (§3, PR #21); event pagination for the API (`limit` 1–100 with a cursor);
-  correlation (request) ids in logs (PR #22); explicit cancellation of queued jobs (PR #23).
-- Open: phase metrics (ROADMAP 5.3), retention and backup/restore drills (1.4, needs a disk), API
-  authentication hardening (2.1, 7.2).
+  correlation (request) ids in logs (PR #22); explicit cancellation of queued jobs (PR #23); queue and
+  run-time figures on the status page (PR #26, ROADMAP 5.3).
+- Open: retention and backup/restore drills (1.4, needs a disk), API authentication hardening (2.1, 7.2).
 
 **P2 (do not build early):** multi-tenancy, distributed workers, Postgres, object storage, SLAs, a hosted
 dashboard.
@@ -245,7 +247,7 @@ dashboard.
 | P1-fix | Neutral telemetry phase names | Done (PR #21, roadmap 1.1) |
 | B | Admission queue, single Runner, reconciliation, thin API, web page | Done (PR #11); live on Render's free plan since 2026-11-01; page redesigned as a chat layout with Flow, Trace and read-only settings (PR #18, roadmap 1.6) |
 | C | Two-phase review, decision ledger, n8n notifications | Open |
-| D | OpenTelemetry tracing, eval gates in CI | Partly done: CI scorecard, Sentry and request ids exist; tracing and the eval gate are open |
+| D | OpenTelemetry tracing, eval gates in CI | Partly done: CI scorecard, Sentry, request ids and queue/run-time figures (5.3) exist; tracing and the eval gate are open |
 | E | Planner pattern (B), MCP server, second domain with zero Core changes | Open |
 | — | `study_guide.v1`: first-response study guide ([design_philosophy.md](design_philosophy.md)) | Proposed |
 
