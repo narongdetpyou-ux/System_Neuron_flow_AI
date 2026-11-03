@@ -126,7 +126,8 @@ Each row was re-checked against the current code.
    changed) fails as `configuration_changed`; a job claimed `max_claims` times fails as
    `runner_attempts_exhausted`. A different spec is never submitted under an existing `job_id`.
 
-Application states: `QUEUED → RUNNING → COMPLETED | REVIEW_REQUIRED | FAILED | DELIVERY_FAILED` (built), then
+Application states: `QUEUED → RUNNING → COMPLETED | REVIEW_REQUIRED | FAILED | DELIVERY_FAILED` and
+`QUEUED → CANCELLED` (built; cancel only before the claim, roadmap 1.3), then
 `REVIEW_REQUIRED → APPROVED → (linked phase-B QUEUED)` or `REJECTED` (Milestone C).
 
 ## 6. API contract
@@ -138,6 +139,8 @@ Built in round 2 (full reference in [intake_queue.md](intake_queue.md)):
 - `GET /v1/jobs/{job_id}` returns status, the step plan frozen at claim, the review summary, a step
   timeline, AI provenance and the receipt hash. It never returns internal paths, params or credentials.
 - `GET /v1/jobs/{job_id}/events?after=<cursor>&limit=1-100` returns bounded pages.
+- `POST /v1/jobs/{job_id}/cancel` withdraws a job that is still `QUEUED` (`409 not_cancellable` otherwise;
+  repeating it on a cancelled job returns `200` with the same record).
 - `GET /v1/jobs?limit=&before=` lists jobs newest first; `GET /v1/status` shows the Runner heartbeat, queue
   counts, AI mode, storage and each workflow's steps (ids, agents, order, retry budget, time limit; never
   params); `GET /healthz` is the unauthenticated liveness check.
@@ -167,7 +170,7 @@ app/boot.py                    process 1 of the image: takes the data folder, dr
 app/settings.py, app/serve.py  environment settings; the launcher (API + supervised Runner in one container)
 Dockerfile, render.yaml        the container and the Render Blueprint (railway.json kept for Railway)
 examples/                      case_triage_demo, case_triage_shadow_demo, sentry_smoke_test, service_smoke_test
-tests/                         110 tests: core, triage v1/v2, AI gateway, scorecard, Sentry, API, queue, Runner, HTTP
+tests/                         116 tests: core, triage v1/v2, AI gateway, scorecard, Sentry, API, queue, Runner, HTTP
 .github/workflows/             core-tests, service-container, sentry-smoke, shadow-eval-claude (manual)
 .github/scripts/               check_render_blueprint.py: render.yaml structure, build filter, Render's schema
 planned: review ledger and artifact store, app/domains/study_guide/
