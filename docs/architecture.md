@@ -176,9 +176,10 @@ app/boot.py                    process 1 of the image: takes the data folder, dr
 app/settings.py, app/serve.py  environment settings; the launcher (API + supervised Runner in one container)
 Dockerfile, render.yaml        the container and the Render Blueprint (railway.json kept for Railway)
 examples/                      case_triage_demo, case_triage_shadow_demo, sentry_smoke_test, service_smoke_test
-tests/                         139 tests: core, triage v1/v2, AI gateway, masking, scorecard, eval gate, Sentry, API, queue, Runner, HTTP, metrics
+tests/                         141 tests: core, triage v1/v2, AI gateway, masking, scorecard, eval gate, Sentry, API, queue, Runner, HTTP, metrics
 tests/baselines/               shadow_eval_mock.json: every case's answer with the mock AI (the eval gate's baseline)
-.github/workflows/             core-tests, service-container, sentry-smoke, shadow-eval-claude (manual)
+.github/workflows/             core-tests, service-container, secret-scan, sentry-smoke, shadow-eval-claude (manual)
+.github/gitleaks.toml          secret scan rules (gitleaks defaults + Sentry DSN); .github/.gitleaksignore: reviewed findings
 .github/scripts/               check_render_blueprint.py: render.yaml structure, build filter, Render's schema
 planned: review ledger and artifact store, app/domains/study_guide/
 ```
@@ -239,7 +240,8 @@ planned: review ledger and artifact store, app/domains/study_guide/
 - Done: the telemetry phase fix (§3, PR #21); event pagination for the API (`limit` 1–100 with a cursor);
   correlation (request) ids in logs (PR #22); explicit cancellation of queued jobs (PR #23); queue and
   run-time figures on the status page (PR #26, ROADMAP 5.3); the eval gate in CI, which fails when any
-  per-case answer of the mock scorecard changes (PR #27, ROADMAP 5.2).
+  per-case answer of the mock scorecard changes (PR #27, ROADMAP 5.2); a secret scan of every commit of
+  every branch in CI, with the Sentry DSN read only from a repository secret (PR #29, ROADMAP 7.4).
 - Open: retention and backup/restore drills (1.4, needs a disk), API authentication hardening (2.1, 7.2).
 
 **P2 (do not build early):** multi-tenancy, distributed workers, Postgres, object storage, SLAs, a hosted
@@ -271,5 +273,7 @@ The order of the remaining work, with tasks, acceptance checks and owner decisio
   pattern-based and misses names without a title, addresses and more, so it does not make real data safe.
 - Every process in the container (API, Runner, Core workers) runs as one user with one environment, so each
   of them could read the AI key once it is set. Options and a recommendation are in ROADMAP 7.1.
+- The Sentry DSN that the smoke workflow carried until 2026-11-03 is still in the git history. It can only
+  submit events; it must be revoked in Sentry before the repository is made public (ROADMAP 7.4).
 - Live Claude results, security review, benchmarks and user studies do not exist yet. No document should
   claim them.

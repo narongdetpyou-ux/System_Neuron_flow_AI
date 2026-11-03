@@ -21,11 +21,12 @@ differs, this file and architecture.md win.
   - ถ้าสองฝ่ายเห็นไม่ตรงกัน เคสจะถูกยกให้คนดูก่อน
 - ถ้าเครื่องดับกลางทาง ระบบทำต่อได้ ส่งซ้ำก็ไม่เกิดงานซ้ำ
 - ยกเลิกเคสที่ยังรอคิวได้ และทุกคำขอมีรหัสคำขอ (request id) ไว้ไล่ดูใน log (ขั้น 1.2, 1.3)
-- ผ่านชุดทดสอบอัตโนมัติ 139 ข้อ และเปิดใช้ออนไลน์บน Render แล้ว ระบบปิดตัวอย่างเรียบร้อย และการแก้แค่เอกสารไม่ทำให้ Render ขึ้นเวอร์ชันใหม่ (ขั้น 0.1, 0.5)
+- ผ่านชุดทดสอบอัตโนมัติ 141 ข้อ และเปิดใช้ออนไลน์บน Render แล้ว ระบบปิดตัวอย่างเรียบร้อย และการแก้แค่เอกสารไม่ทำให้ Render ขึ้นเวอร์ชันใหม่ (ขั้น 0.1, 0.5)
 - หน้าเว็บเป็นแบบแชท: พิมพ์เคส ดูขั้นตอนก่อนส่ง กดยืนยัน แล้วติดตามใน Flow และประวัติเหตุการณ์ (ขั้น 1.6)
 - หน้าเว็บบอกว่ามีเคสรอกี่เคส เคสที่รอนานสุดรอมานานเท่าไร ปกติแต่ละเคสใช้เวลาเท่าไร และเคสที่ไม่สำเร็จล้มเพราะอะไร (ขั้น 5.3)
 - ถ้ามีคนแก้กฎหรือ prompt แล้วคำตอบของเคสทดสอบเคสไหนเปลี่ยน ช่องตรวจบน GitHub จะเป็นสีแดงและบอกว่าเคสไหนเปลี่ยนอะไร (ขั้น 5.2)
 - ก่อนส่งเคสให้ AI ระบบปิดข้อมูลส่วนตัวที่จับรูปแบบได้ (อีเมล เบอร์โทร เลขบัตรประชาชน เลขแบบบัตรเครดิต ตัวเลขยาว และชื่อที่มีคำนำหน้า) AI เห็นแค่ป้ายแทน เช่น [PHONE] และหน้าเว็บบอกว่าปิดอะไรไปกี่จุด (ขั้น 7.1)
+- ทุกครั้งที่มีการส่งโค้ด GitHub สแกนหาคีย์หรือรหัสลับที่หลุดในประวัติโค้ดทั้งหมด และที่อยู่ Sentry (DSN) ไม่อยู่ในไฟล์แล้ว อ่านจากความลับ (secret) เท่านั้น (ขั้น 7.4 ส่วนเตรียมการ)
 
 **ลำดับต่อจากนี้** แต่ละขั้นจบด้วยสิ่งที่คุณลองเองได้
 
@@ -38,7 +39,7 @@ differs, this file and architecture.md win.
 | 4 | ช่องคุยภาษาธรรมดา: ระบบเข้าใจว่าคุณขออะไร บอกตรง ๆ เมื่อเรื่องอยู่นอกกรอบ และถามกลับ 1 คำถามเมื่อข้อมูลไม่พอ | คุยกับระบบได้เลย ไม่ต้องเลือกประเภทงานเอง | ยังไม่เริ่ม (ต้องรอขั้น 3) |
 | 5 | ติดตามเส้นทางของแต่ละงาน (เวลา token จุดที่ช้า) และด่านตรวจผลรายเคส | ตัวเลขคิวและเวลาบนหน้าเว็บ ช่องตรวจบน PR แล้วต่อด้วยเส้นทางงานใน Honeycomb | เริ่มแล้ว: 5.3 (ตัวเลขคิวและเวลา) และ 5.2 (ด่านตรวจผลรายเคส) เสร็จแล้ว ส่วน 5.1 ต้องใช้คีย์ Honeycomb ของคุณ |
 | 6 | AI วางแผนงานหลายขั้น ระบบตรวจแผนก่อนรัน และเครื่องมืออื่นเรียกใช้ผ่าน MCP ได้ | สั่งงานจากแอป Claude ได้ | ยังไม่เริ่ม (ต้องรอขั้น 2–4) |
-| 7 | เตรียมพร้อมก่อนให้คนอื่นใช้ หรือก่อนเปิด repo สาธารณะ | รายงานตรวจความปลอดภัย และรายการตรวจก่อนเปิดตัว | เริ่มแล้ว: 7.1 ปิดข้อมูลส่วนตัวก่อนส่งให้ AI ทำแล้ว ส่วนการจำกัดว่าใครเห็นคีย์ AI ได้ เขียนแผนไว้ ยังไม่ทำ |
+| 7 | เตรียมพร้อมก่อนให้คนอื่นใช้ หรือก่อนเปิด repo สาธารณะ | รายงานตรวจความปลอดภัย และรายการตรวจก่อนเปิดตัว | เริ่มแล้ว: 7.1 ปิดข้อมูลส่วนตัวก่อนส่งให้ AI ทำแล้ว ส่วนการจำกัดว่าใครเห็นคีย์ AI ได้ เขียนแผนไว้ ยังไม่ทำ; 7.4 ส่วนเตรียมการ (สแกนหาคีย์ที่หลุด และย้าย DSN ไปเป็นความลับ) ทำแล้ว ที่เหลือรอคุณตัดสินใจ (D5) |
 
 **เรื่องที่คุณต้องตัดสินใจเอง** อยู่ในตาราง [Owner decisions](#owner-decisions) ข้างล่าง เช่น
 - จะจ่ายค่า Render เพื่อให้เคสไม่หายหรือไม่
@@ -112,7 +113,7 @@ Marks: ✅ done · 🟡 built or partly checked (the status says what is left) �
 | 7.1 | Mask personal data before AI calls; narrow key exposure | 🟡 masking built in PR #28; key exposure: design note only | before any real data |
 | 7.2 | Production HTTP server and authentication hardening | ⬜ | before other users |
 | 7.3 | Independent security review | ⬜ owner | 7.1, 7.2 |
-| 7.4 | Public-release checklist | ⬜ owner decision D5 | — |
+| 7.4 | Public-release checklist | 🟡 preparation in PR #29 (history scan in CI, DSN only from a secret); the rest waits for D5 | — |
 | 7.5 | Consented pilot with real volunteers | ⬜ owner decision D4 | 7.1–7.3 |
 
 Phase 2 can be built and tested without a disk. Real use needs D1 = paid: on the free plan, tokens and
@@ -850,6 +851,30 @@ workflow types.
 - Confirm the rights to all code and history, and keep the GPL-3.0-only license.
 - Disclose AI assistance where funders require it.
 - Write a README section for outsiders.
+- **Status (2026-11-03): the preparation is built in PR #29; publishing stays the owner's decision (D5).**
+  - [x] The Sentry smoke workflow reads its DSN only from the repository secret `SENTRY_DSN`. Without it, a
+    push skips the test with a notice and a manual run fails with the steps to add it.
+  - [x] *Actions → Secret scan* runs gitleaks v8.30.1 (built from source, so the Go checksum database
+    verifies it) over every commit of every branch on every push and pull request. The rules are gitleaks'
+    defaults plus a Sentry DSN rule, which the defaults lack (`.github/gitleaks.toml`). A second pass
+    without the reviewed list fails if an entry in `.github/.gitleaksignore` is no longer found.
+  - [x] First scans (2026-11-03, all branches): the defaults found nothing; the DSN rule found one item,
+    the old DSN added in commit `683f963`. It is listed in `.github/.gitleaksignore` with the reason.
+  - [x] `tests/test_no_secrets.py` checks the files as they are now with the standard library, so a cloud
+    session without gitleaks catches a pasted key before it is pushed.
+  - [ ] **Owner, now:** put the DSN in the repository secret `SENTRY_DSN` (steps in the owner test below).
+  - [ ] **Owner, before going public:** revoke the old DSN in Sentry (Settings → Client Keys), create a new
+    one and put it in the secret, because the old one stays readable in the history.
+  - [ ] **Owner, when going public:** turn on GitHub's secret scanning and push protection (Settings →
+    Code security; free for public repositories); confirm the rights and the license; disclose AI
+    assistance; write the README section for outsiders.
+- **Owner test (ไทย):**
+  1. เปิด Sentry → Settings → Projects → neuron-flow-runtime → Client Keys (DSN) แล้วคัดลอกค่า DSN
+  2. เปิด GitHub → repo นี้ → Settings → Secrets and variables → Actions → New repository secret
+     ตั้งชื่อ `SENTRY_DSN` วางค่าที่คัดลอกมา แล้วกด Add secret
+  3. เปิด Actions → Sentry smoke test → Run workflow ต้องเป็นสีเขียว
+  4. เปิด Actions → Secret scan → รันล่าสุด → งาน gitleaks ต้องเป็นสีเขียว และใน log ต้องเห็น
+     "no leaks found" กับ "1 finding(s) in the history before the reviewed list; 1 reviewed"
 
 ### 7.5 Consented pilot with real volunteers (owner decision D4)
 
@@ -935,3 +960,7 @@ workflow types.
 - 2026-11-03: 7.1 split. Masking is built in PR #28. Narrowing key exposure turned out to need either a
   Core change or a new process under its own user (both need an ADR), so it is written up as a design note
   in 7.1 and left for before 7.2.
+- 2026-11-03: 7.4 preparation in PR #29: the DSN only from a secret, and a history scan in CI. gitleaks
+  is built from source in CI, so the Go checksum database verifies it and no download hash is pinned; its
+  defaults miss Sentry DSNs, so one rule was added. Publishing and the rest of the checklist stay with the
+  owner (D5).

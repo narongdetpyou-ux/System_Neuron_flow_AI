@@ -7,7 +7,7 @@ project.
 ## What exists
 
 - **Core runtime** (`neuron_flow/`). Since its extraction on 2026-10-31 it has changed once, for the planned telemetry fix (PR #21).
-- **139 automated tests** passing on Python 3.10 and 3.12 in CI, and on 3.13 in a development session
+- **141 automated tests** passing on Python 3.10 and 3.12 in CI, and on 3.13 in a development session
   (3.11 was last checked on 2026-11-01, at 53 tests).
   - Last pinned green run on `main` (`0b03735`, 119 tests): https://github.com/narongdetpyou-ux/System_Neuron_flow_AI/actions/runs/41550257103
 - **Support-case triage domain:**
@@ -56,8 +56,10 @@ These facts do **not** imply any of the following:
 - **The repository is private.** A license in a private repository does not create public availability or
   user adoption. Before publishing anything, the owner must decide what to publish and check secrets,
   provenance and rights.
-  - Before going public, move the Sentry DSN in `.github/workflows/sentry-smoke.yml` into a repository
-    secret, or rotate it. It is submit-only and rate-limited, but it should not be public.
+  - Since 2026-11-03 (PR #29) the Sentry smoke workflow reads its DSN only from a repository secret, and
+    *Actions → Secret scan* checks every commit of every branch with gitleaks. Its one reviewed finding is
+    the old DSN, still in the history: revoke that key in Sentry before going public. It is submit-only and
+    rate-limited, but it should not be public.
 - **No outside evidence yet.** No third-party users, testimonials or security certifications have been
   evidenced. Never fill these fields with synthetic numbers.
 - **Applicant facts are unverified.** This pack does not verify the applicant's identity, residence and
