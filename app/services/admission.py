@@ -40,8 +40,11 @@ def request_fingerprint(workflow_type, normalized_input):
     return fingerprint({"workflow_type": workflow_type, "input": normalized_input})
 
 
-def admit(store, body, *, max_queued, catalog=CATALOG):
-    """Returns ``(job, created)``; raises :class:`AdmissionError` when the request is refused."""
+def admit(store, body, *, max_queued, catalog=CATALOG, request_id=None):
+    """Returns ``(job, created)``; raises :class:`AdmissionError` when the request is refused.
+
+    ``request_id`` (already checked by the API) is stored in the new job's first event.
+    """
     if not isinstance(body, dict) or set(body) != _FIELDS:
         raise AdmissionError(400, "invalid_fields", "The body must contain exactly: workflow_type, idempotency_key, input")
     workflow_type = body["workflow_type"]
@@ -59,7 +62,8 @@ def admit(store, body, *, max_queued, catalog=CATALOG):
     digest = request_fingerprint(workflow.name, normalized)
     try:
         job, created = store.admit(job_id=new_job_id(), idempotency_key=key, request_fingerprint=digest,
-                                   workflow_type=workflow.name, input=normalized, max_queued=max_queued)
+                                   workflow_type=workflow.name, input=normalized, max_queued=max_queued,
+                                   request_id=request_id)
     except QueueFull:
         raise AdmissionError(503, "queue_full", "The queue is full; try again in a few minutes") from None
     if not created and job["request_fingerprint"] != digest:

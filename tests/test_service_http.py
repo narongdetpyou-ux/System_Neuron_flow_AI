@@ -98,6 +98,54 @@ class LiveServerTests(unittest.TestCase):
         self.assertNotIn("0123456789abcdef", joined)
         self.assertNotIn(KEY, joined)
 
+    def test_request_id_round_trips_and_follows_a_job(self):
+        # Roadmap 1.2: one id from the access line to the job's first event.
+        rid = "trace-from-client.42"
+        with self.assertLogs("neuron_flow.http", level="INFO") as logs:
+            status, headers, body = self.request("POST", "/v1/jobs", case_body("key-http-rid1"),
+                                                 headers={"X-Request-Id": rid})
+        self.assertEqual((status, headers["X-Request-Id"]), (202, rid))
+        self.assertTrue(logs.output[-1].endswith(" " + rid), logs.output[-1])
+        job_id = json.loads(body)["job_id"]
+        for forbidden in ("upload an attachment", "CASE-1", job_id, KEY):
+            self.assertNotIn(forbidden, logs.output[-1])
+        events = json.loads(self.request("GET", f"/v1/jobs/{job_id}/events")[2])["events"]
+        self.assertEqual((events[0]["kind"], events[0]["payload"]["request_id"]), ("job.queued", rid))
+        self.assertEqual(json.loads(self.request("GET", f"/v1/jobs/{job_id}")[2])["request_id"], rid)
+        # A retry with the same idempotency key is a new request, but the job keeps its admitting id.
+        status, headers, body = self.request("POST", "/v1/jobs", case_body("key-http-rid1"),
+                                             headers={"X-Request-Id": "second-try"})
+        self.assertEqual((status, headers["X-Request-Id"], json.loads(body)["request_id"]), (200, "second-try", rid))
+
+    def test_every_response_gets_a_fresh_id_when_none_is_sent(self):
+        seen = set()
+        for path, auth in (("/", ""), ("/healthz", ""), ("/v1/status", None), ("/v1/nope", None)):
+            headers = {"Authorization": auth} if auth is not None else {}
+            status, response_headers, _body = self.request("GET", path, headers=headers)
+            self.assertRegex(response_headers.get("X-Request-Id", ""), r"^req_[0-9a-f]{16}$", path)
+            seen.add(response_headers["X-Request-Id"])
+        self.assertEqual(len(seen), 4)
+        # Refused before the app runs (no Content-Length): still answered with an id.
+        with socket.create_connection(self.server.server_address[:2], timeout=5) as connection:
+            connection.sendall(b"POST /v1/jobs HTTP/1.0\r\nContent-Type: application/json\r\n"
+                               b"X-Request-Id: early-refusal\r\n\r\n")
+            reply = connection.recv(4096)
+        self.assertIn(b"X-Request-Id: early-refusal", reply)
+
+    def test_unsafe_request_ids_are_replaced_and_never_logged(self):
+        unsafe = ["has space", "x" * 65, "-leading-dash", "semi;colon", "\u00e9t\u00e9",
+                  "job_0123456789abcdef01234567", "prefix-job_0123456789abcdef01234567", KEY]
+        with self.assertLogs("neuron_flow.http", level="INFO") as logs:
+            for sent in unsafe:
+                status, headers, _body = self.request("GET", "/v1/status",
+                                                      headers={"X-Request-Id": sent.encode("utf-8").decode("latin-1")})
+                self.assertEqual(status, 200)
+                self.assertRegex(headers["X-Request-Id"], r"^req_[0-9a-f]{16}$", sent)
+        joined = "\n".join(logs.output)
+        self.assertNotIn(KEY, joined)
+        self.assertNotIn("0123456789abcdef", joined)
+        self.assertNotIn("has space", joined)
+
 
 class LimiterTests(unittest.TestCase):
     def test_tokens_come_back_over_time(self):

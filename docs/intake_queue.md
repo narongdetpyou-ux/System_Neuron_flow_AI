@@ -1,6 +1,6 @@
 # Intake API, job queue, Runner and web page (round 2, Milestone B)
 
-**Status:** built in PR #11 and tested offline (107 tests on 2026-11-03, including killing the Runner
+**Status:** built in PR #11 and tested offline (110 tests on 2026-11-03, including killing the Runner
 mid-step). The container build is checked on every push by *Actions → Service container*. Live on
 Render's free plan since 2026-11-01 (`render.yaml`). Railway was the first choice, but it has paused new
 sign-ups since 22 Oct 2026 after a security incident; `railway.json` stays in the repository for later.
@@ -40,6 +40,8 @@ Design principles: [design_philosophy.md](design_philosophy.md).
 | ตั้งค่า AI ไม่ครบ (เช่น เลือก Claude แต่ไม่ใส่ key) | ไม่เริ่มงานใด ๆ เคสรอในคิวจนกว่าจะแก้ | แถบเตือนสีเหลืองบอกสาเหตุ |
 | คิวเต็ม หรือส่งถี่เกินไป | ปฏิเสธชั่วคราว (503 / 429) | "คิวเต็ม" หรือ "ส่งถี่เกินไป รอ N วินาที" |
 | ใส่รหัสเข้าใช้ผิด 10 ครั้งในหนึ่งนาที | พักการลองจากเครื่องนั้นชั่วคราว (429) | "ลองรหัสผิดหลายครั้งเกินไป" |
+
+**ตามรอยคำขอ (request id)** ทุกคำตอบจากระบบมี "รหัสคำขอ" ติดมาด้วย (หัวข้อ `X-Request-Id`) รหัสเดียวกันนี้อยู่ในบันทึกการเข้าใช้ (access log) และในเหตุการณ์แรกของงาน ("รับเข้าคิว") เมื่อมีปัญหา ให้เปิดเคสนั้น → "รายละเอียดเชิงเทคนิค" → ดู "รหัสคำขอที่ส่งเคสนี้" แล้วส่งรหัสนี้ให้ Claude ไล่ดูใน log ได้ตรงคำขอนั้นทันที ถ้าระบบขัดข้องฝั่งเซิร์ฟเวอร์ ข้อความเตือนบนหน้าเว็บก็จะบอกรหัสคำขอด้วย รหัสนี้ไม่มีข้อความเคสหรือรหัสลับ
 
 ทุกกรณีที่ระบบกู้งานหลังตัวรันงานหยุด จะส่งแจ้งเตือนเข้า Sentry ด้วย (ถ้าตั้งค่า `SENTRY_DSN` ไว้) ดู [observability_sentry.md](observability_sentry.md)
 
@@ -183,13 +185,25 @@ it stops the container (Render's default, which its free plan does not let `rend
 
 Every `/v1` route needs `Authorization: Bearer <NEURON_FLOW_ACCESS_KEY>`. Bodies are JSON, at most 16 KiB.
 
+**Request ids (roadmap 1.2).** Every response, including the page, `/healthz` and errors refused before the
+app runs, carries an `X-Request-Id` header:
+- a client may send its own `X-Request-Id`: 1–64 characters, starting with a letter or digit, then letters,
+  digits, `.`, `_` or `-`. It is used as is;
+- anything else is replaced by a new id `req_<16 hex>`. That includes an id containing a job id (access
+  lines never carry job ids) and an id equal to the access key;
+- the id is the last field of the access log line, and a new job stores it in its first event
+  (`job.queued`, `payload.request_id`). `GET /v1/jobs/{job_id}` returns it as `request_id` (`null` for jobs
+  admitted before this change). A duplicate submission gets its own new id in the header, while the job
+  keeps the id of the request that created it;
+- a `500 internal_error` body also includes `request_id`.
+
 | Method and path | What it does | Success | Errors |
 |---|---|---|---|
 | `GET /healthz` | Liveness for the host's health check (no key); also says whether an access key is set | 200 `{"ok": true, "access_key": "configured"}` | 503 |
 | `GET /v1/status` | Runner heartbeat, queue counts, AI mode, storage, limits, and each workflow's steps (`workflows[].steps`) | 200 | 401, 429 |
 | `POST /v1/jobs` | Admit a job | 202 new, 200 duplicate | 400, 401, 409, 411, 413, 415, 429, 503 |
 | `GET /v1/jobs?limit=20&before=<seq>` | Newest first; `next_before` is the next cursor | 200 | 400, 401 |
-| `GET /v1/jobs/{job_id}` | Status, the step plan frozen at claim (`plan`, `null` while queued), reviewer proposal, step timeline, AI provenance, receipt hash | 200 | 401, 404 |
+| `GET /v1/jobs/{job_id}` | Status, the step plan frozen at claim (`plan`, `null` while queued), reviewer proposal, step timeline, AI provenance, receipt hash, the admitting `request_id` | 200 | 401, 404 |
 | `GET /v1/jobs/{job_id}/events?after=<seq>&limit=50` | History in bounded pages (`limit` 1–100) | 200 | 400, 401, 404 |
 
 ```bash
@@ -227,6 +241,7 @@ Error bodies look like `{"error": "<code>", "message": "<English text>"}`. Codes
 | A failed validator blocks only the dependent steps | `test_a_failed_validator_blocks_only_the_steps_that_depend_on_it` |
 | Delivery conflicts get their own status | `test_a_delivery_conflict_gets_its_own_status` |
 | Changed settings never finish an interrupted job silently | `test_changed_ai_settings_never_finish_an_interrupted_job_silently` |
+| One request can be followed from the access line to the job record; unsafe client ids are replaced and never logged (roadmap 1.2) | `test_service_http`: `test_request_id_round_trips_and_follows_a_job`, `test_every_response_gets_a_fresh_id_when_none_is_sent`, `test_unsafe_request_ids_are_replaced_and_never_logged` |
 | The access key never appears in responses, stored files or logs | `test_the_key_is_never_in_a_response_or_a_stored_file`, `test_the_service_starts_works_and_stops_cleanly`, CI container job |
 | The container runs without root, keeps data across a restart and stops cleanly | *Actions → Service container* (`examples/service_smoke_test.py`) |
 
@@ -260,7 +275,8 @@ job) belong to Milestone C and are still open.
   keys never pass through it.
 - Body cap (16 KiB, checked before reading), connection cap, socket timeouts, queue cap and rate limits.
 - Logs and Sentry events carry no case text, no query strings, no job ids in access lines and never the
-  key. Responses carry no file paths.
+  key. Responses carry no file paths. A client's `X-Request-Id` reaches the log only when it matches the
+  safe pattern above and is neither a job id nor the key.
 - Data is synthetic. There is no redaction of personal data before the AI call yet (gap G5), so do not
   enter real customer information.
 

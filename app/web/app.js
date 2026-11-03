@@ -85,6 +85,7 @@
     queue_full: "คิวเต็มแล้ว รอสักครู่แล้วลองใหม่",
     rate_limited: "ส่งถี่เกินไป",
     body_too_large: "ข้อความยาวเกินไป",
+    internal_error: "ระบบขัดข้องฝั่งเซิร์ฟเวอร์",
   };
   const STEP_STATE = { done: "สำเร็จ", fail: "ไม่สำเร็จ", skip: "ข้าม", none: "ไม่ได้รัน", pending: "ยังไม่เริ่ม", working: "กำลังทำงาน", preview: "ตัวอย่าง" };
   const LEVEL = { ok: "ok", run: "run", err: "err", warn: "warn", info: "info" };
@@ -844,6 +845,7 @@
     const kv = [["รหัสงาน (job id)", job.job_id], ["ประเภทงาน", job.workflow_type],
       ["ตัวรันงานหยิบเคสนี้", `${job.claims} ครั้ง`], ["รับเข้าคิว", fullTime(job.created_at)],
       ["เริ่มทำ", fullTime(job.started_at)], ["เสร็จ", fullTime(job.finished_at)]];
+    if (job.request_id) kv.splice(1, 0, ["รหัสคำขอที่ส่งเคสนี้ (request id)", job.request_id]);
     const ai = result.ai;
     if (ai) {
       kv.push(["AI ที่ใช้", `${ai.provider}/${ai.model}` + (ai.served_model && ai.served_model !== ai.model ? ` (ตอบโดย ${ai.served_model})` : "")]);
@@ -1055,7 +1057,7 @@
     const p = event.payload || {};
     const kind = event.kind || "";
     const base = { t: clockTime(event.at), raw: `${kind} ${JSON.stringify(p)}` };
-    if (kind === "job.queued") return { ...base, lv: "info", msg: "รับเข้าคิว", k: p.workflow_type };
+    if (kind === "job.queued") return { ...base, lv: "info", msg: "รับเข้าคิว", k: [p.workflow_type, p.request_id].filter(Boolean).join(" · ") };
     if (kind === "job.claimed") return { ...base, lv: "run", msg: `ตัวรันงานหยิบเคส (ครั้งที่ ${p.claim})` };
     if (kind === "job.recovering") return { ...base, lv: "warn", msg: `ทำต่อหลังระบบเปิดใหม่ (ครั้งที่ ${p.claim})` };
     if (kind.startsWith("step.")) {
@@ -1333,6 +1335,7 @@
     let message = API_ERROR[code] || result.data.message || `ระบบตอบกลับ ${result.status}`;
     if (code === "rate_limited") message += ` รอ ${result.data.retry_after_s || 60} วินาทีแล้วลองใหม่`;
     if (code === "invalid_input" && result.data.message) message += ` (${result.data.message})`;
+    if (code === "internal_error" && result.data.request_id) message += ` · รหัสคำขอ (request id) ${result.data.request_id}`;
     return { ok: false, message };
   }
 

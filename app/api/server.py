@@ -5,7 +5,8 @@ guards:
 * a socket timeout on every read, so a stalled client cannot hold a thread for long;
 * a cap on concurrent connections (extra connections get an immediate 503);
 * a body cap checked from ``Content-Length`` before anything is read;
-* access log lines without query strings, bodies, headers or job ids.
+* access log lines without query strings, bodies, headers or job ids; each line ends with the request id
+  that the response also carries in ``X-Request-Id``.
 For real traffic, put a production web server in front of the same ``ApiApp`` (see
 docs/intake_queue.md).
 """
@@ -61,29 +62,30 @@ class _Handler(BaseHTTPRequestHandler):
             return None, error(400, "bad_request", "The body ended early")
         return body, None
 
-    def _respond(self, split):
+    def _respond(self, split, headers, request_id):
         body, response = self._read_body()
         if response is not None:
-            return finalize(response)
+            return finalize(response, request_id)
         try:
             query = parse_qs(split.query, keep_blank_values=True, max_num_fields=20)
         except ValueError:
-            return finalize(error(400, "bad_request", "Too many query parameters"))
-        request = Request(self.command, split.path or "/", query,
-                          {name.lower(): value for name, value in self.headers.items()}, body, self._client())
+            return finalize(error(400, "bad_request", "Too many query parameters"), request_id)
+        request = Request(self.command, split.path or "/", query, headers, body, self._client(), request_id)
         return self.server.app.handle(request)
 
     def _serve(self):
         started = time.monotonic()
         split = urlsplit(self.path)
+        headers = {name.lower(): value for name, value in self.headers.items()}
+        request_id = self.server.app.request_id(headers)
         try:
-            response = self._respond(split)
+            response = self._respond(split, headers, request_id)
         except (socket.timeout, ConnectionError):  # the client stalled or left while sending
             self.close_connection = True
             response = None
         # Log before replying, so the line never arrives after the client has its answer.
-        log.info("%s %s %s %.0fms", self.command, route_label(split.path),
-                 response.status if response is not None else "-", (time.monotonic() - started) * 1000)
+        log.info("%s %s %s %.0fms %s", self.command, route_label(split.path),
+                 response.status if response is not None else "-", (time.monotonic() - started) * 1000, request_id)
         if response is None:
             return
         try:

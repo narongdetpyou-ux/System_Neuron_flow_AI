@@ -105,7 +105,7 @@ If a task seems to need breaking a rule:
 ## 4. Checking your work
 
 ```bash
-python -m unittest discover -s tests -v        # all tests (107 on 2026-11-03); Python 3.10–3.13
+python -m unittest discover -s tests -v        # all tests (110 on 2026-11-03); Python 3.10–3.13
 python -m examples.case_triage_demo            # v1 rules, one synthetic case
 python -m examples.case_triage_shadow_demo     # v2 shadow mode with the offline mock AI
 python -m app.eval.triage_shadow_eval          # scorecard on 61 synthetic cases
@@ -207,6 +207,7 @@ Notes for cloud sessions (claude.ai/code):
   - B: intake API, queue, Runner and web page (PR #11).
   - The Claude Code session hook (PR #12).
   - Neutral telemetry phase names, the one planned Core change (PR #21, roadmap 1.1).
+  - Request ids from the access log to the job record (PR #22, roadmap 1.2).
   - The Render service `neuron-flow` exists and is live at https://neuron-flow.onrender.com (free plan,
     first deploy 2026-11-01). Use the Render connector to read its deploys, events and logs; this
     session's network may not reach `onrender.com` or `render.com` directly.

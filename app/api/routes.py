@@ -10,7 +10,9 @@
   GET  /v1/jobs/{job_id}/events   bounded pages: ?after=<seq>&limit=1-100
 
 Every ``/v1`` route needs ``Authorization: Bearer <NEURON_FLOW_ACCESS_KEY>``. Responses never contain
-file paths, credentials or stack traces. The API only reads and admits; it never opens the Core
+file paths, credentials or stack traces. Every response carries ``X-Request-Id``: a well-formed id the
+client sent, or a new random one. The same id is written in the access log line and, for a new job, in
+its ``job.queued`` event, so one request can be followed from the log to the job record. The API only reads and admits; it never opens the Core
 ``Runtime`` (ADR-001).
 """
 
@@ -21,6 +23,7 @@ import json
 import logging
 from pathlib import Path
 import re
+import secrets
 import time
 
 from neuron_flow import __version__
@@ -40,6 +43,9 @@ from .limits import RateLimiter
 MAX_BODY_BYTES = 16 * 1024
 WEB_DIR = Path(__file__).resolve().parent.parent / "web"
 JOB_PATH = re.compile(r"^/v1/jobs/(job_[0-9a-f]{24})(/events)?$")
+JOB_ID_TEXT = re.compile(r"job_[0-9a-f]{24}")
+# A client may send its own id: 1-64 characters, letters, digits, '.', '_' or '-'. Nothing else reaches the logs.
+REQUEST_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$")
 _ASSETS = {"/": ("index.html", "text/html; charset=utf-8"),
            "/static/app.css": ("app.css", "text/css; charset=utf-8"),
            "/static/app.js": ("app.js", "text/javascript; charset=utf-8")}
@@ -58,6 +64,7 @@ class Request:
     headers: dict = field(default_factory=dict)   # lower-case names
     body: bytes = b""
     client: str = "local"
+    request_id: str = ""                          # set by ApiApp.request_id(); empty means "not yet"
 
 
 @dataclass
@@ -81,10 +88,15 @@ def error(status, code, message, *, headers=(), **extra):
     return json_response(status, {"error": code, "message": message, **extra}, headers)
 
 
-def finalize(response):
-    """Add the security headers every response carries."""
-    response.headers = [*_COMMON_HEADERS, *response.headers]
+def finalize(response, request_id=None):
+    """Add the security headers every response carries, and the request id when there is one."""
+    extra = [("X-Request-Id", request_id)] if request_id else []
+    response.headers = [*_COMMON_HEADERS, *response.headers, *extra]
     return response
+
+
+def new_request_id():
+    return "req_" + secrets.token_hex(8)
 
 
 class ApiApp:
@@ -104,7 +116,23 @@ class ApiApp:
 
     # -- entry point ---------------------------------------------------------------------------
 
+    def request_id(self, headers):
+        """The id for one request: the client's ``X-Request-Id`` if it is safe to log, else a new one.
+
+        Refused (and replaced): anything malformed, anything that contains a job id (access lines never
+        carry job ids), and the access key itself (a client that confuses the two headers).
+        """
+        sent = headers.get("x-request-id", "").strip()
+        if not REQUEST_ID.fullmatch(sent) or JOB_ID_TEXT.search(sent):
+            return new_request_id()
+        if self._key_digest is not None and hmac.compare_digest(
+                hashlib.sha256(sent.encode("utf-8")).digest(), self._key_digest):
+            return new_request_id()
+        return sent
+
     def handle(self, request):
+        if not request.request_id:
+            request.request_id = self.request_id(request.headers)
         try:
             response = self._route(request)
         except BadParameter as exc:
@@ -113,8 +141,9 @@ class ApiApp:
             log.exception("api: unexpected error on %s %s", request.method, route_label(request.path))
             if self.reporter is not None:
                 self.reporter.capture_exception(exc)
-            response = error(500, "internal_error", "Something went wrong on the server")
-        return finalize(response)
+            response = error(500, "internal_error", "Something went wrong on the server",
+                             request_id=request.request_id)
+        return finalize(response, request.request_id)
 
     def _route(self, request):
         method, path = request.method, request.path
@@ -227,7 +256,8 @@ class ApiApp:
         except SpecError:
             return error(400, "invalid_json", "The body is not valid JSON, or it repeats a field")
         try:
-            job, created = admit(self.store, body, max_queued=self.settings.max_queued, catalog=self.catalog)
+            job, created = admit(self.store, body, max_queued=self.settings.max_queued, catalog=self.catalog,
+                                 request_id=request.request_id)
         except AdmissionError as exc:
             headers = [("Retry-After", "60")] if exc.status == 503 else []
             return error(exc.status, exc.code, exc.message, headers=headers, **exc.extra)
@@ -276,6 +306,7 @@ class ApiApp:
             view["queue_position"] = self.store.queue_position(job)
         if detail:
             view["input"] = case
+            view["request_id"] = self.store.admitting_request_id(job["job_id"])
             # The plan frozen when the Runner claimed the job: what it really runs. None while queued.
             view["plan"] = plan_view(job["spec"]) if job["spec"] else None
             view["result"] = job["result"]
