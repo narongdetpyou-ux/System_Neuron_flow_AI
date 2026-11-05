@@ -95,6 +95,9 @@ POST /v1/jobs                    SERVER  the request that admitted the case (API
         └── step prepare
 ```
 
+- **Which step gets the `chat` span:** the workflow's AI step (`WorkflowType.ai_step`): `classify_llm` for
+  `case_triage.v2` and `detect_topic` for `study_guide.v1`. The study guide's second AI call, `explain`, has
+  its step span but no `chat` span yet; its tokens are only in the step output.
 - **Times are wall-clock times** written by the API, the Runner and Core on one machine.
 - **A step span** runs from the moment Core started the attempt to the moment it recorded the outcome.
   It includes starting a worker process for the step, which is most of the time with the mock AI.

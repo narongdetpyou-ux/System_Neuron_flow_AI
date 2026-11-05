@@ -18,6 +18,9 @@ jobs:
         run: python -m examples.case_triage_demo
       - name: Run shadow-mode demonstration (offline mock AI)
         run: python -m examples.case_triage_shadow_demo
+      # The study guide's answers to four synthetic requests, shown on the run page (roadmap 3.2).
+      - name: Run study guide demonstration (offline mock AI)
+        run: python -m examples.study_guide_demo --summary "$GITHUB_STEP_SUMMARY"
       # Eval gate (roadmap 5.2): fails when any case answers differently from the committed baseline. It runs
       # even when an earlier step failed, so the run page always lists what changed.
       - name: Score shadow mode and compare every case with the baseline (offline mock AI)

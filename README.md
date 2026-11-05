@@ -51,6 +51,20 @@ Since round 2, cases can also come in from outside, through an HTTP API or a Tha
    wait, each step attempt and the AI call with its tokens. No case text, prompt, AI answer or key is ever
    sent. Details: [observability_tracing.md](docs/observability_tracing.md).
 
+Since roadmap 3.2, a second, unrelated workflow runs on the same Core with no Core change: the **study
+guide** (`study_guide.v1`, the owner's first-response rule):
+
+1. A person writes what they want to learn in everyday words or a metaphor, in Thai or English.
+2. The AI maps it to one topic of a versioned catalog, or answers "out of scope". It cannot answer a topic
+   that is not in the catalog.
+3. Rules pick at most 5 resources from a verified library, in the person's language and free ones first,
+   and order them: background topics first, then easy to hard.
+4. The AI writes one plain sentence per resource. It never sees or writes a URL; code inserts every link
+   from the library.
+5. The answer comes in layers (a one-line summary, the steps, the details) and asks "did I understand you
+   correctly?". Out of scope, it says honestly what it can help with. It decides nothing, so it needs no
+   review. Details: [study_guide.md](docs/study_guide.md).
+
 ## What is inside
 
 | Part | Where | Status |
@@ -62,7 +76,7 @@ Since round 2, cases can also come in from outside, through an HTTP API or a Tha
 | Error monitoring and tracing | `app/observability/` | Sentry errors, degraded-AI warnings and Runner recoveries; traces to Honeycomb (OTLP), off until a key is set; on for the Render service, first trace seen 2026-11-03 |
 | Scorecard: 61 synthetic labelled cases (EN + TH) | `app/eval/` | Runs in CI; mock scores test the pipeline, not AI accuracy |
 | Intake API, durable job queue, single Runner with crash recovery, Thai web page | `app/api/`, `app/persistence/`, `app/services/`, `app/web/`, `app/serve.py` | Working (round 2), tested offline and as a container in CI; live on Render's free plan since 2026-11-01 |
-| Study guide, part 1: versioned topic catalog (11 topics, Thai and English) and verified resource library (17 links), with a weekly link check | `app/domains/study_guide/` | Built (roadmap 3.1); the workflow that answers people is **not built yet** (3.2) |
+| Study guide (`study_guide.v1`): versioned topic catalog (11 topics, Thai and English), verified resource library (17 links) with a weekly link check, and the five-step workflow | `app/domains/study_guide/` | Working with the offline mock AI through the API (roadmap 3.1, 3.2); **not yet run against real Claude**; no box on the web page yet (3.4) |
 | Human-review decisions, n8n intake, reviewer notifications | — | **Not built yet** (Milestone C in [architecture](docs/architecture.md)) |
 
 ## Try it
@@ -74,8 +88,8 @@ changes only docs, tests or CI files does not redeploy (`buildFilter` in `render
 forgets its cases when it sleeps or redeploys; a paid plan with a disk keeps them.
 
 **On GitHub, no local setup needed:**
-- *Actions → Core logic tests* runs every test on Python 3.10 and 3.12, plus both demos and the scorecard.
-  The scorecard table appears on the run page. The eval gate then compares every case's answer with
+- *Actions → Core logic tests* runs every test on Python 3.10 and 3.12, plus the demos and the scorecard.
+  The scorecard table and the study guide's example answers appear on the run page. The eval gate then compares every case's answer with
   `tests/baselines/shadow_eval_mock.json` and fails on any change.
 - *Actions → Service container* checks `render.yaml`, builds the same container as Render, submits cases
   over HTTP, restarts it and checks that nothing was lost.
@@ -90,10 +104,11 @@ forgets its cases when it sleeps or redeploys; a paid plan with a disk keeps the
 
 **Locally (Python 3.10+):**
 ```bash
-python -m unittest discover -s tests -v        # 198 tests
+python -m unittest discover -s tests -v        # 230 tests
 python -m examples.case_triage_demo            # v1 rules, one synthetic case
 python -m examples.case_triage_shadow_demo     # v2 shadow mode, three synthetic cases (offline mock AI)
 python -m app.eval.triage_shadow_eval          # scorecard on 61 synthetic cases
+python -m examples.study_guide_demo            # the study guide's answers to four synthetic requests
 NEURON_FLOW_ACCESS_KEY=<16+ characters> python -m app.serve   # API + web page on http://localhost:8000
 ```
 With `NEURON_FLOW_LLM_PROVIDER=anthropic` and `ANTHROPIC_API_KEY` set, the same commands use Claude.
@@ -120,7 +135,7 @@ most 1 MiB. The agent `version` is frozen into each job, so an old job refuses t
 | [Intake API, queue, Runner and web page](docs/intake_queue.md) | Round 2: how a case flows from outside, recovery rules, API reference, Render setup |
 | [Sentry error reporting](docs/observability_sentry.md) | What gets reported, privacy rules, alerts |
 | [Tracing to Honeycomb](docs/observability_tracing.md) | One trace per case: what a span carries and never carries, setup in Render, how it is checked |
-| [Study guide](docs/study_guide.md) | The topic catalog and verified resource library (roadmap 3.1): file format, checks, versioning, the weekly link check |
+| [Study guide](docs/study_guide.md) | `study_guide.v1`: the workflow and its answer, failure handling, the mock's limits; the topic catalog and verified library, the weekly link check |
 | [Funding readiness pack](docs/funding/README.md) | Internal evidence register; not a submitted application |
 | [Evidence notes](docs/evidence/2026-11-03-render-operations.md) | Dated measurements; the first one covers Render operations (graceful stops, deploy filter, cold start) |
 
@@ -133,6 +148,8 @@ most 1 MiB. The agent `version` is frozen into each job, so an old job refuses t
 - All test data is synthetic. Mock AI scores are inflated by design and are not evidence of AI accuracy.
 - Masking personal data before AI calls is pattern-based; it lowers the risk but does not make real data safe.
 - The real Claude API has not been called yet, so there are no accuracy, latency or cost claims for Claude.
+- The study guide's mock AI is a keyword simulation: it cannot read a new metaphor, so its answers prove the
+  workflow runs, not that it understands people. That is measured in roadmap 3.3.
 
 ## Origin
 

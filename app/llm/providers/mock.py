@@ -7,6 +7,11 @@ Its "accuracy" says nothing about how a real model would perform.
 Test scenarios (``mock_scenario`` in the step params) simulate provider
 behaviour on chosen attempts, e.g. ``{"kind": "transient", "attempts": [1]}``
 fails the first attempt and answers normally afterwards.
+
+Each prompt needs its own simulation: the triage prompt uses the keyword answer below, and a domain
+registers the simulation of its own prompts with :func:`register_simulator` (the study guide does, in
+``app.domains.study_guide.mock_answers``). A prompt without one fails loudly instead of getting an answer
+shaped for another prompt.
 """
 
 import json
@@ -16,7 +21,8 @@ from neuron_flow import SpecError
 
 from ..errors import LLMConfigError, LLMTransientError
 
-SCENARIO_KINDS = ("keyword", "fixed", "transient", "invalid_output", "malformed", "declined", "config_error")
+SCENARIO_KINDS = ("keyword", "fixed", "answer", "transient", "invalid_output", "malformed", "declined",
+                  "config_error")
 _ORDER = ("access", "upload", "billing")
 KEYWORDS = {
     "access": ("password", "passcode", "sign in", "sign-in", "signin", "log in", "log-in", "login",
@@ -42,6 +48,12 @@ def validate_scenario(scenario):
         for key in ("confidence", "rationale"):
             if key in scenario and not isinstance(scenario[key], str):
                 raise SpecError(f"mock_scenario {key} must be text")
+    elif scenario["kind"] == "answer":  # any prompt: the exact answer fields, as text
+        allowed |= {"answer"}
+        answer = scenario.get("answer")
+        if (not isinstance(answer, dict) or not answer
+                or not all(isinstance(k, str) and isinstance(v, str) for k, v in answer.items())):
+            raise SpecError("An answer mock_scenario needs an answer object of text fields")
     if set(scenario) - allowed:
         raise SpecError("mock_scenario has unsupported fields")
     attempts = scenario.get("attempts")
@@ -72,6 +84,18 @@ def keyword_answer(case_text):
             "rationale": "Keyword simulation (not an AI model): matched " + ", ".join(matched[category]) + "."}
 
 
+_SIMULATORS = {"triage_classify_v1": lambda prompt, text: keyword_answer(text)}
+
+
+def register_simulator(prompt_id, simulate):
+    """Register ``simulate(prompt, text) -> answer dict`` for one prompt id. Registering the same function
+    again is a no-op; a different one for the same prompt is refused."""
+    known = _SIMULATORS.get(prompt_id)
+    if known is not None and known is not simulate:
+        raise ValueError(f"A different mock simulation is already registered for prompt {prompt_id}")
+    _SIMULATORS[prompt_id] = simulate
+
+
 def complete(config, prompt, case_text, *, attempt=1, scenario=None):
     scenario = validate_scenario(scenario or {"kind": "keyword"})
     applies = "attempts" not in scenario or attempt in scenario["attempts"]
@@ -92,8 +116,13 @@ def complete(config, prompt, case_text, *, attempt=1, scenario=None):
         text = json.dumps({"category": scenario["category"], "confidence": scenario.get("confidence", "high"),
                            "rationale": scenario.get("rationale", "Fixed answer from a test scenario (mock).")},
                           ensure_ascii=False)
+    elif kind == "answer":
+        text = json.dumps(scenario["answer"], ensure_ascii=False)
     else:
-        text = json.dumps(keyword_answer(case_text), ensure_ascii=False)
+        simulate = _SIMULATORS.get(prompt.id)
+        if simulate is None:
+            raise LLMConfigError(f"The mock provider has no simulation for prompt {prompt.id}")
+        text = json.dumps(simulate(prompt, case_text), ensure_ascii=False)
     request_chars = len(prompt.system) + len(prompt.user_message(case_text))
     return {"text": text, "stop_reason": stop_reason, "served_model": config.model,
             "usage": {"input_tokens": max(1, math.ceil(request_chars / 4)),

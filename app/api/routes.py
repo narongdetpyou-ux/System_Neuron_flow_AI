@@ -355,7 +355,7 @@ class ApiApp:
             view["plan"] = plan_view(job["spec"]) if job["spec"] else None
             view["result"] = job["result"]
         else:
-            view["summary_preview"] = case.get("summary", "")[:90]
+            view["summary_preview"] = (case.get("summary") or case.get("message") or "")[:90]
         return view
 
 
