@@ -15,7 +15,9 @@ trusted agents in bounded child processes, retries, recovers after a crash and w
 - a scorecard on 61 synthetic cases;
 - Sentry reporting, and tracing to Honeycomb (one trace per case; off until a key is set);
 - since round 2, an HTTP API, a durable job queue, a single Runner with crash recovery and a Thai web page,
-  shipped as one container for Render.
+  shipped as one container for Render;
+- the first part of a second domain, the study guide: a versioned topic catalog and a verified resource
+  library with a weekly link check (roadmap 3.1). The workflow that uses them is not built yet.
 
 All data is synthetic. Milestones A, A2 and B are done.
 
@@ -27,7 +29,8 @@ Read in this order when you need depth:
 4. Feature docs: [intake_queue.md](docs/intake_queue.md) (API, queue, Runner, web page, Render setup),
    [case_triage_v2_shadow.md](docs/case_triage_v2_shadow.md) (the AI second opinion),
    [observability_sentry.md](docs/observability_sentry.md),
-   [observability_tracing.md](docs/observability_tracing.md) (traces to Honeycomb).
+   [observability_tracing.md](docs/observability_tracing.md) (traces to Honeycomb),
+   [study_guide.md](docs/study_guide.md) (the topic catalog, the resource library and the link check).
 
 ## 2. Working with the owner (read this first)
 
@@ -108,7 +111,7 @@ If a task seems to need breaking a rule:
 ## 4. Checking your work
 
 ```bash
-python -m unittest discover -s tests -v        # all tests (169 on 2026-11-03); Python 3.10–3.13
+python -m unittest discover -s tests -v        # all tests (198 on 2026-11-05); Python 3.10–3.13
 python -m examples.case_triage_demo            # v1 rules, one synthetic case
 python -m examples.case_triage_shadow_demo     # v2 shadow mode with the offline mock AI
 python -m app.eval.triage_shadow_eval --compare-with tests/baselines/shadow_eval_mock.json  # scorecard + eval gate
@@ -132,6 +135,10 @@ GitHub Actions (the owner can open these; the first three run on every push and 
 - *Secret scan* (`secret-scan.yml`) runs gitleaks over every commit of every branch on every push and pull
   request, with the rules in `.github/gitleaks.toml`. Reviewed findings are listed with a reason in
   `.github/.gitleaksignore`; a second pass fails if an entry there is no longer found.
+- *Study library link check* (`study-links.yml`) opens every link in the study-guide library every Monday,
+  by hand, and on every push or pull request that changes `app/domains/study_guide/`. It fails on a broken
+  link, warns on a moved or bot-blocked one, and never edits the library. This session cannot reach most
+  of those sites, so read this check's summary instead of fetching the links yourself.
 - *Shadow eval with Claude (manual)* runs the scorecard against real Claude and needs the repository secret
   `ANTHROPIC_API_KEY`.
 
@@ -173,6 +180,7 @@ Notes for cloud sessions (claude.ai/code):
 |---|---|
 | `neuron_flow/` | Core (rule 1) |
 | `app/domains/case_triage/` | v1 rules, the input contract, the v2 shadow agents and workflow |
+| `app/domains/study_guide/` | the study guide's topic catalog and verified resource library (`catalog/*_v1.json`), their checks and hash (`library.py`) and the link check (`link_check.py`); no `.md` files here, because the Render build filter ignores them |
 | `app/llm/` | AI gateway, prompt library (prompt + answer schema, one hash), personal-data masking, mock and Claude providers |
 | `app/eval/` | scorecard and the 61 labelled synthetic cases |
 | `app/observability/sentry.py` | Sentry reporting: step failures, degraded AI, Runner recoveries |
@@ -254,6 +262,9 @@ Notes for cloud sessions (claude.ai/code):
   - The Render service `neuron-flow` exists and is live at https://neuron-flow.onrender.com (free plan,
     first deploy 2026-11-01). Use the Render connector to read its deploys, events and logs; this
     session's network may not reach `onrender.com` or `render.com` directly.
+  - The study guide's topic catalog (11 topics) and verified resource library (17 links), with checks, one
+    SHA-256 over both files for agent versions, and a weekly link check in CI (roadmap 3.1, the PR for
+    branch `claude/sharp-hamilton-z9mfnu`).
   - The web page's chat layout from the owner's "Nocturne" mockup (PR #18, roadmap 1.6; live and
     owner-tested on 2026-11-03). Parts of the mockup that would break the rules in §3 (key and provider
     fields, editing steps, a "never ask" policy) are shown read-only or left out on purpose; see
@@ -261,10 +272,11 @@ Notes for cloud sessions (claude.ai/code):
 - **Not done yet:**
   - Real Claude has never been run.
   - Review decisions and per-person identity (Milestone C) are not built.
+  - The `study_guide.v1` workflow, its scorecard and its page (roadmap 3.2–3.4) are not built.
   - The rest of the roadmap is open.
 - **Next:** [docs/ROADMAP.md](docs/ROADMAP.md), the first item that is not ✅ and whose needs are met.
   - Waiting on the owner: 0.2 and 1.4 (D1, paid Render plan), 0.3 and 0.4 (D2, Claude API key).
-  - Buildable now without an owner decision: Phase 2 (2.1 first) and Phase 3 (3.1 first). The rest of 7.1
-    (who can read the AI key) needs an ADR first.
-  - The owner decides which of these comes first; ask before starting a new phase.
+  - Buildable now without an owner decision: Phase 3, 3.2 next (the owner chose Phase 3 before Phase 2 on
+    2026-11-05), and Phase 2 (2.1 first). The rest of 7.1 (who can read the AI key) needs an ADR first.
+  - The owner decides which phase comes next; ask before starting a new phase.
 - Keep this section and the ROADMAP status table true in every PR.

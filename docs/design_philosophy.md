@@ -65,7 +65,9 @@ The rest of this file is in Thai, the owner's working language.
 
 ## สถานะเทียบกับหลัก (1 พ.ย. 2026)
 
-ตรวจซ้ำเมื่อ 3 พ.ย. 2026 รายการข้างล่างยังเหมือนเดิม งานที่ทำเพิ่ม (คิวรับเคส หน้าเว็บแบบแชท การยกเลิกเคส และรหัสคำขอ) ทำให้ระบบแน่นขึ้น แต่ยังไม่ได้ปิดรายการ "ยังขาด" ข้อไหน รายการเหล่านั้นอยู่ในขั้น 3–4 ของ [แผนงาน](ROADMAP.md) ซึ่งยังไม่เริ่ม
+ตรวจซ้ำเมื่อ 3 พ.ย. 2026 รายการข้างล่างยังเหมือนเดิม งานที่ทำเพิ่ม (คิวรับเคส หน้าเว็บแบบแชท การยกเลิกเคส และรหัสคำขอ) ทำให้ระบบแน่นขึ้น แต่ยังไม่ได้ปิดรายการ "ยังขาด" ข้อไหน รายการเหล่านั้นอยู่ในขั้น 3–4 ของ [แผนงาน](ROADMAP.md)
+
+อัปเดต 5 พ.ย. 2026: เริ่มขั้น 3 แล้ว คลังแหล่งความรู้ที่ตรวจแล้ว (17 แหล่ง) และสมุดหัวข้อที่มีเวอร์ชัน (11 หัวข้อ) สร้างเสร็จในขั้น 3.1 ([study_guide.md](study_guide.md)) แต่ตัวผู้ช่วยที่ใช้คลังนี้ตอบคน (`study_guide.v1`) ยังไม่ได้สร้าง
 
 - **มีแล้ว (รอบแรก, PR #9):**
   - ถอดความหมายแบบแคบ คือข้อความเคส → 4 หมวด
@@ -80,7 +82,7 @@ The rest of this file is in Thai, the owner's working language.
   - คำตอบ "นอกกรอบ" ที่ชัดเจน พร้อมเคสทดสอบนอกกรอบ
   - การถามกลับเมื่อข้อมูลไม่พอ
   - คำอธิบายแบบหลายชั้น
-  - การตอบสนองแรกแบบแนะนำแหล่งเรียน (`study_guide.v1`) และคลังแหล่งความรู้ที่ตรวจแล้ว
+  - การตอบสนองแรกแบบแนะนำแหล่งเรียน (`study_guide.v1`); คลังแหล่งความรู้ที่ตรวจแล้วมีแล้ว (ขั้น 3.1)
 
 ## แผนสร้าง `study_guide.v1` (ข้อเสนอ ยังไม่ได้สร้าง)
 
@@ -95,15 +97,19 @@ The rest of this file is in Thai, the owner's working language.
 
 ## แหล่งศึกษาเริ่มต้น
 
+ตารางนี้คือรายการตั้งต้นของคลังแหล่งเรียน ตั้งแต่ขั้น 3.1 ลิงก์ที่ระบบใช้ได้จริงอยู่ในคลัง
+`app/domains/study_guide/catalog/resources_v1.json` ซึ่งตรวจแล้วและถูกตรวจลิงก์ซ้ำทุกสัปดาห์
+(ดู [study_guide.md](study_guide.md)) ทุกลิงก์ในตารางนี้ต้องอยู่ในคลังด้วย ชุดทดสอบตรวจข้อนี้ให้
+
 | เรื่อง | แหล่ง |
 |---|---|
-| แผนที่หัวข้อและลำดับการเรียน (ภาพรวม) | roadmap.sh: AI Engineer, AI Agents, Prompt Engineering, System Design https://roadmap.sh/ |
+| แผนที่หัวข้อและลำดับการเรียน (ภาพรวม) | roadmap.sh: AI Engineer https://roadmap.sh/ai-engineer · AI Agents https://roadmap.sh/ai-agents · Prompt Engineering https://roadmap.sh/prompt-engineering · System Design https://roadmap.sh/system-design |
 | เรียนพื้นฐานเป็นภาษาไทย ฟรี | Thai MOOC (มหาวิทยาลัยไซเบอร์ไทย) https://thaimooc.ac.th/ |
-| ออกแบบ AI ให้เรียบง่ายและมีจุดตรวจ | Anthropic, Building effective agents https://www.anthropic.com/engineering/building-effective-agents |
+| ออกแบบ AI ให้เรียบง่ายและมีจุดตรวจ | Anthropic, Building effective agents https://www.anthropic.com/research/building-effective-agents |
 | ขยายความแบบค่อยเปิด (progressive disclosure) | Anthropic, Equipping agents for the real world with Agent Skills https://www.anthropic.com/research/equipping-agents-for-the-real-world-with-agent-skills |
 | คุมไม่ให้หลุดกรอบ | Rebedea et al. (2023) NeMo Guardrails https://arxiv.org/abs/2310.10501 |
 | วัดการตรวจจับเรื่องนอกกรอบ | Larson et al. (2019) CLINC150 https://aclanthology.org/D19-1131/ · ข้อมูล https://github.com/clinc/oos-eval |
-| AI กับคำเปรียบเปรยและเจตนา | LLMs for Subjective Language Understanding: A Survey (2025) https://arxiv.org/abs/2508.07959 · Sanchez-Bayona & Agerri (2025) Metaphor and LLMs https://aclanthology.org/2025.findings-acl.898/ |
+| AI กับคำเปรียบเปรยและเจตนา | Large Language Models for Subjective Language Understanding: A Survey (2025) https://arxiv.org/abs/2508.07959 · Sanchez-Bayona & Agerri (2025) Metaphor and LLMs https://aclanthology.org/2025.findings-acl.898/ |
 | จัดลำดับเส้นทางการเรียน | Fuster-López et al. (2024) Learning path recommender systems in e-learning https://arxiv.org/abs/2406.10245 |
 | อธิบายให้มือใหม่ไม่ท่วมท้น | Cooper, Cognitive load theory as an aid for instructional design (AJET) https://ajet.org.au/index.php/AJET/article/download/2322/1146/7314 |
 | กันคำสั่งแอบแฝงในข้อความผู้ใช้ | Claude Docs, Mitigate jailbreaks and prompt injections https://platform.claude.com/docs/en/test-and-evaluate/strengthen-guardrails/mitigate-jailbreaks |

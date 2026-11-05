@@ -1,0 +1,29 @@
+name: Study library link check
+# Opens every link in the study-guide library (app/domains/study_guide/catalog/resources_v1.json, roadmap 3.1)
+# and fails when one is broken. It never edits the library; a person decides what to change. The run page's
+# summary lists every link with the title the site answered with.
+# Runs every Monday, by hand, and on every push or pull request that changes the study guide, so a new link
+# is checked before it is merged. GitHub's runners can reach the internet; Claude Code sessions mostly cannot.
+on:
+  schedule:
+    - cron: "23 2 * * 1"  # Mondays 02:23 UTC (09:23 in Bangkok)
+  workflow_dispatch:
+  push:
+    paths:
+      - "app/domains/study_guide/**"
+      - ".github/workflows/study-links.yml"
+  pull_request:
+    paths:
+      - "app/domains/study_guide/**"
+      - ".github/workflows/study-links.yml"
+jobs:
+  links:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - name: Check every link in the study library
+        run: python -m app.domains.study_guide.link_check --summary "$GITHUB_STEP_SUMMARY"
