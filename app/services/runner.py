@@ -40,7 +40,7 @@ from app.observability import SentryReporter, Tracing, init_sentry, job_spans, r
 from app.persistence import TERMINAL, QueueStore
 from app.settings import Settings
 
-from .results import AI_STEP, CORE_FINAL, step_events, summarize
+from .results import CORE_FINAL, step_events, summarize
 from .workflows import CATALOG, agents_for
 
 HEARTBEAT_S = 2.0
@@ -202,7 +202,9 @@ class Runner:
             if job["spec"] is not None:
                 events = runtime.synapse.events_for("monitor", job_id)
                 job = dict(job, spec=_with_core_versions(runtime, job_id, job["spec"]))
-            self.tracing.export(job_spans(job, self.store.admission(job_id), events, ai_step=AI_STEP))
+            workflow = self.catalog.get(job["workflow_type"])
+            ai_step = getattr(workflow, "ai_step", None)
+            self.tracing.export(job_spans(job, self.store.admission(job_id), events, ai_step=ai_step))
         except Exception as exc:  # tracing never changes a job; only the type is logged, never a message
             log.warning("runner: could not build the trace of %s (%s)", job_id, type(exc).__name__)
 

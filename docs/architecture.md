@@ -1,7 +1,7 @@
 # System Neuron Flow AI — Architecture
 
-**Current as of 2026-11-05** (`main` @ `83d18de`, after tracing (PRs #30, #31), plus the study-guide library of
-roadmap 3.1 on its branch; first written for
+**Current as of 2026-11-05** (`main` @ `921563c`, after the study-guide library (PR #32), plus the
+`study_guide.v1` workflow of roadmap 3.2 on its branch; first written for
 round 2, PR #11, on top of `59c6889`). This file replaces
 "Architecture Review & Revised Architecture v2" (31 Oct 2026). That review's dated code observations were
 re-checked against the current code and folded into §3. The AI design comes from the v3 roadmap, and its
@@ -39,7 +39,7 @@ flowchart TD
     subgraph L2[Layer 2: Domains, agents, AI gateway]
       TRI[case_triage v1 rules + v2 shadow mode - built]
       LLM[app/llm gateway: prompt library, mock + Claude - built]
-      SG[study_guide: topic catalog + verified library - built; workflow planned]
+      SG[study_guide.v1: topic catalog, verified library and workflow - built; page planned]
     end
     subgraph L1[Layer 1: Core neuron_flow - one planned fix since extraction]
       CORE[Dendrite -> Synapse -> Axon -> Soma -> AxonTerminal]
@@ -51,7 +51,7 @@ flowchart TD
 | Layer | Responsibility | Built | Planned |
 |---|---|---|---|
 | 1 Core `neuron_flow/` | Spec validation, static DAG scheduling, bounded child processes, retries, recovery, events, verified receipts, integrity, case memory, candidate gate. No HTTP, business rules, credentials or user authorisation. | All of it; changed once since commit `09100f7`: the telemetry fix (roadmap 1.1, PR #21) | No further Core change planned |
-| 2 Domains & agents `app/domains/`, `app/llm/` | Input contracts, trusted agent registry, fixed DAG templates, validators, AI calls | case_triage v1 and v2, AI gateway; the study guide's versioned topic catalog and verified resource library with a weekly link check (roadmap 3.1) | The `study_guide.v1` workflow, a second unrelated domain (3.2) |
+| 2 Domains & agents `app/domains/`, `app/llm/` | Input contracts, trusted agent registry, fixed DAG templates, validators, AI calls | case_triage v1 and v2, AI gateway; `study_guide.v1`, a second unrelated domain: versioned topic catalog, verified resource library with a weekly link check, and the five-step workflow (roadmap 3.1, 3.2) | The study guide's scorecard (3.3) |
 | 3 Application services | Admission, idempotency, the only Runtime owner, crash reconciliation, review decisions, results, measurement, monitoring | Scorecard (`app/eval/`), Sentry reporting (`app/observability/`), admission queue (`app/persistence/`), admission, Runner with reconciliation, results (`app/services/`) | Review ledger, artifact store (Milestone C) |
 | 4 Interfaces | Authentication, request validation, status pages, human decisions | GitHub Actions workflows (tests, scorecard, Sentry check, container check, manual Claude run); HTTP API and web page (`app/api/`, `app/web/`) behind one shared access key, started by `app/serve.py` in one container for Render (`render.yaml`; Railway also configured) | n8n intake and notifications, per-reviewer identity, review decisions |
 
@@ -107,6 +107,15 @@ Each row was re-checked against the current code.
   model, the prompt or the masking rules therefore creates a new version, and an old job refuses to run on it.
 - **Shadow mode:** the rules stay official. The AI adds a second opinion, and a disagreement raises review to
   elevated. Every proposal stays `PENDING_HUMAN_REVIEW`.
+- **Prompts completed from versioned data (ADR-019):** the study guide completes its prompt files before
+  each call. Detection gets one line per catalog topic, and its answer is limited to the catalog's ids plus
+  `out_of_scope`; the explanation gets one note field per step that code chose. The file keeps its own
+  hash, and the agent version adds the library tag (`…;library=v1@sha256:…`), so a changed catalog is a new
+  version too.
+- **Informational answers (ADR-018):** a study guide decides nothing about anyone and sends nothing outside,
+  so it ends `COMPLETED` without review. The AI may only pick a catalog topic and write short notes; code
+  picks and orders the resources and inserts every URL from the verified library, and AI text containing a
+  link is refused.
 - **Monitoring:** failed steps send Sentry errors; degraded steps (`{"status": "unavailable"}`) send grouped
   warnings. With tracing on, every AI call is also a span with its model, tokens and latency (GenAI
   semantic conventions; [observability_tracing.md](observability_tracing.md)).
@@ -132,7 +141,8 @@ Each row was re-checked against the current code.
    changed) fails as `configuration_changed`; a job claimed `max_claims` times fails as
    `runner_attempts_exhausted`. A different spec is never submitted under an existing `job_id`.
 
-Application states: `QUEUED → RUNNING → COMPLETED | REVIEW_REQUIRED | FAILED | DELIVERY_FAILED` and
+Application states: `QUEUED → RUNNING → COMPLETED | REVIEW_REQUIRED | FAILED | DELIVERY_FAILED` (case triage
+always ends `REVIEW_REQUIRED`; the informational `study_guide.v1` ends `COMPLETED`, ADR-018) and
 `QUEUED → CANCELLED` (built; cancel only before the claim, roadmap 1.3), then
 `REVIEW_REQUIRED → APPROVED → (linked phase-B QUEUED)` or `REJECTED` (Milestone C).
 
@@ -160,6 +170,10 @@ Planned (Milestone C):
   session, a reason and the expected version.
 - `GET /v1/artifacts/{artifact_id}` is authorised access by id, never by a user-supplied path.
 
+Workflow types in the catalog (`app/services/workflows.py`): `case_triage.v2` (the page's default) and
+`case_triage.v1` with `{"case_id", "summary"}`, and `study_guide.v1` with `{"message"}` (4–500 characters;
+[study_guide.md](study_guide.md)).
+
 Requests never carry agent import paths, code, tenant ids or callbacks.
 
 ## 7. Code organisation
@@ -167,7 +181,8 @@ Requests never carry agent import paths, code, tenant ids or callbacks.
 ```text
 neuron_flow/                   Core runtime (one change since extraction: the telemetry fix)
 app/domains/case_triage/       v1 rules (agents.py, workflow.py), contracts.py, v2 shadow_agents.py, shadow_workflow.py
-app/domains/study_guide/       library.py (topic catalog + resource library: checks, SHA-256), link_check.py, catalog/*_v1.json
+app/domains/study_guide/       library.py (topic catalog + resource library: checks, SHA-256), link_check.py, catalog/*_v1.json;
+                               workflow.py, agents.py, planning.py, ai_prompts.py, mock_answers.py (study_guide.v1)
 app/llm/                       config, errors, gateway, prompts, redaction (personal-data masking), prompt_library/, providers/{mock, anthropic}
 app/eval/                      triage_shadow_eval.py, golden/case_triage_synthetic_v1.json (61 cases)
 app/observability/             sentry.py (step failures, degraded AI, Runner recoveries); tracing.py (OTLP/JSON exporter) and job_spans.py (a job's spans)
@@ -178,14 +193,14 @@ app/web/                       index.html, app.css, app.js: the Thai web page (c
 app/boot.py                    process 1 of the image: takes the data folder, drops root, becomes tini
 app/settings.py, app/serve.py  environment settings; the launcher (API + supervised Runner in one container)
 Dockerfile, render.yaml        the container and the Render Blueprint (railway.json kept for Railway)
-examples/                      case_triage_demo, case_triage_shadow_demo, sentry_smoke_test, service_smoke_test
-tests/                         198 tests: core, triage v1/v2, AI gateway, masking, scorecard, eval gate, Sentry, tracing, API, queue, Runner, HTTP, metrics, study library, link check
+examples/                      case_triage_demo, case_triage_shadow_demo, study_guide_demo, sentry_smoke_test, service_smoke_test
+tests/                         230 tests: core, triage v1/v2, AI gateway, masking, scorecard, eval gate, Sentry, tracing, API, queue, Runner, HTTP, metrics, study library, link check, study guide
 tests/baselines/               shadow_eval_mock.json: every case's answer with the mock AI (the eval gate's baseline)
 .github/workflows/             core-tests, service-container, tracing-check, secret-scan, sentry-smoke, study-links (weekly), shadow-eval-claude (manual)
 .github/gitleaks.toml          secret scan rules (gitleaks defaults + Sentry DSN + Honeycomb keys); .github/.gitleaksignore: reviewed findings
 .github/scripts/               check_render_blueprint.py: render.yaml structure, build filter, Render's schema; check_traces.py
 .github/otel/                  collector.yaml: the OpenTelemetry Collector that the tracing check sends to
-planned: review ledger and artifact store; the study_guide.v1 workflow (agents, prompts, catalog entry)
+planned: review ledger and artifact store; the study guide's scorecard and page (3.3, 3.4)
 ```
 
 ## 8. Architecture decisions (ADRs)
@@ -209,11 +224,17 @@ planned: review ledger and artifact store; the study_guide.v1 workflow (agents, 
 | 015 | Interrupted jobs resume only under the spec frozen at their first claim; any drift fails them as `configuration_changed` | In force (round 2) |
 | 016 | Until reviewer identity exists (Milestone C), the API is protected by one shared access key, with per-client limits on wrong keys | In force (round 2); to be replaced |
 | 017 | Tracing uses a small standard-library OTLP/HTTP JSON exporter, not the OpenTelemetry SDK. Job, step and AI spans are built after the job from durable records (queue record, Core step events, the AI view); only allow-listed ASCII attributes can be sent | In force (PR #30). Trade-off: no automatic instrumentation, no metrics or logs signals, and two modules (about 700 lines with comments) to maintain. Attribute names follow the semantic conventions, so the SDK can replace it without changing the data |
+| 018 | An informational workflow (today `study_guide.v1`) ends `COMPLETED` without human review. It may only answer with information from versioned data; it records no decision, changes nothing and sends nothing outside, and its validator refuses a `decision` field. Anything that decides about a person or acts outside still goes to review (rule 4) | In force (roadmap 3.2, PR #33). Trade-off: nobody checks an answer before the person reads it, so the answer must stay safe by construction (catalog topics only, at most 5 library links, code-inserted URLs, "out of scope" instead of guessing) and is measured in 3.3 |
+| 019 | A prompt file may be completed from versioned data before a call (`app.llm.prompts.specialize`): extra system lines, fixed choices for a text field, extra text fields. The file keeps its hash, and the agent version carries the data's own version next to it | In force (PR #33, the study guide's catalog). Trade-off: the exact prompt text is no longer one file to read, but it is a pure function of two versioned inputs and is rebuilt the same way for every attempt |
 
 ## 9. Acceptance gates
 
 **Met in round 1 (all automated):**
 - AI shadow mode was added with **zero Core changes**.
+- A second, unrelated domain (`study_guide.v1`, roadmap 3.2) runs on the same Core with **zero Core changes**
+  (PR #33: no file under `neuron_flow/` changed). Its gates are automated: answers use only library links and
+  at most 5 resources; out-of-scope answers list what the guide covers; an AI text with a link is refused;
+  a job frozen with another library is never answered.
 - Changing the model or prompt stops an old job from re-running.
 - Prompt injection (EN/TH) cannot pick a queue or make a decision.
 - An AI outage still lets the case reach review.
@@ -266,7 +287,7 @@ dashboard.
 | C | Two-phase review, decision ledger, n8n notifications | Open |
 | D | OpenTelemetry tracing, eval gates in CI | Done: the per-case eval gate (5.2), queue/run-time figures (5.3), Sentry, request ids, and tracing (5.1, PR #30), with the first trace seen in Honeycomb on 2026-11-03 |
 | E | Planner pattern (B), MCP server, second domain with zero Core changes | Open |
-| — | `study_guide.v1`: first-response study guide ([design_philosophy.md](design_philosophy.md), [study_guide.md](study_guide.md)) | Started: the topic catalog, the verified resource library and the weekly link check are built (roadmap 3.1); the workflow, its scorecard and the page are not (3.2–3.4) |
+| — | `study_guide.v1`: first-response study guide ([design_philosophy.md](design_philosophy.md), [study_guide.md](study_guide.md)) | Workflow built: the topic catalog, the verified resource library, the weekly link check (3.1, PR #32) and the five-step workflow in the catalog (3.2, PR #33), tested with the mock AI only; the scorecard and the page are not built (3.3, 3.4) |
 
 The order of the remaining work, with tasks, acceptance checks and owner decisions for each step, is in
 [ROADMAP.md](ROADMAP.md).
@@ -283,5 +304,7 @@ The order of the remaining work, with tasks, acceptance checks and owner decisio
   of them could read the AI key once it is set. Options and a recommendation are in ROADMAP 7.1.
 - The Sentry DSN that the smoke workflow carried until 2026-11-03 is still in the git history. It can only
   submit events; it must be revoked in Sentry before the repository is made public (ROADMAP 7.4).
+- The study guide has only run with the mock AI, a keyword simulation that cannot read a new metaphor.
+  Whether a real model maps everyday words and metaphors to the right topic is unmeasured until 3.3 and D2.
 - Live Claude results, security review, benchmarks and user studies do not exist yet. No document should
   claim them.

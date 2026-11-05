@@ -21,14 +21,15 @@ differs, this file and architecture.md win.
   - ถ้าสองฝ่ายเห็นไม่ตรงกัน เคสจะถูกยกให้คนดูก่อน
 - ถ้าเครื่องดับกลางทาง ระบบทำต่อได้ ส่งซ้ำก็ไม่เกิดงานซ้ำ
 - ยกเลิกเคสที่ยังรอคิวได้ และทุกคำขอมีรหัสคำขอ (request id) ไว้ไล่ดูใน log (ขั้น 1.2, 1.3)
-- ผ่านชุดทดสอบอัตโนมัติ 198 ข้อ และเปิดใช้ออนไลน์บน Render แล้ว ระบบปิดตัวอย่างเรียบร้อย และการแก้แค่เอกสารไม่ทำให้ Render ขึ้นเวอร์ชันใหม่ (ขั้น 0.1, 0.5)
+- ผ่านชุดทดสอบอัตโนมัติ 230 ข้อ และเปิดใช้ออนไลน์บน Render แล้ว ระบบปิดตัวอย่างเรียบร้อย และการแก้แค่เอกสารไม่ทำให้ Render ขึ้นเวอร์ชันใหม่ (ขั้น 0.1, 0.5)
 - หน้าเว็บเป็นแบบแชท: พิมพ์เคส ดูขั้นตอนก่อนส่ง กดยืนยัน แล้วติดตามใน Flow และประวัติเหตุการณ์ (ขั้น 1.6)
 - หน้าเว็บบอกว่ามีเคสรอกี่เคส เคสที่รอนานสุดรอมานานเท่าไร ปกติแต่ละเคสใช้เวลาเท่าไร และเคสที่ไม่สำเร็จล้มเพราะอะไร (ขั้น 5.3)
 - ถ้ามีคนแก้กฎหรือ prompt แล้วคำตอบของเคสทดสอบเคสไหนเปลี่ยน ช่องตรวจบน GitHub จะเป็นสีแดงและบอกว่าเคสไหนเปลี่ยนอะไร (ขั้น 5.2)
 - ก่อนส่งเคสให้ AI ระบบปิดข้อมูลส่วนตัวที่จับรูปแบบได้ (อีเมล เบอร์โทร เลขบัตรประชาชน เลขแบบบัตรเครดิต ตัวเลขยาว และชื่อที่มีคำนำหน้า) AI เห็นแค่ป้ายแทน เช่น [PHONE] และหน้าเว็บบอกว่าปิดอะไรไปกี่จุด (ขั้น 7.1)
 - ทุกครั้งที่มีการส่งโค้ด GitHub สแกนหาคีย์หรือรหัสลับที่หลุดในประวัติโค้ดทั้งหมด และที่อยู่ Sentry (DSN) ไม่อยู่ในไฟล์แล้ว อ่านจากความลับ (secret) เท่านั้น (ขั้น 7.4 ส่วนเตรียมการ)
 - ส่งเส้นทางการทำงาน (trace) ของทุกเคสไป Honeycomb แล้ว: เห็นว่าแต่ละขั้นใช้เวลาเท่าไร ลองกี่ครั้ง และ AI ใช้ token เท่าไร โดยไม่ส่งข้อความเคสหรือคำตอบของ AI เปิดใช้บน Render แล้ว และเห็นเส้นทางแรกใน Honeycomb เมื่อ 4 พ.ย. 00:23 น. (ขั้น 5.1)
-- มีคลังแหล่งเรียนที่ตรวจแล้ว 17 แหล่งใน 11 หัวข้อ ทุกแหล่งบอกว่าใช้ทำอะไร ระดับไหน ภาษาอะไร และควรเน้นส่วนไหน และ GitHub เปิดทุกลิงก์ทุกวันจันทร์เพื่อจับลิงก์เสีย ผู้ช่วยแนะนำแหล่งเรียนที่ใช้คลังนี้ยังไม่ได้สร้าง (ขั้น 3.1)
+- มีคลังแหล่งเรียนที่ตรวจแล้ว 17 แหล่งใน 11 หัวข้อ ทุกแหล่งบอกว่าใช้ทำอะไร ระดับไหน ภาษาอะไร และควรเน้นส่วนไหน และ GitHub เปิดทุกลิงก์ทุกวันจันทร์เพื่อจับลิงก์เสีย (ขั้น 3.1)
+- ผู้ช่วยแนะนำแหล่งเรียนทำงานได้แล้วผ่าน API: พิมพ์เรื่องที่อยากรู้ด้วยคำธรรมดา ได้แหล่งเรียนไม่เกิน 5 แหล่งเรียงพื้นฐานก่อน ทุกลิงก์มาจากคลัง ถ้าเรื่องอยู่นอกกรอบก็บอกตรง ๆ ว่าช่วยเรื่องไหนได้ ยังใช้แค่ AI จำลอง และยังไม่มีช่องบนหน้าเว็บ (ขั้น 3.2)
 
 **ลำดับต่อจากนี้** แต่ละขั้นจบด้วยสิ่งที่คุณลองเองได้
 
@@ -37,7 +38,7 @@ differs, this file and architecture.md win.
 | 0 | เปิดใช้ออนไลน์บน Render และวัดผล Claude จริงครั้งแรก | ใส่เคสบนหน้าเว็บจริง และอ่านผลวัดของ Claude | ออนไลน์แล้ว ที่เหลือรอคุณตัดสินใจเรื่องเงิน (D1 แผน Render, D2 API key ของ Claude) |
 | 1 | เก็บงานเล็ก ๆ ให้ระบบแน่นขึ้น | ยกเลิกเคสที่ยังรอคิวได้ | เสร็จ ยกเว้น 1.4 (สำรองข้อมูล) ที่ต้องใช้แผน Render แบบเสียเงิน |
 | 2 | ให้คนรีวิวได้จริง: ผู้รีวิวมีรหัสของตัวเอง กดอนุมัติหรือไม่อนุมัติได้ และ n8n แจ้งเตือน | กล่อง "รอรีวิว" บนหน้าเว็บ และข้อความแจ้งเตือน | ยังไม่เริ่ม |
-| 3 | ผู้ช่วยแนะนำแหล่งเรียน (`study_guide.v1`) ตามหลักปรัชญาของคุณ | พิมพ์เรื่องที่อยากรู้ด้วยคำธรรมดา แล้วได้แหล่งเรียนไม่เกิน 5 แหล่งพร้อมลำดับการเรียน | เริ่มแล้ว (คุณเลือกขั้นนี้ก่อนขั้น 2 เมื่อ 5 พ.ย.): 3.1 คลังแหล่งเรียนและการตรวจลิงก์ทุกสัปดาห์ ทำแล้ว; 3.2 ตัวผู้ช่วยเป็นงานถัดไป |
+| 3 | ผู้ช่วยแนะนำแหล่งเรียน (`study_guide.v1`) ตามหลักปรัชญาของคุณ | พิมพ์เรื่องที่อยากรู้ด้วยคำธรรมดา แล้วได้แหล่งเรียนไม่เกิน 5 แหล่งพร้อมลำดับการเรียน | เริ่มแล้ว (คุณเลือกขั้นนี้ก่อนขั้น 2 เมื่อ 5 พ.ย.): 3.1 คลังแหล่งเรียน และ 3.2 ตัวผู้ช่วย ทำแล้ว (ลองผ่าน API และดูตัวอย่างคำตอบใน Actions ได้); 3.3 ชุดข้อสอบและ 3.4 ช่องบนหน้าเว็บ ยังไม่ทำ |
 | 4 | ช่องคุยภาษาธรรมดา: ระบบเข้าใจว่าคุณขออะไร บอกตรง ๆ เมื่อเรื่องอยู่นอกกรอบ และถามกลับ 1 คำถามเมื่อข้อมูลไม่พอ | คุยกับระบบได้เลย ไม่ต้องเลือกประเภทงานเอง | ยังไม่เริ่ม (ต้องรอขั้น 3) |
 | 5 | ติดตามเส้นทางของแต่ละงาน (เวลา token จุดที่ช้า) และด่านตรวจผลรายเคส | ตัวเลขคิวและเวลาบนหน้าเว็บ ช่องตรวจบน PR แล้วต่อด้วยเส้นทางงานใน Honeycomb | เสร็จแล้วทั้ง 5.1, 5.2 และ 5.3; เส้นทางงานแรกเข้า Honeycomb เมื่อ 4 พ.ย. 00:23 น. |
 | 6 | AI วางแผนงานหลายขั้น ระบบตรวจแผนก่อนรัน และเครื่องมืออื่นเรียกใช้ผ่าน MCP ได้ | สั่งงานจากแอป Claude ได้ | ยังไม่เริ่ม (ต้องรอขั้น 2–4) |
@@ -99,7 +100,7 @@ Marks: ✅ done · 🟡 built or partly checked (the status says what is left) �
 | 2.7 | Artifact store with hash checks | ⬜ when needed | — |
 | 2.8 | Measure rules vs AI against reviewer labels | ⬜ | 2.2, 0.3 |
 | 3.1 | Topic catalog and verified resource library | ✅ PR #32; links checked by *Study library link check* on the PR ([evidence note](evidence/2026-11-05-study-library-links.md)); the weekly run starts after the merge | — |
-| 3.2 | `study_guide.v1` workflow | ⬜ | 3.1 |
+| 3.2 | `study_guide.v1` workflow | ✅ PR #33; mock AI only, no live Claude run yet (D2) | 3.1 |
 | 3.3 | Study-guide evaluation set and scorecard | ⬜ | 3.2 |
 | 3.4 | Study guide on the web page | ⬜ | 3.2 |
 | 4.1 | The frame: a versioned catalog of what the system can do | ⬜ | 3.2 |
@@ -627,6 +628,36 @@ detect_topic (AI) ─► pick_resources (rules) ─► build_path (rules) ─►
   - the mock provider supports it, so every test runs offline;
   - it is registered in the workflow catalog;
   - a study guide is informational, so its job ends `COMPLETED` without review. Write this decision down.
+- **Status (2026-11-05): built in PR #33.** Details: [study_guide.md](study_guide.md#the-workflow-roadmap-32).
+  - The five steps run on the unchanged Core: `detect_topic` (AI) → `pick_resources` → `build_path` →
+    `explain` (AI) → `answer`. The last step's id is `answer` (agent `study.prepare`), so the page can tell
+    it apart from triage's `prepare`.
+  - *Changed when it was built:* "Thai first" became "the person's language first". An English request got
+    a Thai course first, which helps nobody, and a Thai request still gets Thai resources first. The topic's
+    own resources take at most 3 of the 5 places; the rest go to prerequisite topics, nearest first. A
+    prerequisite topic that gets no place is named in the answer.
+  - Detection also returns the message's language, so the answer (labels, purposes, the confirm question)
+    is in Thai or English.
+  - The prompts are completed from the library before each call (ADR-019). Detection may only answer a
+    catalog id or `out_of_scope`; the explanation gets one note field per step. The AI is never shown a URL,
+    and any AI text with a link is refused (an off-contract answer, retried, then the fallback).
+  - Failures: detection unavailable → `not_understood`, which says so and lists the topics; explanation
+    unavailable → the library's own text; a bad key → the step fails loudly. A job frozen with another
+    library fails with `LibraryChanged`, and Core refuses changed agent versions.
+  - The decision to end `COMPLETED` is ADR-018 in architecture.md.
+  - In the catalog as `study_guide.v1`, so the API accepts `{"message": …}`. The page's settings tab lists its
+    steps; the page has no box for it yet (3.4).
+  - `examples/study_guide_demo.py` runs in *Core logic tests* and shows four answers on the run page.
+  - The mock provider now has one simulation per prompt. The study guide's mock counts words taken from
+    the catalog examples (all 66 map to their own topic), so it cannot read a new metaphor: the owner's
+    "บรรณารักษ์ที่รู้ใจ" is out of scope with the mock. That is a limit of the simulation, and 3.3 and a live
+    Claude run (D2) will measure the real thing.
+  - Known gap: the `explain` AI call has a step span but no `chat` span in traces yet.
+- **Owner test (ไทย):**
+  1. เปิด GitHub → Actions → *Core logic tests* → รันล่าสุดของ PR นี้ → Summary
+  2. หัวข้อ "ผู้ช่วยแนะนำแหล่งเรียน: ตัวอย่างคำตอบ" ต้องมีคำตอบ 4 ข้อ ข้อแรกได้แผน 5 แหล่ง ข้อ "สูตรต้มยำ"
+     ต้องขึ้น "อยู่นอกกรอบ" พร้อมรายการหัวข้อที่ช่วยได้ และทุกลิงก์ต้องเป็นลิงก์ในคลัง
+  3. หลัง merge เปิดหน้าเว็บ → แท็บ "ตั้งค่า" ต้องเห็นกล่อง "ผู้ช่วยแนะนำแหล่งเรียน" ที่มี 5 ขั้นตอน
 
 ### 3.3 Evaluation set and scorecard
 
@@ -1032,3 +1063,6 @@ workflow types.
   `kind` and `access` per resource were added to the planned fields; the link check also runs on every
   change to the study guide, and treats moved and bot-blocked links as warnings, not failures. After a
   transient connection reset on its first run, it retries twice instead of once.
+- 2026-11-05: 3.2 done in PR #33. "Thai first" became "the person's language first"; detection also
+  returns the language; the final step's id is `answer`. Two decisions were written down: ADR-018
+  (informational answers end without review) and ADR-019 (prompts completed from versioned data).

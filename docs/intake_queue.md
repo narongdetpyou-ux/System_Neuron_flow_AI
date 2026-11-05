@@ -1,6 +1,6 @@
 # Intake API, job queue, Runner and web page (round 2, Milestone B)
 
-**Status:** built in PR #11 and tested offline (198 tests on 2026-11-05, including killing the Runner
+**Status:** built in PR #11 and tested offline (230 tests on 2026-11-05, including killing the Runner
 mid-step). The container build is checked on every push by *Actions → Service container*. Live on
 Render's free plan since 2026-11-01 (`render.yaml`). Railway was the first choice, but it has paused new
 sign-ups since 22 Oct 2026 after a security incident; `railway.json` stays in the repository for later.
@@ -252,7 +252,11 @@ curl -s https://<your-service>.onrender.com/v1/jobs \
 # 202 {"job_id": "job_…", "status": "QUEUED", "queue_position": 1, "created": true, …}
 ```
 
-- `workflow_type`: `case_triage.v2` (shadow mode, used by the page) or `case_triage.v1` (rules only).
+- `workflow_type`: `case_triage.v2` (shadow mode, used by the page) or `case_triage.v1` (rules only), with
+  `input` `{"case_id", "summary"}`; or `study_guide.v1` (the study guide, roadmap 3.2) with
+  `{"message": "…"}`, 4–500 characters. A study guide job ends `COMPLETED`, and `result.output` holds the
+  layered answer ([study_guide.md](study_guide.md#the-workflow-roadmap-32)). In the job list its
+  `case_id` is `null` and `summary_preview` shows the message.
 - `idempotency_key`: 8–128 characters `[A-Za-z0-9._:-]`. Use one key per real submission and reuse it
   only to retry that submission.
 - A request never carries agent names, import paths, steps, params or callbacks.

@@ -58,15 +58,24 @@
   const STEP = {
     classify_rules: "กฎเดิมจัดหมวด", classify_llm: "AI ให้ความเห็นที่สอง", compare: "เทียบสองความเห็น",
     prepare: "เตรียมข้อเสนอให้คนตรวจ", classify: "กฎจัดหมวด",
+    detect_topic: "AI ถอดความว่าอยากเรียนเรื่องอะไร", pick_resources: "กฎเลือกแหล่งเรียน (ไม่เกิน 5)",
+    build_path: "กฎเรียงลำดับการเรียน", explain: "AI อธิบายเป็นภาษาธรรมดา", answer: "เตรียมคำตอบเป็นชั้น",
   };
-  const STEP_SHORT = { classify_rules: "กฎเดิม", classify_llm: "AI", compare: "เทียบ", prepare: "เตรียม", classify: "กฎ" };
+  const STEP_SHORT = {
+    classify_rules: "กฎเดิม", classify_llm: "AI", compare: "เทียบ", prepare: "เตรียม", classify: "กฎ",
+    detect_topic: "ถอดความ", pick_resources: "เลือกแหล่ง", build_path: "เรียงลำดับ", explain: "อธิบาย", answer: "คำตอบ",
+  };
+  const AI_STEPS = new Set(["classify_llm", "detect_topic", "explain"]);
   const ROLE = {
     classify_rules: "ข้อเสนอหลัก (กฎ)", classify: "ข้อเสนอหลัก (กฎ)", classify_llm: "ความเห็นที่สอง (AI · shadow)",
     compare: "เทียบสองความเห็น", prepare: "เตรียมให้คนตรวจ",
+    detect_topic: "AI เสนอหัวข้อจากสมุดหัวข้อ", pick_resources: "กฎ: เฉพาะแหล่งในคลังที่ตรวจแล้ว",
+    build_path: "กฎ: พื้นฐานก่อน ง่ายไปยาก", explain: "AI อธิบาย (ไม่เขียนลิงก์เอง)", answer: "คำตอบ ไม่ต้องรอคนตรวจ",
   };
   const WORKFLOW = {
     "case_triage.v2": "จัดหมวดเคส: กฎเดิม + AI ความเห็นที่สอง",
     "case_triage.v1": "จัดหมวดเคส: กฎอย่างเดียว",
+    "study_guide.v1": "ผู้ช่วยแนะนำแหล่งเรียน (ยังไม่มีช่องใช้งานบนหน้านี้)",
   };
   const ERROR_TYPE = {
     ControllerInterrupted: "ตัวรันงานหยุดกลางคัน แล้วทำต่อหลังเปิดใหม่",
@@ -1219,7 +1228,7 @@
           el("td", { text: (step.depends_on || []).length ? step.depends_on.map((dep) => STEP_SHORT[dep] || dep).join(", ") : "—" }),
           el("td", { text: limitText(step.timeout_s) }),
           el("td", { text: `${step.max_attempts} ครั้ง` }),
-          el("td", {}, step.id === "classify_llm" ? el("span", { class: "tag tag-accent", text: ROLE[step.id] }) : (ROLE[step.id] || "")),
+          el("td", {}, AI_STEPS.has(step.id) ? el("span", { class: "tag tag-accent", text: ROLE[step.id] }) : (ROLE[step.id] || "")),
         ]))),
       ])) : el("p", { class: "lead", text: "แสดงขั้นตอนของงานนี้ไม่ได้" });
       return [head, table];
