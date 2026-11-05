@@ -91,7 +91,7 @@ class LinkCheckTests(unittest.TestCase):
         _Handler.agents.clear()
 
     def check(self, path, timeout=5.0):
-        return check_url("r", self.base + path, timeout=timeout, retry_delay=0, opener=self.opener)
+        return check_url("r", self.base + path, timeout=timeout, retry_delays=(0, 0), opener=self.opener)
 
     def test_a_working_page_is_ok_with_its_title_cleaned(self):
         result = self.check("/ok")
@@ -121,12 +121,18 @@ class LinkCheckTests(unittest.TestCase):
             self.assertEqual((result.outcome, result.status), ("blocked", status), path)
             self.assertIn("check it by hand", result.detail)
 
-    def test_server_errors_are_retried_once(self):
-        result = self.check("/flaky")
+    def test_server_errors_are_retried_twice_after_the_delays(self):
+        waits = []
+        result = check_url("r", self.base + "/flaky", timeout=5, retry_delays=(0.01, 0.02), opener=self.opener,
+                           sleep=waits.append)
         self.assertEqual((result.outcome, result.attempts, result.title), ("ok", 2, "Back"))
-        result = self.check("/down")
-        self.assertEqual((result.outcome, result.status, result.attempts), ("broken", 500, 2))
-        self.assertEqual(_Handler.hits["/down"], 2)
+        self.assertEqual(waits, [0.01], "no further wait after the page came back")
+        waits.clear()
+        result = check_url("r", self.base + "/down", timeout=5, retry_delays=(0.01, 0.02), opener=self.opener,
+                           sleep=waits.append)
+        self.assertEqual((result.outcome, result.status, result.attempts), ("broken", 500, 3))
+        self.assertEqual((_Handler.hits["/down"], waits), (3, [0.01, 0.02]))
+        self.assertEqual(link_check.RETRY_DELAYS, (5.0, 20.0))
 
     def test_a_redirect_loop_is_broken(self):
         result = self.check("/loop")
@@ -137,17 +143,17 @@ class LinkCheckTests(unittest.TestCase):
         result = self.check("/pdf")
         self.assertEqual((result.outcome, result.title), ("ok", "Cognitive load (CLT)"))
 
-    def test_a_timeout_is_broken_after_a_retry(self):
+    def test_a_timeout_is_broken_after_the_retries(self):
         result = self.check("/slow", timeout=0.2)
-        self.assertEqual((result.outcome, result.attempts), ("broken", 2))
+        self.assertEqual((result.outcome, result.attempts), ("broken", 3))
         self.assertIn("no answer within 0.2 s", result.detail)
 
     def test_a_closed_port_is_broken(self):
         with socket.socket() as probe:
             probe.bind(("127.0.0.1", 0))
             port = probe.getsockname()[1]
-        result = check_url("r", f"http://127.0.0.1:{port}/", timeout=2, retry_delay=0, opener=self.opener)
-        self.assertEqual((result.outcome, result.status, result.attempts), ("broken", None, 2))
+        result = check_url("r", f"http://127.0.0.1:{port}/", timeout=2, retry_delays=(0, 0), opener=self.opener)
+        self.assertEqual((result.outcome, result.status, result.attempts), ("broken", None, 3))
         self.assertEqual(result.detail, "connection refused")
 
     def test_https_to_http_redirects_are_refused(self):

@@ -109,7 +109,7 @@ The rest of this file is in Thai, the owner's working language.
 | ขยายความแบบค่อยเปิด (progressive disclosure) | Anthropic, Equipping agents for the real world with Agent Skills https://www.anthropic.com/research/equipping-agents-for-the-real-world-with-agent-skills |
 | คุมไม่ให้หลุดกรอบ | Rebedea et al. (2023) NeMo Guardrails https://arxiv.org/abs/2310.10501 |
 | วัดการตรวจจับเรื่องนอกกรอบ | Larson et al. (2019) CLINC150 https://aclanthology.org/D19-1131/ · ข้อมูล https://github.com/clinc/oos-eval |
-| AI กับคำเปรียบเปรยและเจตนา | LLMs for Subjective Language Understanding: A Survey (2025) https://arxiv.org/abs/2508.07959 · Sanchez-Bayona & Agerri (2025) Metaphor and LLMs https://aclanthology.org/2025.findings-acl.898/ |
+| AI กับคำเปรียบเปรยและเจตนา | Large Language Models for Subjective Language Understanding: A Survey (2025) https://arxiv.org/abs/2508.07959 · Sanchez-Bayona & Agerri (2025) Metaphor and LLMs https://aclanthology.org/2025.findings-acl.898/ |
 | จัดลำดับเส้นทางการเรียน | Fuster-López et al. (2024) Learning path recommender systems in e-learning https://arxiv.org/abs/2406.10245 |
 | อธิบายให้มือใหม่ไม่ท่วมท้น | Cooper, Cognitive load theory as an aid for instructional design (AJET) https://ajet.org.au/index.php/AJET/article/download/2322/1146/7314 |
 | กันคำสั่งแอบแฝงในข้อความผู้ใช้ | Claude Docs, Mitigate jailbreaks and prompt injections https://platform.claude.com/docs/en/test-and-evaluate/strengthen-guardrails/mitigate-jailbreaks |

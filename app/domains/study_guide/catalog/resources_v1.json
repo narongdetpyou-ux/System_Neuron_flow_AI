@@ -159,7 +159,7 @@
     {
       "id": "learning_path_recommenders",
       "url": "https://arxiv.org/abs/2406.10245",
-      "title": "On Conceptualisation and an Overview of Learning Path Recommender Systems in E-Learning",
+      "title": "On conceptualisation and an overview of learning path recommender systems in e-learning",
       "by": "Fuster-López et al. (2024)",
       "kind": "paper",
       "level": "advanced",
@@ -215,8 +215,8 @@
     {
       "id": "cast_udl_guidelines",
       "url": "https://udlguidelines.cast.org/",
-      "title": "The UDL Guidelines",
-      "by": "CAST (version 3.0, 2024)",
+      "title": "Universal Design for Learning Guidelines",
+      "by": "CAST",
       "kind": "guidelines",
       "level": "beginner",
       "language": "en",

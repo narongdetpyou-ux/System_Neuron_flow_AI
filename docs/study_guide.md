@@ -117,10 +117,12 @@ check.
 | `ok` | 2xx at the listed address (adding or dropping a final `/` counts) | — |
 | `moved` | 2xx after a redirect to another address | warning: update the entry after checking it is the same resource |
 | `blocked` | 401, 403 or 429: the site refused an automated visit | warning: check it by hand |
-| `broken` | 404, 410, other 4xx; 5xx after one retry; network, DNS or TLS errors and timeouts after one retry; redirect loops; https → http redirects | the run fails |
+| `broken` | 404, 410, other 4xx; a 5xx, network, DNS or TLS error or timeout still there after two retries (5 s and 20 s later); redirect loops; https → http redirects | the run fails |
 
 - It sends a plain client name (`Mozilla/5.0 (compatible; neuron-flow-link-check/1.0)`) and no personal
   data, reads at most 256 KiB per page, and waits 20 s per attempt.
+- Why two retries: on its first run (2026-11-05) one link answered "connection reset" twice, 5 s apart,
+  and opened normally 30 s later in the next run. With one retry, that was a false alarm in 1 of 2 runs.
 - The summary lists each link with the title the site answered with (HTML `<title>`, or a PDF's metadata
   title), so a person can see that the link still leads to the resource. Titles come from other sites: they
   are cleaned to one line, shown only inside code spans, and never put in annotations.
@@ -147,8 +149,8 @@ detection must be tested on phrases it was not shown.
   a file from another version are refused; 43 broken rules are each reported; every problem is reported at
   once.
 - `tests/test_study_link_check.py`, against a local HTTP server: ok, a trailing-slash redirect, moved,
-  404 (not retried), 403 and 429 (blocked), a 503 that recovers on the retry, a 500 that does not, a
-  redirect loop, a PDF title, a timeout, a closed port, refused https → http redirects, the client name;
+  404 (not retried), 403 and 429 (blocked), a 503 that recovers on the first retry, a 500 that is still
+  there after both retries (with the waits), a redirect loop, a PDF title, a timeout, a closed port, refused https → http redirects, the client name;
   and `main()`: exit codes, warnings versus errors, a summary table that a hostile title cannot break, an
   invalid library, and the library files left unchanged.
 

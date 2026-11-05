@@ -12,12 +12,14 @@ Outcomes:
   entry to the new address after checking that it is still the same resource. A warning, not a failure.
 * ``blocked``: 401, 403 or 429. The site refused an automated visit, which does not prove the link is
   broken; check it by hand. A warning, not a failure.
-* ``broken``: 404, 410 or any other 4xx; 5xx after one retry; a network, DNS or TLS error or a timeout
-  after one retry; a redirect loop; or a redirect from https to http. These fail the run.
+* ``broken``: 404, 410 or any other 4xx; 5xx, a network, DNS or TLS error or a timeout that is still
+  there after two retries (5 s and 20 s later); a redirect loop; or a redirect from https to http. These
+  fail the run. The retries are there because the first run on GitHub (2026-11-05) met a connection reset
+  on both attempts 5 s apart, and the same link opened 30 s later.
 
 The report shows each page's own title, so a person can see that the link still leads to the resource the
 entry describes. Page titles are text from other sites, so they are cleaned before they go into the
-Markdown report, and they never go into annotations.
+Markdown report, and they never go into annotations. The address a redirect points to is also cleaned.
 
 Exit status: 0 when no link is broken; 1 when any link is broken; 2 when the library itself is invalid.
 Usage: ``python -m app.domains.study_guide.link_check [--summary FILE] [--timeout SECONDS]``
@@ -84,13 +86,18 @@ def build_opener(proxies=None):
     return urllib.request.build_opener(*handlers)
 
 
-def check_url(resource_id, url, *, timeout=20.0, retry_delay=5.0, opener=None, sleep=time.sleep):
-    """Open one URL; a server error or a network problem is retried once."""
+RETRY_DELAYS = (5.0, 20.0)
+
+
+def check_url(resource_id, url, *, timeout=20.0, retry_delays=RETRY_DELAYS, opener=None, sleep=time.sleep):
+    """Open one URL. A server error or a network problem is tried again after each delay in turn."""
     opener = opener or build_opener()
     result, retry = _attempt(resource_id, url, timeout, opener, 1)
-    if retry:
-        sleep(retry_delay)
-        result, _ = _attempt(resource_id, url, timeout, opener, 2)
+    for attempt, delay in enumerate(retry_delays, 2):
+        if not retry:
+            break
+        sleep(delay)
+        result, retry = _attempt(resource_id, url, timeout, opener, attempt)
     return result
 
 

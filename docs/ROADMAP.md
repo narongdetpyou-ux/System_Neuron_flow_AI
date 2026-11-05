@@ -588,6 +588,9 @@ The design follows the proposal in design_philosophy.md.
     changes the study guide, so a new link is checked before it is merged. Broken links fail the run;
     moved links and sites that refuse automated visits (401/403/429) are warnings, because they are not
     proof of a broken link. It never edits the library.
+  - First runs on GitHub: 16 of 17 links opened on the push run, and the 17th (the Cooper PDF) answered
+    "connection reset" on both attempts 5 s apart; 30 s later the pull-request run opened all 17. Network
+    errors and 5xx are therefore retried twice (5 s and 20 s later) instead of once.
   - Not in the library on purpose: the owner's example "อยากให้ระบบเป็นเหมือนบรรณารักษ์ที่รู้ใจ", kept for the
     evaluation set (3.3) so detection is tested on a phrase it was not shown.
   - Gaps, honestly: one Thai resource (Thai MOOC); `plain_language` has only the ISO standard, whose full
@@ -1027,4 +1030,5 @@ workflow types.
   carried no agent version and that the key instructions were unclear; both were fixed in the follow-up PR.
 - 2026-11-05: the owner chose Phase 3 before Phase 2. 3.1 done in PR #32: a summary per topic and `by`,
   `kind` and `access` per resource were added to the planned fields; the link check also runs on every
-  change to the study guide, and treats moved and bot-blocked links as warnings, not failures.
+  change to the study guide, and treats moved and bot-blocked links as warnings, not failures. After a
+  transient connection reset on its first run, it retries twice instead of once.
