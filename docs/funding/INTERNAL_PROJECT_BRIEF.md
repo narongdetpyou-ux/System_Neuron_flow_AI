@@ -56,7 +56,7 @@ yet been benchmarked or validated with prospective users.
   - A scorecard over 61 synthetic labelled cases in English and Thai runs in
     CI. Its mock scores test the pipeline, not accuracy.
   - Sentry error monitoring, with live smoke-test events received.
-  - 169 automated tests.
+  - 198 automated tests.
 - Architecture: [architecture](../architecture.md) covers the layers, decisions
   and milestone status. The admission queue, single Runner, API and a Thai web
   page are implemented and online with synthetic data (Render free plan).

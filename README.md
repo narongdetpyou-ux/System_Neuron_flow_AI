@@ -62,6 +62,7 @@ Since round 2, cases can also come in from outside, through an HTTP API or a Tha
 | Error monitoring and tracing | `app/observability/` | Sentry errors, degraded-AI warnings and Runner recoveries; traces to Honeycomb (OTLP), off until a key is set; on for the Render service, first trace seen 2026-11-03 |
 | Scorecard: 61 synthetic labelled cases (EN + TH) | `app/eval/` | Runs in CI; mock scores test the pipeline, not AI accuracy |
 | Intake API, durable job queue, single Runner with crash recovery, Thai web page | `app/api/`, `app/persistence/`, `app/services/`, `app/web/`, `app/serve.py` | Working (round 2), tested offline and as a container in CI; live on Render's free plan since 2026-11-01 |
+| Study guide, part 1: versioned topic catalog (11 topics, Thai and English) and verified resource library (17 links), with a weekly link check | `app/domains/study_guide/` | Built (roadmap 3.1); the workflow that answers people is **not built yet** (3.2) |
 | Human-review decisions, n8n intake, reviewer notifications | — | **Not built yet** (Milestone C in [architecture](docs/architecture.md)) |
 
 ## Try it
@@ -82,12 +83,14 @@ forgets its cases when it sleeps or redeploys; a paid plan with a disk keeps the
   `SENTRY_DSN`; without it, it skips with a notice.
 - *Actions → Secret scan* checks every commit of every branch for keys and tokens (gitleaks) on every push
   and pull request.
+- *Actions → Study library link check* opens every link in the study-guide library every Monday and on
+  every change to it, and fails when one is broken. It never edits the library.
 - *Actions → Shadow eval with Claude (manual)* runs the scorecard against real Claude. It needs the
   repository secret `ANTHROPIC_API_KEY`.
 
 **Locally (Python 3.10+):**
 ```bash
-python -m unittest discover -s tests -v        # 169 tests
+python -m unittest discover -s tests -v        # 198 tests
 python -m examples.case_triage_demo            # v1 rules, one synthetic case
 python -m examples.case_triage_shadow_demo     # v2 shadow mode, three synthetic cases (offline mock AI)
 python -m app.eval.triage_shadow_eval          # scorecard on 61 synthetic cases
@@ -117,6 +120,7 @@ most 1 MiB. The agent `version` is frozen into each job, so an old job refuses t
 | [Intake API, queue, Runner and web page](docs/intake_queue.md) | Round 2: how a case flows from outside, recovery rules, API reference, Render setup |
 | [Sentry error reporting](docs/observability_sentry.md) | What gets reported, privacy rules, alerts |
 | [Tracing to Honeycomb](docs/observability_tracing.md) | One trace per case: what a span carries and never carries, setup in Render, how it is checked |
+| [Study guide](docs/study_guide.md) | The topic catalog and verified resource library (roadmap 3.1): file format, checks, versioning, the weekly link check |
 | [Funding readiness pack](docs/funding/README.md) | Internal evidence register; not a submitted application |
 | [Evidence notes](docs/evidence/2026-11-03-render-operations.md) | Dated measurements; the first one covers Render operations (graceful stops, deploy filter, cold start) |
 

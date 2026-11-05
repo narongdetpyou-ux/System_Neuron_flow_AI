@@ -21,22 +21,23 @@ differs, this file and architecture.md win.
   - ถ้าสองฝ่ายเห็นไม่ตรงกัน เคสจะถูกยกให้คนดูก่อน
 - ถ้าเครื่องดับกลางทาง ระบบทำต่อได้ ส่งซ้ำก็ไม่เกิดงานซ้ำ
 - ยกเลิกเคสที่ยังรอคิวได้ และทุกคำขอมีรหัสคำขอ (request id) ไว้ไล่ดูใน log (ขั้น 1.2, 1.3)
-- ผ่านชุดทดสอบอัตโนมัติ 169 ข้อ และเปิดใช้ออนไลน์บน Render แล้ว ระบบปิดตัวอย่างเรียบร้อย และการแก้แค่เอกสารไม่ทำให้ Render ขึ้นเวอร์ชันใหม่ (ขั้น 0.1, 0.5)
+- ผ่านชุดทดสอบอัตโนมัติ 198 ข้อ และเปิดใช้ออนไลน์บน Render แล้ว ระบบปิดตัวอย่างเรียบร้อย และการแก้แค่เอกสารไม่ทำให้ Render ขึ้นเวอร์ชันใหม่ (ขั้น 0.1, 0.5)
 - หน้าเว็บเป็นแบบแชท: พิมพ์เคส ดูขั้นตอนก่อนส่ง กดยืนยัน แล้วติดตามใน Flow และประวัติเหตุการณ์ (ขั้น 1.6)
 - หน้าเว็บบอกว่ามีเคสรอกี่เคส เคสที่รอนานสุดรอมานานเท่าไร ปกติแต่ละเคสใช้เวลาเท่าไร และเคสที่ไม่สำเร็จล้มเพราะอะไร (ขั้น 5.3)
 - ถ้ามีคนแก้กฎหรือ prompt แล้วคำตอบของเคสทดสอบเคสไหนเปลี่ยน ช่องตรวจบน GitHub จะเป็นสีแดงและบอกว่าเคสไหนเปลี่ยนอะไร (ขั้น 5.2)
 - ก่อนส่งเคสให้ AI ระบบปิดข้อมูลส่วนตัวที่จับรูปแบบได้ (อีเมล เบอร์โทร เลขบัตรประชาชน เลขแบบบัตรเครดิต ตัวเลขยาว และชื่อที่มีคำนำหน้า) AI เห็นแค่ป้ายแทน เช่น [PHONE] และหน้าเว็บบอกว่าปิดอะไรไปกี่จุด (ขั้น 7.1)
 - ทุกครั้งที่มีการส่งโค้ด GitHub สแกนหาคีย์หรือรหัสลับที่หลุดในประวัติโค้ดทั้งหมด และที่อยู่ Sentry (DSN) ไม่อยู่ในไฟล์แล้ว อ่านจากความลับ (secret) เท่านั้น (ขั้น 7.4 ส่วนเตรียมการ)
 - ส่งเส้นทางการทำงาน (trace) ของทุกเคสไป Honeycomb แล้ว: เห็นว่าแต่ละขั้นใช้เวลาเท่าไร ลองกี่ครั้ง และ AI ใช้ token เท่าไร โดยไม่ส่งข้อความเคสหรือคำตอบของ AI เปิดใช้บน Render แล้ว และเห็นเส้นทางแรกใน Honeycomb เมื่อ 4 พ.ย. 00:23 น. (ขั้น 5.1)
+- มีคลังแหล่งเรียนที่ตรวจแล้ว 17 แหล่งใน 11 หัวข้อ ทุกแหล่งบอกว่าใช้ทำอะไร ระดับไหน ภาษาอะไร และควรเน้นส่วนไหน และ GitHub เปิดทุกลิงก์ทุกวันจันทร์เพื่อจับลิงก์เสีย ผู้ช่วยแนะนำแหล่งเรียนที่ใช้คลังนี้ยังไม่ได้สร้าง (ขั้น 3.1)
 
 **ลำดับต่อจากนี้** แต่ละขั้นจบด้วยสิ่งที่คุณลองเองได้
 
-| ขั้น | ทำอะไร | คุณจะได้ลองอะไร | สถานะ (3 พ.ย. 2026) |
+| ขั้น | ทำอะไร | คุณจะได้ลองอะไร | สถานะ (5 พ.ย. 2026) |
 |---|---|---|---|
 | 0 | เปิดใช้ออนไลน์บน Render และวัดผล Claude จริงครั้งแรก | ใส่เคสบนหน้าเว็บจริง และอ่านผลวัดของ Claude | ออนไลน์แล้ว ที่เหลือรอคุณตัดสินใจเรื่องเงิน (D1 แผน Render, D2 API key ของ Claude) |
 | 1 | เก็บงานเล็ก ๆ ให้ระบบแน่นขึ้น | ยกเลิกเคสที่ยังรอคิวได้ | เสร็จ ยกเว้น 1.4 (สำรองข้อมูล) ที่ต้องใช้แผน Render แบบเสียเงิน |
 | 2 | ให้คนรีวิวได้จริง: ผู้รีวิวมีรหัสของตัวเอง กดอนุมัติหรือไม่อนุมัติได้ และ n8n แจ้งเตือน | กล่อง "รอรีวิว" บนหน้าเว็บ และข้อความแจ้งเตือน | ยังไม่เริ่ม |
-| 3 | ผู้ช่วยแนะนำแหล่งเรียน (`study_guide.v1`) ตามหลักปรัชญาของคุณ | พิมพ์เรื่องที่อยากรู้ด้วยคำธรรมดา แล้วได้แหล่งเรียนไม่เกิน 5 แหล่งพร้อมลำดับการเรียน | ยังไม่เริ่ม |
+| 3 | ผู้ช่วยแนะนำแหล่งเรียน (`study_guide.v1`) ตามหลักปรัชญาของคุณ | พิมพ์เรื่องที่อยากรู้ด้วยคำธรรมดา แล้วได้แหล่งเรียนไม่เกิน 5 แหล่งพร้อมลำดับการเรียน | เริ่มแล้ว (คุณเลือกขั้นนี้ก่อนขั้น 2 เมื่อ 5 พ.ย.): 3.1 คลังแหล่งเรียนและการตรวจลิงก์ทุกสัปดาห์ ทำแล้ว; 3.2 ตัวผู้ช่วยเป็นงานถัดไป |
 | 4 | ช่องคุยภาษาธรรมดา: ระบบเข้าใจว่าคุณขออะไร บอกตรง ๆ เมื่อเรื่องอยู่นอกกรอบ และถามกลับ 1 คำถามเมื่อข้อมูลไม่พอ | คุยกับระบบได้เลย ไม่ต้องเลือกประเภทงานเอง | ยังไม่เริ่ม (ต้องรอขั้น 3) |
 | 5 | ติดตามเส้นทางของแต่ละงาน (เวลา token จุดที่ช้า) และด่านตรวจผลรายเคส | ตัวเลขคิวและเวลาบนหน้าเว็บ ช่องตรวจบน PR แล้วต่อด้วยเส้นทางงานใน Honeycomb | เสร็จแล้วทั้ง 5.1, 5.2 และ 5.3; เส้นทางงานแรกเข้า Honeycomb เมื่อ 4 พ.ย. 00:23 น. |
 | 6 | AI วางแผนงานหลายขั้น ระบบตรวจแผนก่อนรัน และเครื่องมืออื่นเรียกใช้ผ่าน MCP ได้ | สั่งงานจากแอป Claude ได้ | ยังไม่เริ่ม (ต้องรอขั้น 2–4) |
@@ -97,7 +98,7 @@ Marks: ✅ done · 🟡 built or partly checked (the status says what is left) �
 | 2.6 | Side-effect contract | ⬜ when needed | before any outward action |
 | 2.7 | Artifact store with hash checks | ⬜ when needed | — |
 | 2.8 | Measure rules vs AI against reviewer labels | ⬜ | 2.2, 0.3 |
-| 3.1 | Topic catalog and verified resource library | ⬜ | — |
+| 3.1 | Topic catalog and verified resource library | ✅ PR #32; links checked by *Study library link check* on the PR ([evidence note](evidence/2026-11-05-study-library-links.md)); the weekly run starts after the merge | — |
 | 3.2 | `study_guide.v1` workflow | ⬜ | 3.1 |
 | 3.3 | Study-guide evaluation set and scorecard | ⬜ | 3.2 |
 | 3.4 | Study guide on the web page | ⬜ | 3.2 |
@@ -571,6 +572,30 @@ The design follows the proposal in design_philosophy.md.
 - **Weekly link check:** a scheduled GitHub Actions job (GitHub runners can reach the internet) checks every
   URL and fails loudly on broken links. It never removes entries by itself.
 - **Versioning:** the library's hash is part of the agent version, like a prompt hash.
+- **Status (2026-11-05): built in PR #32.** Details: [study_guide.md](study_guide.md).
+  - 11 topics and 17 resources: every link of the seed table, with the roadmap.sh home page split into
+    its four named roadmaps (AI Engineer, AI Agents, Prompt Engineering, System Design) and the Anthropic
+    article at its current address. A test keeps every seed link in the library.
+  - *Added to the plan when it was built:* each topic has a one-sentence summary in both languages (for
+    detection and for honest out-of-scope answers); each resource also says who made it (`by`), what kind
+    it is, and whether it is free or paid. Levels are stored as `beginner`/`intermediate`/`advanced` and
+    shown as เริ่มต้น/กลาง/ลึก. A prerequisite may not be harder than the topic that needs it, so a path can
+    go from prerequisites to the topic and from easy to hard at once.
+  - `app/domains/study_guide/library.py` refuses a library that breaks any rule and lists every problem.
+    One SHA-256 covers both files (canonical JSON); `Library.tag` (`v1@sha256:…`) is what 3.2 puts in the
+    agent versions.
+  - *Actions → Study library link check* runs every Monday, by hand, and on every push or pull request that
+    changes the study guide, so a new link is checked before it is merged. Broken links fail the run;
+    moved links and sites that refuse automated visits (401/403/429) are warnings, because they are not
+    proof of a broken link. It never edits the library.
+  - Not in the library on purpose: the owner's example "อยากให้ระบบเป็นเหมือนบรรณารักษ์ที่รู้ใจ", kept for the
+    evaluation set (3.3) so detection is tested on a phrase it was not shown.
+  - Gaps, honestly: one Thai resource (Thai MOOC); `plain_language` has only the ISO standard, whose full
+    text is paid; `recommender_systems` has one advanced technical report.
+- **Owner test (ไทย):**
+  1. เปิด GitHub → Actions → *Study library link check* → รันล่าสุด
+  2. เลื่อนลงไปที่หัวข้อ "ตรวจลิงก์คลังแหล่งเรียน (study library link check)" ต้องขึ้นคำว่า "ผ่าน"
+  3. ตารางต้องมี 17 แถว แต่ละแถวมีชื่อหน้าที่เว็บตอบกลับมา และไม่มีแถวที่ขึ้น "❌ เสีย"
 
 ### 3.2 The workflow
 
@@ -1000,3 +1025,6 @@ workflow types.
 - 2026-11-03: 5.1 built in PR #30 with a small standard-library exporter instead of the OpenTelemetry SDK
   (ADR-017), and ticked after the first trace was seen in Honeycomb on Render. That check found that steps
   carried no agent version and that the key instructions were unclear; both were fixed in the follow-up PR.
+- 2026-11-05: the owner chose Phase 3 before Phase 2. 3.1 done in PR #32: a summary per topic and `by`,
+  `kind` and `access` per resource were added to the planned fields; the link check also runs on every
+  change to the study guide, and treats moved and bot-blocked links as warnings, not failures.

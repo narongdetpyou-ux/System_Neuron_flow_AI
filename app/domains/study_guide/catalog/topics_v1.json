@@ -1,0 +1,127 @@
+{
+  "id": "topics_v1",
+  "description": "What the study guide can help with (roadmap 3.1). Topic detection may only answer one of these ids, or out_of_scope. The examples show how people may ask; they are not the evaluation set (roadmap 3.3), which must use different phrases.",
+  "topics": [
+    {
+      "id": "ai_basics",
+      "name": {"th": "พื้นฐานการสร้างงานด้วย AI", "en": "Foundations of building with AI"},
+      "summary": {"th": "AI ทำอะไรได้และทำอะไรไม่ได้ และแอปนำโมเดล AI มาใช้งานอย่างไร", "en": "What AI models can and cannot do, and how apps put them to work."},
+      "examples": {
+        "th": ["อยากรู้ว่า AI ทำงานยังไง", "อยากเอา AI มาช่วยงานในแอปของเรา", "จะเริ่มเรียนเรื่อง AI จากตรงไหนดี"],
+        "en": ["How does AI actually work?", "I want to add AI to our app", "Where should I start learning about AI?"]
+      },
+      "prerequisites": [],
+      "level": "beginner"
+    },
+    {
+      "id": "prompt_writing",
+      "name": {"th": "การเขียนคำสั่งให้ AI (prompt engineering)", "en": "Prompt engineering"},
+      "summary": {"th": "เขียนคำสั่งให้ AI เข้าใจงานตรงกับที่ต้องการ และตอบในรูปแบบที่ตรวจได้", "en": "Writing instructions so the AI understands the task and answers in a form that can be checked."},
+      "examples": {
+        "th": ["สั่ง AI ยังไงให้ตอบตรงใจ", "AI ชอบตอบไม่ตรงคำถาม ต้องเขียนสั่งยังไง", "คุยกับ AI เหมือนสั่งงานเด็กใหม่ที่เก่งแต่ยังไม่รู้เรื่องของเรา"],
+        "en": ["How do I write a good prompt?", "The AI keeps misunderstanding what I ask", "Talking to the AI feels like briefing a smart newcomer who knows nothing about us"]
+      },
+      "prerequisites": ["ai_basics"],
+      "level": "beginner"
+    },
+    {
+      "id": "ai_agents",
+      "name": {"th": "ผู้ช่วย AI ที่ทำงานหลายขั้น (AI agents)", "en": "AI agents and multi-step workflows"},
+      "summary": {"th": "ให้ AI ทำงานต่อกันหลายขั้นโดยมีจุดตรวจ และเลือกแบบที่ง่ายที่สุดที่ยังใช้งานได้", "en": "Letting AI work through several steps with checkpoints, and choosing the simplest design that works."},
+      "examples": {
+        "th": ["อยากให้ AI ทำงานแทนเป็นขั้น ๆ เอง", "อยากได้ผู้ช่วยที่รับเรื่องแล้วทำต่อจนจบ เหมือนเลขาที่รู้งาน", "อยากให้ AI หลายตัวส่งงานต่อกันเป็นทอด ๆ"],
+        "en": ["I want an AI assistant that does tasks step by step", "Something like a personal assistant that takes a request and sees it through", "Several AIs passing work along like an assembly line"]
+      },
+      "prerequisites": ["prompt_writing"],
+      "level": "intermediate"
+    },
+    {
+      "id": "staying_in_scope",
+      "name": {"th": "การคุมให้ AI อยู่ในกรอบ (guardrails, การตรวจเรื่องนอกกรอบ)", "en": "Keeping AI inside its frame (guardrails, out-of-scope detection)"},
+      "summary": {"th": "กำหนดว่า AI ช่วยเรื่องไหนได้ จับคำขอที่อยู่นอกกรอบ แล้วบอกตรง ๆ แทนการเดา", "en": "Defining what the AI may help with, catching requests outside that frame, and saying so honestly instead of guessing."},
+      "examples": {
+        "th": ["ไม่อยากให้ AI ตอบเรื่องที่ไม่เกี่ยวกับงาน", "อยากให้ AI รู้ว่าเรื่องไหนไม่ใช่หน้าที่ตัวเอง", "อยากมีรั้วกั้นไม่ให้ AI ออกนอกลู่นอกทาง"],
+        "en": ["How do I stop the AI from answering off-topic questions?", "The AI should say when something is not its job", "I want a fence that keeps the AI on the path"]
+      },
+      "prerequisites": ["ai_agents"],
+      "level": "advanced"
+    },
+    {
+      "id": "prompt_injection",
+      "name": {"th": "การกันคำสั่งแอบแฝง (prompt injection)", "en": "Defending against prompt injection"},
+      "summary": {"th": "ป้องกันไม่ให้ข้อความจากผู้ใช้หรือจากเอกสารสั่งให้ AI ทำนอกกติกา", "en": "Stopping text from users or documents from making the AI break its rules."},
+      "examples": {
+        "th": ["มีคนพิมพ์หลอกให้ AI ทำตามคำสั่งแปลก ๆ จะกันยังไง", "กลัวคนแอบซ่อนคำสั่งไว้ในข้อความที่ส่งให้ AI", "เหมือนมีคนสอดจดหมายปลอมไว้ในกองเอกสาร แล้ว AI ก็ทำตาม"],
+        "en": ["Someone tricked the chatbot into ignoring its rules", "How do I protect the AI from hidden instructions in text?", "Like a forged note slipped into the paperwork that the AI obeys"]
+      },
+      "prerequisites": ["prompt_writing"],
+      "level": "intermediate"
+    },
+    {
+      "id": "intent_understanding",
+      "name": {"th": "การเข้าใจความตั้งใจและคำเปรียบเปรย (intent detection, metaphor understanding)", "en": "Understanding intent and metaphor"},
+      "summary": {"th": "ระบบรู้ได้อย่างไรว่าคนต้องการอะไรจากคำพูดธรรมดา คำพูดที่ต่างกันแต่หมายถึงเรื่องเดียวกัน และคำเปรียบเปรย", "en": "How a system works out what people want from everyday words, different phrasings of the same need, and metaphors."},
+      "examples": {
+        "th": ["อยากให้ระบบเข้าใจคำพูดธรรมดา ไม่ต้องใช้ศัพท์เทคนิค", "คนพูดไม่เหมือนกันแต่หมายถึงเรื่องเดียวกัน ระบบจะรู้ได้ยังไง", "อยากให้ระบบฟังแล้วจับใจความได้เหมือนเพื่อนสนิท"],
+        "en": ["The system should understand everyday words, not jargon", "People say the same thing in different ways; how can a system tell?", "I want it to get what I mean, like an old friend would"]
+      },
+      "prerequisites": ["ai_basics"],
+      "level": "advanced"
+    },
+    {
+      "id": "recommender_systems",
+      "name": {"th": "ระบบแนะนำและการจัดเส้นทางการเรียน (recommender systems, learning paths)", "en": "Recommender systems and learning paths"},
+      "summary": {"th": "ระบบเลือกสิ่งที่เหมาะกับแต่ละคน และเรียงลำดับว่าควรเรียนอะไรก่อนหลัง", "en": "Systems that choose what suits each person and put what to learn in order."},
+      "examples": {
+        "th": ["อยากให้ระบบแนะนำว่าควรเรียนอะไรก่อนหลัง", "อยากให้ระบบเลือกของให้เหมือนคนขายที่จำได้ว่าลูกค้าแต่ละคนชอบอะไร", "อยากได้ระบบที่รู้ว่าแต่ละคนควรอ่านอะไรต่อ"],
+        "en": ["Recommend what someone should learn next", "Like a shop assistant who remembers what each customer likes", "Suggest the right reading order for each learner"]
+      },
+      "prerequisites": ["intent_understanding"],
+      "level": "advanced"
+    },
+    {
+      "id": "plain_language",
+      "name": {"th": "การเขียนด้วยภาษาธรรมดา (plain language)", "en": "Plain language"},
+      "summary": {"th": "เขียนให้ผู้อ่านหาสิ่งที่ต้องการเจอ เข้าใจ และนำไปใช้ได้", "en": "Writing so readers can find what they need, understand it and use it."},
+      "examples": {
+        "th": ["อยากเขียนคู่มือให้คนทั่วไปอ่านรู้เรื่อง", "ข้อความในระบบมีแต่ศัพท์เทคนิค อยากให้อ่านง่ายขึ้น", "อยากให้หน้าจอพูดภาษาคน"],
+        "en": ["How do I write instructions anyone can follow?", "Our messages are full of jargon", "I want the screen to talk like a human"]
+      },
+      "prerequisites": [],
+      "level": "beginner"
+    },
+    {
+      "id": "layered_explanation",
+      "name": {"th": "การอธิบายเป็นชั้นและค่อย ๆ เปิดรายละเอียด (progressive disclosure)", "en": "Layered explanations (progressive disclosure)"},
+      "summary": {"th": "เริ่มจากสรุปสั้น ๆ แล้วค่อยให้รายละเอียดเมื่อผู้ฟังพร้อม เพื่อไม่ให้ข้อมูลท่วมท้น", "en": "Start with a short summary and add detail only when the reader is ready, so nobody is overwhelmed."},
+      "examples": {
+        "th": ["อยากให้ระบบอธิบายสั้น ๆ ก่อน แล้วค่อยลงรายละเอียด", "อธิบายยังไงให้มือใหม่ไม่งง", "อยากให้คำอธิบายเหมือนแผนที่ที่ซูมเข้าไปดูทีละชั้นได้"],
+        "en": ["Explain briefly first, then go deeper when asked", "How do I explain things without overwhelming beginners?", "Like a map you can zoom into layer by layer"]
+      },
+      "prerequisites": ["plain_language"],
+      "level": "intermediate"
+    },
+    {
+      "id": "inclusive_learning",
+      "name": {"th": "การสนับสนุนผู้เรียนทุกคนอย่างเท่าเทียม (Universal Design for Learning)", "en": "Inclusive learning design (Universal Design for Learning)"},
+      "summary": {"th": "ออกแบบการเรียนให้คนที่พื้นฐานต่างกันเรียนได้ เช่น มีหลายทางให้เข้าถึงเนื้อหา และไม่ให้ภาระทางความคิดหนักเกินไป", "en": "Designing learning that works for people with different backgrounds: several ways in, and no needless mental load."},
+      "examples": {
+        "th": ["อยากให้ทุกคนเรียนได้ แม้พื้นฐานไม่เท่ากัน", "สอนคนที่ไม่เคยเขียนโปรแกรมยังไงให้ไม่ท้อ", "อยากให้บทเรียนเป็นเหมือนทางลาดที่ใครก็ขึ้นได้"],
+        "en": ["How do I teach people with very different backgrounds?", "Make learning work for everyone, not just experts", "Lessons should be like a ramp anyone can use"]
+      },
+      "prerequisites": [],
+      "level": "beginner"
+    },
+    {
+      "id": "system_design",
+      "name": {"th": "การออกแบบระบบ (system design)", "en": "System design"},
+      "summary": {"th": "วางโครงระบบให้ทำงานได้จริง ทนต่อความผิดพลาด และรองรับงานที่มากขึ้นได้ เช่น คิว ฐานข้อมูล และการกู้คืน", "en": "Planning how a system's parts fit together so it works, survives failures and can grow: queues, databases, recovery."},
+      "examples": {
+        "th": ["อยากวางโครงระบบตั้งแต่ต้นให้ไม่พังง่าย", "ระบบเราต้องรับงานเยอะขึ้น ต้องออกแบบยังไง", "อยากได้แบบแปลนบ้านของระบบก่อนลงมือสร้าง"],
+        "en": ["How should I structure a system so it does not fall over?", "Our system needs to handle much more work", "I want a blueprint of the system before building it"]
+      },
+      "prerequisites": [],
+      "level": "intermediate"
+    }
+  ]
+}

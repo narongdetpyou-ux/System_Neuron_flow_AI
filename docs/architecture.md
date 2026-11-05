@@ -1,6 +1,7 @@
 # System Neuron Flow AI — Architecture
 
-**Current as of 2026-11-03** (`main` @ `0b03735`, after roadmap Phase 1 in PRs #21–#24; first written for
+**Current as of 2026-11-05** (`main` @ `83d18de`, after tracing (PRs #30, #31), plus the study-guide library of
+roadmap 3.1 on its branch; first written for
 round 2, PR #11, on top of `59c6889`). This file replaces
 "Architecture Review & Revised Architecture v2" (31 Oct 2026). That review's dated code observations were
 re-checked against the current code and folded into §3. The AI design comes from the v3 roadmap, and its
@@ -38,7 +39,7 @@ flowchart TD
     subgraph L2[Layer 2: Domains, agents, AI gateway]
       TRI[case_triage v1 rules + v2 shadow mode - built]
       LLM[app/llm gateway: prompt library, mock + Claude - built]
-      SG[study_guide.v1 - proposed]
+      SG[study_guide: topic catalog + verified library - built; workflow planned]
     end
     subgraph L1[Layer 1: Core neuron_flow - one planned fix since extraction]
       CORE[Dendrite -> Synapse -> Axon -> Soma -> AxonTerminal]
@@ -50,7 +51,7 @@ flowchart TD
 | Layer | Responsibility | Built | Planned |
 |---|---|---|---|
 | 1 Core `neuron_flow/` | Spec validation, static DAG scheduling, bounded child processes, retries, recovery, events, verified receipts, integrity, case memory, candidate gate. No HTTP, business rules, credentials or user authorisation. | All of it; changed once since commit `09100f7`: the telemetry fix (roadmap 1.1, PR #21) | No further Core change planned |
-| 2 Domains & agents `app/domains/`, `app/llm/` | Input contracts, trusted agent registry, fixed DAG templates, validators, AI calls | case_triage v1 and v2, AI gateway | `study_guide.v1`, a second unrelated domain |
+| 2 Domains & agents `app/domains/`, `app/llm/` | Input contracts, trusted agent registry, fixed DAG templates, validators, AI calls | case_triage v1 and v2, AI gateway; the study guide's versioned topic catalog and verified resource library with a weekly link check (roadmap 3.1) | The `study_guide.v1` workflow, a second unrelated domain (3.2) |
 | 3 Application services | Admission, idempotency, the only Runtime owner, crash reconciliation, review decisions, results, measurement, monitoring | Scorecard (`app/eval/`), Sentry reporting (`app/observability/`), admission queue (`app/persistence/`), admission, Runner with reconciliation, results (`app/services/`) | Review ledger, artifact store (Milestone C) |
 | 4 Interfaces | Authentication, request validation, status pages, human decisions | GitHub Actions workflows (tests, scorecard, Sentry check, container check, manual Claude run); HTTP API and web page (`app/api/`, `app/web/`) behind one shared access key, started by `app/serve.py` in one container for Render (`render.yaml`; Railway also configured) | n8n intake and notifications, per-reviewer identity, review decisions |
 
@@ -166,6 +167,7 @@ Requests never carry agent import paths, code, tenant ids or callbacks.
 ```text
 neuron_flow/                   Core runtime (one change since extraction: the telemetry fix)
 app/domains/case_triage/       v1 rules (agents.py, workflow.py), contracts.py, v2 shadow_agents.py, shadow_workflow.py
+app/domains/study_guide/       library.py (topic catalog + resource library: checks, SHA-256), link_check.py, catalog/*_v1.json
 app/llm/                       config, errors, gateway, prompts, redaction (personal-data masking), prompt_library/, providers/{mock, anthropic}
 app/eval/                      triage_shadow_eval.py, golden/case_triage_synthetic_v1.json (61 cases)
 app/observability/             sentry.py (step failures, degraded AI, Runner recoveries); tracing.py (OTLP/JSON exporter) and job_spans.py (a job's spans)
@@ -177,13 +179,13 @@ app/boot.py                    process 1 of the image: takes the data folder, dr
 app/settings.py, app/serve.py  environment settings; the launcher (API + supervised Runner in one container)
 Dockerfile, render.yaml        the container and the Render Blueprint (railway.json kept for Railway)
 examples/                      case_triage_demo, case_triage_shadow_demo, sentry_smoke_test, service_smoke_test
-tests/                         169 tests: core, triage v1/v2, AI gateway, masking, scorecard, eval gate, Sentry, tracing, API, queue, Runner, HTTP, metrics
+tests/                         198 tests: core, triage v1/v2, AI gateway, masking, scorecard, eval gate, Sentry, tracing, API, queue, Runner, HTTP, metrics, study library, link check
 tests/baselines/               shadow_eval_mock.json: every case's answer with the mock AI (the eval gate's baseline)
-.github/workflows/             core-tests, service-container, tracing-check, secret-scan, sentry-smoke, shadow-eval-claude (manual)
+.github/workflows/             core-tests, service-container, tracing-check, secret-scan, sentry-smoke, study-links (weekly), shadow-eval-claude (manual)
 .github/gitleaks.toml          secret scan rules (gitleaks defaults + Sentry DSN + Honeycomb keys); .github/.gitleaksignore: reviewed findings
 .github/scripts/               check_render_blueprint.py: render.yaml structure, build filter, Render's schema; check_traces.py
 .github/otel/                  collector.yaml: the OpenTelemetry Collector that the tracing check sends to
-planned: review ledger and artifact store, app/domains/study_guide/
+planned: review ledger and artifact store; the study_guide.v1 workflow (agents, prompts, catalog entry)
 ```
 
 ## 8. Architecture decisions (ADRs)
@@ -264,7 +266,7 @@ dashboard.
 | C | Two-phase review, decision ledger, n8n notifications | Open |
 | D | OpenTelemetry tracing, eval gates in CI | Done: the per-case eval gate (5.2), queue/run-time figures (5.3), Sentry, request ids, and tracing (5.1, PR #30), with the first trace seen in Honeycomb on 2026-11-03 |
 | E | Planner pattern (B), MCP server, second domain with zero Core changes | Open |
-| — | `study_guide.v1`: first-response study guide ([design_philosophy.md](design_philosophy.md)) | Proposed |
+| — | `study_guide.v1`: first-response study guide ([design_philosophy.md](design_philosophy.md), [study_guide.md](study_guide.md)) | Started: the topic catalog, the verified resource library and the weekly link check are built (roadmap 3.1); the workflow, its scorecard and the page are not (3.2–3.4) |
 
 The order of the remaining work, with tasks, acceptance checks and owner decisions for each step, is in
 [ROADMAP.md](ROADMAP.md).
