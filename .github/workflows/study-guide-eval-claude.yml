@@ -1,0 +1,48 @@
+name: Study guide eval with Claude (manual)
+# Scores the study guide (study_guide.v1, roadmap 3.3) on the synthetic request set with the real Claude API.
+# Manual only, because it uses API credits: per request, one short call to find the topic and, when there is a
+# plan, one more to explain it (67 requests).
+# Needs the repository secret ANTHROPIC_API_KEY (Settings -> Secrets and variables -> Actions).
+on:
+  workflow_dispatch:
+    inputs:
+      model:
+        description: "Claude model id"
+        default: "claude-haiku-5-5"
+        required: true
+      limit:
+        description: "Only the first N requests (leave empty for all)"
+        default: ""
+        required: false
+jobs:
+  eval:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      NEURON_FLOW_LLM_PROVIDER: anthropic
+      NEURON_FLOW_LLM_MODEL: ${{ inputs.model }}
+      LIMIT: ${{ inputs.limit }}
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - name: Check the API key is configured
+        run: |
+          if [ -z "$ANTHROPIC_API_KEY" ]; then
+            echo "::error::Add the repository secret ANTHROPIC_API_KEY (Settings -> Secrets and variables -> Actions), then run again."
+            exit 1
+          fi
+      - name: Score the study guide with Claude
+        run: |
+          ARGS=()
+          if [ -n "$LIMIT" ]; then ARGS=(--limit "$LIMIT"); fi
+          python -m app.eval.study_guide_eval --summary "$GITHUB_STEP_SUMMARY" --out study-guide-eval-claude.json "${ARGS[@]}"
+      - name: Keep the scorecard
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: study-guide-eval-claude
+          path: study-guide-eval-claude.json
+          if-no-files-found: ignore

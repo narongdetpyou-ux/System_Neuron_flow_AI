@@ -74,7 +74,7 @@ guide** (`study_guide.v1`, the owner's first-response rule):
 | Case triage v2: shadow mode with AI second opinion | `app/domains/case_triage/shadow_*.py` | Working with the offline mock AI; Claude path tested against a fake API, **not yet run against the real Claude API** |
 | AI gateway: versioned prompt, mock and Claude providers | `app/llm/` | Working (see above) |
 | Error monitoring and tracing | `app/observability/` | Sentry errors, degraded-AI warnings and Runner recoveries; traces to Honeycomb (OTLP), off until a key is set; on for the Render service, first trace seen 2026-11-03 |
-| Scorecard: 61 synthetic labelled cases (EN + TH) | `app/eval/` | Runs in CI; mock scores test the pipeline, not AI accuracy |
+| Scorecards: 61 synthetic labelled triage cases, and 67 study-guide requests (EN + TH, metaphors, out of scope, injection) | `app/eval/` | Run in CI as eval gates; mock scores test the pipeline, not AI accuracy |
 | Intake API, durable job queue, single Runner with crash recovery, Thai web page | `app/api/`, `app/persistence/`, `app/services/`, `app/web/`, `app/serve.py` | Working (round 2), tested offline and as a container in CI; live on Render's free plan since 2026-11-01 |
 | Study guide (`study_guide.v1`): versioned topic catalog (11 topics, Thai and English), verified resource library (17 links) with a weekly link check, and the five-step workflow | `app/domains/study_guide/` | Working with the offline mock AI through the API (roadmap 3.1, 3.2); **not yet run against real Claude**; no box on the web page yet (3.4) |
 | Human-review decisions, n8n intake, reviewer notifications | — | **Not built yet** (Milestone C in [architecture](docs/architecture.md)) |
@@ -88,9 +88,11 @@ changes only docs, tests or CI files does not redeploy (`buildFilter` in `render
 forgets its cases when it sleeps or redeploys; a paid plan with a disk keeps them.
 
 **On GitHub, no local setup needed:**
-- *Actions → Core logic tests* runs every test on Python 3.10 and 3.12, plus the demos and the scorecard.
-  The scorecard table and the study guide's example answers appear on the run page. The eval gate then compares every case's answer with
-  `tests/baselines/shadow_eval_mock.json` and fails on any change.
+- *Actions → Core logic tests* runs every test on Python 3.10 and 3.12, plus the demos and both scorecards.
+  The scorecard tables and the study guide's example answers appear on the run page. The eval gates then
+  compare every case's answer with `tests/baselines/shadow_eval_mock.json` and
+  `tests/baselines/study_guide_eval_mock.json` and fail on any change. The study guide's scorecard also
+  fails when an answer has a link outside the library or more than 5 resources.
 - *Actions → Service container* checks `render.yaml`, builds the same container as Render, submits cases
   over HTTP, restarts it and checks that nothing was lost.
 - *Actions → Sentry smoke test* checks that error reporting reaches Sentry. It needs the repository secret
@@ -101,14 +103,17 @@ forgets its cases when it sleeps or redeploys; a paid plan with a disk keeps the
   every change to it, and fails when one is broken. It never edits the library.
 - *Actions → Shadow eval with Claude (manual)* runs the scorecard against real Claude. It needs the
   repository secret `ANTHROPIC_API_KEY`.
+- *Actions → Study guide eval with Claude (manual)* runs the study guide's scorecard against real Claude, with
+  the same secret.
 
 **Locally (Python 3.10+):**
 ```bash
-python -m unittest discover -s tests -v        # 230 tests
+python -m unittest discover -s tests -v        # 243 tests
 python -m examples.case_triage_demo            # v1 rules, one synthetic case
 python -m examples.case_triage_shadow_demo     # v2 shadow mode, three synthetic cases (offline mock AI)
 python -m app.eval.triage_shadow_eval          # scorecard on 61 synthetic cases
 python -m examples.study_guide_demo            # the study guide's answers to four synthetic requests
+python -m app.eval.study_guide_eval            # the study guide's scorecard on 67 synthetic requests
 NEURON_FLOW_ACCESS_KEY=<16+ characters> python -m app.serve   # API + web page on http://localhost:8000
 ```
 With `NEURON_FLOW_LLM_PROVIDER=anthropic` and `ANTHROPIC_API_KEY` set, the same commands use Claude.
@@ -148,8 +153,9 @@ most 1 MiB. The agent `version` is frozen into each job, so an old job refuses t
 - All test data is synthetic. Mock AI scores are inflated by design and are not evidence of AI accuracy.
 - Masking personal data before AI calls is pattern-based; it lowers the risk but does not make real data safe.
 - The real Claude API has not been called yet, so there are no accuracy, latency or cost claims for Claude.
-- The study guide's mock AI is a keyword simulation: it cannot read a new metaphor, so its answers prove the
-  workflow runs, not that it understands people. That is measured in roadmap 3.3.
+- The study guide's mock AI is a keyword simulation: it cannot read a new metaphor. On the 67-request
+  scorecard it finds the right topic for 2 of 48 in-scope requests, so its answers prove the workflow runs,
+  not that it understands people. A live Claude run has not been made (D2).
 
 ## Origin
 

@@ -28,9 +28,18 @@ jobs:
         run: >-
           python -m app.eval.triage_shadow_eval --summary "$GITHUB_STEP_SUMMARY" --out shadow-eval-mock.json
           --compare-with tests/baselines/shadow_eval_mock.json
-      - name: Keep the scorecard
+      # The study guide's scorecard and eval gate (roadmap 3.3): fails when a promise breaks (a link outside the
+      # library, more than 5 resources) or when any request answers differently from the baseline.
+      - name: Score the study guide and compare every request with the baseline (offline mock AI)
+        if: ${{ !cancelled() }}
+        run: >-
+          python -m app.eval.study_guide_eval --summary "$GITHUB_STEP_SUMMARY" --out study-guide-eval-mock.json
+          --compare-with tests/baselines/study_guide_eval_mock.json
+      - name: Keep the scorecards
         if: ${{ !cancelled() && matrix.python-version == '3.12' }}
         uses: actions/upload-artifact@v7
         with:
-          name: shadow-eval-mock
-          path: shadow-eval-mock.json
+          name: eval-mock
+          path: |
+            shadow-eval-mock.json
+            study-guide-eval-mock.json

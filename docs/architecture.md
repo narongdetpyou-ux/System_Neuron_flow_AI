@@ -1,7 +1,7 @@
 # System Neuron Flow AI — Architecture
 
-**Current as of 2026-11-05** (`main` @ `921563c`, after the study-guide library (PR #32), plus the
-`study_guide.v1` workflow of roadmap 3.2 on its branch; first written for
+**Current as of 2026-11-06** (`main` @ `88cbbea`, after the `study_guide.v1` workflow (PR #33), plus the
+study guide's scorecard of roadmap 3.3 on its branch; first written for
 round 2, PR #11, on top of `59c6889`). This file replaces
 "Architecture Review & Revised Architecture v2" (31 Oct 2026). That review's dated code observations were
 re-checked against the current code and folded into §3. The AI design comes from the v3 roadmap, and its
@@ -31,7 +31,7 @@ flowchart TD
       N8N[n8n intake + reviewer notifications - planned]
     end
     subgraph L3[Layer 3: Application services]
-      EV[Scorecard app/eval - built]
+      EV[Scorecards app/eval: triage and study guide - built]
       OBS[Sentry reporting app/observability - built]
       Q[Admission queue + single Runner + reconciliation app/persistence, app/services - built in round 2]
       REV[Review ledger + linked phase-B jobs - planned]
@@ -184,7 +184,8 @@ app/domains/case_triage/       v1 rules (agents.py, workflow.py), contracts.py, 
 app/domains/study_guide/       library.py (topic catalog + resource library: checks, SHA-256), link_check.py, catalog/*_v1.json;
                                workflow.py, agents.py, planning.py, ai_prompts.py, mock_answers.py (study_guide.v1)
 app/llm/                       config, errors, gateway, prompts, redaction (personal-data masking), prompt_library/, providers/{mock, anthropic}
-app/eval/                      triage_shadow_eval.py, golden/case_triage_synthetic_v1.json (61 cases)
+app/eval/                      triage_shadow_eval.py, study_guide_eval.py, common.py (the eval gate's shared parts);
+                               golden/case_triage_synthetic_v1.json (61 cases), golden/study_guide_synthetic_v1.json (67 requests)
 app/observability/             sentry.py (step failures, degraded AI, Runner recoveries); tracing.py (OTLP/JSON exporter) and job_spans.py (a job's spans)
 app/persistence/               queue_store.py: the application job queue, events and Runner heartbeat (SQLite)
 app/services/                  workflows.py (catalog), admission.py, runner.py (with reconciliation), results.py, metrics.py
@@ -194,9 +195,9 @@ app/boot.py                    process 1 of the image: takes the data folder, dr
 app/settings.py, app/serve.py  environment settings; the launcher (API + supervised Runner in one container)
 Dockerfile, render.yaml        the container and the Render Blueprint (railway.json kept for Railway)
 examples/                      case_triage_demo, case_triage_shadow_demo, study_guide_demo, sentry_smoke_test, service_smoke_test
-tests/                         230 tests: core, triage v1/v2, AI gateway, masking, scorecard, eval gate, Sentry, tracing, API, queue, Runner, HTTP, metrics, study library, link check, study guide
-tests/baselines/               shadow_eval_mock.json: every case's answer with the mock AI (the eval gate's baseline)
-.github/workflows/             core-tests, service-container, tracing-check, secret-scan, sentry-smoke, study-links (weekly), shadow-eval-claude (manual)
+tests/                         243 tests: core, triage v1/v2, AI gateway, masking, scorecards, eval gates, Sentry, tracing, API, queue, Runner, HTTP, metrics, study library, link check, study guide
+tests/baselines/               shadow_eval_mock.json, study_guide_eval_mock.json: every case's answer with the mock AI (the eval gates' baselines)
+.github/workflows/             core-tests, service-container, tracing-check, secret-scan, sentry-smoke, study-links (weekly), shadow-eval-claude and study-guide-eval-claude (manual)
 .github/gitleaks.toml          secret scan rules (gitleaks defaults + Sentry DSN + Honeycomb keys); .github/.gitleaksignore: reviewed findings
 .github/scripts/               check_render_blueprint.py: render.yaml structure, build filter, Render's schema; check_traces.py
 .github/otel/                  collector.yaml: the OpenTelemetry Collector that the tracing check sends to
@@ -270,7 +271,9 @@ planned: review ledger and artifact store; the study guide's scorecard and page 
   every branch in CI, with the Sentry DSN read only from a repository secret (PR #29, ROADMAP 7.4);
   tracing to Honeycomb, one trace per job with its steps and AI call, with the encoding checked against the
   OpenTelemetry Collector in CI (PR #30, ROADMAP 5.1) and seen in Honeycomb on Render on 2026-11-03
-  (`docs/evidence/2026-11-03-first-trace-honeycomb.md`).
+  (`docs/evidence/2026-11-03-first-trace-honeycomb.md`); the study guide's scorecard and eval gate in CI, which
+  fails when a link outside the library or more than 5 resources appears in any answer, or when any
+  request's answer changes (PR #34, ROADMAP 3.3; mock only).
 - Open: retention and backup/restore drills (1.4, needs a disk), API authentication hardening (2.1, 7.2).
 
 **P2 (do not build early):** multi-tenancy, distributed workers, Postgres, object storage, SLAs, a hosted
@@ -285,9 +288,9 @@ dashboard.
 | P1-fix | Neutral telemetry phase names | Done (PR #21, roadmap 1.1) |
 | B | Admission queue, single Runner, reconciliation, thin API, web page | Done (PR #11); live on Render's free plan since 2026-11-01; page redesigned as a chat layout with Flow, Trace and read-only settings (PR #18, roadmap 1.6) |
 | C | Two-phase review, decision ledger, n8n notifications | Open |
-| D | OpenTelemetry tracing, eval gates in CI | Done: the per-case eval gate (5.2), queue/run-time figures (5.3), Sentry, request ids, and tracing (5.1, PR #30), with the first trace seen in Honeycomb on 2026-11-03 |
+| D | OpenTelemetry tracing, eval gates in CI | Done: the per-case eval gates (5.2 for triage; 3.3 for the study guide), queue/run-time figures (5.3), Sentry, request ids, and tracing (5.1, PR #30), with the first trace seen in Honeycomb on 2026-11-03 |
 | E | Planner pattern (B), MCP server, second domain with zero Core changes | Open |
-| — | `study_guide.v1`: first-response study guide ([design_philosophy.md](design_philosophy.md), [study_guide.md](study_guide.md)) | Workflow built: the topic catalog, the verified resource library, the weekly link check (3.1, PR #32) and the five-step workflow in the catalog (3.2, PR #33), tested with the mock AI only; the scorecard and the page are not built (3.3, 3.4) |
+| — | `study_guide.v1`: first-response study guide ([design_philosophy.md](design_philosophy.md), [study_guide.md](study_guide.md)) | Workflow and scorecard built: the topic catalog, the verified resource library, the weekly link check (3.1, PR #32), the five-step workflow in the catalog (3.2, PR #33) and the 67-request scorecard with its eval gate (3.3, PR #34), all with the mock AI only; the page is not built (3.4), and the live Claude run waits for D2 |
 
 The order of the remaining work, with tasks, acceptance checks and owner decisions for each step, is in
 [ROADMAP.md](ROADMAP.md).

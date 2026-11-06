@@ -32,7 +32,7 @@ Read in this order when you need depth:
    [case_triage_v2_shadow.md](docs/case_triage_v2_shadow.md) (the AI second opinion),
    [observability_sentry.md](docs/observability_sentry.md),
    [observability_tracing.md](docs/observability_tracing.md) (traces to Honeycomb),
-   [study_guide.md](docs/study_guide.md) (the topic catalog, the resource library and the link check).
+   [study_guide.md](docs/study_guide.md) (the study guide: workflow, scorecard, topic catalog, library, link check).
 
 ## 2. Working with the owner (read this first)
 
@@ -118,18 +118,21 @@ If a task seems to need breaking a rule:
 ## 4. Checking your work
 
 ```bash
-python -m unittest discover -s tests -v        # all tests (230 on 2026-11-05); Python 3.10–3.13
+python -m unittest discover -s tests -v        # all tests (243 on 2026-11-06); Python 3.10–3.13
 python -m examples.case_triage_demo            # v1 rules, one synthetic case
 python -m examples.case_triage_shadow_demo     # v2 shadow mode with the offline mock AI
 python -m examples.study_guide_demo            # the study guide's answers to four synthetic requests
 python -m app.eval.triage_shadow_eval --compare-with tests/baselines/shadow_eval_mock.json  # scorecard + eval gate
+python -m app.eval.study_guide_eval --compare-with tests/baselines/study_guide_eval_mock.json  # study guide's
 NEURON_FLOW_ACCESS_KEY=$(python -c "import secrets; print(secrets.token_urlsafe(24))") python -m app.serve
 ```
 
 GitHub Actions (the owner can open these; the first three run on every push and pull request):
 - *Core logic tests* (`core-tests.yml`) runs every test on Python 3.10 and 3.12, the demos (the study guide
-  demo writes its four answers to the run summary) and the scorecard, then the eval gate: it fails when any case answers differently from
-  `tests/baselines/shadow_eval_mock.json` (roadmap 5.2).
+  demo writes its four answers to the run summary) and both scorecards, then the eval gates: they fail when
+  any case answers differently from `tests/baselines/shadow_eval_mock.json` (roadmap 5.2) or
+  `tests/baselines/study_guide_eval_mock.json` (roadmap 3.3), and the study guide's also fails when an answer
+  has a link outside the library or more than 5 resources.
 - *Service container* (`service-container.yml`):
   - checks `render.yaml` against Render's schema;
   - builds the same container as Render and submits cases over HTTP;
@@ -147,8 +150,8 @@ GitHub Actions (the owner can open these; the first three run on every push and 
   by hand, and on every push or pull request that changes `app/domains/study_guide/`. It fails on a broken
   link, warns on a moved or bot-blocked one, and never edits the library. This session cannot reach most
   of those sites, so read this check's summary instead of fetching the links yourself.
-- *Shadow eval with Claude (manual)* runs the scorecard against real Claude and needs the repository secret
-  `ANTHROPIC_API_KEY`.
+- *Shadow eval with Claude (manual)* and *Study guide eval with Claude (manual)* run the two scorecards
+  against real Claude and need the repository secret `ANTHROPIC_API_KEY`.
 
 Notes for cloud sessions (claude.ai/code):
 - `.claude/hooks/session-start.sh` installs `sentry-sdk`; nothing else is needed.
@@ -190,7 +193,7 @@ Notes for cloud sessions (claude.ai/code):
 | `app/domains/case_triage/` | v1 rules, the input contract, the v2 shadow agents and workflow |
 | `app/domains/study_guide/` | the study guide: topic catalog and verified resource library (`catalog/*_v1.json`), their checks and hash (`library.py`), the link check (`link_check.py`), and the `study_guide.v1` workflow (`workflow.py`, `agents.py`, `planning.py`, `ai_prompts.py`, `mock_answers.py`); no `.md` files here, because the Render build filter ignores them |
 | `app/llm/` | AI gateway, prompt library (prompt + answer schema, one hash), personal-data masking, mock and Claude providers |
-| `app/eval/` | scorecard and the 61 labelled synthetic cases |
+| `app/eval/` | the two scorecards (triage: 61 labelled cases; study guide: 67 labelled requests) and the eval gate's shared code (`common.py`) |
 | `app/observability/sentry.py` | Sentry reporting: step failures, degraded AI, Runner recoveries |
 | `app/observability/tracing.py`, `job_spans.py` | tracing: the OTLP/JSON exporter with its attribute allow-list, and a finished job's spans (ADR-017) |
 | `app/persistence/queue_store.py` | the application queue in its own SQLite file (`<data>/app/queue.sqlite3`) |
@@ -276,6 +279,9 @@ Notes for cloud sessions (claude.ai/code):
     rules, a plain-language explanation (AI), and a layered answer whose links code inserts; it ends
     `COMPLETED` (ADR-018) and its prompts are completed from the library (ADR-019). Mock AI only (PR #33,
     roadmap 3.2).
+  - The study guide's scorecard: 67 synthetic requests (Thai and English, metaphors, out of scope,
+    injection), run in CI with the mock as an eval gate that also fails on a link outside the library or more
+    than 5 resources; a manual workflow runs it with Claude (PR #34, roadmap 3.3). Mock: topic correct 2/48.
   - The web page's chat layout from the owner's "Nocturne" mockup (PR #18, roadmap 1.6; live and
     owner-tested on 2026-11-03). Parts of the mockup that would break the rules in §3 (key and provider
     fields, editing steps, a "never ask" policy) are shown read-only or left out on purpose; see
@@ -283,12 +289,12 @@ Notes for cloud sessions (claude.ai/code):
 - **Not done yet:**
   - Real Claude has never been run.
   - Review decisions and per-person identity (Milestone C) are not built.
-  - The study guide's scorecard and its page (roadmap 3.3, 3.4) are not built, and it has not run with
-    real Claude.
+  - The study guide's page (roadmap 3.4) is not built, and neither the study guide nor its scorecard has
+    run with real Claude.
   - The rest of the roadmap is open.
 - **Next:** [docs/ROADMAP.md](docs/ROADMAP.md), the first item that is not ✅ and whose needs are met.
   - Waiting on the owner: 0.2 and 1.4 (D1, paid Render plan), 0.3 and 0.4 (D2, Claude API key).
-  - Buildable now without an owner decision: Phase 3, 3.3 next (the owner chose Phase 3 before Phase 2 on
+  - Buildable now without an owner decision: Phase 3, 3.4 next (the owner chose Phase 3 before Phase 2 on
     2026-11-05), and Phase 2 (2.1 first). The rest of 7.1 (who can read the AI key) needs an ADR first.
   - The owner decides which phase comes next; ask before starting a new phase.
 - Keep this section and the ROADMAP status table true in every PR.
