@@ -120,8 +120,9 @@ def load_golden(path=DEFAULT_GOLDEN, library=None):
             "cases": cases}
 
 
-def evaluate(golden, config=None, *, limit=None, max_workers=3):
+def evaluate(golden, config=None, *, limit=None, max_workers=3, min_interval_s=0.0):
     config = config or LLMConfig.from_env()
+    pacer = common.Pacer(min_interval_s)
     library = load_library(LIBRARY_VERSION)
     urls = {resource.id: resource.url for resource in library.resources}
     cases = golden["cases"][:limit] if limit else golden["cases"]
@@ -130,6 +131,7 @@ def evaluate(golden, config=None, *, limit=None, max_workers=3):
     with tempfile.TemporaryDirectory(prefix="neuron-study-eval-") as workspace:
         with Runtime(workspace, agents=study_registry(config), max_workers=max_workers) as runtime:
             for case in cases:
+                pacer.wait()
                 job_id = "eval_" + case["case_id"].replace("-", "_")
                 runtime.submit(build_study_workflow(job_id, {"message": case["message"]}, config))
                 rows.append(case_row(case, runtime.run(job_id), urls))
@@ -142,7 +144,8 @@ def evaluate(golden, config=None, *, limit=None, max_workers=3):
                            "library": library.tag,
                            "golden": {"name": golden["name"], "sha256": golden["sha256"], "cases": len(cases),
                                       "label_scope": golden["label_scope"]},
-                           "duration_s": round(time.monotonic() - started, 2)},
+                           "duration_s": round(time.monotonic() - started, 2),
+                           "min_interval_s": pacer.min_interval_s},
             "metrics": compute_metrics(rows), "cases": rows}
 
 
@@ -267,7 +270,7 @@ def answer_changes(reference, candidate):
 
 def gate_markdown(changes, compared_with, cases):
     return common.gate_markdown(changes, compared_with, cases, module="app.eval.study_guide_eval",
-                                live_run="Study guide eval with Claude")
+                                live_run="Study guide eval with Claude หรือ with GitHub Models")
 
 
 # -- the report ---------------------------------------------------------------------------------------
@@ -284,6 +287,7 @@ def summary_markdown(report):
                   "> *Mock provider: a keyword simulation built from the catalog examples before this set was written, "
                   "and not tuned to it. It proves the pipeline, the measurement and the two promises, not understanding.*",
                   ""]
+    lines += common.github_models_note(llm)
     links = m["links_outside_library"]
     over = m["answers_over_five"]
     lines += [f"ชุดข้อสอบ `{p['golden']['name']}` ({p['golden']['cases']} คำขอ) · AI `{llm['provider']}/{llm['model']}` · "
@@ -330,6 +334,8 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--golden", default=str(DEFAULT_GOLDEN), help="labelled request file")
     parser.add_argument("--limit", type=int, default=None, help="only the first N requests")
+    parser.add_argument("--min-interval-s", type=float, default=0.0,
+                        help="wait at least this long between two requests (rate-limited free tiers)")
     parser.add_argument("--out", help="write the full JSON report here")
     parser.add_argument("--summary", help="append the markdown summary here (e.g. $GITHUB_STEP_SUMMARY)")
     parser.add_argument("--compare-with",
@@ -338,7 +344,7 @@ def main(argv=None):
     args = parser.parse_args(argv)
     # Read the reference first, so a missing or broken file fails before the run, not after it.
     reference = as_baseline(decode(Path(args.compare_with).read_bytes())) if args.compare_with else None
-    report = evaluate(load_golden(args.golden), limit=args.limit)
+    report = evaluate(load_golden(args.golden), limit=args.limit, min_interval_s=args.min_interval_s)
     text = summary_markdown(report)
     print(text)
     if args.out:

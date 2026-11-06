@@ -17,8 +17,9 @@ description = "Honeycomb Ingest or Management key: it belongs in Render's Enviro
 regex = '''(?i)\bhc[a-z](?:ik_[a-z0-9]{58}|mk_[a-z0-9]{26}:[a-z0-9]{32})\b'''
 keywords = ["ik_", "mk_"]
 
-# The fake keys that the tests use on purpose, to prove that real keys never leak into jobs, logs or files.
+# The fake keys that the tests use on purpose, to prove that real keys never leak into jobs, logs or files
+# (sk-ant-test-… for Claude, gh-models-test-… for GitHub Models).
 # Only these exact shapes are allowed; a real key in a test file is still reported.
 [[allowlists]]
 description = "Deliberately fake keys in the tests"
-regexes = ['''^sk-ant-test-[A-Za-z0-9_-]*$''', '''^test-access-key-[0-9]+$''']
+regexes = ['''^sk-ant-test-[A-Za-z0-9_-]*$''', '''^gh-models-test-[A-Za-z0-9_-]*$''', '''^test-access-key-[0-9]+$''']

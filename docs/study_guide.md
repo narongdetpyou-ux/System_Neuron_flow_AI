@@ -7,10 +7,11 @@
   verified resources in study order come out, as a layered answer. It is in the workflow catalog, so the
   API accepts it; the page has no box for it yet (3.4).
 - Roadmap 3.3 (PR #34) is built: 67 labelled synthetic requests and a scorecard. CI runs the scorecard
-  with the mock AI on every push, as an eval gate; a manual workflow runs it with Claude.
+  with the mock AI on every push, as an eval gate; manual workflows run it with GitHub Models (free, no key;
+  ADR-020) or with Claude (D2).
 - Not built: the page (3.4).
-- It has only run with the offline mock AI, a keyword simulation. Real Claude has never been run (D2), so
-  there is no measurement of how well it understands people yet.
+- It has only run with the offline mock AI, a keyword simulation. No real model has run yet (GitHub Models
+  is ready; Claude needs D2), so there is no measurement of how well it understands people yet.
 
 ## ภาพรวมสำหรับเจ้าของโปรเจกต์
 
@@ -56,9 +57,9 @@
 - **ตรวจลิงก์ทุกวันจันทร์** เวลา 09:23 น. และทุกครั้งที่มีคนแก้คลัง ถ้ามีลิงก์เสีย ช่องตรวจบน GitHub จะเป็นสีแดง
 
 **สิ่งที่ยังจำกัดอยู่ (บอกตรง ๆ)**
-- **ยังไม่เคยใช้ Claude จริง** AI ที่ใช้อยู่ตอนนี้เป็น AI จำลอง (mock) ซึ่งจับแค่คำสำคัญจากตัวอย่างในสมุดหัวข้อ
+- **ยังไม่เคยใช้ AI จริง** AI ที่ใช้อยู่ตอนนี้เป็น AI จำลอง (mock) ซึ่งจับแค่คำสำคัญจากตัวอย่างในสมุดหัวข้อ
   - คำเปรียบที่ไม่มีคำเหล่านั้น เช่น "อยากให้ระบบเป็นเหมือนบรรณารักษ์ที่รู้ใจ" AI จำลองจะตอบว่า "นอกกรอบ"
-  - ต้องใช้ Claude จริง (เรื่องที่ D2) ถึงจะเข้าใจคำเปรียบได้
+  - ต้องใช้ AI จริงถึงจะเข้าใจคำเปรียบได้: ลองได้ฟรีแล้วผ่าน GitHub Models (ข้อ 5 ข้างล่าง) หรือใช้ Claude เมื่อตัดสินใจเรื่อง D2
   - ชุดข้อสอบในขั้น 3.3 วัดเรื่องนี้แล้ว: AI จำลองหาหัวข้อถูกแค่ 2 จาก 48 คำขอ ดูหัวข้อ "ชุดข้อสอบ" ข้างล่าง
 - **ประโยค "บรรณารักษ์ที่รู้ใจ" ของคุณ ตั้งใจไม่ใส่ไว้ในสมุดหัวข้อ** และเป็นข้อสอบข้อหนึ่งในขั้น 3.3
 - **ในคลังมีแหล่งภาษาไทยแหล่งเดียว** คือ Thai MOOC
@@ -92,11 +93,13 @@
    - หาหัวข้อถูก **2/48** เพราะ AI จำลองจับแค่คำสำคัญจากตัวอย่างในสมุดหัวข้อ คำขอส่วนใหญ่จึงถูกตอบว่า "นอกกรอบ" (46 จาก 48)
    - เรื่องนอกกรอบจับได้ครบ 19/19 แต่ที่ตอบว่า "นอกกรอบ" ถูกจริงแค่ 19/65 ข้อ
    - ลิงก์นอกคลัง **0** และคำตอบที่เกิน 5 แหล่ง **0** แต่ AI จำลองได้แผนแค่ 2 คำตอบ คำมั่นจึงถูกลองกับลิงก์แค่ 7 ลิงก์
-   - ตัวเลขเหล่านี้ **ไม่ใช่ความแม่นยำ** บอกแค่ว่าระบบและการวัดผลทำงานครบ ผลจริงต้องรอรันกับ Claude
+   - ตัวเลขเหล่านี้ **ไม่ใช่ความแม่นยำ** บอกแค่ว่าระบบและการวัดผลทำงานครบ ผลจริงต้องรอรันกับ AI จริง
 4. **ด่านตรวจผลรายข้อ (eval gate):** ทุกครั้งที่ส่งโค้ด GitHub รันชุดข้อสอบนี้ด้วย AI จำลอง แล้วเทียบคำตอบทุกข้อกับไฟล์ต้นแบบ
    (`tests/baselines/study_guide_eval_mock.json`) ถ้าข้อไหนเปลี่ยน ช่องตรวจ *Core logic tests* จะเป็นสีแดงและบอกว่าข้อไหน
-5. **รันกับ Claude จริง (เมื่อมี API key, เรื่องที่ D2):** Actions → *Study guide eval with Claude (manual)* → Run workflow
-   ใส่ limit = 5 เพื่อลองก่อน แล้วค่อยรันครบ 67 ข้อ แต่ละข้อเรียก Claude 1–2 ครั้ง (ถอดความ และอธิบายเมื่อได้แผน)
+5. **รันกับ AI จริงแบบฟรี (GitHub Models, ไม่ต้องมีคีย์):** Actions → *Study guide eval with GitHub Models (manual)* → Run workflow
+   ใส่ limit = 5 เพื่อลองก่อน แล้วค่อยรันครบ 67 ข้อ แต่ละข้อเรียก AI 1–2 ครั้ง ระบบเว้นข้อละ 10 วินาทีเพราะระดับฟรีจำกัดต่อนาที
+   ครบ 67 ข้อใช้โควตาเกือบทั้งวันของรุ่นนั้น (ราว 150 ครั้งต่อวัน) จึงควรรันวันคนละวันกับชุดคัดแยกเคส ผลเป็นของรุ่นที่เลือก ไม่ใช่ของ Claude
+   (เมื่อมี Claude API key แล้ว, เรื่องที่ D2: *Study guide eval with Claude (manual)* ทำแบบเดียวกัน)
 
 **ดูผลชุดข้อสอบได้เลย**
 1. เปิด GitHub → Actions → *Core logic tests* → รันล่าสุด → Summary
@@ -255,6 +258,14 @@ The keyword mock only knows words from the catalog examples, so it calls almost 
 scope". With so few plans, the promises were exercised on 7 links only. The 3.2 tests check the same
 promises for every topic in both languages.
 
+**With GitHub Models, by hand (free, no key; ADR-020).** *Actions → Study guide eval with GitHub Models (manual)*
+(`.github/workflows/study-guide-eval-github-models.yml`) passes the workflow's own `GITHUB_TOKEN` with only
+`contents: read` and `models: read`. Inputs: the model (default `openai/gpt-4.1-mini`) and an optional `limit`.
+Requests start at least 10 seconds apart (`--min-interval-s 10`), because the free low tier allows about 15
+requests a minute; a full run uses most of one model's daily allowance (about 150 requests). The run page
+first lists the model ids GitHub offers, then says that the numbers belong to the chosen model, not to
+Claude.
+
 **With Claude, by hand.** *Actions → Study guide eval with Claude (manual)*
 (`.github/workflows/study-guide-eval-claude.yml`) needs the repository secret `ANTHROPIC_API_KEY` (D2).
 Inputs: the model (default `claude-haiku-5-5`) and an optional `limit`. Each request makes one detection call,
@@ -392,7 +403,7 @@ detection must be tested on phrases it was not shown.
     personal data masked, a hiccup retried, detection unavailable four ways (outage, declined, unknown
     topic, a link in the restatement), a bad key failing loudly, explanation unavailable four ways, versions
     carrying the library, and a job frozen with another library never answered;
-  - **the Claude path, against a local fake API:** both calls, the catalog and its choices in the first
+  - **the Claude path, against a local fake API** (and the GitHub Models path, in `tests/test_github_models.py`): both calls, the catalog and its choices in the first
     request, one note per step in the second, the phone number masked, no URL sent to the AI, and the key
     never stored;
   - **the service:** a job ends `COMPLETED` with no review and `result.ai` from detection; admission refuses

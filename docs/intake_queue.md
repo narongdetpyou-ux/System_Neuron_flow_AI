@@ -1,6 +1,6 @@
 # Intake API, job queue, Runner and web page (round 2, Milestone B)
 
-**Status:** built in PR #11 and tested offline (243 tests on 2026-11-06, including killing the Runner
+**Status:** built in PR #11 and tested offline (259 tests on 2026-11-06, including killing the Runner
 mid-step). The container build is checked on every push by *Actions → Service container*. Live on
 Render's free plan since 2026-11-01 (`render.yaml`). Railway was the first choice, but it has paused new
 sign-ups since 22 Oct 2026 after a security incident; `railway.json` stays in the repository for later.
@@ -116,6 +116,7 @@ Design principles: [design_philosophy.md](design_philosophy.md).
 
 ไม่บังคับ (เพิ่มในแท็บ Environment ได้เลย Blueprint จะไม่ลบตัวแปรที่ไฟล์ไม่ได้กำหนด):
 - ใช้ Claude จริงแทน AI จำลอง: เพิ่ม `NEURON_FLOW_LLM_PROVIDER=anthropic` และ `ANTHROPIC_API_KEY` (เสียค่า API ประมาณ 1 คำขอสั้น ๆ ต่อเคส)
+- หรือใช้ GitHub Models ฟรี (ADR-020): เพิ่ม `NEURON_FLOW_LLM_PROVIDER=github` และ `GITHUB_MODELS_TOKEN` ซึ่งเป็น token แบบ fine-grained ที่ให้สิทธิ์ *Models: read* อย่างเดียว ระดับฟรีจำกัดราว 15 เคสต่อนาที และ 150 เคสต่อวัน เกินนั้นเคสยังไปถึงผู้รีวิว แต่ AI จะขึ้นว่าใช้งานไม่ได้ (ขั้น 0.4 ยังไม่ได้ลอง)
 - แจ้งเตือนข้อผิดพลาด: เพิ่ม `SENTRY_DSN`
 
 ## How it works
@@ -330,7 +331,7 @@ job) belong to Milestone C and are still open.
 | `NEURON_FLOW_ACCESS_KEY` | none (the API refuses `/v1`) | Shared access key, at least 16 characters |
 | `NEURON_FLOW_DATA_DIR` | Railway volume, else `./neuron_workspace` | Where the queue and Core data live; on Render, the disk's mount path (`/var/data`) |
 | `PORT` / `NEURON_FLOW_HOST` | `8000` / `0.0.0.0` | Listening address |
-| `NEURON_FLOW_LLM_PROVIDER`, `NEURON_FLOW_LLM_MODEL`, `ANTHROPIC_API_KEY` | `mock` | AI second opinion (see [case_triage_v2_shadow.md](case_triage_v2_shadow.md)) |
+| `NEURON_FLOW_LLM_PROVIDER`, `NEURON_FLOW_LLM_MODEL`, `ANTHROPIC_API_KEY` or `GITHUB_MODELS_TOKEN` | `mock` | AI second opinion: `mock`, `anthropic` or `github` (see [case_triage_v2_shadow.md](case_triage_v2_shadow.md)) |
 | `NEURON_FLOW_MAX_QUEUED` | `100` | Admission refuses new jobs above this many waiting |
 | `NEURON_FLOW_SUBMIT_PER_MINUTE` | `30` | Submissions per client per minute (4× for everyone together) |
 | `NEURON_FLOW_MAX_CONNECTIONS` | `32` | Concurrent HTTP connections |

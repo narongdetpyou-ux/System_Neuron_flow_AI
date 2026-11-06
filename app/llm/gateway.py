@@ -2,8 +2,8 @@
 
 Flow for one call:
 1. refuse text that did not go through ``redaction.mask`` (personal data is masked before every AI call);
-2. pick the provider named in the frozen job configuration (mock or anthropic), and send the versioned
-   prompt plus the masked case text (as a JSON string);
+2. pick the provider named in the frozen job configuration (mock, anthropic or github), and send the
+   versioned prompt plus the masked case text (as a JSON string);
 3. treat a refusal as ``ModelDeclined`` and a cut-off answer as ``InvalidModelOutput``;
 4. parse the JSON answer and check it against the prompt's answer schema
    (every field present, no extra fields, fixed choices respected);
@@ -16,13 +16,13 @@ import time
 from neuron_flow.model import decode
 
 from .errors import InvalidModelOutput, ModelDeclined
-from .providers import anthropic, mock
+from .providers import anthropic, github_models, mock
 from .redaction import MaskedText
 
 TEXT_LIMIT = 200
 _CUT_OFF = {"max_tokens", "model_context_window_exceeded"}
 _CONTROL = re.compile(r"[\x00-\x1f\x7f  ]+")
-_PROVIDERS = {"mock": mock, "anthropic": anthropic}
+_PROVIDERS = {"mock": mock, "anthropic": anthropic, "github": github_models}
 
 
 def structured_answer(config, prompt, case_text, *, attempt=1, scenario=None):
