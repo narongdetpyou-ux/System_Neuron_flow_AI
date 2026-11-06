@@ -3,7 +3,7 @@
 This file specifies the measurement protocol. The table "Metrics and gates" lists
 **prospective** targets, not completed results.
 
-**Current baseline (2026-11-06):** 259 automated tests, green in CI. Last pinned run: `main` @
+**Current baseline (2026-11-06):** 262 automated tests, green in CI. Last pinned run: `main` @
 `0b03735` with 119 tests (https://github.com/narongdetpyou-ux/System_Neuron_flow_AI/actions/runs/41550257103). The first baseline (2026-11-01, `main` @ `59c6889`) had 53 tests.
 Always link the exact CI run and commit before describing a result as verified.
 

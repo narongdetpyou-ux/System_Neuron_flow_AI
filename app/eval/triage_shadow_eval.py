@@ -257,7 +257,7 @@ def summary_markdown(report):
               f"| token ที่ใช้ เข้า / ออก | {m['tokens']['input']:,} / {m['tokens']['output']:,}"
               f"{' (ประมาณการ)' if m['tokens']['estimated'] else ''} |",
               f"| เวลาตอบของ AI p50 / p95 | {_ms(m['llm_latency_ms']['p50'])} / {_ms(m['llm_latency_ms']['p95'])} ms |",
-              "", "### แยกตามภาษา", "", "| ภาษา | เคส | กฎถูก | AI ถูก |", "|---|---|---|---|"]
+              "", *common.reason_line(report["cases"], "llm_status", "llm_reason"), "### แยกตามภาษา", "", "| ภาษา | เคส | กฎถูก | AI ถูก |", "|---|---|---|---|"]
     for lang, score in m["by_language"].items():
         lines.append(f"| {LANGUAGES[lang]} | {score['cases']} | {_fmt(score['rules_correct'])} | {_fmt(score['llm_correct'])} |")
     d = m["when_disagreeing"]

@@ -35,14 +35,20 @@ def main(summary_path):
                                                    "x-github-api-version": "2022-11-28"})
     try:
         with urllib.request.urlopen(request, timeout=20) as response:
-            found = rows(json.loads(response.read(2_000_000).decode("utf-8")))
+            status, kind, raw = response.status, response.headers.get("content-type", "?"), response.read(2_000_000)
+        try:
+            found = rows(json.loads(raw.decode("utf-8-sig")))
+        except ValueError:
+            preview = raw[:200].decode("utf-8", errors="replace").replace("`", "'")
+            raise RuntimeError(f"HTTP {status}, {kind}, {len(raw)} bytes, starts with: {preview!r}") from None
         lines = ["<details><summary>รุ่นที่ GitHub Models มีให้ตอนนี้ (Models available now)</summary>", "",
                  "ระดับ low ใช้ฟรีได้มากกว่าระดับ high (Low-tier models allow more free requests.)", "",
                  "| model id | rate limit tier |", "|---|---|"]
         lines += [f"| `{model_id}` | {tier} |" for model_id, tier in found]
         lines += ["", "</details>", ""]
     except Exception as exc:  # the list is a convenience; never fail the run for it
-        lines = [f"_Could not read the GitHub Models catalog ({type(exc).__name__})._", ""]
+        detail = f": {exc}" if isinstance(exc, RuntimeError) else ""
+        lines = [f"_Could not read the GitHub Models catalog ({type(exc).__name__}{detail})._", ""]
     with open(summary_path, "a", encoding="utf-8") as stream:
         stream.write("\n".join(lines) + "\n")
     return 0

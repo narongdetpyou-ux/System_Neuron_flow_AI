@@ -82,7 +82,7 @@ def _error_codes(exc):
     """The error's code words (``error.code``, ``error.type``, ``error.innererror.code``); never its message."""
     codes = []
     try:
-        error = json.loads(exc.read(65536).decode("utf-8")).get("error")
+        error = json.loads(exc.read(65536).decode("utf-8-sig")).get("error")
         if isinstance(error, dict):
             inner = error.get("innererror") if isinstance(error.get("innererror"), dict) else {}
             codes = [value for value in (error.get("code"), error.get("type"), inner.get("code"))
@@ -123,9 +123,9 @@ def _parse_completion(raw, config):
     if len(raw) > MAX_RESPONSE_BYTES:
         raise InvalidModelOutput("Provider response is too large")
     try:
-        data = json.loads(raw.decode("utf-8"))
+        data = json.loads(raw.decode("utf-8-sig"))  # tolerate a leading byte-order mark
     except (UnicodeDecodeError, ValueError):
-        raise InvalidModelOutput("Provider response is not JSON") from None
+        raise InvalidModelOutput(f"Provider response is not JSON ({len(raw)} bytes)") from None
     choices = data.get("choices") if isinstance(data, dict) else None
     if not isinstance(choices, list) or not choices or not isinstance(choices[0], dict) \
             or not isinstance(choices[0].get("message"), dict):
