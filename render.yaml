@@ -10,7 +10,7 @@
 # NEURON_FLOW_DATA_DIR variable and the `disk` block below. Make these changes here, not in the dashboard:
 # a Blueprint sync overwrites dashboard changes that conflict with this file.
 #
-# Leave NEURON_FLOW_LLM_PROVIDER, ANTHROPIC_API_KEY, GITHUB_MODELS_TOKEN, SENTRY_DSN and HONEYCOMB_API_KEY out of this file. Add
+# Leave NEURON_FLOW_LLM_PROVIDER, ANTHROPIC_API_KEY, TYPHOON_API_KEY, SENTRY_DSN and HONEYCOMB_API_KEY out of this file. Add
 # them in the dashboard (Environment tab) when needed; a sync keeps variables that this file does not define.
 # HONEYCOMB_API_KEY turns tracing on (docs/observability_tracing.md).
 services:

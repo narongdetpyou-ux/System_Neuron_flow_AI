@@ -1,0 +1,55 @@
+name: Study guide eval with Typhoon (manual)
+# Scores the study guide (study_guide.v1, roadmap 3.3) on the synthetic request set with Typhoon (ADR-021).
+# Typhoon's hosted API is free (a research showcase, rate-limited: about 200 requests a minute, 5 a second)
+# and collects usage data to improve its models, which is acceptable only because every request is synthetic.
+# Needs the repository secret TYPHOON_API_KEY (Settings -> Secrets and variables -> Actions).
+# Per request, up to two short calls (find the topic, then explain the plan; 67 requests).
+on:
+  workflow_dispatch:
+    inputs:
+      model:
+        description: "Typhoon model id"
+        default: "typhoon-v2.5-30b-a3b-instruct"
+        required: true
+      limit:
+        description: "Only the first N requests (leave empty for all)"
+        default: ""
+        required: false
+permissions:
+  contents: read
+jobs:
+  eval:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      NEURON_FLOW_LLM_PROVIDER: typhoon
+      NEURON_FLOW_LLM_MODEL: ${{ inputs.model }}
+      LIMIT: ${{ inputs.limit }}
+      TYPHOON_API_KEY: ${{ secrets.TYPHOON_API_KEY }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - name: Check the API key is configured
+        run: |
+          if [ -z "$TYPHOON_API_KEY" ]; then
+            echo "::error::Add the repository secret TYPHOON_API_KEY (Settings -> Secrets and variables -> Actions), then run again."
+            exit 1
+          fi
+      - name: Check the connection with one fixed sentence
+        continue-on-error: true
+        run: PYTHONPATH=. python .github/scripts/llm_probe.py "$GITHUB_STEP_SUMMARY"
+      - name: Score the study guide with Typhoon
+        run: |
+          ARGS=()
+          if [ -n "$LIMIT" ]; then ARGS=(--limit "$LIMIT"); fi
+          python -m app.eval.study_guide_eval --min-interval-s 1 --summary "$GITHUB_STEP_SUMMARY" \
+            --out study-guide-eval-typhoon.json "${ARGS[@]}"
+      - name: Keep the scorecard
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: study-guide-eval-typhoon
+          path: study-guide-eval-typhoon.json
+          if-no-files-found: ignore

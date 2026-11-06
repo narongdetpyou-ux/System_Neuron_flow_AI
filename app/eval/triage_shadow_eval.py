@@ -228,7 +228,7 @@ def answer_changes(reference, candidate):
 def gate_markdown(changes, compared_with, cases):
     """The gate's verdict for the run page (Thai first), with how to proceed when it fails."""
     return common.gate_markdown(changes, compared_with, cases, module="app.eval.triage_shadow_eval",
-                                live_run="Shadow eval with Claude หรือ with GitHub Models")
+                                live_run="Shadow eval with Claude หรือ with Typhoon")
 
 
 def summary_markdown(report):
@@ -241,7 +241,7 @@ def summary_markdown(report):
                   "ผลนี้ยืนยันว่าทุกขั้นของระบบและการวัดผลทำงานครบ แต่ไม่ได้บอกความแม่นยำของ AI จริง  ",
                   "> *Mock provider: a keyword simulation written alongside this case set, so its score is "
                   "inflated by design. This run proves the pipeline and the measurement work, not AI accuracy.*", ""]
-    lines += common.github_models_note(llm)
+    lines += common.provider_note(llm)
     lines += [f"ชุดเคส `{p['golden']['name']}` ({p['golden']['cases']} เคส) · AI `{llm['provider']}/{llm['model']}` · "
               f"prompt `{p['prompt']['id']}` (`{p['prompt']['sha256'][:12]}`) · commit `{(p['git_sha'] or 'unknown')[:12]}`",
               "", "| สิ่งที่วัด | ผล |", "|---|---|",

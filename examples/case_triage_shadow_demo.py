@@ -2,7 +2,7 @@
 
 From the repository root:  python -m examples.case_triage_shadow_demo
 Uses the offline mock AI unless NEURON_FLOW_LLM_PROVIDER=anthropic and ANTHROPIC_API_KEY are set (Claude),
-or NEURON_FLOW_LLM_PROVIDER=github and GITHUB_MODELS_TOKEN (GitHub Models).
+or NEURON_FLOW_LLM_PROVIDER=typhoon and TYPHOON_API_KEY (Typhoon).
 """
 import json
 import tempfile
