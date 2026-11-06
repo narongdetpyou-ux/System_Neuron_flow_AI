@@ -1,9 +1,11 @@
 # case_triage v2 — shadow mode (AI second opinion)
 
 **Status:** on `main` since 2026-11-01 (PR #9). Implemented and tested with the offline mock AI. The
-Claude and Typhoon code paths are tested against a local fake API server. **No real model has run yet**:
-Claude needs a paid `ANTHROPIC_API_KEY` (D2), and the free Typhoon path (ADR-021, added 2026-11-06 after
-GitHub Models turned out to be retired) waits for its first manual run. Synthetic data only.
+Claude and Typhoon code paths are tested against a local fake API server. **First live runs, with Typhoon,
+on 2026-11-06** (the free path, ADR-021): the first got 0/5 answers because Typhoon ignores
+`response_format`; after the fix (ADR-022) the AI answered 61/61 and was correct on 60/61 of the synthetic
+cases, in two runs ([evidence](evidence/2026-11-06-first-live-typhoon.md)). Claude has not been run (it needs a paid
+`ANTHROPIC_API_KEY`, D2). Synthetic data only.
 service, public API or human-review service. No Core (`neuron_flow/`) file was changed. Design principles:
 [design_philosophy.md](design_philosophy.md).
 
@@ -20,6 +22,7 @@ service, public API or human-review service. No Core (`neuron_flow/`) file was c
 6. ทุกคำตอบของ AI ถูกบันทึกว่ามาจากรุ่นไหน ใช้ prompt ฉบับไหน ถ้าเปลี่ยน prompt หรือรุ่น AI งานเก่าจะไม่ถูกรันซ้ำด้วยค่าใหม่โดยไม่รู้ตัว
 7. **ด่านตรวจผลรายเคส (eval gate, ขั้น 5.2)** ทุกครั้งที่มีการส่งโค้ดขึ้น GitHub ระบบรันเคสทดสอบ 61 เคสด้วย AI จำลอง แล้วเทียบคำตอบของทุกเคสกับไฟล์ต้นแบบ (`tests/baselines/shadow_eval_mock.json`) ถ้ามีเคสไหนตอบต่างจากเดิม แม้แต่ช่องเดียว (หมวดของกฎ หมวดของ AI ความมั่นใจ การเห็นตรงกัน ความสำคัญ หรือเหตุผล) ช่องตรวจ *Core logic tests* จะเป็นสีแดง และหน้าผลรันจะบอกว่าเคสไหนเปลี่ยนอะไร ถ้าตั้งใจเปลี่ยน ต้องอัปเดตไฟล์ต้นแบบใน PR เดียวกันและเขียนเหตุผลไว้ ถ้าเปลี่ยน prompt หรือรุ่น AI ต้องแนบผลรันกับ AI จริงด้วย
 8. **ใช้ AI จริงได้ฟรีผ่าน Typhoon ของ SCB 10X (ADR-021)** ไม่ต้องมีบัตร ปุ่ม *Shadow eval with Typhoon (manual)* ใน Actions ใช้คีย์จาก secret `TYPHOON_API_KEY` ส่งเคสสมมุติทั้ง 61 เคสให้ Typhoon (ค่าเริ่มต้น `typhoon-v2.5-30b-a3b-instruct`) ก่อนเริ่มจะลองส่งประโยคทดสอบ 1 ประโยค และแสดงคำตอบดิบให้เห็นว่าการเชื่อมต่อใช้ได้ไหม ผลที่ได้เป็นของ Typhoon ไม่ใช่ของ Claude Typhoon เก็บข้อมูลการใช้งานไปปรับปรุงโมเดล จึงใช้ได้กับข้อมูลสมมุติเท่านั้น ถ้าตัวกรองของผู้ให้บริการบล็อกข้อความเคสไหน เคสนั้นนับเป็น "AI ไม่ตอบ" และไปถึงผู้รีวิวตามปกติ ไม่ทำให้งานล้ม (GitHub Models ที่ใช้ก่อนหน้านี้ปิดบริการไปแล้วตั้งแต่ 30 ก.ค. 2026)
+9. **รันกับ Typhoon จริงแล้วเมื่อ 6 พ.ย.** รอบแรก AI ตอบไม่ได้เลย 0 จาก 5 เคส เพราะ Typhoon ไม่ทำตามช่องตั้งค่ารูปแบบคำตอบ (response_format) ตอนนี้ระบบบอกรูปแบบคำตอบเป็นคำพูดด้วย (ADR-022) หลังแก้ AI ตอบได้ 61/61 และจัดหมวดถูก 60/61 ทั้ง 2 รอบ (กฎเดิมถูก 29/61 เคสภาษาไทย AI ถูก 26/26) เคสเป็นของสมมุติที่ผู้พัฒนาเขียนเอง จึงยังไม่ใช่ความแม่นยำจริง ([บันทึกหลักฐาน](evidence/2026-11-06-first-live-typhoon.md))
 
 ## How one case flows
 
@@ -86,7 +89,11 @@ they were degraded quietly, a broken setup could go unnoticed.
 - **Current API rules are followed.** The Claude client uses structured output (`output_config.format`) and
   sends no `temperature`/`top_p`, because current Claude 5.5 models reject forced tool choice and sampling
   parameters. The OpenAI-format client (Typhoon) uses `response_format` with a strict `json_schema` built
-  from the same answer schema, and sends no sampling parameters, tools or effort either.
+  from the same answer schema, and sends no sampling parameters, tools or effort either. Typhoon ignores
+  `response_format` (its first live run, 2026-11-06, got plain `key: value` lines), so the client also states
+  the answer format in words at the end of the system prompt and reads the reply from its first `{` to its
+  last `}`; the validators still refuse anything that is not exactly one valid object (ADR-022). The format
+  version (`json-instruction-v1`) is part of Typhoon's agent version.
 - **A content-filter block is one declined case.** On an OpenAI-format service, an HTTP 400
   `content_filter` reply (or `finish_reason: content_filter`, or a `refusal` message) becomes
   `unavailable: model_declined` at once
@@ -147,8 +154,8 @@ python -m app.eval.triage_shadow_eval --compare-with tests/baselines/shadow_eval
   ```
 
   The file has one case per line, so the pull request's diff shows exactly which cases changed. A prompt
-  or model change also needs a live run by hand (*Actions → Shadow eval with Claude* or *with GitHub
-  Models*), attached to the pull request.
+  or model change also needs a live run by hand (*Actions → Shadow eval with Claude* or *with Typhoon*),
+  attached to the pull request.
 - **Comparing two runs:** `--compare-with` also accepts a full report written with `--out`, for example to
   list where a live run differs from the mock. `compare_reports` (through
   `neuron_flow.evaluation.candidate_gate`) still compares the AI outcomes of two reports from Python.
@@ -168,8 +175,20 @@ It does not show AI accuracy.
    rate-limit headers, first characters) and how the provider classified it (`.github/scripts/llm_probe.py`;
    never the key, never a case). Cases then start at least 1 second apart (`--min-interval-s 1`).
 4. Read the scorecard on the run page, or download `shadow-eval-typhoon.json`. When the AI gave no answer,
-   a line under the table counts why (for example `unavailable: invalid_model_output 5`). The page says the
-   numbers belong to Typhoon, not to Claude.
+   a line under the table counts why (for example `unavailable: invalid_model_output 5`). The page lists the
+   cases both got wrong and the cases only the AI got wrong, and says the numbers belong to Typhoon, not to
+   Claude.
+
+First results (2026-11-06, [evidence](evidence/2026-11-06-first-live-typhoon.md)), all on the developer's synthetic set:
+
+| Run | AI answered | AI correct | Rules correct | Rule mistakes raised | Both wrong |
+|---|---|---|---|---|---|
+| First run, 5 cases, before the fix | 0/5 (`invalid_model_output` 5) | – | 3/5 | 0/2 | – |
+| 61 cases, after the fix | 61/61 | 60/61 | 29/61 | 32/32 | 0 |
+| 61 cases, repeated | 61/61 | 60/61 | 29/61 | 32/32 | 0 |
+
+The AI's one mistake in the repeat was `EN-ADV-04` ("Something is wrong with my account, please check",
+labelled `other`), which it called `access`. Thai cases: AI correct 26/26, rules 7/26.
 
 GitHub Models (ADR-020) was the first free path, but GitHub retired it on 2026-07-30; its first run got only a
 bare `OK` back, which the connection check above made visible.
@@ -206,8 +225,9 @@ bare `OK` back, which the connection check above made visible.
 - Synthetic cases labelled by the developer. These are not real customer data and not independent ground truth.
 - Masking is pattern-based (see "Safety rules built in"). It lowers the risk; it does not make real
   personal data safe to send.
-- No real model has run yet, so there are no accuracy, latency or cost claims for Claude or Typhoon. A
-  Typhoon result, once measured, describes that model only.
+- The only live runs are Typhoon's on this synthetic set (2026-11-06): a first measurement of that model,
+  not accuracy, and nothing about Claude. Its latency was measured from GitHub's runners, not from Render.
+  No cost claims are made.
 - Typhoon's API is a free beta research showcase that collects usage data; synthetic data only.
 - Token counts cover answered calls only. No money estimate is made, because prices change.
 - Shadow mode does not reduce reviewer work. It orders that work and explains it.

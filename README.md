@@ -71,12 +71,12 @@ guide** (`study_guide.v1`, the owner's first-response rule):
 |---|---|---|
 | Core runtime: DAG workflows, bounded child processes, retries, restart recovery, verified receipts | `neuron_flow/` | Working; one planned fix since extraction (telemetry phase names, PR #21) |
 | Case triage v1: deterministic keyword rules | `app/domains/case_triage/agents.py`, `workflow.py` | Working |
-| Case triage v2: shadow mode with AI second opinion | `app/domains/case_triage/shadow_*.py` | Working with the offline mock AI; Claude and Typhoon paths tested against a fake API, **not yet run against a real model** |
-| AI gateway: versioned prompt, mock, Claude and Typhoon providers | `app/llm/` | Working (see above); Typhoon (SCB 10X, Thai-first) is free within rate limits (ADR-021) |
+| Case triage v2: shadow mode with AI second opinion | `app/domains/case_triage/shadow_*.py` | Working with the offline mock AI; Claude and Typhoon paths tested against a fake API; **first live runs with Typhoon** on 2026-11-06 (synthetic set, [evidence](docs/evidence/2026-11-06-first-live-typhoon.md)); Claude not run yet |
+| AI gateway: versioned prompt, mock, Claude and Typhoon providers | `app/llm/` | Working (see above); Typhoon (SCB 10X, Thai-first) is free within rate limits (ADR-021) and is told the answer format in words, because it ignores `response_format` (ADR-022) |
 | Error monitoring and tracing | `app/observability/` | Sentry errors, degraded-AI warnings and Runner recoveries; traces to Honeycomb (OTLP), off until a key is set; on for the Render service, first trace seen 2026-11-03 |
 | Scorecards: 61 synthetic labelled triage cases, and 67 study-guide requests (EN + TH, metaphors, out of scope, injection) | `app/eval/` | Run in CI as eval gates; mock scores test the pipeline, not AI accuracy |
 | Intake API, durable job queue, single Runner with crash recovery, Thai web page | `app/api/`, `app/persistence/`, `app/services/`, `app/web/`, `app/serve.py` | Working (round 2), tested offline and as a container in CI; live on Render's free plan since 2026-11-01 |
-| Study guide (`study_guide.v1`): versioned topic catalog (11 topics, Thai and English), verified resource library (17 links) with a weekly link check, and the five-step workflow | `app/domains/study_guide/` | Working with the offline mock AI through the API (roadmap 3.1, 3.2); **not yet run against a real model**; no box on the web page yet (3.4) |
+| Study guide (`study_guide.v1`): versioned topic catalog (11 topics, Thai and English), verified resource library (17 links) with a weekly link check, and the five-step workflow | `app/domains/study_guide/` | Working through the API (roadmap 3.1, 3.2); mock AI in CI; **first live run with Typhoon** on 2026-11-06 (synthetic set); no box on the web page yet (3.4) |
 | Human-review decisions, n8n intake, reviewer notifications | — | **Not built yet** (Milestone C in [architecture](docs/architecture.md)) |
 
 ## Try it
@@ -111,7 +111,7 @@ forgets its cases when it sleeps or redeploys; a paid plan with a disk keeps the
 
 **Locally (Python 3.10+):**
 ```bash
-python -m unittest discover -s tests -v        # 266 tests
+python -m unittest discover -s tests -v        # 267 tests
 python -m examples.case_triage_demo            # v1 rules, one synthetic case
 python -m examples.case_triage_shadow_demo     # v2 shadow mode, three synthetic cases (offline mock AI)
 python -m app.eval.triage_shadow_eval          # scorecard on 61 synthetic cases
@@ -147,7 +147,7 @@ most 1 MiB. The agent `version` is frozen into each job, so an old job refuses t
 | [Tracing to Honeycomb](docs/observability_tracing.md) | One trace per case: what a span carries and never carries, setup in Render, how it is checked |
 | [Study guide](docs/study_guide.md) | `study_guide.v1`: the workflow and its answer, failure handling, the mock's limits; the topic catalog and verified library, the weekly link check |
 | [Funding readiness pack](docs/funding/README.md) | Internal evidence register; not a submitted application |
-| [Evidence notes](docs/evidence/2026-11-03-render-operations.md) | Dated measurements; the first one covers Render operations (graceful stops, deploy filter, cold start) |
+| [Evidence notes](docs/evidence/2026-11-03-render-operations.md) | Dated measurements; the first one covers Render operations (graceful stops, deploy filter, cold start), and [the first live AI runs](docs/evidence/2026-11-06-first-live-typhoon.md) are Typhoon's (2026-11-06) |
 
 ## Scope and limits
 
@@ -157,11 +157,14 @@ most 1 MiB. The agent `version` is frozen into each job, so an old job refuses t
 - Agent child processes isolate failures; they are **not** a security sandbox.
 - All test data is synthetic. Mock AI scores are inflated by design and are not evidence of AI accuracy.
 - Masking personal data before AI calls is pattern-based; it lowers the risk but does not make real data safe.
-- No real model has been called yet (neither Claude nor Typhoon), so there are no accuracy, latency or
-  cost claims.
+- The only live-model runs are Typhoon's first ones on the synthetic sets (2026-11-06, [evidence](docs/evidence/2026-11-06-first-live-typhoon.md)):
+  triage AI correct 60/61 in two runs (the rules 29/61), study guide topic correct 46/48 with no link
+  outside the library. The cases and labels are the developer's and the runs are few, so these numbers are
+  a first measurement of that model, not accuracy, and say nothing about Claude, which has not been run.
+  No cost claims are made.
 - The study guide's mock AI is a keyword simulation: it cannot read a new metaphor. On the 67-request
   scorecard it finds the right topic for 2 of 48 in-scope requests, so its answers prove the workflow runs,
-  not that it understands people. A live run has not been made yet (Typhoon is ready; Claude needs D2).
+  not that it understands people.
 
 ## Origin
 

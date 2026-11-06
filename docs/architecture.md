@@ -86,8 +86,10 @@ Each row was re-checked against the current code.
     `providers/openai_compat.py`, which serves any OpenAI chat-completions service from one table in
     `config.py`. Each reads its own key variable (`ANTHROPIC_API_KEY`, `TYPHOON_API_KEY`).
   - Answers use structured JSON output (`output_config.format` for Claude, `response_format` `json_schema`
-    strict for OpenAI-format services), built from the prompt's own answer schema. Neither client sends
-    sampling parameters, tools or forced `tool_choice` (current Claude 5.5 models reject them).
+    strict for OpenAI-format services), built from the prompt's own answer schema. Typhoon ignores
+    `response_format`, so for it the client also states the answer format in words, built from the same
+    schema, and the format version is part of the agent version (ADR-022). Neither client sends sampling
+    parameters, tools or forced `tool_choice` (current Claude 5.5 models reject them).
   - The clients refuse HTTP redirects (`providers/_http.py`), so the key cannot travel to another host.
   - The API key is read from the environment at call time. It never appears in a job, an output or a log.
   - Personal data is masked before every call (`app/llm/redaction.py`, roadmap 7.1): the gateway accepts
@@ -200,7 +202,7 @@ app/boot.py                    process 1 of the image: takes the data folder, dr
 app/settings.py, app/serve.py  environment settings; the launcher (API + supervised Runner in one container)
 Dockerfile, render.yaml        the container and the Render Blueprint (railway.json kept for Railway)
 examples/                      case_triage_demo, case_triage_shadow_demo, study_guide_demo, sentry_smoke_test, service_smoke_test
-tests/                         266 tests: core, triage v1/v2, AI gateway, Typhoon provider, masking, scorecards, eval gates, Sentry, tracing, API, queue, Runner, HTTP, metrics, study library, link check, study guide
+tests/                         267 tests: core, triage v1/v2, AI gateway, Typhoon provider, masking, scorecards, eval gates, Sentry, tracing, API, queue, Runner, HTTP, metrics, study library, link check, study guide
 tests/baselines/               shadow_eval_mock.json, study_guide_eval_mock.json: every case's answer with the mock AI (the eval gates' baselines)
 .github/workflows/             core-tests, service-container, tracing-check, secret-scan, sentry-smoke, study-links (weekly), shadow-eval-claude and study-guide-eval-claude (manual)
 .github/gitleaks.toml          secret scan rules (gitleaks defaults + Sentry DSN + Honeycomb keys); .github/.gitleaksignore: reviewed findings
@@ -233,7 +235,8 @@ planned: review ledger and artifact store; the study guide's scorecard and page 
 | 018 | An informational workflow (today `study_guide.v1`) ends `COMPLETED` without human review. It may only answer with information from versioned data; it records no decision, changes nothing and sends nothing outside, and its validator refuses a `decision` field. Anything that decides about a person or acts outside still goes to review (rule 4) | In force (roadmap 3.2, PR #33). Trade-off: nobody checks an answer before the person reads it, so the answer must stay safe by construction (catalog topics only, at most 5 library links, code-inserted URLs, "out of scope" instead of guessing) and is measured in 3.3 |
 | 019 | A prompt file may be completed from versioned data before a call (`app.llm.prompts.specialize`): extra system lines, fixed choices for a text field, extra text fields. The file keeps its hash, and the agent version carries the data's own version next to it | In force (PR #33, the study guide's catalog). Trade-off: the exact prompt text is no longer one file to read, but it is a pure function of two versioned inputs and is rebuilt the same way for every attempt |
 | 020 | A second real provider, GitHub Models (`github`), so the first live measurement does not wait for a paid Claude key: the owner's Anthropic account asks for card verification (2026-11-06). Same gateway, validators, masking and error classes as Claude; its own key variable (`GITHUB_MODELS_TOKEN`); the manual scorecard workflows pass the workflow's own `GITHUB_TOKEN` with only `contents: read` and `models: read`, so there is no key to create or store. A content-safety block of one case's text (HTTP 400 `content_filter`) counts as a refusal, not a setup error | **Superseded by ADR-021.** Built in PR #35 and #36; GitHub had retired GitHub Models on 2026-07-30 (found when the first run got a bare `OK` back), so the provider and its workflows were removed. Trade-offs: the free tier is rate-limited (about 15 requests a minute and 150 a day per low-tier model), so the scorecards pace cases (`--min-interval-s`); results belong to the chosen model, not to Claude, and say so on the run page; GitHub's data terms for the catalog were not reviewed here, so only synthetic data may go to it (rule 9; D4 decides real data) |
-| 021 | Typhoon (`typhoon`) replaces GitHub Models as the free real provider. SCB 10X hosts it as a free research API (no card; about 200 requests a minute, 5 a second) in the OpenAI chat-completions format, so it reuses the ADR-020 client, now `providers/openai_compat.py` with a provider table. Thai-first, which suits a case set that is half Thai. Key from `TYPHOON_API_KEY` (a repository secret; the owner created it on 2026-11-06). Every live run first checks the connection with one fixed synthetic sentence and shows the raw reply (`.github/scripts/llm_probe.py`) | In force (this PR; not yet run live). Trade-offs: the API is a beta research showcase without formal support, and it collects usage data to improve its models, so it may only ever see synthetic data (rule 9; D4). Whether it honours strict `json_schema` output is confirmed only by the first run; the connection check shows it. Results describe Typhoon, never Claude |
+| 021 | Typhoon (`typhoon`) replaces GitHub Models as the free real provider. SCB 10X hosts it as a free research API (no card; about 200 requests a minute, 5 a second) in the OpenAI chat-completions format, so it reuses the ADR-020 client, now `providers/openai_compat.py` with a provider table. Thai-first, which suits a case set that is half Thai. Key from `TYPHOON_API_KEY` (a repository secret; the owner created it on 2026-11-06). Every live run first checks the connection with one fixed synthetic sentence and shows the raw reply (`.github/scripts/llm_probe.py`) | In force (PR #37). Trade-offs: the API is a beta research showcase without formal support, and it collects usage data to improve its models, so it may only ever see synthetic data (rule 9; D4). The first run (2026-11-06) showed that it ignores strict `json_schema` output (ADR-022). Results describe Typhoon, never Claude |
+| 022 | An OpenAI-format client may also state the answer format in words. When a provider is listed in `ANSWER_FORMATS` (`app/llm/config.py`; today only `typhoon`, format `json-instruction-v1`), the client appends to the system prompt an instruction built from the prompt's own answer schema (the keys in order, each choice field's allowed values, one JSON object and nothing else), and reads the reply from its first `{` to its last `}` after removing a Markdown code fence. The same validators then check the object; plain `key: value` lines, extra keys, a wrong choice or two objects are still refused, never parsed. The format version is part of the agent version (`;format=json-instruction-v1`), so a job frozen before the change fails as `configuration_changed` (ADR-015). Claude's requests and versions are unchanged | In force (PR #38). Found on the first live run (2026-11-06): Typhoon answered HTTP 200 but ignored `response_format`, so all 5 answers were plain lines and were refused ([evidence](evidence/2026-11-06-first-live-typhoon.md)). Trade-off: the model sees text that is not in the prompt file, so the prompt's hash alone no longer names everything sent; the format version in the agent version closes that gap, and the instruction is a pure function of the answer schema |
 
 ## 9. Acceptance gates
 
@@ -291,13 +294,13 @@ dashboard.
 | Milestone | Content | Status |
 |---|---|---|
 | A | case_triage v1 rules, synthetic demo, tests | Done |
-| A2 | AI gateway, v2 shadow mode, scorecard, Sentry reporting | Done (PR #8, #9); a free Typhoon provider added (ADR-021, after GitHub Models was found retired); no real model has run yet |
+| A2 | AI gateway, v2 shadow mode, scorecard, Sentry reporting | Done (PR #8, #9); a free Typhoon provider added (ADR-021, after GitHub Models was found retired). First live runs with Typhoon on 2026-11-06 after the answer-format fix (ADR-022): AI correct 60/61 on the synthetic triage set in two runs ([evidence](evidence/2026-11-06-first-live-typhoon.md)); Claude not run yet (D2) |
 | P1-fix | Neutral telemetry phase names | Done (PR #21, roadmap 1.1) |
 | B | Admission queue, single Runner, reconciliation, thin API, web page | Done (PR #11); live on Render's free plan since 2026-11-01; page redesigned as a chat layout with Flow, Trace and read-only settings (PR #18, roadmap 1.6) |
 | C | Two-phase review, decision ledger, n8n notifications | Open |
 | D | OpenTelemetry tracing, eval gates in CI | Done: the per-case eval gates (5.2 for triage; 3.3 for the study guide), queue/run-time figures (5.3), Sentry, request ids, and tracing (5.1, PR #30), with the first trace seen in Honeycomb on 2026-11-03 |
 | E | Planner pattern (B), MCP server, second domain with zero Core changes | Open |
-| — | `study_guide.v1`: first-response study guide ([design_philosophy.md](design_philosophy.md), [study_guide.md](study_guide.md)) | Workflow and scorecard built: the topic catalog, the verified resource library, the weekly link check (3.1, PR #32), the five-step workflow in the catalog (3.2, PR #33) and the 67-request scorecard with its eval gate (3.3, PR #34), all with the mock AI only; the page is not built (3.4); a live run is ready with Typhoon (ADR-021), and with Claude after D2 |
+| — | `study_guide.v1`: first-response study guide ([design_philosophy.md](design_philosophy.md), [study_guide.md](study_guide.md)) | Workflow and scorecard built: the topic catalog, the verified resource library, the weekly link check (3.1, PR #32), the five-step workflow in the catalog (3.2, PR #33) and the 67-request scorecard with its eval gate (3.3, PR #34), with the mock AI in CI; first live run with Typhoon on 2026-11-06: topic correct 46/48, 0 of 142 links outside the library ([evidence](evidence/2026-11-06-first-live-typhoon.md)); the page is not built (3.4); Claude after D2 |
 
 The order of the remaining work, with tasks, acceptance checks and owner decisions for each step, is in
 [ROADMAP.md](ROADMAP.md).
@@ -314,8 +317,8 @@ The order of the remaining work, with tasks, acceptance checks and owner decisio
   of them could read the AI key once it is set. Options and a recommendation are in ROADMAP 7.1.
 - The Sentry DSN that the smoke workflow carried until 2026-11-03 is still in the git history. It can only
   submit events; it must be revoked in Sentry before the repository is made public (ROADMAP 7.4).
-- The study guide has only run with the mock AI, a keyword simulation that cannot read a new metaphor.
-  Whether a real model maps everyday words and metaphors to the right topic is unmeasured until the first
-  live run (Typhoon now, Claude after D2).
-- Live model results (Claude or Typhoon), security review, benchmarks and user studies do not exist yet.
-  No document should claim them. A Typhoon result, once measured, describes that model only.
+- The only live-model results are Typhoon's first runs on the synthetic sets (2026-11-06, one or two runs
+  per scorecard, [evidence](evidence/2026-11-06-first-live-typhoon.md)). The cases and labels are the developer's,
+  so they are a first measurement, not accuracy, and they describe that model only. Claude has not been run
+  (D2).
+- Security review, benchmarks and user studies do not exist yet. No document should claim them.

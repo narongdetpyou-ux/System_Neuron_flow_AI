@@ -21,7 +21,7 @@ differs, this file and architecture.md win.
   - ถ้าสองฝ่ายเห็นไม่ตรงกัน เคสจะถูกยกให้คนดูก่อน
 - ถ้าเครื่องดับกลางทาง ระบบทำต่อได้ ส่งซ้ำก็ไม่เกิดงานซ้ำ
 - ยกเลิกเคสที่ยังรอคิวได้ และทุกคำขอมีรหัสคำขอ (request id) ไว้ไล่ดูใน log (ขั้น 1.2, 1.3)
-- ผ่านชุดทดสอบอัตโนมัติ 266 ข้อ และเปิดใช้ออนไลน์บน Render แล้ว ระบบปิดตัวอย่างเรียบร้อย และการแก้แค่เอกสารไม่ทำให้ Render ขึ้นเวอร์ชันใหม่ (ขั้น 0.1, 0.5)
+- ผ่านชุดทดสอบอัตโนมัติ 267 ข้อ และเปิดใช้ออนไลน์บน Render แล้ว ระบบปิดตัวอย่างเรียบร้อย และการแก้แค่เอกสารไม่ทำให้ Render ขึ้นเวอร์ชันใหม่ (ขั้น 0.1, 0.5)
 - หน้าเว็บเป็นแบบแชท: พิมพ์เคส ดูขั้นตอนก่อนส่ง กดยืนยัน แล้วติดตามใน Flow และประวัติเหตุการณ์ (ขั้น 1.6)
 - หน้าเว็บบอกว่ามีเคสรอกี่เคส เคสที่รอนานสุดรอมานานเท่าไร ปกติแต่ละเคสใช้เวลาเท่าไร และเคสที่ไม่สำเร็จล้มเพราะอะไร (ขั้น 5.3)
 - ถ้ามีคนแก้กฎหรือ prompt แล้วคำตอบของเคสทดสอบเคสไหนเปลี่ยน ช่องตรวจบน GitHub จะเป็นสีแดงและบอกว่าเคสไหนเปลี่ยนอะไร (ขั้น 5.2)
@@ -30,17 +30,17 @@ differs, this file and architecture.md win.
 - ส่งเส้นทางการทำงาน (trace) ของทุกเคสไป Honeycomb แล้ว: เห็นว่าแต่ละขั้นใช้เวลาเท่าไร ลองกี่ครั้ง และ AI ใช้ token เท่าไร โดยไม่ส่งข้อความเคสหรือคำตอบของ AI เปิดใช้บน Render แล้ว และเห็นเส้นทางแรกใน Honeycomb เมื่อ 4 พ.ย. 00:23 น. (ขั้น 5.1)
 - มีคลังแหล่งเรียนที่ตรวจแล้ว 17 แหล่งใน 11 หัวข้อ ทุกแหล่งบอกว่าใช้ทำอะไร ระดับไหน ภาษาอะไร และควรเน้นส่วนไหน และ GitHub เปิดทุกลิงก์ทุกวันจันทร์เพื่อจับลิงก์เสีย (ขั้น 3.1)
 - ผู้ช่วยแนะนำแหล่งเรียนทำงานได้แล้วผ่าน API: พิมพ์เรื่องที่อยากรู้ด้วยคำธรรมดา ได้แหล่งเรียนไม่เกิน 5 แหล่งเรียงพื้นฐานก่อน ทุกลิงก์มาจากคลัง ถ้าเรื่องอยู่นอกกรอบก็บอกตรง ๆ ว่าช่วยเรื่องไหนได้ ยังใช้แค่ AI จำลอง และยังไม่มีช่องบนหน้าเว็บ (ขั้น 3.2)
-- มีชุดข้อสอบของผู้ช่วยแนะนำแหล่งเรียน 67 ข้อ (ไทยและอังกฤษ คำเปรียบ คำพูดอ้อม เรื่องนอกกรอบ และคำสั่งแอบแฝง) GitHub รันทุกครั้งที่ส่งโค้ด ถ้ามีลิงก์นอกคลังหรือเกิน 5 แหล่งแม้ข้อเดียว หรือคำตอบข้อไหนเปลี่ยน ช่องตรวจจะเป็นสีแดง AI จำลองหาหัวข้อถูกแค่ 2 จาก 48 ข้อ ซึ่งไม่ใช่ความแม่นยำ ผลจริงต้องรอรันกับ AI จริง (ขั้น 3.3)
-- ใช้ AI จริงได้ฟรีแล้วโดยไม่ต้องมีบัตร: ผ่าน Typhoon ของ SCB 10X (เก่งภาษาไทย) คุณสมัครและใส่คีย์ `TYPHOON_API_KEY` ไว้ใน GitHub แล้ว มีปุ่มรันเองใน Actions สองปุ่ม (*Shadow eval with Typhoon* และ *Study guide eval with Typhoon*) ยังไม่ได้รันจริง (GitHub Models ที่ลองก่อนหน้านี้ปิดบริการไปตั้งแต่ 30 ก.ค. 2026; ขั้น 0.3, ADR-021)
+- มีชุดข้อสอบของผู้ช่วยแนะนำแหล่งเรียน 67 ข้อ (ไทยและอังกฤษ คำเปรียบ คำพูดอ้อม เรื่องนอกกรอบ และคำสั่งแอบแฝง) GitHub รันทุกครั้งที่ส่งโค้ด ถ้ามีลิงก์นอกคลังหรือเกิน 5 แหล่งแม้ข้อเดียว หรือคำตอบข้อไหนเปลี่ยน ช่องตรวจจะเป็นสีแดง AI จำลองหาหัวข้อถูกแค่ 2 จาก 48 ข้อ ซึ่งไม่ใช่ความแม่นยำ ส่วนผลกับ AI จริงอยู่ในข้อถัดไป (ขั้น 3.3)
+- วัดผล AI จริงครั้งแรกแล้ว ฟรีผ่าน Typhoon ของ SCB 10X (เก่งภาษาไทย) เมื่อ 6 พ.ย.: รอบแรก AI ตอบไม่ได้เลย 0 จาก 5 เคส เพราะ Typhoon ไม่ทำตามช่องตั้งค่าที่ขอให้ตอบเป็น JSON แก้แล้วโดยบอกรูปแบบคำตอบเป็นคำพูดด้วย (ADR-022) หลังแก้ รันครบทั้งชุด: คัดแยกเคส AI ถูก 60 จาก 61 เคส ทั้ง 2 รอบ (กฎเดิมถูก 29) และผู้ช่วยแนะนำแหล่งเรียนหาหัวข้อถูก 46 จาก 48 ข้อ ไม่มีลิงก์นอกคลังเลย เคสเป็นของสมมุติที่ผู้พัฒนาเขียนเอง จึงยังไม่ใช่ความแม่นยำจริง และเป็นผลของ Typhoon ไม่ใช่ของ Claude ([บันทึกหลักฐาน](evidence/2026-11-06-first-live-typhoon.md); ขั้น 0.3, ADR-021, ADR-022)
 
 **ลำดับต่อจากนี้** แต่ละขั้นจบด้วยสิ่งที่คุณลองเองได้
 
-| ขั้น | ทำอะไร | คุณจะได้ลองอะไร | สถานะ (5 พ.ย. 2026) |
+| ขั้น | ทำอะไร | คุณจะได้ลองอะไร | สถานะ (6 พ.ย. 2026) |
 |---|---|---|---|
-| 0 | เปิดใช้ออนไลน์บน Render และวัดผล AI จริงครั้งแรก | ใส่เคสบนหน้าเว็บจริง และอ่านผลวัดของ AI จริง | ออนไลน์แล้ว; วัดผล AI จริงได้ฟรีผ่าน Typhoon แล้ว รอคุณกดรัน (0.3); ที่เหลือรอคุณตัดสินใจเรื่องเงิน (D1 แผน Render, D2 API key ของ Claude) |
+| 0 | เปิดใช้ออนไลน์บน Render และวัดผล AI จริงครั้งแรก | ใส่เคสบนหน้าเว็บจริง และอ่านผลวัดของ AI จริง | ออนไลน์แล้ว; วัดผล AI จริงครั้งแรกแล้วด้วย Typhoon (0.3, 6 พ.ย.); ที่เหลือรอคุณตัดสินใจเรื่องเงิน (D1 แผน Render, D2 API key ของ Claude) |
 | 1 | เก็บงานเล็ก ๆ ให้ระบบแน่นขึ้น | ยกเลิกเคสที่ยังรอคิวได้ | เสร็จ ยกเว้น 1.4 (สำรองข้อมูล) ที่ต้องใช้แผน Render แบบเสียเงิน |
 | 2 | ให้คนรีวิวได้จริง: ผู้รีวิวมีรหัสของตัวเอง กดอนุมัติหรือไม่อนุมัติได้ และ n8n แจ้งเตือน | กล่อง "รอรีวิว" บนหน้าเว็บ และข้อความแจ้งเตือน | ยังไม่เริ่ม |
-| 3 | ผู้ช่วยแนะนำแหล่งเรียน (`study_guide.v1`) ตามหลักปรัชญาของคุณ | พิมพ์เรื่องที่อยากรู้ด้วยคำธรรมดา แล้วได้แหล่งเรียนไม่เกิน 5 แหล่งพร้อมลำดับการเรียน | เริ่มแล้ว (คุณเลือกขั้นนี้ก่อนขั้น 2 เมื่อ 5 พ.ย.): 3.1 คลังแหล่งเรียน 3.2 ตัวผู้ช่วย และ 3.3 ชุดข้อสอบ ทำแล้ว (ดูตัวอย่างคำตอบและผลข้อสอบใน Actions ได้); 3.4 ช่องบนหน้าเว็บ ยังไม่ทำ; ผลกับ AI จริงรันได้ฟรีผ่าน Typhoon (Claude รอ D2) |
+| 3 | ผู้ช่วยแนะนำแหล่งเรียน (`study_guide.v1`) ตามหลักปรัชญาของคุณ | พิมพ์เรื่องที่อยากรู้ด้วยคำธรรมดา แล้วได้แหล่งเรียนไม่เกิน 5 แหล่งพร้อมลำดับการเรียน | เริ่มแล้ว (คุณเลือกขั้นนี้ก่อนขั้น 2 เมื่อ 5 พ.ย.): 3.1 คลังแหล่งเรียน 3.2 ตัวผู้ช่วย และ 3.3 ชุดข้อสอบ ทำแล้ว (ดูตัวอย่างคำตอบและผลข้อสอบใน Actions ได้); 3.4 ช่องบนหน้าเว็บ ยังไม่ทำ; รันกับ AI จริง (Typhoon) แล้ว หาหัวข้อถูก 46 จาก 48 ข้อ ไม่มีลิงก์นอกคลัง (Claude รอ D2) |
 | 4 | ช่องคุยภาษาธรรมดา: ระบบเข้าใจว่าคุณขออะไร บอกตรง ๆ เมื่อเรื่องอยู่นอกกรอบ และถามกลับ 1 คำถามเมื่อข้อมูลไม่พอ | คุยกับระบบได้เลย ไม่ต้องเลือกประเภทงานเอง | ยังไม่เริ่ม (ต้องรอขั้น 3) |
 | 5 | ติดตามเส้นทางของแต่ละงาน (เวลา token จุดที่ช้า) และด่านตรวจผลรายเคส | ตัวเลขคิวและเวลาบนหน้าเว็บ ช่องตรวจบน PR แล้วต่อด้วยเส้นทางงานใน Honeycomb | เสร็จแล้วทั้ง 5.1, 5.2 และ 5.3; เส้นทางงานแรกเข้า Honeycomb เมื่อ 4 พ.ย. 00:23 น. |
 | 6 | AI วางแผนงานหลายขั้น ระบบตรวจแผนก่อนรัน และเครื่องมืออื่นเรียกใช้ผ่าน MCP ได้ | สั่งงานจากแอป Claude ได้ | ยังไม่เริ่ม (ต้องรอขั้น 2–4) |
@@ -83,7 +83,7 @@ Marks: ✅ done · 🟡 built or partly checked (the status says what is left) �
 |---|---|---|---|
 | 0.1 | Put round 2 online on Render | ✅ live since 2026-11-01; graceful stops confirmed on Render ([evidence note](evidence/2026-11-03-render-operations.md)) | — |
 | 0.2 | Free or paid hosting | ⬜ owner decision D1 | 0.1 |
-| 0.3 | First scorecard run with a real model | 🟡 Typhoon path built (ADR-021, this PR; GitHub Models, ADR-020, was retired by GitHub); waits for the owner to run it. Claude still needs D2 | — |
+| 0.3 | First scorecard run with a real model | ✅ path A, Typhoon (ADR-021, ADR-022; PR #37, #38): the first run got 0/5 answers (Typhoon ignores `response_format`), fixed; on the full sets triage AI correct 60/61 in two runs and study guide topic correct 46/48 ([evidence note](evidence/2026-11-06-first-live-typhoon.md)). Path B, Claude, still needs D2 | — |
 | 0.4 | Claude for the online page | ⬜ optional | 0.1, 0.3 |
 | 0.5 | Skip Render deploys for docs-only commits | ✅ PR #15; merges #19, #20 and #24 did not deploy, code merges did ([evidence note](evidence/2026-11-03-render-operations.md)) | 0.1 |
 | 0.6 | Open Dependabot PRs #1–#5 | ✅ #1–#5 closed (they edit files removed in PR #6); PR #20 moved the workflows to the Node 24 action versions, and CI no longer warns about Node.js 20 | — |
@@ -103,7 +103,7 @@ Marks: ✅ done · 🟡 built or partly checked (the status says what is left) �
 | 2.8 | Measure rules vs AI against reviewer labels | ⬜ | 2.2, 0.3 |
 | 3.1 | Topic catalog and verified resource library | ✅ PR #32; links checked by *Study library link check* on the PR ([evidence note](evidence/2026-11-05-study-library-links.md)); the weekly run starts after the merge | — |
 | 3.2 | `study_guide.v1` workflow | ✅ PR #33; mock AI only, no live run yet (Typhoon ready, Claude needs D2) | 3.1 |
-| 3.3 | Study-guide evaluation set and scorecard | ✅ PR #34 with the mock in CI (an eval gate); a live run is ready with Typhoon, with Claude after D2 | 3.2 |
+| 3.3 | Study-guide evaluation set and scorecard | ✅ PR #34 with the mock in CI (an eval gate); first live run with Typhoon on 2026-11-06 (PR #38): topic correct 46/48, 0 of 142 links outside the library; Claude after D2 | 3.2 |
 | 3.4 | Study guide on the web page | ⬜ | 3.2 |
 | 4.1 | The frame: a versioned catalog of what the system can do | ⬜ | 3.2 |
 | 4.2 | `intake.route.v1`: the plain-language router | ⬜ | 4.1 |
@@ -199,9 +199,10 @@ decisions would vanish on every sleep.
 - **Two paths.** On 2026-11-06 the owner's Anthropic account asked for card verification, which the owner
   could not do, so a free path was added first. Both use the same gateway, validators and scorecards, and
   each result names its provider and model.
-  - **A. Typhoon (free, no card; built, ADR-021).** SCB 10X's Thai-first model, through its free research
-    API (about 200 requests a minute). The key is the repository secret `TYPHOON_API_KEY` (set by the owner on
-    2026-11-06). The first free path, GitHub Models (ADR-020), turned out to be retired since 2026-07-30.
+  - **A. Typhoon (free, no card; done, ADR-021, ADR-022).** SCB 10X's Thai-first model, through its free
+    research API (about 200 requests a minute). The key is the repository secret `TYPHOON_API_KEY` (set by the
+    owner on 2026-11-06). The first free path, GitHub Models (ADR-020), turned out to be retired since
+    2026-07-30.
   - **B. Claude (needs D2).** An API key from the Claude Console with a monthly spend limit, stored as the
     repository secret `ANTHROPIC_API_KEY`.
 - **Tasks:**
@@ -222,6 +223,18 @@ decisions would vanish on every sleep.
      funding/README.md.
 - **Done when:** the evidence note exists, with denominators and failures, and no doc still says
   "never run".
+- **Status (2026-11-06): path A done** ([evidence note](evidence/2026-11-06-first-live-typhoon.md)).
+  - Run 1 (the owner's, `main`): HTTP 200 but plain `key: value` lines, so the AI answered 0/5
+    (`unavailable: invalid_model_output` 5). Typhoon ignores `response_format`. ADR-022 (PR #38): the client
+    also states the answer format in words, reads the one JSON object, and puts the format version in the
+    agent version.
+  - Then on PR #38's branch, all 61 triage cases twice and all 67 study requests once: triage AI correct
+    60/61 in both runs (rules 29/61; Thai 26/26), with the 32 rule mistakes all raised and no case wrong
+    for both; study guide topic correct 46/48, out of scope precision 16/17 and recall 16/19, 0 of 142
+    links outside the library, 0 of 67 answers over five. No AI step ended unavailable or failed.
+  - Developer-labelled synthetic cases and a few runs: a first measurement of Typhoon, not accuracy, and
+    nothing about Claude. The comparison with the mock is by rates on the run pages; this session cannot
+    download the per-case reports.
 - **Owner test (ไทย):**
   1. เปิด GitHub → Actions → *Shadow eval with Typhoon (manual)* → Run workflow
   2. ช่อง model ไม่ต้องแก้ ช่อง limit ใส่ 5 แล้วกด Run workflow
@@ -665,8 +678,8 @@ detect_topic (AI) ─► pick_resources (rules) ─► build_path (rules) ─►
   - `examples/study_guide_demo.py` runs in *Core logic tests* and shows four answers on the run page.
   - The mock provider now has one simulation per prompt. The study guide's mock counts words taken from
     the catalog examples (all 66 map to their own topic), so it cannot read a new metaphor: the owner's
-    "บรรณารักษ์ที่รู้ใจ" is out of scope with the mock. That is a limit of the simulation, and 3.3 and a live
-    Claude run (D2) will measure the real thing.
+    "บรรณารักษ์ที่รู้ใจ" is out of scope with the mock. That is a limit of the simulation; 3.3 and live runs
+    measure the real thing (with Typhoon on 2026-11-06 the sentence got its labelled topic).
   - Known gap: the `explain` AI call has a step span but no `chat` span in traces yet.
 - **Owner test (ไทย):**
   1. เปิด GitHub → Actions → *Core logic tests* → รันล่าสุดของ PR นี้ → Summary
@@ -702,8 +715,10 @@ detect_topic (AI) ─► pick_resources (rules) ─► build_path (rules) ─►
   - Mock results (2026-11-06): topic correct 2/48, out-of-scope precision 19/65 and recall 19/19, in scope
     turned away 46/48, links outside the library 0 of 7, answers over five 0 of 67. The keyword mock cannot
     read new phrasings; these numbers test the pipeline, not understanding.
-  - *Actions → Study guide eval with Typhoon (manual)* is ready with `TYPHOON_API_KEY` (ADR-021), and *Study guide
-    eval with Claude (manual)* needs `ANTHROPIC_API_KEY` (D2). The first live run goes into a dated evidence note.
+  - First live run, Typhoon on 2026-11-06 (PR #38, [evidence note](evidence/2026-11-06-first-live-typhoon.md)): topic correct
+    46/48, out-of-scope precision 16/17 and recall 16/19, in scope turned away 1/48, links outside the
+    library 0 of 142, answers over five 0 of 67, injection topic correct 4/6; its five misses are listed
+    in the note. *Study guide eval with Claude (manual)* needs `ANTHROPIC_API_KEY` (D2).
 - **Owner test (ไทย):**
   1. เปิด GitHub → Actions → *Core logic tests* → รันล่าสุดของ PR นี้ (3.12) → Summary
   2. หัวข้อ "ผลวัดผู้ช่วยแนะนำแหล่งเรียน (study guide scorecard)" ต้องขึ้น "ลิงก์นอกคลัง 0" และ "คำตอบที่เกิน 5 แหล่ง 0"
@@ -1118,3 +1133,10 @@ workflow types.
   owner chose Typhoon instead and stored `TYPHOON_API_KEY`; ADR-021 replaces the GitHub Models provider and
   workflows with an OpenAI-format client and two Typhoon workflows. Lesson: check that a service is still
   running, from its own changelog, before building on it.
+- 2026-11-06: the owner's first Typhoon run (5 cases) got HTTP 200 but plain `key: value` lines, so the AI
+  answered 0/5: Typhoon ignores `response_format`. ADR-022 (PR #38): the client states the answer format in
+  words and reads the one JSON object; the format version is part of the agent version. Then the full sets
+  on the PR's branch: triage AI correct 60/61 in two runs (rules 29/61), study guide topic correct 46/48 with
+  0 of 142 links outside the library; 0.3 path A is done ([evidence note](evidence/2026-11-06-first-live-typhoon.md)).
+  The triage run page now also lists the AI's own mistakes, because this session cannot download a run's
+  per-case report.
