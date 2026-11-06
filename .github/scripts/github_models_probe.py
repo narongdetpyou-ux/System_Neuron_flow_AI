@@ -1,20 +1,22 @@
 """One connection check against GitHub Models, written to the run summary, before a scorecard run.
 
 It sends one fixed synthetic sentence (never a case from the set) with the same request the provider sends,
-then reports what came back: HTTP status, content type and encoding, rate-limit headers, the body's size
+then reports what came back (one request; the verdict is about the reply shown): HTTP status, content type and encoding, rate-limit headers, the body's size
 and its first characters, and how the provider itself classified the reply. The token is never printed.
 A broken connection only writes the findings: the scorecard step runs either way.
 
 Run from the repository root: ``PYTHONPATH=. python .github/scripts/github_models_probe.py "$GITHUB_STEP_SUMMARY"``
 """
 
+import io
 import json
 import os
 import sys
 import urllib.error
 import urllib.request
 
-from app.llm import LLMConfig, load_prompt, mask, structured_answer
+from app.llm import InvalidModelOutput, LLMConfig, ModelDeclined, load_prompt
+from app.llm.gateway import _CUT_OFF, parse_answer
 from app.llm.config import DEFAULT_GITHUB_MODELS_BASE_URL, GITHUB_TOKEN_ENV
 from app.llm.providers import github_models
 
@@ -40,6 +42,20 @@ def raw_call(config, token):
             return exc.code, exc.headers, exc.read(200_000)
 
 
+def verdict(config, prompt, status, headers, raw):
+    """How the provider and gateway classify this very reply (no second request): the answer, or the error."""
+    if status >= 300:
+        error = urllib.error.HTTPError("probe", status, "probe", headers, io.BytesIO(raw))
+        reply = github_models._for_status(error, config)  # raises, unless content safety blocked the sentence
+    else:
+        reply = github_models._parse_completion(raw, config)
+    if reply["stop_reason"] == "refusal":
+        raise ModelDeclined("The model declined to answer")
+    if reply["stop_reason"] in _CUT_OFF:
+        raise InvalidModelOutput(f"The answer was cut off ({reply['stop_reason']})")
+    return parse_answer(reply["text"], prompt.output_schema), reply["served_model"]
+
+
 def describe(status, headers, raw):
     text = raw.decode("utf-8", errors="replace")
     lines = [f"- HTTP status: `{status}`, body: {len(raw)} bytes"
@@ -59,11 +75,12 @@ def main(summary_path):
     try:
         config = LLMConfig.from_env()
         lines.append(f"- model: `{config.model}`, token present: {'yes' if token else 'no'}")
-        lines += describe(*raw_call(config, token))
+        status, headers, raw = raw_call(config, token)
+        lines += describe(status, headers, raw)
         try:
-            result = structured_answer(config, load_prompt("triage_classify_v1"), mask(SENTENCE))
-            lines.append(f"- provider verdict: **answered** `{json.dumps(result['answer'], ensure_ascii=False)}`, "
-                         f"served model `{result['served_model']}`")
+            answer, served = verdict(config, load_prompt("triage_classify_v1"), status, headers, raw)
+            lines.append(f"- provider verdict: **answered** `{json.dumps(answer, ensure_ascii=False)}`, "
+                         f"served model `{served}`")
         except Exception as exc:  # the class and our own message (status and codes only), never the reply
             lines.append(f"- provider verdict: **{type(exc).__name__}**: {str(exc)[:200]}")
     except Exception as exc:

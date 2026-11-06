@@ -296,6 +296,21 @@ class DiagnosticsTests(unittest.TestCase):
         self.assertIn("provider verdict: **answered**", text)
         self.assertNotIn(TOKEN, text)
         self.assertEqual(fake.requests[0]["body"]["messages"][1]["content"].count(probe.SENTENCE), 1)
+        self.assertEqual(len(fake.requests), 1)  # one request: the verdict is about the reply shown
+        # The verdict follows the reply that is shown, even when a later reply would differ.
+        for first, expected in (((200, "data: {}"), "**InvalidModelOutput**"),
+                                (gh_error(429, "RateLimitReached"), "**LLMTransientError**: Provider temporarily"),
+                                (gh_error(400, "content_filter"), "**ModelDeclined**")):
+            with FakeServer([first, (200, completion(GOOD))]) as fake, \
+                    tempfile.NamedTemporaryFile("r", suffix=".md") as summary, \
+                    patch.patch.dict(os.environ, {"GITHUB_MODELS_TOKEN": TOKEN, "NEURON_FLOW_LLM_PROVIDER": "github",
+                                                  "NEURON_FLOW_GITHUB_MODELS_BASE_URL": fake.base_url}), \
+                    patch.patch("builtins.print"):
+                probe.main(summary.name)
+                text = Path(summary.name).read_text("utf-8")
+            self.assertIn(expected, text)
+            self.assertNotIn("**answered**", text)
+            self.assertEqual(len(fake.requests), 1)
 
 
 class PacingTests(unittest.TestCase):
