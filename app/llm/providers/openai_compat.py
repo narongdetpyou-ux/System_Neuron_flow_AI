@@ -7,10 +7,20 @@ entry in ``config.py`` (provider name, default model, key variable, endpoint) an
 
 Request shape (kept as close as possible to the Claude path):
 * ``POST {base_url}/chat/completions`` with the model id;
-* the prompt's system text as the system message and the masked case text (a JSON string) as the user message;
+* the prompt's system text, then an answer-format instruction (below), as the system message, and the masked
+  case text (a JSON string) as the user message;
 * structured JSON output through ``response_format`` (``json_schema``, strict), built from the prompt's own
-  answer schema, so the answer is limited to the same fixed choices before our validators check it again;
+  answer schema, for services that enforce it;
 * ``max_tokens`` from the frozen configuration; no sampling parameters, tools or effort.
+
+The answer format in words (ADR-022). Typhoon's API ignores ``response_format``: on its first live run
+(2026-11-06) it answered ``category: upload`` / ``confidence: high`` / ``rationale: …`` as plain lines, so not
+one of 5 cases had a usable answer. The client therefore also tells the model, after the prompt, to reply
+with one JSON object, and lists the keys and their allowed values from the answer schema
+(:func:`format_instruction`). That text is versioned as ``config.ANSWER_FORMATS`` and is part of the agent
+version. When a reply wraps the object in a Markdown code fence or puts a sentence around it, only the
+outermost ``{…}`` is passed on (:func:`answer_text`); the gateway still parses it strictly and checks every
+field against the schema, so nothing looser than before is accepted.
 
 How failures are classified (Core decides retries from the class), the same as for Claude:
 * 408, 429, 5xx, timeouts, network errors -> LLMTransientError
@@ -33,7 +43,7 @@ import urllib.request
 
 from neuron_flow import __version__
 
-from ..config import DEFAULT_BASE_URLS, KEY_ENVS
+from ..config import ANSWER_FORMATS, DEFAULT_BASE_URLS, KEY_ENVS
 from ..errors import InvalidModelOutput, LLMConfigError, LLMRequestError, LLMTransientError
 from ._http import MAX_RESPONSE_BYTES, OPENER
 
@@ -42,6 +52,8 @@ _ERROR_CODE = re.compile(r"^[A-Za-z][A-Za-z0-9_]{0,59}$")
 _MODEL = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:/-]{0,99}$")
 _SCHEMA_NAME = re.compile(r"[^A-Za-z0-9_-]")
 _STOP_REASONS = {"stop": "end_turn", "length": "max_tokens", "content_filter": "refusal"}
+_FENCE = re.compile(r"\A```[A-Za-z0-9_-]*[ \t]*\r?\n(.*?)\r?\n?[ \t]*```\Z", re.DOTALL)
+FORMAT_VERSION = "json-instruction-v1"  # the text of format_instruction below; config.ANSWER_FORMATS names it
 
 
 def endpoint(config):
@@ -53,10 +65,35 @@ def request_headers(config, key):
             "accept": "application/json", "user-agent": f"neuron-flow/{__version__}"}
 
 
+def format_instruction(schema):
+    """The answer format in words, built from the (possibly specialized) answer schema. Version
+    ``FORMAT_VERSION``: change it, and ``config.ANSWER_FORMATS``, whenever this text changes."""
+    lines = ["Answer format: reply with one JSON object and nothing else. No Markdown, no code fence, and no text "
+             "before or after the object.",
+             "The object has exactly these keys, in this order, and every value is a JSON string:"]
+    for name, spec in schema["properties"].items():
+        if "enum" in spec:
+            rule = "exactly one of " + ", ".join(json.dumps(value, ensure_ascii=False) for value in spec["enum"])
+        else:
+            rule = "free text"
+        description = (spec.get("description") or "").strip()
+        lines.append(f"- {json.dumps(name)}: {rule}." + (f" {description}" if description else ""))
+    lines.append("Use no other keys.")
+    return "\n".join(lines)
+
+
+def system_text(config, prompt):
+    """The system message: the prompt file's text, then the answer-format instruction for providers that
+    ignore ``response_format`` (``config.ANSWER_FORMATS``)."""
+    if ANSWER_FORMATS.get(config.provider) != FORMAT_VERSION:
+        raise LLMConfigError(f"No answer-format instruction for provider {config.provider}")
+    return f"{prompt.system}\n\n{format_instruction(prompt.output_schema)}"
+
+
 def build_request_body(config, prompt, case_text):
     name = _SCHEMA_NAME.sub("_", prompt.id)[:64] or "answer"
     return {"model": config.model, "max_tokens": config.max_tokens,
-            "messages": [{"role": "system", "content": prompt.system},
+            "messages": [{"role": "system", "content": system_text(config, prompt)},
                          {"role": "user", "content": prompt.user_message(case_text)}],
             "response_format": {"type": "json_schema",
                                 "json_schema": {"name": name, "strict": True, "schema": prompt.output_schema}}}
@@ -123,6 +160,21 @@ def _count(value):
     return value if type(value) is int and value >= 0 else 0
 
 
+def answer_text(content):
+    """The JSON object in a reply, for services that do not enforce ``response_format``: a Markdown code fence
+    around it is removed, and so is any text before the first ``{`` or after the last ``}``. Anything else is
+    left as it is, so a reply without an object (such as ``category: upload``) still fails the gateway's
+    strict parse."""
+    text = content.strip().lstrip("\ufeff").strip()
+    fenced = _FENCE.match(text)
+    if fenced:
+        text = fenced.group(1).strip()
+    start, end = text.find("{"), text.rfind("}")
+    if start != -1 and end > start:
+        text = text[start:end + 1]
+    return text
+
+
 def parse_completion(raw, config):
     if len(raw) > MAX_RESPONSE_BYTES:
         raise InvalidModelOutput("Provider response is too large")
@@ -148,7 +200,7 @@ def parse_completion(raw, config):
         stop_reason = "end_turn"
     usage = data.get("usage") if isinstance(data.get("usage"), dict) else {}
     served = data.get("model")
-    return {"text": content if isinstance(content, str) else "", "stop_reason": stop_reason,
+    return {"text": answer_text(content) if isinstance(content, str) else "", "stop_reason": stop_reason,
             "served_model": served if isinstance(served, str) and _MODEL.fullmatch(served) else config.model,
             "usage": {"input_tokens": _count(usage.get("prompt_tokens")),
                       "output_tokens": _count(usage.get("completion_tokens")), "estimated": False}}

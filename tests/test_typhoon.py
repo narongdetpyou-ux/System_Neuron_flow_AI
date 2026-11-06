@@ -14,7 +14,8 @@ from app.domains.study_guide import build_study_workflow, study_registry
 from app.eval import common, study_guide_eval, triage_shadow_eval
 from app.llm import (InvalidModelOutput, LLMConfig, LLMConfigError, LLMRequestError, LLMTransientError,
                      ModelDeclined, load_prompt, mask, structured_answer)
-from app.llm.providers import openai_compat
+from app.llm.config import ANSWER_FORMATS
+from app.llm.providers import anthropic, openai_compat
 from tests.fake_openai import FakeServer, api_error, completion
 
 TOKEN = "typhoon-test-SECRET-789"
@@ -22,6 +23,10 @@ PROMPT = load_prompt("triage_classify_v1")
 GOOD = {"category": "upload", "confidence": "high", "rationale": "The customer cannot attach a file."}
 UPLOAD = "I cannot upload an attachment to my ticket"
 STUDY_TEXT = "I want to learn how to write better prompts for AI chatbots"
+# What Typhoon really sent back on its first live run (2026-11-06, the connection check's fixed sentence): plain
+# lines instead of the JSON object that response_format asked for. Synthetic content, no personal data.
+PLAIN_LINES_2026_11_06 = ("category: upload  \nconfidence: high  \nrationale: The issue involves inability to attach "
+                          "or send a file, which directly relates to file upload functionality.")
 
 
 def typhoon(base_url, **overrides):
@@ -107,7 +112,8 @@ class HttpTests(unittest.TestCase):
         for forbidden in ("temperature", "top_p", "seed", "tools", "tool_choice", "reasoning_effort", "stream"):
             self.assertNotIn(forbidden, body)
         self.assertEqual([m["role"] for m in body["messages"]], ["system", "user"])
-        self.assertEqual(body["messages"][0]["content"], PROMPT.system)
+        self.assertEqual(body["messages"][0]["content"],
+                         PROMPT.system + "\n\n" + openai_compat.format_instruction(PROMPT.output_schema))
         self.assertIn('"case_text": "Upload \\"fails\\""', body["messages"][1]["content"])
 
     def test_default_endpoint_is_typhoon_over_https(self):
@@ -216,6 +222,74 @@ class HttpTests(unittest.TestCase):
             self.assertEqual(fake.requests, [])
 
 
+class AnswerFormatTests(unittest.TestCase):
+    """Typhoon ignores response_format, so the client states the format in words and finds the object (ADR-022)."""
+
+    def setUp(self):
+        self.env = patch.patch.dict(os.environ, {"TYPHOON_API_KEY": TOKEN})
+        self.env.start()
+
+    def tearDown(self):
+        self.env.stop()
+
+    def test_the_instruction_lists_every_key_and_choice_of_the_schema(self):
+        from app.domains.study_guide import load_library
+        from app.domains.study_guide.ai_prompts import detect_prompt, explain_prompt
+        text = openai_compat.format_instruction(PROMPT.output_schema)
+        self.assertIn("reply with one JSON object and nothing else", text)
+        self.assertIn('- "category": exactly one of "access", "upload", "billing", "other".', text)
+        self.assertIn('- "confidence": exactly one of "low", "medium", "high".', text)
+        self.assertIn('- "rationale": free text.', text)
+        library = load_library()
+        detect = openai_compat.format_instruction(detect_prompt(library).output_schema)
+        for topic in library.topics:
+            self.assertIn(f'"{topic.id}"', detect)
+        self.assertIn('"out_of_scope"', detect)
+        explain = openai_compat.format_instruction(explain_prompt(3).output_schema)
+        self.assertEqual([line.split('"')[1] for line in explain.splitlines() if line.startswith('- "')],
+                         ["summary", "note_1", "note_2", "note_3"])
+
+    def test_a_fenced_or_wrapped_object_is_accepted_and_still_checked_strictly(self):
+        good = json.dumps(GOOD)
+        for content in (f"```json\n{good}\n```", f"```\n{good}\n```", f"Here is the answer:\n{good}\nThanks.",
+                        f"\ufeff{good}", f"  {good}  "):
+            with FakeServer([(200, completion(content))]) as fake:
+                self.assertEqual(ask(fake.base_url)["answer"], GOOD, content[:30])
+        for content in (PLAIN_LINES_2026_11_06,                               # no object at all
+                        f"```json\n{json.dumps({**GOOD, 'queue': 'vip'})}\n```",  # an extra key
+                        f"```json\n{json.dumps({**GOOD, 'category': 'Upload'})}\n```",  # not an exact choice
+                        '{"category": "upload"} {"confidence": "high"}',     # two objects
+                        "```json\n{\"category\": \"upload\"\n```"):        # cut off inside the fence
+            with FakeServer([(200, completion(content))]) as fake:
+                with self.assertRaises(InvalidModelOutput, msg=content[:40]):
+                    ask(fake.base_url)
+
+    def test_the_answer_format_is_part_of_the_version_and_claude_is_unchanged(self):
+        self.assertEqual(ANSWER_FORMATS, {"typhoon": openai_compat.FORMAT_VERSION})
+        tag = LLMConfig(provider="typhoon", model="typhoon-v2.5-30b-a3b-instruct").version_tag(PROMPT)
+        self.assertTrue(tag.endswith(";format=json-instruction-v1"), tag)
+        claude = LLMConfig(provider="anthropic", model="claude-haiku-5-5")
+        for config in (claude, LLMConfig()):
+            self.assertNotIn("format=", config.version_tag(PROMPT))
+        self.assertEqual(anthropic.build_request_body(claude, PROMPT, "x")["system"], PROMPT.system)
+        with patch.patch.dict(ANSWER_FORMATS, {"typhoon": "json-instruction-v9"}):
+            with self.assertRaisesRegex(LLMConfigError, "answer-format"):
+                openai_compat.build_request_body(typhoon("https://x.example/v1"), PROMPT, "x")
+
+    def test_a_plain_text_reply_is_retried_and_a_fenced_reply_is_used(self):
+        replies = [(200, completion(PLAIN_LINES_2026_11_06)), (200, completion(f"```json\n{json.dumps(GOOD)}\n```"))]
+        with FakeServer(replies) as fake, tempfile.TemporaryDirectory() as work:
+            config = typhoon(fake.base_url)
+            with Runtime(work, agents=shadow_registry(config)) as rt:
+                rt.submit(build_shadow_workflow("plain_then_fenced", {"case_id": "PF-1", "summary": UPLOAD}, config))
+                snapshot = rt.run("plain_then_fenced")
+        llm = snapshot["steps"]["classify_llm"]
+        self.assertEqual((llm["output"]["status"], llm["output"]["category"], llm["attempts"]), ("ok", "upload", 2))
+        self.assertEqual(len(fake.requests), 2)
+        self.assertIn("Answer format: reply with one JSON object",
+                      fake.requests[0]["body"]["messages"][0]["content"])
+
+
 class EndToEndTests(unittest.TestCase):
     def test_triage_shadow_mode_without_storing_the_token(self):
         replies = [(200, completion(GOOD)), api_error(400, "content_filter")]
@@ -295,10 +369,12 @@ class DiagnosticsTests(unittest.TestCase):
         self.assertIn("(starts with a UTF-8 BOM)", text)
         self.assertIn("provider verdict: **answered**", text)
         self.assertNotIn(TOKEN, text)
+        self.assertIn("Answer format: reply with one JSON object", fake.requests[0]["body"]["messages"][0]["content"])
         self.assertEqual(fake.requests[0]["body"]["messages"][1]["content"].count(probe.SENTENCE), 1)
         self.assertEqual(len(fake.requests), 1)  # one request: the verdict is about the reply shown
         # The verdict follows the reply that is shown, even when a later reply would differ.
         for first, expected in (((200, "data: {}"), "**InvalidModelOutput**"),
+                                ((200, completion(PLAIN_LINES_2026_11_06)), "**InvalidModelOutput**: The model answer is not valid JSON"),
                                 (api_error(429, "RateLimitReached"), "**LLMTransientError**: Provider temporarily"),
                                 (api_error(400, "content_filter"), "**ModelDeclined**")):
             with FakeServer([first, (200, completion(GOOD))]) as fake, \
