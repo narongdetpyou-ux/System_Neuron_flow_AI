@@ -70,8 +70,9 @@ def load_golden(path=DEFAULT_GOLDEN):
             "sha256": fingerprint(document), "cases": cases}
 
 
-def evaluate(golden, config=None, *, limit=None, max_workers=3):
+def evaluate(golden, config=None, *, limit=None, max_workers=3, min_interval_s=0.0):
     config = config or LLMConfig.from_env()
+    pacer = common.Pacer(min_interval_s)
     cases = golden["cases"][:limit] if limit else golden["cases"]
     prompt = load_prompt(PROMPT_ID)
     started = time.monotonic()
@@ -79,6 +80,7 @@ def evaluate(golden, config=None, *, limit=None, max_workers=3):
     with tempfile.TemporaryDirectory(prefix="neuron-shadow-eval-") as workspace:
         with Runtime(workspace, agents=shadow_registry(config), max_workers=max_workers) as runtime:
             for case in cases:
+                pacer.wait()
                 job_id = "eval_" + case["case_id"]
                 runtime.submit(build_shadow_workflow(
                     job_id, {"case_id": case["case_id"], "summary": case["summary"]}, config))
@@ -90,7 +92,8 @@ def evaluate(golden, config=None, *, limit=None, max_workers=3):
                            "prompt": {"id": prompt.id, "sha256": prompt.sha256},
                            "golden": {"name": golden["name"], "sha256": golden["sha256"], "cases": len(cases),
                                       "label_scope": golden["label_scope"]},
-                           "duration_s": round(time.monotonic() - started, 2)},
+                           "duration_s": round(time.monotonic() - started, 2),
+                           "min_interval_s": pacer.min_interval_s},
             "metrics": compute_metrics(rows), "cases": rows}
 
 
@@ -225,7 +228,7 @@ def answer_changes(reference, candidate):
 def gate_markdown(changes, compared_with, cases):
     """The gate's verdict for the run page (Thai first), with how to proceed when it fails."""
     return common.gate_markdown(changes, compared_with, cases, module="app.eval.triage_shadow_eval",
-                                live_run="Shadow eval with Claude")
+                                live_run="Shadow eval with Claude หรือ with GitHub Models")
 
 
 def summary_markdown(report):
@@ -238,6 +241,7 @@ def summary_markdown(report):
                   "ผลนี้ยืนยันว่าทุกขั้นของระบบและการวัดผลทำงานครบ แต่ไม่ได้บอกความแม่นยำของ AI จริง  ",
                   "> *Mock provider: a keyword simulation written alongside this case set, so its score is "
                   "inflated by design. This run proves the pipeline and the measurement work, not AI accuracy.*", ""]
+    lines += common.github_models_note(llm)
     lines += [f"ชุดเคส `{p['golden']['name']}` ({p['golden']['cases']} เคส) · AI `{llm['provider']}/{llm['model']}` · "
               f"prompt `{p['prompt']['id']}` (`{p['prompt']['sha256'][:12]}`) · commit `{(p['git_sha'] or 'unknown')[:12]}`",
               "", "| สิ่งที่วัด | ผล |", "|---|---|",
@@ -276,6 +280,8 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--golden", default=str(DEFAULT_GOLDEN), help="labelled case file")
     parser.add_argument("--limit", type=int, default=None, help="only the first N cases")
+    parser.add_argument("--min-interval-s", type=float, default=0.0,
+                        help="wait at least this long between two cases (rate-limited free tiers)")
     parser.add_argument("--out", help="write the full JSON report here")
     parser.add_argument("--summary", help="append the markdown summary here (e.g. $GITHUB_STEP_SUMMARY)")
     parser.add_argument("--compare-with",
@@ -284,7 +290,7 @@ def main(argv=None):
     args = parser.parse_args(argv)
     # Read the reference first, so a missing or broken file fails before the run, not after it.
     reference = as_baseline(decode(Path(args.compare_with).read_bytes())) if args.compare_with else None
-    report = evaluate(load_golden(args.golden), limit=args.limit)
+    report = evaluate(load_golden(args.golden), limit=args.limit, min_interval_s=args.min_interval_s)
     text = summary_markdown(report)
     print(text)
     if args.out:

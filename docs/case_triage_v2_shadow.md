@@ -1,8 +1,9 @@
 # case_triage v2 — shadow mode (AI second opinion)
 
 **Status:** on `main` since 2026-11-01 (PR #9). Implemented and tested with the offline mock AI. The
-Claude code path is tested against a local fake API server. It has **not yet been run against the real
-Claude API**, because that needs an `ANTHROPIC_API_KEY`. Synthetic data only. This is not a production
+Claude and GitHub Models code paths are tested against a local fake API server. **No real model has run
+yet**: Claude needs a paid `ANTHROPIC_API_KEY` (D2), and the free GitHub Models path (ADR-020, added
+2026-11-06) waits for its first manual run. Synthetic data only. This is not a production
 service, public API or human-review service. No Core (`neuron_flow/`) file was changed. Design principles:
 [design_philosophy.md](design_philosophy.md).
 
@@ -17,7 +18,8 @@ service, public API or human-review service. No Core (`neuron_flow/`) file was c
 4. ระบบ **เทียบ** สองความเห็น ถ้าไม่ตรงกัน เคสถูกยกเป็น "ต้องดูก่อน" (priority elevated) พร้อมเหตุผล
 5. ผู้รีวิวได้รับข้อเสนอที่ **รอคนตัดสินเสมอ** (PENDING_HUMAN_REVIEW) AI ไม่มีสิทธิ์ตัดสินหรือเปลี่ยนคิวเอง
 6. ทุกคำตอบของ AI ถูกบันทึกว่ามาจากรุ่นไหน ใช้ prompt ฉบับไหน ถ้าเปลี่ยน prompt หรือรุ่น AI งานเก่าจะไม่ถูกรันซ้ำด้วยค่าใหม่โดยไม่รู้ตัว
-7. **ด่านตรวจผลรายเคส (eval gate, ขั้น 5.2)** ทุกครั้งที่มีการส่งโค้ดขึ้น GitHub ระบบรันเคสทดสอบ 61 เคสด้วย AI จำลอง แล้วเทียบคำตอบของทุกเคสกับไฟล์ต้นแบบ (`tests/baselines/shadow_eval_mock.json`) ถ้ามีเคสไหนตอบต่างจากเดิม แม้แต่ช่องเดียว (หมวดของกฎ หมวดของ AI ความมั่นใจ การเห็นตรงกัน ความสำคัญ หรือเหตุผล) ช่องตรวจ *Core logic tests* จะเป็นสีแดง และหน้าผลรันจะบอกว่าเคสไหนเปลี่ยนอะไร ถ้าตั้งใจเปลี่ยน ต้องอัปเดตไฟล์ต้นแบบใน PR เดียวกันและเขียนเหตุผลไว้ ถ้าเปลี่ยน prompt หรือรุ่น AI ต้องแนบผลรัน Claude จริงด้วย
+7. **ด่านตรวจผลรายเคส (eval gate, ขั้น 5.2)** ทุกครั้งที่มีการส่งโค้ดขึ้น GitHub ระบบรันเคสทดสอบ 61 เคสด้วย AI จำลอง แล้วเทียบคำตอบของทุกเคสกับไฟล์ต้นแบบ (`tests/baselines/shadow_eval_mock.json`) ถ้ามีเคสไหนตอบต่างจากเดิม แม้แต่ช่องเดียว (หมวดของกฎ หมวดของ AI ความมั่นใจ การเห็นตรงกัน ความสำคัญ หรือเหตุผล) ช่องตรวจ *Core logic tests* จะเป็นสีแดง และหน้าผลรันจะบอกว่าเคสไหนเปลี่ยนอะไร ถ้าตั้งใจเปลี่ยน ต้องอัปเดตไฟล์ต้นแบบใน PR เดียวกันและเขียนเหตุผลไว้ ถ้าเปลี่ยน prompt หรือรุ่น AI ต้องแนบผลรันกับ AI จริงด้วย
+8. **ใช้ AI จริงได้ฟรีผ่าน GitHub Models (ADR-020)** ไม่ต้องมีบัตรและไม่ต้องสร้างคีย์ ปุ่ม *Shadow eval with GitHub Models (manual)* ใน Actions ใช้สิทธิ์ของ GitHub เอง (`GITHUB_TOKEN` ที่อ่านรุ่น AI ได้อย่างเดียว) ส่งเคสสมมุติทั้ง 61 เคสให้รุ่นที่เลือก (ค่าเริ่มต้น `openai/gpt-4.1-mini`) ระดับฟรีจำกัดราว 15 ครั้งต่อนาทีและ 150 ครั้งต่อวัน ระบบจึงเว้นเคสละ 5 วินาที ผลที่ได้เป็นของรุ่นนั้น ไม่ใช่ของ Claude และหน้าผลจะเขียนบอกไว้ ถ้าระบบความปลอดภัยของผู้ให้บริการบล็อกข้อความเคสไหน (content filter) เคสนั้นนับเป็น "AI ไม่ตอบ" และไปถึงผู้รีวิวตามปกติ ไม่ทำให้งานล้ม
 
 ## How one case flows
 
@@ -75,26 +77,33 @@ they were degraded quietly, a broken setup could go unnoticed.
   text that did not go through `mask()`. The output's `masked` field counts each kind, never the values.
   Not detected: names without a title or label, Thai surnames after a given name, addresses, short numbers,
   mixed letter-and-digit identifiers. The keywords the rules and the AI need stay readable.
-- **The API key is never stored.** It is read from `ANTHROPIC_API_KEY` at call time, never placed in the job,
-  and the tests scan every stored file to confirm it is absent. Provider error messages are not copied
+- **The API key is never stored.** It is read from `ANTHROPIC_API_KEY` (Claude) or `GITHUB_MODELS_TOKEN`
+  (GitHub Models) at call time, never placed in the job, and the tests scan every stored file to confirm it
+  is absent. Provider error messages are not copied
   (only the HTTP status and error type).
 - **Every answer is traceable.** Each AI output records the provider, model, prompt id and prompt SHA-256.
   The served model and token usage are recorded too.
-- **Current API rules are followed.** The client uses structured output (`output_config.format`) and sends no
-  `temperature`/`top_p`, because current Claude 5.5 models reject forced tool choice and sampling
-  parameters.
+- **Current API rules are followed.** The Claude client uses structured output (`output_config.format`) and
+  sends no `temperature`/`top_p`, because current Claude 5.5 models reject forced tool choice and sampling
+  parameters. The GitHub Models client uses `response_format` with a strict `json_schema` built from the
+  same answer schema, and sends no sampling parameters, tools or effort either.
+- **A content-safety block is one declined case.** GitHub Models runs behind Azure AI content safety. An
+  HTTP 400 `content_filter` reply (or `finish_reason: content_filter`, or a `refusal` message) becomes
+  `unavailable: model_declined` at once, so the case still reaches review instead of failing the job.
 
 ## Configuration (environment variables)
 
 | Variable | Default | Meaning |
 |---|---|---|
-| `NEURON_FLOW_LLM_PROVIDER` | `mock` | `mock` (offline keyword simulation) or `anthropic` (Claude) |
-| `NEURON_FLOW_LLM_MODEL` | `mock-keyword-1` / `claude-haiku-5-5` | model id |
+| `NEURON_FLOW_LLM_PROVIDER` | `mock` | `mock` (offline keyword simulation), `anthropic` (Claude) or `github` (GitHub Models) |
+| `NEURON_FLOW_LLM_MODEL` | `mock-keyword-1` / `claude-haiku-5-5` / `openai/gpt-4.1-mini` | model id; GitHub Models ids are `publisher/model` |
 | `ANTHROPIC_API_KEY` | — | required for `anthropic`; checked before any job is submitted |
+| `GITHUB_MODELS_TOKEN` | — | required for `github`; a token with the *Models: read* permission (in Actions, the workflow's `GITHUB_TOKEN` with `models: read`); checked before any job is submitted. A plain `GITHUB_TOKEN` is never picked up by itself |
 | `NEURON_FLOW_LLM_MAX_TOKENS` | `2048` | answer budget (thinking tokens count too) |
 | `NEURON_FLOW_LLM_TIMEOUT_S` | `30` | HTTP timeout; the step timeout is 15 s longer, so the agent can still report `unavailable` itself |
-| `NEURON_FLOW_LLM_EFFORT` | not sent | optional `output_config.effort` for models that support it |
-| `NEURON_FLOW_ANTHROPIC_BASE_URL` | `https://api.anthropic.com` | HTTPS only; no credentials in the URL |
+| `NEURON_FLOW_LLM_EFFORT` | not sent | optional `output_config.effort` for Claude models that support it; refused with `github` |
+| `NEURON_FLOW_ANTHROPIC_BASE_URL` | `https://api.anthropic.com` | Claude only; HTTPS only; no credentials in the URL |
+| `NEURON_FLOW_GITHUB_MODELS_BASE_URL` | `https://models.github.ai/inference` | GitHub Models only (for example an organisation's `…/orgs/<org>/inference`); same URL rules |
 
 ## Measuring it: the scorecard
 
@@ -138,10 +147,10 @@ python -m app.eval.triage_shadow_eval --compare-with tests/baselines/shadow_eval
   ```
 
   The file has one case per line, so the pull request's diff shows exactly which cases changed. A prompt
-  or model change also needs a live run by hand (*Actions → Shadow eval with Claude*), attached to the
-  pull request.
+  or model change also needs a live run by hand (*Actions → Shadow eval with Claude* or *with GitHub
+  Models*), attached to the pull request.
 - **Comparing two runs:** `--compare-with` also accepts a full report written with `--out`, for example to
-  list where a Claude run differs from the mock. `compare_reports` (through
+  list where a live run differs from the mock. `compare_reports` (through
   `neuron_flow.evaluation.candidate_gate`) still compares the AI outcomes of two reports from Python.
 - **Where the baseline lives:** in `tests/`, so a baseline-only change does not redeploy Render.
 
@@ -149,7 +158,21 @@ The mock AI's keyword list was written alongside the synthetic case set, so its
 score is inflated by design. The mock run proves that the pipeline and the measurement work.
 It does not show AI accuracy.
 
-## Turning on real Claude (no local computer needed)
+## Turning on a real model for free: GitHub Models (no key, no card)
+
+1. Open **Actions → Shadow eval with GitHub Models (manual) → Run workflow**. Keep the model
+   (`openai/gpt-4.1-mini`) and set `limit` to 5 for a first try. Nothing needs to be set up: the workflow
+   grants its own `GITHUB_TOKEN` only `contents: read` and `models: read`.
+2. The run first lists the model ids GitHub offers today, with their rate-limit tier, in a folded section
+   of the run page. OpenAI retires `gpt-4.1-mini` on 2027-01-14; pick another low-tier id from that list
+   then.
+3. Cases start at least 5 seconds apart (`--min-interval-s 5`), because the free low tier allows about 15
+   requests a minute and 150 a day per model. All 61 cases take about 6 minutes.
+4. Read the scorecard on the run page, or download `shadow-eval-github-models.json`. The page says the
+   numbers belong to that model, not to Claude. Many "unavailable" answers usually mean the daily limit
+   was reached: run again the next day.
+
+## Turning on real Claude (no local computer needed; needs D2)
 
 1. Create an API key in the Claude Console.
 2. On GitHub, add a repository secret: **Settings → Secrets and variables →
@@ -166,6 +189,9 @@ It does not show AI accuracy.
 | `app/llm/prompt_library/triage_classify_v1.json` | the prompt and answer schema (one file, one SHA-256) |
 | `app/llm/gateway.py` | asks the provider and checks the answer's shape |
 | `app/llm/providers/anthropic.py` | Claude Messages API over the standard library |
+| `app/llm/providers/github_models.py` | GitHub Models chat completions over the standard library (ADR-020) |
+| `app/llm/providers/_http.py` | the shared HTTP opener that refuses every redirect |
+| `.github/workflows/shadow-eval-github-models.yml` | the free live run; `.github/scripts/github_models_catalog.py` lists the model ids |
 | `app/llm/providers/mock.py` | offline keyword simulation + failure scenarios for tests |
 | `app/domains/case_triage/shadow_agents.py` | the AI, compare and prepare agents and their validators |
 | `app/domains/case_triage/shadow_workflow.py` | trusted registry and the four-step DAG |
@@ -178,7 +204,9 @@ It does not show AI accuracy.
 - Synthetic cases labelled by the developer. These are not real customer data and not independent ground truth.
 - Masking is pattern-based (see "Safety rules built in"). It lowers the risk; it does not make real
   personal data safe to send.
-- The real Claude path has not been run live yet, so there are no accuracy, latency or cost claims for Claude.
+- No real model has run yet, so there are no accuracy, latency or cost claims for Claude or for any GitHub
+  Models model. A GitHub Models result, once measured, describes that model only.
+- GitHub's free tier is rate-limited and its data terms were not reviewed here; synthetic data only.
 - Token counts cover answered calls only. No money estimate is made, because prices change.
 - Shadow mode does not reduce reviewer work. It orders that work and explains it.
 - Core's single-machine limits still apply. Agent child processes are not a security sandbox.

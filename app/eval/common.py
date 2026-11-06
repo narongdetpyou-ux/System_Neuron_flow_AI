@@ -4,9 +4,34 @@ parts of a run (case set, AI, prompts, library) must match."""
 
 import json
 import subprocess
+import time
 from pathlib import Path
 
 MAX_LISTED_CHANGES = 40
+
+
+class Pacer:
+    """Keeps the starts of two cases at least ``min_interval_s`` seconds apart.
+
+    Free tiers count requests per minute (GitHub Models' low tier allows 15). Without pacing, a fast run
+    would turn the limit into "unavailable" answers and measure the limit instead of the model. 0 = no wait.
+    """
+
+    def __init__(self, min_interval_s=0.0, *, clock=time.monotonic, sleep=time.sleep):
+        if isinstance(min_interval_s, bool) or not isinstance(min_interval_s, (int, float)) \
+                or not 0 <= min_interval_s <= 120:
+            raise ValueError("min_interval_s must be between 0 and 120 seconds")
+        self.min_interval_s = float(min_interval_s)
+        self._clock, self._sleep, self._last = clock, sleep, None
+
+    def wait(self):
+        if self.min_interval_s <= 0:
+            return
+        now = self._clock()
+        if self._last is not None and now < self._last + self.min_interval_s:
+            self._sleep(self._last + self.min_interval_s - now)
+            now = self._clock()
+        self._last = now
 
 
 def rate(numerator, denominator):
@@ -23,6 +48,16 @@ def fmt_rate(value):
 def fmt_ms(value):
     return "–" if value is None else f"{value:,.1f}" if value >= 10 else f"{value:.3f}"
 
+
+def github_models_note(llm):
+    """A note for runs on GitHub Models' free tier (Thai first): what the numbers are, and the daily limit."""
+    if llm["provider"] != "github":
+        return []
+    return ["> **หมายเหตุ:** รอบนี้ใช้ AI จริงผ่าน GitHub Models (ระดับฟรี) รุ่น `" + llm["model"] + "` ผลนี้เป็นของรุ่นนี้ "
+            "ไม่ใช่ของ Claude ระดับฟรีจำกัดจำนวนครั้งต่อนาทีและต่อวัน ถ้าช่อง \"AI ใช้งานไม่ได้\" สูงผิดปกติ "
+            "อาจเป็นเพราะชนเพดานรายวัน ให้รอวันถัดไปแล้วรันใหม่  ",
+            "> *GitHub Models free tier: these numbers belong to this model, not to Claude. Free use is limited per "
+            "minute and per day; many \"unavailable\" answers usually mean the daily limit was reached.*", ""]
 
 def git_sha():
     try:
@@ -103,5 +138,5 @@ def gate_markdown(changes, compared_with, cases, *, module, live_run):
     lines += ["", "- **ถ้าไม่ได้ตั้งใจ:** แก้โค้ดจนผลกลับมาเหมือนเดิม",
               f"- **ถ้าตั้งใจเปลี่ยน:** อัปเดต baseline ใน PR เดียวกัน "
               f"(`python -m {module} --write-baseline {compared_with}`) และเขียนเหตุผลไว้ในคำอธิบาย PR "
-              f"ถ้าเปลี่ยน prompt หรือรุ่น AI ให้แนบผลรัน Claude จริงด้วย (Actions → {live_run})", ""]
+              f"ถ้าเปลี่ยน prompt หรือรุ่น AI ให้แนบผลรันกับ AI จริงด้วย (Actions → {live_run})", ""]
     return "\n".join(lines)

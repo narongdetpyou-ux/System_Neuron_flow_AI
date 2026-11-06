@@ -21,7 +21,7 @@ differs, this file and architecture.md win.
   - ถ้าสองฝ่ายเห็นไม่ตรงกัน เคสจะถูกยกให้คนดูก่อน
 - ถ้าเครื่องดับกลางทาง ระบบทำต่อได้ ส่งซ้ำก็ไม่เกิดงานซ้ำ
 - ยกเลิกเคสที่ยังรอคิวได้ และทุกคำขอมีรหัสคำขอ (request id) ไว้ไล่ดูใน log (ขั้น 1.2, 1.3)
-- ผ่านชุดทดสอบอัตโนมัติ 243 ข้อ และเปิดใช้ออนไลน์บน Render แล้ว ระบบปิดตัวอย่างเรียบร้อย และการแก้แค่เอกสารไม่ทำให้ Render ขึ้นเวอร์ชันใหม่ (ขั้น 0.1, 0.5)
+- ผ่านชุดทดสอบอัตโนมัติ 259 ข้อ และเปิดใช้ออนไลน์บน Render แล้ว ระบบปิดตัวอย่างเรียบร้อย และการแก้แค่เอกสารไม่ทำให้ Render ขึ้นเวอร์ชันใหม่ (ขั้น 0.1, 0.5)
 - หน้าเว็บเป็นแบบแชท: พิมพ์เคส ดูขั้นตอนก่อนส่ง กดยืนยัน แล้วติดตามใน Flow และประวัติเหตุการณ์ (ขั้น 1.6)
 - หน้าเว็บบอกว่ามีเคสรอกี่เคส เคสที่รอนานสุดรอมานานเท่าไร ปกติแต่ละเคสใช้เวลาเท่าไร และเคสที่ไม่สำเร็จล้มเพราะอะไร (ขั้น 5.3)
 - ถ้ามีคนแก้กฎหรือ prompt แล้วคำตอบของเคสทดสอบเคสไหนเปลี่ยน ช่องตรวจบน GitHub จะเป็นสีแดงและบอกว่าเคสไหนเปลี่ยนอะไร (ขั้น 5.2)
@@ -30,16 +30,17 @@ differs, this file and architecture.md win.
 - ส่งเส้นทางการทำงาน (trace) ของทุกเคสไป Honeycomb แล้ว: เห็นว่าแต่ละขั้นใช้เวลาเท่าไร ลองกี่ครั้ง และ AI ใช้ token เท่าไร โดยไม่ส่งข้อความเคสหรือคำตอบของ AI เปิดใช้บน Render แล้ว และเห็นเส้นทางแรกใน Honeycomb เมื่อ 4 พ.ย. 00:23 น. (ขั้น 5.1)
 - มีคลังแหล่งเรียนที่ตรวจแล้ว 17 แหล่งใน 11 หัวข้อ ทุกแหล่งบอกว่าใช้ทำอะไร ระดับไหน ภาษาอะไร และควรเน้นส่วนไหน และ GitHub เปิดทุกลิงก์ทุกวันจันทร์เพื่อจับลิงก์เสีย (ขั้น 3.1)
 - ผู้ช่วยแนะนำแหล่งเรียนทำงานได้แล้วผ่าน API: พิมพ์เรื่องที่อยากรู้ด้วยคำธรรมดา ได้แหล่งเรียนไม่เกิน 5 แหล่งเรียงพื้นฐานก่อน ทุกลิงก์มาจากคลัง ถ้าเรื่องอยู่นอกกรอบก็บอกตรง ๆ ว่าช่วยเรื่องไหนได้ ยังใช้แค่ AI จำลอง และยังไม่มีช่องบนหน้าเว็บ (ขั้น 3.2)
-- มีชุดข้อสอบของผู้ช่วยแนะนำแหล่งเรียน 67 ข้อ (ไทยและอังกฤษ คำเปรียบ คำพูดอ้อม เรื่องนอกกรอบ และคำสั่งแอบแฝง) GitHub รันทุกครั้งที่ส่งโค้ด ถ้ามีลิงก์นอกคลังหรือเกิน 5 แหล่งแม้ข้อเดียว หรือคำตอบข้อไหนเปลี่ยน ช่องตรวจจะเป็นสีแดง AI จำลองหาหัวข้อถูกแค่ 2 จาก 48 ข้อ ซึ่งไม่ใช่ความแม่นยำ ผลจริงต้องรอรันกับ Claude (ขั้น 3.3)
+- มีชุดข้อสอบของผู้ช่วยแนะนำแหล่งเรียน 67 ข้อ (ไทยและอังกฤษ คำเปรียบ คำพูดอ้อม เรื่องนอกกรอบ และคำสั่งแอบแฝง) GitHub รันทุกครั้งที่ส่งโค้ด ถ้ามีลิงก์นอกคลังหรือเกิน 5 แหล่งแม้ข้อเดียว หรือคำตอบข้อไหนเปลี่ยน ช่องตรวจจะเป็นสีแดง AI จำลองหาหัวข้อถูกแค่ 2 จาก 48 ข้อ ซึ่งไม่ใช่ความแม่นยำ ผลจริงต้องรอรันกับ AI จริง (ขั้น 3.3)
+- ใช้ AI จริงได้ฟรีแล้วโดยไม่ต้องมีบัตร: ผ่าน GitHub Models ด้วยบัญชี GitHub ที่คุณมีอยู่ ไม่ต้องสร้างหรือใส่คีย์ มีปุ่มรันเองใน Actions สองปุ่ม (*Shadow eval with GitHub Models* และ *Study guide eval with GitHub Models*) ระดับฟรีจำกัดราว 15 ครั้งต่อนาที และ 150 ครั้งต่อวันต่อรุ่น ระบบจึงเว้นจังหวะระหว่างเคสให้เอง ยังไม่ได้รันจริง (ขั้น 0.3, ADR-020)
 
 **ลำดับต่อจากนี้** แต่ละขั้นจบด้วยสิ่งที่คุณลองเองได้
 
 | ขั้น | ทำอะไร | คุณจะได้ลองอะไร | สถานะ (5 พ.ย. 2026) |
 |---|---|---|---|
-| 0 | เปิดใช้ออนไลน์บน Render และวัดผล Claude จริงครั้งแรก | ใส่เคสบนหน้าเว็บจริง และอ่านผลวัดของ Claude | ออนไลน์แล้ว ที่เหลือรอคุณตัดสินใจเรื่องเงิน (D1 แผน Render, D2 API key ของ Claude) |
+| 0 | เปิดใช้ออนไลน์บน Render และวัดผล AI จริงครั้งแรก | ใส่เคสบนหน้าเว็บจริง และอ่านผลวัดของ AI จริง | ออนไลน์แล้ว; วัดผล AI จริงได้ฟรีผ่าน GitHub Models แล้ว รอคุณกดรัน (0.3); ที่เหลือรอคุณตัดสินใจเรื่องเงิน (D1 แผน Render, D2 API key ของ Claude) |
 | 1 | เก็บงานเล็ก ๆ ให้ระบบแน่นขึ้น | ยกเลิกเคสที่ยังรอคิวได้ | เสร็จ ยกเว้น 1.4 (สำรองข้อมูล) ที่ต้องใช้แผน Render แบบเสียเงิน |
 | 2 | ให้คนรีวิวได้จริง: ผู้รีวิวมีรหัสของตัวเอง กดอนุมัติหรือไม่อนุมัติได้ และ n8n แจ้งเตือน | กล่อง "รอรีวิว" บนหน้าเว็บ และข้อความแจ้งเตือน | ยังไม่เริ่ม |
-| 3 | ผู้ช่วยแนะนำแหล่งเรียน (`study_guide.v1`) ตามหลักปรัชญาของคุณ | พิมพ์เรื่องที่อยากรู้ด้วยคำธรรมดา แล้วได้แหล่งเรียนไม่เกิน 5 แหล่งพร้อมลำดับการเรียน | เริ่มแล้ว (คุณเลือกขั้นนี้ก่อนขั้น 2 เมื่อ 5 พ.ย.): 3.1 คลังแหล่งเรียน 3.2 ตัวผู้ช่วย และ 3.3 ชุดข้อสอบ ทำแล้ว (ดูตัวอย่างคำตอบและผลข้อสอบใน Actions ได้); 3.4 ช่องบนหน้าเว็บ ยังไม่ทำ; ผลกับ Claude จริงรอ D2 |
+| 3 | ผู้ช่วยแนะนำแหล่งเรียน (`study_guide.v1`) ตามหลักปรัชญาของคุณ | พิมพ์เรื่องที่อยากรู้ด้วยคำธรรมดา แล้วได้แหล่งเรียนไม่เกิน 5 แหล่งพร้อมลำดับการเรียน | เริ่มแล้ว (คุณเลือกขั้นนี้ก่อนขั้น 2 เมื่อ 5 พ.ย.): 3.1 คลังแหล่งเรียน 3.2 ตัวผู้ช่วย และ 3.3 ชุดข้อสอบ ทำแล้ว (ดูตัวอย่างคำตอบและผลข้อสอบใน Actions ได้); 3.4 ช่องบนหน้าเว็บ ยังไม่ทำ; ผลกับ AI จริงรันได้ฟรีผ่าน GitHub Models (Claude รอ D2) |
 | 4 | ช่องคุยภาษาธรรมดา: ระบบเข้าใจว่าคุณขออะไร บอกตรง ๆ เมื่อเรื่องอยู่นอกกรอบ และถามกลับ 1 คำถามเมื่อข้อมูลไม่พอ | คุยกับระบบได้เลย ไม่ต้องเลือกประเภทงานเอง | ยังไม่เริ่ม (ต้องรอขั้น 3) |
 | 5 | ติดตามเส้นทางของแต่ละงาน (เวลา token จุดที่ช้า) และด่านตรวจผลรายเคส | ตัวเลขคิวและเวลาบนหน้าเว็บ ช่องตรวจบน PR แล้วต่อด้วยเส้นทางงานใน Honeycomb | เสร็จแล้วทั้ง 5.1, 5.2 และ 5.3; เส้นทางงานแรกเข้า Honeycomb เมื่อ 4 พ.ย. 00:23 น. |
 | 6 | AI วางแผนงานหลายขั้น ระบบตรวจแผนก่อนรัน และเครื่องมืออื่นเรียกใช้ผ่าน MCP ได้ | สั่งงานจากแอป Claude ได้ | ยังไม่เริ่ม (ต้องรอขั้น 2–4) |
@@ -47,7 +48,7 @@ differs, this file and architecture.md win.
 
 **เรื่องที่คุณต้องตัดสินใจเอง** อยู่ในตาราง [Owner decisions](#owner-decisions) ข้างล่าง เช่น
 - จะจ่ายค่า Render เพื่อให้เคสไม่หายหรือไม่
-- จะใส่ Claude API key หรือไม่
+- จะใส่ Claude API key หรือไม่ (ไม่ใส่ก็วัดผลกับ AI จริงได้ผ่าน GitHub Models)
 - ใครเป็นผู้รีวิว
 - จะเปิด repo เป็นสาธารณะเมื่อไร
 
@@ -82,7 +83,7 @@ Marks: ✅ done · 🟡 built or partly checked (the status says what is left) �
 |---|---|---|---|
 | 0.1 | Put round 2 online on Render | ✅ live since 2026-11-01; graceful stops confirmed on Render ([evidence note](evidence/2026-11-03-render-operations.md)) | — |
 | 0.2 | Free or paid hosting | ⬜ owner decision D1 | 0.1 |
-| 0.3 | First scorecard run with real Claude | ⬜ owner (API key, D2) | — |
+| 0.3 | First scorecard run with a real model | 🟡 GitHub Models path built (ADR-020, this PR); waits for the owner to run it. Claude still needs D2 | — |
 | 0.4 | Claude for the online page | ⬜ optional | 0.1, 0.3 |
 | 0.5 | Skip Render deploys for docs-only commits | ✅ PR #15; merges #19, #20 and #24 did not deploy, code merges did ([evidence note](evidence/2026-11-03-render-operations.md)) | 0.1 |
 | 0.6 | Open Dependabot PRs #1–#5 | ✅ #1–#5 closed (they edit files removed in PR #6); PR #20 moved the workflows to the Node 24 action versions, and CI no longer warns about Node.js 20 | — |
@@ -101,8 +102,8 @@ Marks: ✅ done · 🟡 built or partly checked (the status says what is left) �
 | 2.7 | Artifact store with hash checks | ⬜ when needed | — |
 | 2.8 | Measure rules vs AI against reviewer labels | ⬜ | 2.2, 0.3 |
 | 3.1 | Topic catalog and verified resource library | ✅ PR #32; links checked by *Study library link check* on the PR ([evidence note](evidence/2026-11-05-study-library-links.md)); the weekly run starts after the merge | — |
-| 3.2 | `study_guide.v1` workflow | ✅ PR #33; mock AI only, no live Claude run yet (D2) | 3.1 |
-| 3.3 | Study-guide evaluation set and scorecard | ✅ PR #34 with the mock in CI (an eval gate); the live Claude run waits for D2 | 3.2 |
+| 3.2 | `study_guide.v1` workflow | ✅ PR #33; mock AI only, no live run yet (GitHub Models ready, Claude needs D2) | 3.1 |
+| 3.3 | Study-guide evaluation set and scorecard | ✅ PR #34 with the mock in CI (an eval gate); a live run is ready with GitHub Models, with Claude after D2 | 3.2 |
 | 3.4 | Study guide on the web page | ⬜ | 3.2 |
 | 4.1 | The frame: a versioned catalog of what the system can do | ⬜ | 3.2 |
 | 4.2 | `intake.route.v1`: the plain-language router | ⬜ | 4.1 |
@@ -192,15 +193,26 @@ decisions would vanish on every sleep.
   2. ใน Render กด Manual Deploy
   3. เปิดหน้าเว็บใหม่ เคสเดิมต้องยังอยู่
 
-### 0.3 First scorecard run with real Claude (owner adds the key)
+### 0.3 First scorecard run with a real model
 
 - **Goal:** the first honest measurement of a real model, failures included (funding evidence gate 2).
+- **Two paths.** On 2026-11-06 the owner's Anthropic account asked for card verification, which the owner
+  could not do, so a free path was added first (ADR-020). Both use the same gateway, validators and
+  scorecards, and each result names its provider and model.
+  - **A. GitHub Models (free, no key; built).** The workflow's own `GITHUB_TOKEN` calls the model with
+    `models: read`. The free low tier allows about 15 requests a minute and 150 a day per model, so the
+    workflows pace the cases (5 s apart for triage, 10 s for the study guide). Run the two scorecards on
+    different days, or with different models: together they need about 200 requests.
+  - **B. Claude (needs D2).** An API key from the Claude Console with a monthly spend limit, stored as the
+    repository secret `ANTHROPIC_API_KEY`.
 - **Tasks:**
-  1. **Owner:** create an API key in the Claude Console, set a monthly spend limit there, and add the key
-     as the repository secret `ANTHROPIC_API_KEY` (GitHub → Settings → Secrets and variables → Actions).
-  2. Run *Actions → Shadow eval with Claude (manual)* with the default model (`claude-haiku-5-5`) and
-     `limit` 5, then again on all 61 cases.
-  3. Record the result in `docs/evidence/<date>-first-live-claude.md`:
+  1. **Owner, path A:** run *Actions → Shadow eval with GitHub Models (manual)* with the default model
+     (`openai/gpt-4.1-mini`) and `limit` 5, then again on all 61 cases. On another day, run *Study guide eval
+     with GitHub Models (manual)* the same way. OpenAI retires `gpt-4.1-mini` on 2027-01-14; each run lists
+     the model ids GitHub offers at that moment, so pick a low-tier one from that list when it goes.
+  2. **Owner, path B (after D2):** create the key, set the spend limit, add the secret, then run *Actions →
+     Shadow eval with Claude (manual)* with `claude-haiku-5-5` and `limit` 5, then all 61 cases.
+  3. Record each result in `docs/evidence/<date>-first-live-<provider>.md`:
      - the commit SHA, the run link, the model and the served model;
      - every rate as numerator/denominator;
      - the unavailable and failed counts, token totals and latency;
@@ -213,11 +225,15 @@ decisions would vanish on every sleep.
 - **Done when:** the evidence note exists, with denominators and failures, and no doc still says
   "never run".
 - **Owner test (ไทย):**
-  1. เปิด Actions → Shadow eval with Claude → Run workflow
-  2. ใส่ limit = 5 แล้วกด Run
-  3. รอจนเป็นสีเขียว แล้วเปิดหน้าผลเพื่อดูตารางคะแนน
+  1. เปิด GitHub → Actions → *Shadow eval with GitHub Models (manual)* → Run workflow
+  2. ช่อง model ไม่ต้องแก้ ช่อง limit ใส่ 5 แล้วกด Run workflow
+  3. รอราว 2–3 นาทีจนเป็นสีเขียว แล้วกดเข้าไปดู Summary: ต้องมีตารางคะแนน และหมายเหตุว่าใช้ GitHub Models
+     (ไม่ใช่ Claude) ถ้าช่อง "AI ใช้งานไม่ได้" สูงผิดปกติ แปลว่าชนเพดานรายวัน ให้รอวันถัดไป
+  4. ถ้าผลดูปกติ รันอีกรอบโดยปล่อยช่อง limit ว่าง (ครบ 61 เคส ใช้เวลาราว 6 นาที)
+  5. (เมื่อมี Claude API key แล้ว, D2) ทำแบบเดียวกันที่ *Shadow eval with Claude (manual)*
 - **Don't:**
   - set a target before the first run;
+  - present a GitHub Models result as a Claude result, or compare them without naming both models;
   - rerun to hide a bad result;
   - convert tokens to money (prices change);
   - treat developer-labelled synthetic cases as ground truth.
@@ -688,14 +704,15 @@ detect_topic (AI) ─► pick_resources (rules) ─► build_path (rules) ─►
   - Mock results (2026-11-06): topic correct 2/48, out-of-scope precision 19/65 and recall 19/19, in scope
     turned away 46/48, links outside the library 0 of 7, answers over five 0 of 67. The keyword mock cannot
     read new phrasings; these numbers test the pipeline, not understanding.
-  - *Actions → Study guide eval with Claude (manual)* is ready and needs `ANTHROPIC_API_KEY` (D2). Its first
-    run goes into a dated evidence note.
+  - *Actions → Study guide eval with GitHub Models (manual)* is ready with no key (ADR-020), and *Study guide
+    eval with Claude (manual)* needs `ANTHROPIC_API_KEY` (D2). The first live run goes into a dated evidence note.
 - **Owner test (ไทย):**
   1. เปิด GitHub → Actions → *Core logic tests* → รันล่าสุดของ PR นี้ (3.12) → Summary
   2. หัวข้อ "ผลวัดผู้ช่วยแนะนำแหล่งเรียน (study guide scorecard)" ต้องขึ้น "ลิงก์นอกคลัง 0" และ "คำตอบที่เกิน 5 แหล่ง 0"
      พร้อมข้อความ "คำมั่น … เป็นจริงทุกคำตอบ"
   3. ใต้ตารางต้องมี "ด่านตรวจผลรายเคส (eval gate): ผ่าน" ที่บอกว่าทั้ง 67 เคสตอบเหมือนเดิม
-  4. ถ้ามี API key แล้ว (D2): Actions → *Study guide eval with Claude (manual)* → Run workflow → limit = 5
+  4. ลองกับ AI จริงได้ฟรี: Actions → *Study guide eval with GitHub Models (manual)* → Run workflow → limit = 5
+     (หรือ *Study guide eval with Claude (manual)* เมื่อมี API key แล้ว, D2)
 
 ### 3.4 Study guide on the web page
 
@@ -1014,7 +1031,7 @@ workflow types.
 | ID | Decision | Needed before | Options | Until then |
 |---|---|---|---|---|
 | D1 | Pay for Render so cases survive restarts | 0.2; real use of Phase 2 | Free ($0, forgets cases) · `0.5c-512mb` + 1 GB disk (about $7.25 a month at Nov 2026 prices) | Free |
-| D2 | Claude API key and monthly spend limit | 0.3, 0.4 | Key as a GitHub secret and/or in Render's Environment tab; spend limit in the Claude Console | Mock AI only |
+| D2 | Claude API key and monthly spend limit | 0.3 path B, 0.4 with Claude | Key as a GitHub secret and/or in Render's Environment tab; spend limit in the Claude Console | GitHub Models (free, rate-limited) for live measurement; the mock everywhere else |
 | D3 | Who reviews, and how they are told | 2.5 | Owner only · named reviewers; e-mail, LINE or Slack | Owner only, no notifications |
 | D4 | Real data | 7.5 | Synthetic only · consented pilot | Synthetic only |
 | D5 | Public repository and funding application | 7.4 | Stay private · publish an approved snapshot | Private |
@@ -1091,3 +1108,6 @@ workflow types.
   (informational answers end without review) and ADR-019 (prompts completed from versioned data).
 - 2026-11-06: 3.3 done in PR #34 with the mock. The scorecard also became an eval gate, and the gate's code
   is now shared with the triage scorecard (`app/eval/common.py`). The live Claude run waits for D2.
+- 2026-11-06: the owner's Anthropic account asked for card verification, so 0.3 got a free path first:
+  GitHub Models as a third provider (ADR-020), two manual workflows that use the workflow's own token, and
+  pacing in both scorecards for the free tier's per-minute limit. Claude stays path B, waiting for D2.

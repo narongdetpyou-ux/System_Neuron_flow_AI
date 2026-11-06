@@ -1,0 +1,49 @@
+name: Shadow eval with GitHub Models (manual)
+# Scores shadow mode on the synthetic case set with a real model from GitHub Models (ADR-020).
+# Free within GitHub's rate limits: no API key, no card. The workflow's own GITHUB_TOKEN calls the models,
+# with only the permissions below. One short request per case (61 cases); the free low tier allows about
+# 15 requests a minute and 150 a day per model, so cases start at least 5 seconds apart.
+on:
+  workflow_dispatch:
+    inputs:
+      model:
+        description: "GitHub Models id (publisher/model)"
+        default: "openai/gpt-4.1-mini"
+        required: true
+      limit:
+        description: "Only the first N cases (leave empty for all)"
+        default: ""
+        required: false
+permissions:
+  contents: read
+  models: read
+jobs:
+  eval:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      NEURON_FLOW_LLM_PROVIDER: github
+      NEURON_FLOW_LLM_MODEL: ${{ inputs.model }}
+      LIMIT: ${{ inputs.limit }}
+      GITHUB_MODELS_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - name: List the models GitHub offers
+        continue-on-error: true
+        run: python .github/scripts/github_models_catalog.py "$GITHUB_STEP_SUMMARY"
+      - name: Score shadow mode with GitHub Models
+        run: |
+          ARGS=()
+          if [ -n "$LIMIT" ]; then ARGS=(--limit "$LIMIT"); fi
+          python -m app.eval.triage_shadow_eval --min-interval-s 5 --summary "$GITHUB_STEP_SUMMARY" \
+            --out shadow-eval-github-models.json "${ARGS[@]}"
+      - name: Keep the scorecard
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: shadow-eval-github-models
+          path: shadow-eval-github-models.json
+          if-no-files-found: ignore

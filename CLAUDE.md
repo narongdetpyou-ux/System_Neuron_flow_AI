@@ -11,7 +11,8 @@ trusted agents in bounded child processes, retries, recovers after a crash and w
 `app/` is built on top of it without changing Core. It contains:
 - a case-triage domain: keyword rules make the official suggestion, an AI gives a second opinion
   (shadow mode), and a person always decides;
-- an AI gateway (an offline mock or Claude);
+- an AI gateway (an offline mock, Claude, or GitHub Models: free within rate limits, no key in Actions;
+  ADR-020);
 - a scorecard on 61 synthetic cases;
 - Sentry reporting, and tracing to Honeycomb (one trace per case; off until a key is set);
 - since round 2, an HTTP API, a durable job queue, a single Runner with crash recovery and a Thai web page,
@@ -62,7 +63,8 @@ Read in this order when you need depth:
   changes only docs, tests or CI files does not redeploy (the `buildFilter` in `render.yaml`).
 - **Honesty about evidence.**
   - Mock-AI scores are not accuracy, and hashes prove bytes, not authorship.
-  - There is no live-Claude measurement, security review or user study yet.
+  - There is no live-model measurement (Claude or GitHub Models), security review or user study yet. A
+    GitHub Models result describes that model only; never present it as Claude's.
   - Never write a number you did not measure. Record failures as well as successes.
 - **The philosophy covers how you talk, too.** Plain language outside, careful work inside, and small
   measured steps instead of perfection. When the owner brings up a technology or a logic system in everyday
@@ -118,7 +120,7 @@ If a task seems to need breaking a rule:
 ## 4. Checking your work
 
 ```bash
-python -m unittest discover -s tests -v        # all tests (243 on 2026-11-06); Python 3.10–3.13
+python -m unittest discover -s tests -v        # all tests (259 on 2026-11-06); Python 3.10–3.13
 python -m examples.case_triage_demo            # v1 rules, one synthetic case
 python -m examples.case_triage_shadow_demo     # v2 shadow mode with the offline mock AI
 python -m examples.study_guide_demo            # the study guide's answers to four synthetic requests
@@ -150,6 +152,12 @@ GitHub Actions (the owner can open these; the first three run on every push and 
   by hand, and on every push or pull request that changes `app/domains/study_guide/`. It fails on a broken
   link, warns on a moved or bot-blocked one, and never edits the library. This session cannot reach most
   of those sites, so read this check's summary instead of fetching the links yourself.
+- *Shadow eval with GitHub Models (manual)* and *Study guide eval with GitHub Models (manual)* run the two
+  scorecards against a real model from GitHub Models (default `openai/gpt-4.1-mini`). They need no secret:
+  the workflow's own `GITHUB_TOKEN` gets `contents: read` and `models: read` and is passed as
+  `GITHUB_MODELS_TOKEN`. The free low tier allows about 15 requests a minute and 150 a day per model, so the
+  scorecards pace cases (`--min-interval-s`), and each run first lists the model ids GitHub offers (ADR-020).
+  This session cannot reach `models.github.ai`; read the run page instead.
 - *Shadow eval with Claude (manual)* and *Study guide eval with Claude (manual)* run the two scorecards
   against real Claude and need the repository secret `ANTHROPIC_API_KEY`.
 
@@ -179,7 +187,7 @@ Notes for cloud sessions (claude.ai/code):
 - **Eval gate.** If the scorecard's per-case answers change on purpose (rules, prompt, model, cases),
   regenerate `tests/baselines/shadow_eval_mock.json` in the same PR
   (`python -m app.eval.triage_shadow_eval --write-baseline tests/baselines/shadow_eval_mock.json`) and say
-  why in the description. A prompt or model change also attaches a live Claude run (roadmap 0.3).
+  why in the description. A prompt or model change also attaches a live run (roadmap 0.3: GitHub Models, or Claude after D2).
 - **Safety.** No secrets, no real personal data, no unmeasured claims. `tests/test_no_secrets.py` and
   *Secret scan* enforce the first. Never add an entry to `.github/.gitleaksignore` without a reason in the
   file and the owner's knowledge.
@@ -192,7 +200,7 @@ Notes for cloud sessions (claude.ai/code):
 | `neuron_flow/` | Core (rule 1) |
 | `app/domains/case_triage/` | v1 rules, the input contract, the v2 shadow agents and workflow |
 | `app/domains/study_guide/` | the study guide: topic catalog and verified resource library (`catalog/*_v1.json`), their checks and hash (`library.py`), the link check (`link_check.py`), and the `study_guide.v1` workflow (`workflow.py`, `agents.py`, `planning.py`, `ai_prompts.py`, `mock_answers.py`); no `.md` files here, because the Render build filter ignores them |
-| `app/llm/` | AI gateway, prompt library (prompt + answer schema, one hash), personal-data masking, mock and Claude providers |
+| `app/llm/` | AI gateway, prompt library (prompt + answer schema, one hash), personal-data masking, mock, Claude and GitHub Models providers (`providers/_http.py` refuses redirects for both real ones) |
 | `app/eval/` | the two scorecards (triage: 61 labelled cases; study guide: 67 labelled requests) and the eval gate's shared code (`common.py`) |
 | `app/observability/sentry.py` | Sentry reporting: step failures, degraded AI, Runner recoveries |
 | `app/observability/tracing.py`, `job_spans.py` | tracing: the OTLP/JSON exporter with its attribute allow-list, and a finished job's spans (ADR-017) |
@@ -282,18 +290,22 @@ Notes for cloud sessions (claude.ai/code):
   - The study guide's scorecard: 67 synthetic requests (Thai and English, metaphors, out of scope,
     injection), run in CI with the mock as an eval gate that also fails on a link outside the library or more
     than 5 resources; a manual workflow runs it with Claude (PR #34, roadmap 3.3). Mock: topic correct 2/48.
+  - GitHub Models as a third provider (ADR-020): the free live path for roadmap 0.3, added on 2026-11-06
+    because the owner's Anthropic account asked for card verification. Two manual workflows, one per
+    scorecard, and pacing for the free tier. Not run live yet.
   - The web page's chat layout from the owner's "Nocturne" mockup (PR #18, roadmap 1.6; live and
     owner-tested on 2026-11-03). Parts of the mockup that would break the rules in §3 (key and provider
     fields, editing steps, a "never ask" policy) are shown read-only or left out on purpose; see
     intake_queue.md, "หน้าเว็บ: ใช้อย่างไร".
 - **Not done yet:**
-  - Real Claude has never been run.
+  - No real model has ever been run (the GitHub Models workflows wait for the owner's first click).
   - Review decisions and per-person identity (Milestone C) are not built.
   - The study guide's page (roadmap 3.4) is not built, and neither the study guide nor its scorecard has
-    run with real Claude.
+    run with a real model.
   - The rest of the roadmap is open.
 - **Next:** [docs/ROADMAP.md](docs/ROADMAP.md), the first item that is not ✅ and whose needs are met.
-  - Waiting on the owner: 0.2 and 1.4 (D1, paid Render plan), 0.3 and 0.4 (D2, Claude API key).
+  - Waiting on the owner: 0.3 path A (run the GitHub Models workflows; no decision needed), 0.2 and 1.4
+    (D1, paid Render plan), 0.3 path B and 0.4 with Claude (D2, Claude API key).
   - Buildable now without an owner decision: Phase 3, 3.4 next (the owner chose Phase 3 before Phase 2 on
     2026-11-05), and Phase 2 (2.1 first). The rest of 7.1 (who can read the AI key) needs an ADR first.
   - The owner decides which phase comes next; ask before starting a new phase.

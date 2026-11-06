@@ -1,7 +1,8 @@
 """Application-layer access to AI models (LLMs). Core (``neuron_flow``) never imports this.
 
 Agents call :func:`structured_answer` with text from :func:`mask` (personal data masked first); providers
-are ``mock`` (offline keyword simulation for tests) and ``anthropic`` (Claude over HTTPS).
+are ``mock`` (offline keyword simulation for tests), ``anthropic`` (Claude over HTTPS) and ``github``
+(GitHub Models over HTTPS, free within rate limits; ADR-020).
 """
 
 from .config import LLMConfig

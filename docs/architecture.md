@@ -38,7 +38,7 @@ flowchart TD
     end
     subgraph L2[Layer 2: Domains, agents, AI gateway]
       TRI[case_triage v1 rules + v2 shadow mode - built]
-      LLM[app/llm gateway: prompt library, mock + Claude - built]
+      LLM[app/llm gateway: prompt library, mock + Claude + GitHub Models - built]
       SG[study_guide.v1: topic catalog, verified library and workflow - built; page planned]
     end
     subgraph L1[Layer 1: Core neuron_flow - one planned fix since extraction]
@@ -53,7 +53,7 @@ flowchart TD
 | 1 Core `neuron_flow/` | Spec validation, static DAG scheduling, bounded child processes, retries, recovery, events, verified receipts, integrity, case memory, candidate gate. No HTTP, business rules, credentials or user authorisation. | All of it; changed once since commit `09100f7`: the telemetry fix (roadmap 1.1, PR #21) | No further Core change planned |
 | 2 Domains & agents `app/domains/`, `app/llm/` | Input contracts, trusted agent registry, fixed DAG templates, validators, AI calls | case_triage v1 and v2, AI gateway; `study_guide.v1`, a second unrelated domain: versioned topic catalog, verified resource library with a weekly link check, and the five-step workflow (roadmap 3.1, 3.2) | The study guide's scorecard (3.3) |
 | 3 Application services | Admission, idempotency, the only Runtime owner, crash reconciliation, review decisions, results, measurement, monitoring | Scorecard (`app/eval/`), Sentry reporting (`app/observability/`), admission queue (`app/persistence/`), admission, Runner with reconciliation, results (`app/services/`) | Review ledger, artifact store (Milestone C) |
-| 4 Interfaces | Authentication, request validation, status pages, human decisions | GitHub Actions workflows (tests, scorecard, Sentry check, container check, manual Claude run); HTTP API and web page (`app/api/`, `app/web/`) behind one shared access key, started by `app/serve.py` in one container for Render (`render.yaml`; Railway also configured) | n8n intake and notifications, per-reviewer identity, review decisions |
+| 4 Interfaces | Authentication, request validation, status pages, human decisions | GitHub Actions workflows (tests, scorecard, Sentry check, container check, manual live runs with Claude or GitHub Models); HTTP API and web page (`app/api/`, `app/web/`) behind one shared access key, started by `app/serve.py` in one container for Render (`render.yaml`; Railway also configured) | n8n intake and notifications, per-reviewer identity, review decisions |
 
 **Dependency rule:** Interface → Services → Domain → Core. Core never imports `app.*`. A domain builds specs
 and registers agents. It never re-implements retries or scheduling, and it never writes to Core SQLite.
@@ -81,9 +81,14 @@ Each row was re-checked against the current code.
 - **The AI is a trusted Layer 2 agent, never the orchestrator.** Core still schedules, retries and records.
 - **One gateway, `app/llm/`:**
   - The prompt and its answer schema live in one versioned file, and one SHA-256 covers both.
-  - Answers use structured JSON output. Current Claude 5.5 models reject forced `tool_choice` and sampling
-    parameters, so the client sends neither.
-  - The client refuses HTTP redirects, so the key cannot travel to another host.
+  - Three providers: `mock` (offline keyword simulation), `anthropic` (Claude, paid key) and `github`
+    (GitHub Models, free within rate limits, ADR-020). Each real provider is one standard-library module in
+    `app/llm/providers/` and reads its own key variable (`ANTHROPIC_API_KEY`, `GITHUB_MODELS_TOKEN`).
+  - Answers use structured JSON output (`output_config.format` for Claude, `response_format` `json_schema`
+    strict for GitHub Models), built from the prompt's own answer schema. Current Claude 5.5 models reject
+    forced `tool_choice` and sampling parameters, and several GitHub Models reject sampling parameters too,
+    so neither client sends them.
+  - The clients refuse HTTP redirects (`providers/_http.py`), so the key cannot travel to another host.
   - The API key is read from the environment at call time. It never appears in a job, an output or a log.
   - Personal data is masked before every call (`app/llm/redaction.py`, roadmap 7.1): the gateway accepts
     only text from `mask()`, the AI sees placeholders such as `[PHONE]`, and the AI step records how many
@@ -96,7 +101,7 @@ Each row was re-checked against the current code.
   | Setup | 401, 403, 404 | Fail loudly |
   | Rejected request | other 4xx, redirects | Fail loudly |
   | Off-contract answer | broken JSON, unknown value, cut off | Retry, then "unavailable" |
-  | Refusal | `stop_reason: refusal` | "unavailable" at once |
+  | Refusal | `stop_reason: refusal`; on GitHub Models also `finish_reason: content_filter`, a `refusal` message, or HTTP 400 `content_filter` (content safety blocked one case's text) | "unavailable" at once |
 
 - **Validators check three things before Core saves any output:**
   - Schema: the fields and types are right.
@@ -183,7 +188,7 @@ neuron_flow/                   Core runtime (one change since extraction: the te
 app/domains/case_triage/       v1 rules (agents.py, workflow.py), contracts.py, v2 shadow_agents.py, shadow_workflow.py
 app/domains/study_guide/       library.py (topic catalog + resource library: checks, SHA-256), link_check.py, catalog/*_v1.json;
                                workflow.py, agents.py, planning.py, ai_prompts.py, mock_answers.py (study_guide.v1)
-app/llm/                       config, errors, gateway, prompts, redaction (personal-data masking), prompt_library/, providers/{mock, anthropic}
+app/llm/                       config, errors, gateway, prompts, redaction (personal-data masking), prompt_library/, providers/{mock, anthropic, github_models, _http}
 app/eval/                      triage_shadow_eval.py, study_guide_eval.py, common.py (the eval gate's shared parts);
                                golden/case_triage_synthetic_v1.json (61 cases), golden/study_guide_synthetic_v1.json (67 requests)
 app/observability/             sentry.py (step failures, degraded AI, Runner recoveries); tracing.py (OTLP/JSON exporter) and job_spans.py (a job's spans)
@@ -195,7 +200,7 @@ app/boot.py                    process 1 of the image: takes the data folder, dr
 app/settings.py, app/serve.py  environment settings; the launcher (API + supervised Runner in one container)
 Dockerfile, render.yaml        the container and the Render Blueprint (railway.json kept for Railway)
 examples/                      case_triage_demo, case_triage_shadow_demo, study_guide_demo, sentry_smoke_test, service_smoke_test
-tests/                         243 tests: core, triage v1/v2, AI gateway, masking, scorecards, eval gates, Sentry, tracing, API, queue, Runner, HTTP, metrics, study library, link check, study guide
+tests/                         259 tests: core, triage v1/v2, AI gateway, GitHub Models provider, masking, scorecards, eval gates, Sentry, tracing, API, queue, Runner, HTTP, metrics, study library, link check, study guide
 tests/baselines/               shadow_eval_mock.json, study_guide_eval_mock.json: every case's answer with the mock AI (the eval gates' baselines)
 .github/workflows/             core-tests, service-container, tracing-check, secret-scan, sentry-smoke, study-links (weekly), shadow-eval-claude and study-guide-eval-claude (manual)
 .github/gitleaks.toml          secret scan rules (gitleaks defaults + Sentry DSN + Honeycomb keys); .github/.gitleaksignore: reviewed findings
@@ -227,6 +232,7 @@ planned: review ledger and artifact store; the study guide's scorecard and page 
 | 017 | Tracing uses a small standard-library OTLP/HTTP JSON exporter, not the OpenTelemetry SDK. Job, step and AI spans are built after the job from durable records (queue record, Core step events, the AI view); only allow-listed ASCII attributes can be sent | In force (PR #30). Trade-off: no automatic instrumentation, no metrics or logs signals, and two modules (about 700 lines with comments) to maintain. Attribute names follow the semantic conventions, so the SDK can replace it without changing the data |
 | 018 | An informational workflow (today `study_guide.v1`) ends `COMPLETED` without human review. It may only answer with information from versioned data; it records no decision, changes nothing and sends nothing outside, and its validator refuses a `decision` field. Anything that decides about a person or acts outside still goes to review (rule 4) | In force (roadmap 3.2, PR #33). Trade-off: nobody checks an answer before the person reads it, so the answer must stay safe by construction (catalog topics only, at most 5 library links, code-inserted URLs, "out of scope" instead of guessing) and is measured in 3.3 |
 | 019 | A prompt file may be completed from versioned data before a call (`app.llm.prompts.specialize`): extra system lines, fixed choices for a text field, extra text fields. The file keeps its hash, and the agent version carries the data's own version next to it | In force (PR #33, the study guide's catalog). Trade-off: the exact prompt text is no longer one file to read, but it is a pure function of two versioned inputs and is rebuilt the same way for every attempt |
+| 020 | A second real provider, GitHub Models (`github`), so the first live measurement does not wait for a paid Claude key: the owner's Anthropic account asks for card verification (2026-11-06). Same gateway, validators, masking and error classes as Claude; its own key variable (`GITHUB_MODELS_TOKEN`); the manual scorecard workflows pass the workflow's own `GITHUB_TOKEN` with only `contents: read` and `models: read`, so there is no key to create or store. A content-safety block of one case's text (HTTP 400 `content_filter`) counts as a refusal, not a setup error | In force (this PR; not yet run live). Trade-offs: the free tier is rate-limited (about 15 requests a minute and 150 a day per low-tier model), so the scorecards pace cases (`--min-interval-s`); results belong to the chosen model, not to Claude, and say so on the run page; GitHub's data terms for the catalog were not reviewed here, so only synthetic data may go to it (rule 9; D4 decides real data) |
 
 ## 9. Acceptance gates
 
@@ -284,13 +290,13 @@ dashboard.
 | Milestone | Content | Status |
 |---|---|---|
 | A | case_triage v1 rules, synthetic demo, tests | Done |
-| A2 | AI gateway, v2 shadow mode, scorecard, Sentry reporting | Done (PR #8, #9); real Claude not yet run |
+| A2 | AI gateway, v2 shadow mode, scorecard, Sentry reporting | Done (PR #8, #9); a free GitHub Models provider added (ADR-020); no real model has run yet |
 | P1-fix | Neutral telemetry phase names | Done (PR #21, roadmap 1.1) |
 | B | Admission queue, single Runner, reconciliation, thin API, web page | Done (PR #11); live on Render's free plan since 2026-11-01; page redesigned as a chat layout with Flow, Trace and read-only settings (PR #18, roadmap 1.6) |
 | C | Two-phase review, decision ledger, n8n notifications | Open |
 | D | OpenTelemetry tracing, eval gates in CI | Done: the per-case eval gates (5.2 for triage; 3.3 for the study guide), queue/run-time figures (5.3), Sentry, request ids, and tracing (5.1, PR #30), with the first trace seen in Honeycomb on 2026-11-03 |
 | E | Planner pattern (B), MCP server, second domain with zero Core changes | Open |
-| — | `study_guide.v1`: first-response study guide ([design_philosophy.md](design_philosophy.md), [study_guide.md](study_guide.md)) | Workflow and scorecard built: the topic catalog, the verified resource library, the weekly link check (3.1, PR #32), the five-step workflow in the catalog (3.2, PR #33) and the 67-request scorecard with its eval gate (3.3, PR #34), all with the mock AI only; the page is not built (3.4), and the live Claude run waits for D2 |
+| — | `study_guide.v1`: first-response study guide ([design_philosophy.md](design_philosophy.md), [study_guide.md](study_guide.md)) | Workflow and scorecard built: the topic catalog, the verified resource library, the weekly link check (3.1, PR #32), the five-step workflow in the catalog (3.2, PR #33) and the 67-request scorecard with its eval gate (3.3, PR #34), all with the mock AI only; the page is not built (3.4); a live run is ready with GitHub Models (ADR-020), and with Claude after D2 |
 
 The order of the remaining work, with tasks, acceptance checks and owner decisions for each step, is in
 [ROADMAP.md](ROADMAP.md).
@@ -308,6 +314,7 @@ The order of the remaining work, with tasks, acceptance checks and owner decisio
 - The Sentry DSN that the smoke workflow carried until 2026-11-03 is still in the git history. It can only
   submit events; it must be revoked in Sentry before the repository is made public (ROADMAP 7.4).
 - The study guide has only run with the mock AI, a keyword simulation that cannot read a new metaphor.
-  Whether a real model maps everyday words and metaphors to the right topic is unmeasured until 3.3 and D2.
-- Live Claude results, security review, benchmarks and user studies do not exist yet. No document should
-  claim them.
+  Whether a real model maps everyday words and metaphors to the right topic is unmeasured until the first
+  live run (GitHub Models now, Claude after D2).
+- Live model results (Claude or GitHub Models), security review, benchmarks and user studies do not exist
+  yet. No document should claim them. A GitHub Models result, once measured, describes that model only.

@@ -26,21 +26,11 @@ from neuron_flow import __version__
 
 from ..config import API_KEY_ENV, DEFAULT_ANTHROPIC_BASE_URL
 from ..errors import InvalidModelOutput, LLMConfigError, LLMRequestError, LLMTransientError
+from ._http import MAX_RESPONSE_BYTES, OPENER as _OPENER
 
 API_VERSION = "2023-06-01"
-MAX_RESPONSE_BYTES = 1_048_576
 _ERROR_TYPE = re.compile(r"^[a-z_]{1,60}$")
 _MODEL = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,99}$")
-
-
-class _NoRedirect(urllib.request.HTTPRedirectHandler):
-    """urllib would forward x-api-key to a redirect target; refuse every redirect instead."""
-
-    def redirect_request(self, *_args, **_kwargs):
-        return None
-
-
-_OPENER = urllib.request.build_opener(_NoRedirect)  # keeps the default proxy and TLS handling
 
 
 def build_request_body(config, prompt, case_text):

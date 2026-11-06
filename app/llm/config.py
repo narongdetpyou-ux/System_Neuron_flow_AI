@@ -3,7 +3,14 @@
 The configuration travels inside the step ``params`` (so it is recorded with the
 job and covered by the job fingerprint) and inside the agent ``version`` (so Core
 refuses to run an old job with a different model or prompt). API keys are never
-part of it: the agent reads ``ANTHROPIC_API_KEY`` from the environment at call time.
+part of it: the agent reads the provider's key from the environment at call time
+(``ANTHROPIC_API_KEY`` for Claude, ``GITHUB_MODELS_TOKEN`` for GitHub Models).
+
+Providers:
+* ``mock``: the offline keyword simulation (tests and CI; not an AI model);
+* ``anthropic``: Claude, which needs a paid Anthropic API key;
+* ``github``: GitHub Models, the free, rate-limited model catalog that any GitHub account can use
+  (ADR-020). Its model ids look like ``publisher/model``, for example ``openai/gpt-4.1-mini``.
 """
 
 from dataclasses import dataclass
@@ -16,12 +23,18 @@ from urllib.parse import urlsplit
 from .errors import LLMConfigError
 from .redaction import REDACTION_VERSION
 
-PROVIDERS = ("mock", "anthropic")
-DEFAULT_MODELS = {"mock": "mock-keyword-1", "anthropic": "claude-haiku-5-5"}
+PROVIDERS = ("mock", "anthropic", "github")
+DEFAULT_MODELS = {"mock": "mock-keyword-1", "anthropic": "claude-haiku-5-5", "github": "openai/gpt-4.1-mini"}
 DEFAULT_ANTHROPIC_BASE_URL = "https://api.anthropic.com"
+DEFAULT_GITHUB_MODELS_BASE_URL = "https://models.github.ai/inference"
 EFFORT_LEVELS = ("low", "medium", "high", "xhigh", "max")
 API_KEY_ENV = "ANTHROPIC_API_KEY"
-_MODEL = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,99}$")
+GITHUB_TOKEN_ENV = "GITHUB_MODELS_TOKEN"
+# Which environment variable holds each real provider's key, and which one may point it at another endpoint.
+KEY_ENVS = {"anthropic": API_KEY_ENV, "github": GITHUB_TOKEN_ENV}
+BASE_URL_ENVS = {"anthropic": "NEURON_FLOW_ANTHROPIC_BASE_URL", "github": "NEURON_FLOW_GITHUB_MODELS_BASE_URL"}
+# One name, or "publisher/name" (GitHub Models); at most 100 characters in all.
+_MODEL = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]*(?:/[A-Za-z0-9][A-Za-z0-9._:-]*)?$")
 _LOOPBACK = {"127.0.0.1", "localhost", "::1"}
 _PARAM_KEYS = {"provider", "model", "max_tokens", "request_timeout_s", "effort", "base_url"}
 
@@ -38,11 +51,16 @@ class LLMConfig:
     def __post_init__(self):
         if self.provider not in PROVIDERS:
             raise LLMConfigError(f"Unknown LLM provider {self.provider!r}; use one of {', '.join(PROVIDERS)}")
-        if not isinstance(self.model, str) or not _MODEL.fullmatch(self.model):
-            raise LLMConfigError("Model id must be 1-100 letters, digits, '.', '_', ':' or '-'")
+        if not isinstance(self.model, str) or len(self.model) > 100 or not _MODEL.fullmatch(self.model):
+            raise LLMConfigError("Model id must be 1-100 letters, digits, '.', '_', ':' or '-'"
+                                 " (GitHub Models: publisher/model)")
+        if self.provider == "github" and "/" not in self.model:
+            raise LLMConfigError("GitHub Models ids look like publisher/model, for example openai/gpt-4.1-mini")
+        if self.provider != "github" and "/" in self.model:
+            raise LLMConfigError("Only GitHub Models ids contain '/'")
         if self.provider == "mock" and not self.model.startswith("mock-"):
             raise LLMConfigError("The mock provider only accepts model ids starting with 'mock-'")
-        if self.provider != "mock" and self.model.startswith("mock-"):
+        if self.provider != "mock" and self.model.split("/")[-1].startswith("mock-"):
             raise LLMConfigError("A 'mock-' model id needs the mock provider")
         if type(self.max_tokens) is not int or not 16 <= self.max_tokens <= 16384:
             raise LLMConfigError("max_tokens must be an integer between 16 and 16384")
@@ -52,6 +70,9 @@ class LLMConfig:
             raise LLMConfigError("request_timeout_s must be between 0.1 and 300 seconds")
         if self.effort is not None and self.effort not in EFFORT_LEVELS:
             raise LLMConfigError(f"effort must be one of {', '.join(EFFORT_LEVELS)}")
+        if self.effort is not None and self.provider == "github":
+            # Most GitHub Models reject a reasoning-effort setting; refuse it here instead of failing every call.
+            raise LLMConfigError("effort is not used by the github provider; leave NEURON_FLOW_LLM_EFFORT unset")
         if self.base_url is not None:
             if self.provider == "mock":
                 raise LLMConfigError("base_url is only used by real providers")
@@ -76,10 +97,15 @@ class LLMConfig:
         effort = env.get("NEURON_FLOW_LLM_EFFORT", "").strip()
         if effort:
             values["effort"] = effort
-        base_url = env.get("NEURON_FLOW_ANTHROPIC_BASE_URL", "").strip()
-        if base_url and provider != "mock":
+        base_url = env.get(BASE_URL_ENVS[provider], "").strip() if provider in BASE_URL_ENVS else ""
+        if base_url:
             values["base_url"] = base_url
         return cls(**values)
+
+    @property
+    def key_env(self):
+        """The environment variable that holds this provider's key (None for the mock)."""
+        return KEY_ENVS.get(self.provider)
 
     def to_params(self):
         """JSON form stored in the job; contains no secrets."""
@@ -101,8 +127,9 @@ class LLMConfig:
     def check_ready(self, environ=None):
         """Fail before any job is submitted when a real provider has no key."""
         env = os.environ if environ is None else environ
-        if self.provider == "anthropic" and not env.get(API_KEY_ENV, "").strip():
-            raise LLMConfigError(f"{API_KEY_ENV} is not set; the anthropic provider cannot run")
+        name = self.key_env
+        if name and not env.get(name, "").strip():
+            raise LLMConfigError(f"{name} is not set; the {self.provider} provider cannot run")
 
 
 def _check_base_url(value):

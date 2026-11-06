@@ -207,6 +207,7 @@
     if (!ai || !ai.provider) return "AI";
     if (ai.provider === "mock") return "AI จำลอง";
     if (ai.provider === "anthropic") return `Claude (${ai.model})`;
+    if (ai.provider === "github") return `GitHub Models (${ai.model})`;
     return `${ai.provider}/${ai.model}`;
   }
   function stepName(id) { return STEP[id] || id; }
@@ -1241,7 +1242,8 @@
 
   function aiPanel(ai) {
     const provider = ai.provider === "mock" ? "AI จำลอง (mock) — จับคำสำคัญ ไม่ใช่ AI จริง"
-      : ai.provider === "anthropic" ? "Claude (anthropic)" : (ai.provider || "—");
+      : ai.provider === "anthropic" ? "Claude (anthropic)"
+      : ai.provider === "github" ? "GitHub Models (github) — AI จริง ระดับฟรี มีเพดานต่อนาทีและต่อวัน" : (ai.provider || "—");
     return panel("AI ที่ใช้อยู่ (LLM provider)", [
       el("div", { class: "rows" }, [
         el("span", { text: "ผู้ให้บริการ" }), el("span", { text: provider }),
