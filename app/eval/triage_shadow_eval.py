@@ -168,6 +168,9 @@ def compute_metrics(rows):
         "llm_latency_ms": {"p50": percentile(latencies, .5), "p95": percentile(latencies, .95)},
         "both_wrong": [r["case_id"] for r in rows if r["rules_category"] != r["expected"]
                        and r["llm_category"] != r["expected"]],
+        # The AI's own mistakes where the rules were right: following the AI would have hurt here.
+        "llm_wrong_rules_right": [r["case_id"] for r in answered if r["llm_category"] != r["expected"]
+                                  and r["rules_category"] == r["expected"]],
     }
 
 
@@ -265,13 +268,15 @@ def summary_markdown(report):
               "| AI ถูก | กฎถูก | ผิดทั้งคู่ |", "|---|---|---|",
               f"| {d['llm_right']} | {d['rules_right']} | {d['neither']} |", ""]
     rows = {r["case_id"]: r for r in report["cases"]}
-    if m["both_wrong"]:
-        lines += ["### เคสที่ผิดทั้งกฎและ AI (ควรดูต่อ)", ""]
-        for case_id in m["both_wrong"]:
-            r = rows[case_id]
-            lines.append(f"- `{case_id}` ควรเป็น **{r['expected']}** · กฎ: {r['rules_category']} · "
-                         f"AI: {r['llm_category'] or r['llm_status']} · \"{r['summary'][:80]}\"")
-        lines.append("")
+    for title, case_ids in (("เคสที่ผิดทั้งกฎและ AI (ควรดูต่อ)", m["both_wrong"]),
+                            ("เคสที่ AI ผิดแต่กฎถูก (ถ้าเชื่อ AI จะพลาด)", m["llm_wrong_rules_right"])):
+        if case_ids:
+            lines += [f"### {title}", ""]
+            for case_id in case_ids:
+                r = rows[case_id]
+                lines.append(f"- `{case_id}` ควรเป็น **{r['expected']}** · กฎ: {r['rules_category']} · "
+                             f"AI: {r['llm_category'] or r['llm_status']} · \"{r['summary'][:80]}\"")
+            lines.append("")
     lines.append(f"_{p['golden']['label_scope']}_")
     return "\n".join(lines) + "\n"
 
