@@ -24,7 +24,6 @@ import argparse
 import hashlib
 import os
 import platform
-import subprocess
 import sys
 import tempfile
 import time
@@ -40,6 +39,9 @@ from app.domains.case_triage import build_shadow_workflow, shadow_registry
 from app.domains.case_triage.contracts import CATEGORIES
 from app.domains.case_triage.shadow_workflow import PROMPT_ID
 from app.llm import LLMConfig, load_prompt
+
+from . import common
+from .common import fmt_ms as _ms, fmt_rate as _fmt, git_sha as _git_sha, rate as _rate, to_json as _json
 
 DEFAULT_GOLDEN = Path(__file__).with_name("golden") / "case_triage_synthetic_v1.json"
 LANGUAGES = {"en": "อังกฤษ (EN)", "th": "ไทย (TH)"}
@@ -92,15 +94,6 @@ def evaluate(golden, config=None, *, limit=None, max_workers=3):
             "metrics": compute_metrics(rows), "cases": rows}
 
 
-def _git_sha():
-    try:
-        result = subprocess.run(["git", "rev-parse", "HEAD"], capture_output=True, text=True, timeout=5,
-                                cwd=Path(__file__).resolve().parent)
-        return result.stdout.strip() or None
-    except (OSError, subprocess.SubprocessError):
-        return None
-
-
 def case_row(case, snapshot):
     steps = snapshot["steps"]
 
@@ -130,11 +123,6 @@ def case_row(case, snapshot):
             "agreement": final["agreement"] if final else None,
             "review_priority": final["review_priority"] if final else None,
             "review_reasons": final["review_reasons"] if final else []}
-
-
-def _rate(numerator, denominator):
-    return {"numerator": numerator, "denominator": denominator,
-            "rate": round(numerator / denominator, 4) if denominator else None}
 
 
 def compute_metrics(rows):
@@ -203,7 +191,7 @@ REPORT_SCHEMA = "neuron-flow-shadow-eval-v1"
 ANSWER_FIELDS = ("source_sha256", "expected", "job_status", "rules_category", "llm_status", "llm_category",
                  "llm_reason", "llm_confidence", "llm_attempts", "agreement", "review_priority", "review_reasons")
 _IDENTITY = (("golden", "case set"), ("llm", "AI"), ("prompt", "prompt"))
-MAX_LISTED_CHANGES = 40
+_HEAD = ("schema", "golden", "llm", "prompt")
 
 
 def baseline_view(report):
@@ -221,84 +209,23 @@ def as_baseline(document):
     """Accept a baseline file or a full report (``--out``); refuse anything else."""
     if isinstance(document, dict) and document.get("schema") == REPORT_SCHEMA:
         return baseline_view(document)
-    if not isinstance(document, dict) or document.get("schema") != BASELINE_SCHEMA:
-        raise ValueError("Compare with a scorecard report or a baseline file")
-    cases = document.get("cases")
-    if (set(document) != {"schema", "golden", "llm", "prompt", "cases"} or not isinstance(cases, list)
-            or any(not isinstance(c, dict) or set(c) != {"case_id", *ANSWER_FIELDS} for c in cases)
-            or len({c["case_id"] for c in cases}) != len(cases)):
-        raise ValueError("The baseline file is malformed or repeats a case")
-    return document
+    return common.check_baseline(document, BASELINE_SCHEMA, _HEAD, ANSWER_FIELDS)
 
 
 def baseline_json(baseline):
     """Stable text, one case per line, so a pull request's diff shows exactly which cases changed."""
-    import json
-    head = {key: baseline[key] for key in ("schema", "golden", "llm", "prompt")}
-    lines = ["{"]
-    for key, value in head.items():
-        lines.append(f"  {json.dumps(key)}: {json.dumps(value, ensure_ascii=False, sort_keys=True)},")
-    lines.append('  "cases": [')
-    # case_id first, then the answer fields in a fixed order (not sorted), so each line reads left to right.
-    rows = [json.dumps({"case_id": case["case_id"], **{field: case[field] for field in ANSWER_FIELDS}},
-                       ensure_ascii=False) for case in baseline["cases"]]
-    lines += [f"    {row}," for row in rows[:-1]] + [f"    {row}" for row in rows[-1:]]
-    lines += ["  ]", "}"]
-    return "\n".join(lines) + "\n"
-
-
-def _brief(value):
-    import json
-    if isinstance(value, str) and len(value) == 64 and all(ch in "0123456789abcdef" for ch in value):
-        value = value[:12] + "…"  # a SHA-256: the first 12 characters tell two versions apart
-    text = json.dumps(value, ensure_ascii=False, sort_keys=True)
-    return text if len(text) <= 80 else text[:77] + "..."
+    return common.baseline_text(baseline, _HEAD, ANSWER_FIELDS)
 
 
 def answer_changes(reference, candidate):
     """Every difference between two baselines, one short English line each; empty when nothing changed."""
-    changes = []
-    for key, label in _IDENTITY:  # what produced the answers: one line per differing part
-        old, new = reference[key], candidate[key]
-        changes += [f"{label} {part}: {_brief(old.get(part))} -> {_brief(new.get(part))}"
-                    for part in sorted(set(old) | set(new)) if old.get(part) != new.get(part)]
-    before = {case["case_id"]: case for case in reference["cases"]}
-    after = {case["case_id"]: case for case in candidate["cases"]}
-    changes += [f"{case_id}: in the baseline but not in this run" for case_id in before if case_id not in after]
-    changes += [f"{case_id}: new in this run, not in the baseline" for case_id in after if case_id not in before]
-    for case_id, old in before.items():
-        new = after.get(case_id)
-        if new is not None:
-            changes += [f"{case_id}: {field} {_brief(old[field])} -> {_brief(new[field])}"
-                        for field in ANSWER_FIELDS if old[field] != new[field]]
-    return changes
+    return common.answer_changes(reference, candidate, _IDENTITY, ANSWER_FIELDS)
 
 
 def gate_markdown(changes, compared_with, cases):
     """The gate's verdict for the run page (Thai first), with how to proceed when it fails."""
-    if not changes:
-        return (f"### ด่านตรวจผลรายเคส (eval gate): ผ่าน\n\nทั้ง {cases} เคสตอบเหมือนใน `{compared_with}` ทุกช่อง "
-                f"(Every case answered exactly as in the baseline.)\n")
-    lines = [f"### ด่านตรวจผลรายเคส (eval gate): ไม่ผ่าน ({len(changes)} จุดต่างจากเดิม)", "",
-             f"เทียบกับ `{compared_with}` (Per-case answers differ from the baseline.)", ""]
-    lines += [f"- `{line}`" for line in changes[:MAX_LISTED_CHANGES]]
-    if len(changes) > MAX_LISTED_CHANGES:
-        lines.append(f"- … และอีก {len(changes) - MAX_LISTED_CHANGES} จุด")
-    lines += ["", "- **ถ้าไม่ได้ตั้งใจ:** แก้โค้ดจนผลกลับมาเหมือนเดิม",
-              f"- **ถ้าตั้งใจเปลี่ยน:** อัปเดต baseline ใน PR เดียวกัน "
-              f"(`python -m app.eval.triage_shadow_eval --write-baseline {compared_with}`) และเขียนเหตุผลไว้ในคำอธิบาย PR "
-              "ถ้าเปลี่ยน prompt หรือรุ่น AI ให้แนบผลรัน Claude จริงด้วย (Actions → Shadow eval with Claude)", ""]
-    return "\n".join(lines)
-
-
-def _fmt(rate):
-    if not rate["denominator"]:
-        return "–"
-    return f"{rate['numerator']}/{rate['denominator']} ({rate['rate'] * 100:.0f}%)"
-
-
-def _ms(value):
-    return "–" if value is None else f"{value:,.1f}" if value >= 10 else f"{value:.3f}"
+    return common.gate_markdown(changes, compared_with, cases, module="app.eval.triage_shadow_eval",
+                                live_run="Shadow eval with Claude")
 
 
 def summary_markdown(report):
@@ -375,11 +302,6 @@ def main(argv=None):
         with open(args.summary, "a", encoding="utf-8") as stream:
             stream.write(text)
     return code
-
-
-def _json(value):
-    import json
-    return json.dumps(value, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
 
 
 if __name__ == "__main__":

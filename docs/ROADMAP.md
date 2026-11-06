@@ -21,7 +21,7 @@ differs, this file and architecture.md win.
   - ถ้าสองฝ่ายเห็นไม่ตรงกัน เคสจะถูกยกให้คนดูก่อน
 - ถ้าเครื่องดับกลางทาง ระบบทำต่อได้ ส่งซ้ำก็ไม่เกิดงานซ้ำ
 - ยกเลิกเคสที่ยังรอคิวได้ และทุกคำขอมีรหัสคำขอ (request id) ไว้ไล่ดูใน log (ขั้น 1.2, 1.3)
-- ผ่านชุดทดสอบอัตโนมัติ 230 ข้อ และเปิดใช้ออนไลน์บน Render แล้ว ระบบปิดตัวอย่างเรียบร้อย และการแก้แค่เอกสารไม่ทำให้ Render ขึ้นเวอร์ชันใหม่ (ขั้น 0.1, 0.5)
+- ผ่านชุดทดสอบอัตโนมัติ 243 ข้อ และเปิดใช้ออนไลน์บน Render แล้ว ระบบปิดตัวอย่างเรียบร้อย และการแก้แค่เอกสารไม่ทำให้ Render ขึ้นเวอร์ชันใหม่ (ขั้น 0.1, 0.5)
 - หน้าเว็บเป็นแบบแชท: พิมพ์เคส ดูขั้นตอนก่อนส่ง กดยืนยัน แล้วติดตามใน Flow และประวัติเหตุการณ์ (ขั้น 1.6)
 - หน้าเว็บบอกว่ามีเคสรอกี่เคส เคสที่รอนานสุดรอมานานเท่าไร ปกติแต่ละเคสใช้เวลาเท่าไร และเคสที่ไม่สำเร็จล้มเพราะอะไร (ขั้น 5.3)
 - ถ้ามีคนแก้กฎหรือ prompt แล้วคำตอบของเคสทดสอบเคสไหนเปลี่ยน ช่องตรวจบน GitHub จะเป็นสีแดงและบอกว่าเคสไหนเปลี่ยนอะไร (ขั้น 5.2)
@@ -30,6 +30,7 @@ differs, this file and architecture.md win.
 - ส่งเส้นทางการทำงาน (trace) ของทุกเคสไป Honeycomb แล้ว: เห็นว่าแต่ละขั้นใช้เวลาเท่าไร ลองกี่ครั้ง และ AI ใช้ token เท่าไร โดยไม่ส่งข้อความเคสหรือคำตอบของ AI เปิดใช้บน Render แล้ว และเห็นเส้นทางแรกใน Honeycomb เมื่อ 4 พ.ย. 00:23 น. (ขั้น 5.1)
 - มีคลังแหล่งเรียนที่ตรวจแล้ว 17 แหล่งใน 11 หัวข้อ ทุกแหล่งบอกว่าใช้ทำอะไร ระดับไหน ภาษาอะไร และควรเน้นส่วนไหน และ GitHub เปิดทุกลิงก์ทุกวันจันทร์เพื่อจับลิงก์เสีย (ขั้น 3.1)
 - ผู้ช่วยแนะนำแหล่งเรียนทำงานได้แล้วผ่าน API: พิมพ์เรื่องที่อยากรู้ด้วยคำธรรมดา ได้แหล่งเรียนไม่เกิน 5 แหล่งเรียงพื้นฐานก่อน ทุกลิงก์มาจากคลัง ถ้าเรื่องอยู่นอกกรอบก็บอกตรง ๆ ว่าช่วยเรื่องไหนได้ ยังใช้แค่ AI จำลอง และยังไม่มีช่องบนหน้าเว็บ (ขั้น 3.2)
+- มีชุดข้อสอบของผู้ช่วยแนะนำแหล่งเรียน 67 ข้อ (ไทยและอังกฤษ คำเปรียบ คำพูดอ้อม เรื่องนอกกรอบ และคำสั่งแอบแฝง) GitHub รันทุกครั้งที่ส่งโค้ด ถ้ามีลิงก์นอกคลังหรือเกิน 5 แหล่งแม้ข้อเดียว หรือคำตอบข้อไหนเปลี่ยน ช่องตรวจจะเป็นสีแดง AI จำลองหาหัวข้อถูกแค่ 2 จาก 48 ข้อ ซึ่งไม่ใช่ความแม่นยำ ผลจริงต้องรอรันกับ Claude (ขั้น 3.3)
 
 **ลำดับต่อจากนี้** แต่ละขั้นจบด้วยสิ่งที่คุณลองเองได้
 
@@ -38,7 +39,7 @@ differs, this file and architecture.md win.
 | 0 | เปิดใช้ออนไลน์บน Render และวัดผล Claude จริงครั้งแรก | ใส่เคสบนหน้าเว็บจริง และอ่านผลวัดของ Claude | ออนไลน์แล้ว ที่เหลือรอคุณตัดสินใจเรื่องเงิน (D1 แผน Render, D2 API key ของ Claude) |
 | 1 | เก็บงานเล็ก ๆ ให้ระบบแน่นขึ้น | ยกเลิกเคสที่ยังรอคิวได้ | เสร็จ ยกเว้น 1.4 (สำรองข้อมูล) ที่ต้องใช้แผน Render แบบเสียเงิน |
 | 2 | ให้คนรีวิวได้จริง: ผู้รีวิวมีรหัสของตัวเอง กดอนุมัติหรือไม่อนุมัติได้ และ n8n แจ้งเตือน | กล่อง "รอรีวิว" บนหน้าเว็บ และข้อความแจ้งเตือน | ยังไม่เริ่ม |
-| 3 | ผู้ช่วยแนะนำแหล่งเรียน (`study_guide.v1`) ตามหลักปรัชญาของคุณ | พิมพ์เรื่องที่อยากรู้ด้วยคำธรรมดา แล้วได้แหล่งเรียนไม่เกิน 5 แหล่งพร้อมลำดับการเรียน | เริ่มแล้ว (คุณเลือกขั้นนี้ก่อนขั้น 2 เมื่อ 5 พ.ย.): 3.1 คลังแหล่งเรียน และ 3.2 ตัวผู้ช่วย ทำแล้ว (ลองผ่าน API และดูตัวอย่างคำตอบใน Actions ได้); 3.3 ชุดข้อสอบและ 3.4 ช่องบนหน้าเว็บ ยังไม่ทำ |
+| 3 | ผู้ช่วยแนะนำแหล่งเรียน (`study_guide.v1`) ตามหลักปรัชญาของคุณ | พิมพ์เรื่องที่อยากรู้ด้วยคำธรรมดา แล้วได้แหล่งเรียนไม่เกิน 5 แหล่งพร้อมลำดับการเรียน | เริ่มแล้ว (คุณเลือกขั้นนี้ก่อนขั้น 2 เมื่อ 5 พ.ย.): 3.1 คลังแหล่งเรียน 3.2 ตัวผู้ช่วย และ 3.3 ชุดข้อสอบ ทำแล้ว (ดูตัวอย่างคำตอบและผลข้อสอบใน Actions ได้); 3.4 ช่องบนหน้าเว็บ ยังไม่ทำ; ผลกับ Claude จริงรอ D2 |
 | 4 | ช่องคุยภาษาธรรมดา: ระบบเข้าใจว่าคุณขออะไร บอกตรง ๆ เมื่อเรื่องอยู่นอกกรอบ และถามกลับ 1 คำถามเมื่อข้อมูลไม่พอ | คุยกับระบบได้เลย ไม่ต้องเลือกประเภทงานเอง | ยังไม่เริ่ม (ต้องรอขั้น 3) |
 | 5 | ติดตามเส้นทางของแต่ละงาน (เวลา token จุดที่ช้า) และด่านตรวจผลรายเคส | ตัวเลขคิวและเวลาบนหน้าเว็บ ช่องตรวจบน PR แล้วต่อด้วยเส้นทางงานใน Honeycomb | เสร็จแล้วทั้ง 5.1, 5.2 และ 5.3; เส้นทางงานแรกเข้า Honeycomb เมื่อ 4 พ.ย. 00:23 น. |
 | 6 | AI วางแผนงานหลายขั้น ระบบตรวจแผนก่อนรัน และเครื่องมืออื่นเรียกใช้ผ่าน MCP ได้ | สั่งงานจากแอป Claude ได้ | ยังไม่เริ่ม (ต้องรอขั้น 2–4) |
@@ -101,7 +102,7 @@ Marks: ✅ done · 🟡 built or partly checked (the status says what is left) �
 | 2.8 | Measure rules vs AI against reviewer labels | ⬜ | 2.2, 0.3 |
 | 3.1 | Topic catalog and verified resource library | ✅ PR #32; links checked by *Study library link check* on the PR ([evidence note](evidence/2026-11-05-study-library-links.md)); the weekly run starts after the merge | — |
 | 3.2 | `study_guide.v1` workflow | ✅ PR #33; mock AI only, no live Claude run yet (D2) | 3.1 |
-| 3.3 | Study-guide evaluation set and scorecard | ⬜ | 3.2 |
+| 3.3 | Study-guide evaluation set and scorecard | ✅ PR #34 with the mock in CI (an eval gate); the live Claude run waits for D2 | 3.2 |
 | 3.4 | Study guide on the web page | ⬜ | 3.2 |
 | 4.1 | The frame: a versioned catalog of what the system can do | ⬜ | 3.2 |
 | 4.2 | `intake.route.v1`: the plain-language router | ⬜ | 4.1 |
@@ -673,6 +674,28 @@ detect_topic (AI) ─► pick_resources (rules) ─► build_path (rules) ─►
   - the ≤ 5 rule (must hold every time).
 
   Every rate is numerator/denominator. Run it in CI with the mock, and by hand with Claude.
+- **Status (2026-11-06): built in PR #34.** Details: [study_guide.md](study_guide.md#the-scorecard-roadmap-33).
+  - 67 requests: 33 Thai and 34 English; 48 in scope (every topic in both languages) and 19 out of scope;
+    22 metaphors (the owner's librarian included), 15 paraphrases, 7 plain, 6 injection attempts. None is a
+    catalog example, and the loader refuses one. The set was written after the mock's keyword lists, and
+    the lists were not changed to fit it.
+  - `app/eval/study_guide_eval.py` reports topic accuracy, out-of-scope precision and recall, in-scope
+    requests turned away, links outside the library and answers over five, by language and by tag, with
+    tokens, latency and every mistake. A broken promise or an unfinished job fails the run.
+  - *Added to the plan:* the scorecard is also an eval gate like 5.2. *Core logic tests* compares every
+    request's answer with `tests/baselines/study_guide_eval_mock.json`. The gate's shared code moved to
+    `app/eval/common.py`; the triage baseline regenerates byte for byte.
+  - Mock results (2026-11-06): topic correct 2/48, out-of-scope precision 19/65 and recall 19/19, in scope
+    turned away 46/48, links outside the library 0 of 7, answers over five 0 of 67. The keyword mock cannot
+    read new phrasings; these numbers test the pipeline, not understanding.
+  - *Actions → Study guide eval with Claude (manual)* is ready and needs `ANTHROPIC_API_KEY` (D2). Its first
+    run goes into a dated evidence note.
+- **Owner test (ไทย):**
+  1. เปิด GitHub → Actions → *Core logic tests* → รันล่าสุดของ PR นี้ (3.12) → Summary
+  2. หัวข้อ "ผลวัดผู้ช่วยแนะนำแหล่งเรียน (study guide scorecard)" ต้องขึ้น "ลิงก์นอกคลัง 0" และ "คำตอบที่เกิน 5 แหล่ง 0"
+     พร้อมข้อความ "คำมั่น … เป็นจริงทุกคำตอบ"
+  3. ใต้ตารางต้องมี "ด่านตรวจผลรายเคส (eval gate): ผ่าน" ที่บอกว่าทั้ง 67 เคสตอบเหมือนเดิม
+  4. ถ้ามี API key แล้ว (D2): Actions → *Study guide eval with Claude (manual)* → Run workflow → limit = 5
 
 ### 3.4 Study guide on the web page
 
@@ -1066,3 +1089,5 @@ workflow types.
 - 2026-11-05: 3.2 done in PR #33. "Thai first" became "the person's language first"; detection also
   returns the language; the final step's id is `answer`. Two decisions were written down: ADR-018
   (informational answers end without review) and ADR-019 (prompts completed from versioned data).
+- 2026-11-06: 3.3 done in PR #34 with the mock. The scorecard also became an eval gate, and the gate's code
+  is now shared with the triage scorecard (`app/eval/common.py`). The live Claude run waits for D2.
