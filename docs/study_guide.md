@@ -10,8 +10,10 @@
   with the mock AI on every push, as an eval gate; manual workflows run it with Typhoon (free; ADR-021) or with
   Claude (D2).
 - Not built: the page (3.4).
-- It has only run with the offline mock AI, a keyword simulation. No real model has run yet (Typhoon is
-  ready; Claude needs D2), so there is no measurement of how well it understands people yet.
+- CI runs it with the offline mock AI, a keyword simulation. The first live run, with Typhoon on 2026-11-06,
+  found the labelled topic for 46 of 48 in-scope requests, with 0 of 142 links outside the library
+  ([evidence](evidence/2026-11-06-first-live-typhoon.md)). The requests and labels are the developer's and it ran once, so this is
+  a first measurement, not how well it understands people. Claude needs D2.
 
 ## ภาพรวมสำหรับเจ้าของโปรเจกต์
 
@@ -57,10 +59,12 @@
 - **ตรวจลิงก์ทุกวันจันทร์** เวลา 09:23 น. และทุกครั้งที่มีคนแก้คลัง ถ้ามีลิงก์เสีย ช่องตรวจบน GitHub จะเป็นสีแดง
 
 **สิ่งที่ยังจำกัดอยู่ (บอกตรง ๆ)**
-- **ยังไม่เคยใช้ AI จริง** AI ที่ใช้อยู่ตอนนี้เป็น AI จำลอง (mock) ซึ่งจับแค่คำสำคัญจากตัวอย่างในสมุดหัวข้อ
+- **AI ที่ GitHub ใช้ตรวจทุกครั้งเป็น AI จำลอง (mock)** ซึ่งจับแค่คำสำคัญจากตัวอย่างในสมุดหัวข้อ
   - คำเปรียบที่ไม่มีคำเหล่านั้น เช่น "อยากให้ระบบเป็นเหมือนบรรณารักษ์ที่รู้ใจ" AI จำลองจะตอบว่า "นอกกรอบ"
-  - ต้องใช้ AI จริงถึงจะเข้าใจคำเปรียบได้: ลองได้ฟรีแล้วผ่าน Typhoon (ข้อ 5 ข้างล่าง) หรือใช้ Claude เมื่อตัดสินใจเรื่อง D2
   - ชุดข้อสอบในขั้น 3.3 วัดเรื่องนี้แล้ว: AI จำลองหาหัวข้อถูกแค่ 2 จาก 48 คำขอ ดูหัวข้อ "ชุดข้อสอบ" ข้างล่าง
+- **รันกับ AI จริง (Typhoon) แล้ว 1 รอบเมื่อ 6 พ.ย.** หาหัวข้อถูก 46 จาก 48 คำขอ รวมประโยคบรรณารักษ์ของคุณ
+  แต่ยังพลาด 5 ข้อ เช่น "Recommend a good movie for tonight." ซึ่งอยู่นอกกรอบ ถูกจับเข้าหัวข้อระบบแนะนำ (ข้อ 5 ข้างล่าง)
+  - คำขอและเฉลยเขียนโดยผู้พัฒนาเอง และรันแค่รอบเดียว จึงยังไม่ใช่ความแม่นยำจริง และเป็นผลของ Typhoon ไม่ใช่ของ Claude
 - **ประโยค "บรรณารักษ์ที่รู้ใจ" ของคุณ ตั้งใจไม่ใส่ไว้ในสมุดหัวข้อ** และเป็นข้อสอบข้อหนึ่งในขั้น 3.3
 - **ในคลังมีแหล่งภาษาไทยแหล่งเดียว** คือ Thai MOOC
 - **หัวข้อภาษาธรรมดามีแค่มาตรฐาน ISO** ซึ่งฉบับเต็มต้องซื้อ
@@ -93,13 +97,17 @@
    - หาหัวข้อถูก **2/48** เพราะ AI จำลองจับแค่คำสำคัญจากตัวอย่างในสมุดหัวข้อ คำขอส่วนใหญ่จึงถูกตอบว่า "นอกกรอบ" (46 จาก 48)
    - เรื่องนอกกรอบจับได้ครบ 19/19 แต่ที่ตอบว่า "นอกกรอบ" ถูกจริงแค่ 19/65 ข้อ
    - ลิงก์นอกคลัง **0** และคำตอบที่เกิน 5 แหล่ง **0** แต่ AI จำลองได้แผนแค่ 2 คำตอบ คำมั่นจึงถูกลองกับลิงก์แค่ 7 ลิงก์
-   - ตัวเลขเหล่านี้ **ไม่ใช่ความแม่นยำ** บอกแค่ว่าระบบและการวัดผลทำงานครบ ผลจริงต้องรอรันกับ AI จริง
+   - ตัวเลขเหล่านี้ **ไม่ใช่ความแม่นยำ** บอกแค่ว่าระบบและการวัดผลทำงานครบ ผลกับ AI จริงอยู่ในข้อ 5
 4. **ด่านตรวจผลรายข้อ (eval gate):** ทุกครั้งที่ส่งโค้ด GitHub รันชุดข้อสอบนี้ด้วย AI จำลอง แล้วเทียบคำตอบทุกข้อกับไฟล์ต้นแบบ
    (`tests/baselines/study_guide_eval_mock.json`) ถ้าข้อไหนเปลี่ยน ช่องตรวจ *Core logic tests* จะเป็นสีแดงและบอกว่าข้อไหน
 5. **รันกับ AI จริงแบบฟรี (Typhoon ของ SCB 10X):** Actions → *Study guide eval with Typhoon (manual)* → Run workflow
    ใส่ limit = 5 เพื่อลองก่อน แล้วค่อยรันครบ 67 ข้อ แต่ละข้อเรียก AI 1–2 ครั้ง ใช้คีย์จาก secret `TYPHOON_API_KEY`
    ผลเป็นของ Typhoon ไม่ใช่ของ Claude และ Typhoon เก็บข้อมูลการใช้งานไปปรับปรุงโมเดล จึงใช้ได้กับข้อมูลสมมุติเท่านั้น
    (เมื่อมี Claude API key แล้ว, เรื่องที่ D2: *Study guide eval with Claude (manual)* ทำแบบเดียวกัน)
+   - **ผลรอบแรกครบ 67 ข้อ (6 พ.ย.):** หาหัวข้อถูก **46/48** ตอบถูกทุกแบบ 62/67 เรื่องนอกกรอบจับได้ 16/19
+     ที่ตอบว่า "นอกกรอบ" ถูกจริง 16/17 ลิงก์นอกคลัง **0 จาก 142 ลิงก์** คำตอบที่เกิน 5 แหล่ง **0** และ AI เขียนคำอธิบายได้ทุกคำตอบที่มีแผน (50/50)
+   - ข้อที่พลาดทั้ง 5 ข้ออยู่ใน[บันทึกหลักฐาน](evidence/2026-11-06-first-live-typhoon.md) เช่น คำขอนอกกรอบที่มีคำว่า "recommend" หรือ "learn"
+     ถูกจับเข้าหัวข้อ และคำสั่งแอบแฝง 2 ข้อได้หัวข้อผิด (แต่ไม่ได้หัวข้อหรือลิงก์ตามที่คำสั่งแอบแฝงสั่ง)
 
 **ดูผลชุดข้อสอบได้เลย**
 1. เปิด GitHub → Actions → *Core logic tests* → รันล่าสุด → Summary
@@ -271,6 +279,14 @@ and one explanation call when there is a plan. The report is kept as an artifact
 dated evidence note with the commit, the run link, the served model, every rate as a fraction, failures and
 token totals, and do not set a target before that first run.
 
+**First live run (Typhoon, 2026-11-06, [evidence](evidence/2026-11-06-first-live-typhoon.md)).** All 67 requests, commit
+`d54efb3`: topic correct 46/48, all correct 62/67, out-of-scope precision 16/17 and recall 16/19, in scope
+turned away 1/48, links outside the library 0 of 142, answers over five 0 of 67, explanations by the AI
+50/50, injection topic correct 4/6, AI unavailable or failed 0. Tokens 203,527 in and 12,172 out; topic step
+latency p50 1,578.6 ms and p95 2,287.0 ms. The five misses (two out-of-scope requests pulled in by one
+word, one metaphor read as a neighbouring topic, two injections answered with the wrong topic) are listed
+in the note. No prompt or catalog was changed to fit them.
+
 ## What is in the library
 
 Data lives in `app/domains/study_guide/catalog/`; the loader and its checks are in
@@ -425,6 +441,6 @@ detection must be tested on phrases it was not shown.
 
 - **3.4:** a box on the web page, and showing the layered answer.
 - **Also open:** a `chat` span for the `explain` call, and the first live Claude run of the scorecard (D2).
-  Its result goes into a dated evidence note, failures included.
+  Its result goes into a dated evidence note, failures included, like Typhoon's first run.
 
 See [ROADMAP.md](ROADMAP.md#phase-3--study_guidev1-the-first-response-study-guide-the-second-domain).

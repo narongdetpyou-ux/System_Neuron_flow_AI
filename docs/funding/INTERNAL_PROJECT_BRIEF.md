@@ -49,14 +49,16 @@ yet been benchmarked or validated with prospective users.
     suggestion and every proposal waits for a human; nothing is approved
     automatically.
   - Both versions run on the same Core; its only change since extraction is a planned telemetry fix.
-- AI gateway in `app/llm/` (offline mock + Claude provider). It handles
-  outages, off-contract answers, prompt injection and secrets as documented.
-  This was tested offline only: **no live model has been called yet**.
+- AI gateway in `app/llm/` (offline mock, Claude provider, and Typhoon, a free
+  model by SCB 10X). It handles outages, off-contract answers, prompt injection
+  and secrets as documented. **Claude has not been called.** Typhoon was run on
+  the synthetic sets on 2026-11-06: a first measurement on developer-labelled
+  cases, not accuracy.
 - Measurement and monitoring:
   - A scorecard over 61 synthetic labelled cases in English and Thai runs in
     CI. Its mock scores test the pipeline, not accuracy.
   - Sentry error monitoring, with live smoke-test events received.
-  - 262 automated tests.
+  - 267 automated tests.
 - Architecture: [architecture](../architecture.md) covers the layers, decisions
   and milestone status. The admission queue, single Runner, API and a Thai web
   page are implemented and online with synthetic data (Render free plan).

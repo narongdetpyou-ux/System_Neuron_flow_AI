@@ -76,6 +76,7 @@ class MetricsTests(unittest.TestCase):
         self.assertEqual(m["by_language"]["th"]["llm_correct"]["rate"], 1.0)
         self.assertEqual(m["by_tag"]["injection"]["rules_correct"]["numerator"], 0)
         self.assertEqual(m["both_wrong"], ["d"])
+        self.assertEqual(m["llm_wrong_rules_right"], ["c"])  # "e" gave no answer, so it is not a mistake
         self.assertEqual(m["tokens"], {"input": 500, "output": 50, "estimated": False})
 
     def test_empty_denominators_are_not_divided(self):
@@ -100,6 +101,17 @@ class EndToEndEvalTests(unittest.TestCase):
         text = ev.summary_markdown(report)
         self.assertIn("AI จำลอง", text)
         self.assertIn("กฎเดิมจัดหมวดถูก", text)
+
+    def test_summary_names_the_ai_mistakes_where_the_rules_were_right(self):
+        self.assertNotIn("เคสที่ AI ผิดแต่กฎถูก", ev.summary_markdown(self.report))  # the mock makes none here
+        report = json.loads(json.dumps(self.report))
+        case = next(c for c in report["cases"] if c["llm_status"] == "ok" and c["rules_category"] == c["expected"])
+        case["llm_category"] = "billing" if case["expected"] != "billing" else "upload"
+        report["metrics"] = ev.compute_metrics(report["cases"])
+        text = ev.summary_markdown(report)
+        self.assertIn("### เคสที่ AI ผิดแต่กฎถูก", text)
+        self.assertIn(f"- `{case['case_id']}` ควรเป็น **{case['expected']}** · กฎ: {case['rules_category']} · "
+                      f"AI: {case['llm_category']}", text)
 
     def test_outcome_change_gate(self):
         self.assertTrue(ev.compare_reports(self.report, self.report)["accepted"])

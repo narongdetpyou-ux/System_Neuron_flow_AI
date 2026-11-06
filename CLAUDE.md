@@ -63,8 +63,9 @@ Read in this order when you need depth:
   changes only docs, tests or CI files does not redeploy (the `buildFilter` in `render.yaml`).
 - **Honesty about evidence.**
   - Mock-AI scores are not accuracy, and hashes prove bytes, not authorship.
-  - There is no live-model measurement (Claude or Typhoon), security review or user study yet. A Typhoon
-    result describes that model only; never present it as Claude's.
+  - The only live-model measurement is Typhoon's on the synthetic sets (first runs 2026-11-06,
+    `docs/evidence/2026-11-06-first-live-typhoon.md`). There is none for Claude, and no security review or
+    user study yet. A Typhoon result describes that model only; never present it as Claude's.
   - Never write a number you did not measure. Record failures as well as successes.
 - **The philosophy covers how you talk, too.** Plain language outside, careful work inside, and small
   measured steps instead of perfection. When the owner brings up a technology or a logic system in everyday
@@ -120,7 +121,7 @@ If a task seems to need breaking a rule:
 ## 4. Checking your work
 
 ```bash
-python -m unittest discover -s tests -v        # all tests (262 on 2026-11-06); Python 3.10–3.13
+python -m unittest discover -s tests -v        # all tests (267 on 2026-11-06); Python 3.10–3.13
 python -m examples.case_triage_demo            # v1 rules, one synthetic case
 python -m examples.case_triage_shadow_demo     # v2 shadow mode with the offline mock AI
 python -m examples.study_guide_demo            # the study guide's answers to four synthetic requests
@@ -157,8 +158,8 @@ GitHub Actions (the owner can open these; the first three run on every push and 
   owner on 2026-11-06). Typhoon's hosted API is free, rate-limited (about 200 requests a minute, 5 a second)
   and collects usage data, so synthetic data only. Each run first sends one fixed sentence and shows the raw
   reply (`.github/scripts/llm_probe.py`), then paces cases 1 s apart (ADR-021). This session cannot reach
-  `api.opentyphoon.ai`; read the run page instead.
-  This session cannot reach `models.github.ai`; read the run page instead.
+  `api.opentyphoon.ai`; read the run page instead. Nor can it download a run's artifacts (their storage
+  host is refused), so the run page is the record; the scorecards list their mistakes there.
 - *Shadow eval with Claude (manual)* and *Study guide eval with Claude (manual)* run the two scorecards
   against real Claude and need the repository secret `ANTHROPIC_API_KEY`.
 
@@ -201,7 +202,7 @@ Notes for cloud sessions (claude.ai/code):
 | `neuron_flow/` | Core (rule 1) |
 | `app/domains/case_triage/` | v1 rules, the input contract, the v2 shadow agents and workflow |
 | `app/domains/study_guide/` | the study guide: topic catalog and verified resource library (`catalog/*_v1.json`), their checks and hash (`library.py`), the link check (`link_check.py`), and the `study_guide.v1` workflow (`workflow.py`, `agents.py`, `planning.py`, `ai_prompts.py`, `mock_answers.py`); no `.md` files here, because the Render build filter ignores them |
-| `app/llm/` | AI gateway, prompt library (prompt + answer schema, one hash), personal-data masking, mock, Claude and Typhoon providers (`providers/openai_compat.py` serves OpenAI-format services; `providers/_http.py` refuses redirects for both real clients) |
+| `app/llm/` | AI gateway, prompt library (prompt + answer schema, one hash), personal-data masking, mock, Claude and Typhoon providers (`providers/openai_compat.py` serves OpenAI-format services and states the answer format in words for Typhoon, ADR-022; `providers/_http.py` refuses redirects for both real clients) |
 | `app/eval/` | the two scorecards (triage: 61 labelled cases; study guide: 67 labelled requests) and the eval gate's shared code (`common.py`) |
 | `app/observability/sentry.py` | Sentry reporting: step failures, degraded AI, Runner recoveries |
 | `app/observability/tracing.py`, `job_spans.py` | tracing: the OTLP/JSON exporter with its attribute allow-list, and a finished job's spans (ADR-017) |
@@ -293,21 +294,28 @@ Notes for cloud sessions (claude.ai/code):
     than 5 resources; a manual workflow runs it with Claude (PR #34, roadmap 3.3). Mock: topic correct 2/48.
   - A free real model for roadmap 0.3, because the owner's Anthropic account asked for card verification:
     GitHub Models first (ADR-020, PR #35, #36), but GitHub had retired it on 2026-07-30, so the first run got
-    only "OK" back; replaced by Typhoon (ADR-021, this PR), with a connection check on every live run and run
-    pages that count why the AI gave no answer. Not run live yet.
+    only "OK" back; replaced by Typhoon (ADR-021, PR #37), with a connection check on every live run and run
+    pages that count why the AI gave no answer.
+  - The first live runs, with Typhoon (roadmap 0.3 path A, this PR; evidence note
+    `docs/evidence/2026-11-06-first-live-typhoon.md`). The owner's first run got 0/5 answers: Typhoon
+    ignores `response_format` and answered in plain `key: value` lines. The client now also states the
+    answer format in words and reads the one JSON object; the format version is part of the agent version
+    (ADR-022). On the full synthetic sets: triage AI correct 60/61 in two runs (rules 29/61), study guide
+    topic correct 46/48 with 0 of 142 links outside the library. Developer-labelled cases and few runs:
+    a first measurement of that model, not accuracy.
   - The web page's chat layout from the owner's "Nocturne" mockup (PR #18, roadmap 1.6; live and
     owner-tested on 2026-11-03). Parts of the mockup that would break the rules in §3 (key and provider
     fields, editing steps, a "never ask" policy) are shown read-only or left out on purpose; see
     intake_queue.md, "หน้าเว็บ: ใช้อย่างไร".
 - **Not done yet:**
-  - No real model has ever been run (the Typhoon workflows wait for the owner's first click).
+  - Claude has never been run (D2). Typhoon has run only on the synthetic sets (two full triage runs, one
+    full study guide run).
   - Review decisions and per-person identity (Milestone C) are not built.
-  - The study guide's page (roadmap 3.4) is not built, and neither the study guide nor its scorecard has
-    run with a real model.
+  - The study guide's page (roadmap 3.4) is not built.
   - The rest of the roadmap is open.
 - **Next:** [docs/ROADMAP.md](docs/ROADMAP.md), the first item that is not ✅ and whose needs are met.
-  - Waiting on the owner: 0.3 path A (run the Typhoon workflows; the key is set), 0.2 and 1.4
-    (D1, paid Render plan), 0.3 path B and 0.4 with Claude (D2, Claude API key).
+  - Waiting on the owner: 0.2 and 1.4 (D1, paid Render plan), 0.3 path B and 0.4 with Claude (D2, Claude
+    API key).
   - Buildable now without an owner decision: Phase 3, 3.4 next (the owner chose Phase 3 before Phase 2 on
     2026-11-05), and Phase 2 (2.1 first). The rest of 7.1 (who can read the AI key) needs an ADR first.
   - The owner decides which phase comes next; ask before starting a new phase.

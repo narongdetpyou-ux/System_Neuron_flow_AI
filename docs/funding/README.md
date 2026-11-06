@@ -7,14 +7,16 @@ project.
 ## What exists
 
 - **Core runtime** (`neuron_flow/`). Since its extraction on 2026-10-31 it has changed once, for the planned telemetry fix (PR #21).
-- **262 automated tests** passing on Python 3.10 and 3.12 in CI, and on 3.13 in a development session
+- **267 automated tests** passing on Python 3.10 and 3.12 in CI, and on 3.13 in a development session
   (3.11 was last checked on 2026-11-01, at 53 tests).
   - Last pinned green run on `main` (`0b03735`, 119 tests): https://github.com/narongdetpyou-ux/System_Neuron_flow_AI/actions/runs/41550257103
 - **Support-case triage domain:**
   - v1: deterministic keyword rules.
   - v2: shadow mode, where an AI gives a second opinion. Rules stay official and a human always decides.
-- **AI gateway** (`app/llm/`). It has an offline mock and a Claude provider. The Claude path is tested only
-  against a local fake API, and **no live model has been called yet**.
+- **AI gateway** (`app/llm/`). It has an offline mock, a Claude provider and a Typhoon provider (SCB 10X's
+  free research API). The Claude path is tested only against a local fake API; **Claude has not been
+  called**. Typhoon was run on the synthetic sets on 2026-11-06 ([evidence note](../evidence/2026-11-06-first-live-typhoon.md)):
+  a first measurement of that model on developer-labelled cases, not accuracy.
 - **Scorecard** (`app/eval/`) with 61 synthetic, developer-labelled cases in English and Thai.
 - **Sentry error monitoring.** CI smoke-test events have been received by the Sentry project.
 - **Intake service (Milestone B)**: HTTP API, durable job queue, a single Runner with crash recovery and a
@@ -41,12 +43,16 @@ project.
 - The Core library exists, and two domain versions run on it without Core changes.
 - The automated tests pass in CI.
 - The AI integration handles outages, off-contract answers, prompt injection and secrets as documented.
-  This was tested offline only.
+  This was tested offline; the off-contract handling was also seen live, when Typhoon's first run answered
+  in plain text instead of JSON and all 5 answers were refused rather than guessed at.
+- A first live run of a free model (Typhoon) on the synthetic sets is recorded with run links, rates as
+  fractions and every failure ([evidence note](../evidence/2026-11-06-first-live-typhoon.md)).
 - The architecture decisions are written down.
 
 These facts do **not** imply any of the following:
 - product-market fit or open-source traction
-- AI accuracy (no live model has been run)
+- AI accuracy (the only live runs are a free model, Typhoon, on developer-labelled synthetic cases; Claude
+  has not been run)
 - production security or independent benchmarking
 - a usable HTTP service or a real human-review workflow
 - award eligibility
@@ -71,8 +77,9 @@ These facts do **not** imply any of the following:
 ## Next evidence gates
 
 1. ✅ Domain proof confirmed in CI, with link and SHA recorded above.
-2. Run the scorecard once against the real Claude API (*Actions → Shadow eval with Claude*). Record the run
-   link, the model and the results, including failures.
+2. 🟡 Run the scorecard against a real model and record the run link, the model and the results, including
+   failures. Done with Typhoon, a free model by SCB 10X, on 2026-11-06 ([evidence note](../evidence/2026-11-06-first-live-typhoon.md));
+   the same run with real Claude (*Actions → Shadow eval with Claude*) waits for the owner's decision D2.
 3. ✅ Build the durable admission, single Runner and recovery slice (Milestone B), and test controller
    crashes and idempotency (PR #11; tested in CI; online on Render since 2026-11-01).
 4. Verify identity-bound review and artifacts (Milestone C), then get an independent review.

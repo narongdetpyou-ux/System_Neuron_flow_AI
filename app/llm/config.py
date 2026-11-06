@@ -36,6 +36,11 @@ TYPHOON_KEY_ENV = "TYPHOON_API_KEY"
 KEY_ENVS = {"anthropic": API_KEY_ENV, "typhoon": TYPHOON_KEY_ENV}
 BASE_URL_ENVS = {"anthropic": "NEURON_FLOW_ANTHROPIC_BASE_URL", "typhoon": "NEURON_FLOW_TYPHOON_BASE_URL"}
 DEFAULT_BASE_URLS = {"anthropic": DEFAULT_ANTHROPIC_BASE_URL, "typhoon": DEFAULT_TYPHOON_BASE_URL}
+# What a provider's client tells the model about the answer format besides the prompt file (ADR-022). Typhoon's
+# API ignores ``response_format``, so its client also states the format in words, built from the answer schema
+# (``providers/openai_compat.py``). That text is part of what the model sees, so its version is part of the
+# agent version: change it whenever the text changes.
+ANSWER_FORMATS = {"typhoon": "json-instruction-v1"}
 _MODEL = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,99}$")
 _LOOPBACK = {"127.0.0.1", "localhost", "::1"}
 _PARAM_KEYS = {"provider", "model", "max_tokens", "request_timeout_s", "effort", "base_url"}
@@ -118,9 +123,13 @@ class LLMConfig:
         return cls(**data)
 
     def version_tag(self, prompt):
-        """Agent version string: changing model, prompt, answer budget or masking rules means a new version."""
-        return (f"llm={self.provider}/{self.model};prompt={prompt.id}@sha256:{prompt.sha256};"
-                f"max_tokens={self.max_tokens};effort={self.effort or 'default'};redaction={REDACTION_VERSION}")
+        """Agent version string: changing model, prompt, answer budget, masking rules or the answer-format text a
+        client adds (ADR-022) means a new version."""
+        tag = (f"llm={self.provider}/{self.model};prompt={prompt.id}@sha256:{prompt.sha256};"
+               f"max_tokens={self.max_tokens};effort={self.effort or 'default'};redaction={REDACTION_VERSION}")
+        if self.provider in ANSWER_FORMATS:
+            tag += f";format={ANSWER_FORMATS[self.provider]}"
+        return tag
 
     def check_ready(self, environ=None):
         """Fail before any job is submitted when a real provider has no key."""
