@@ -2,7 +2,7 @@
 
 From the repository root:  python -m examples.study_guide_demo [--summary FILE]
 Uses the offline mock AI (a keyword simulation, not an AI model) unless NEURON_FLOW_LLM_PROVIDER=anthropic
-and ANTHROPIC_API_KEY are set (Claude), or NEURON_FLOW_LLM_PROVIDER=github and GITHUB_MODELS_TOKEN (GitHub Models). ``--summary`` appends a Thai/English Markdown report, for example to
+and ANTHROPIC_API_KEY are set (Claude), or NEURON_FLOW_LLM_PROVIDER=typhoon and TYPHOON_API_KEY (Typhoon). ``--summary`` appends a Thai/English Markdown report, for example to
 ``$GITHUB_STEP_SUMMARY``, so the answers can be read on the GitHub Actions run page.
 """
 

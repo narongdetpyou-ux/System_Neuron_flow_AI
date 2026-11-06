@@ -13,7 +13,7 @@ MAX_LISTED_CHANGES = 40
 class Pacer:
     """Keeps the starts of two cases at least ``min_interval_s`` seconds apart.
 
-    Free tiers count requests per minute (GitHub Models' low tier allows 15). Without pacing, a fast run
+    Free tiers count requests per minute (Typhoon allows about 200, and 5 a second). Without pacing, a fast run
     would turn the limit into "unavailable" answers and measure the limit instead of the model. 0 = no wait.
     """
 
@@ -49,15 +49,16 @@ def fmt_ms(value):
     return "–" if value is None else f"{value:,.1f}" if value >= 10 else f"{value:.3f}"
 
 
-def github_models_note(llm):
-    """A note for runs on GitHub Models' free tier (Thai first): what the numbers are, and the daily limit."""
-    if llm["provider"] != "github":
+def provider_note(llm):
+    """A note for runs on a free real model other than Claude (Thai first): whose numbers these are."""
+    if llm["provider"] != "typhoon":
         return []
-    return ["> **หมายเหตุ:** รอบนี้ใช้ AI จริงผ่าน GitHub Models (ระดับฟรี) รุ่น `" + llm["model"] + "` ผลนี้เป็นของรุ่นนี้ "
-            "ไม่ใช่ของ Claude ระดับฟรีจำกัดจำนวนครั้งต่อนาทีและต่อวัน ถ้าช่อง \"AI ใช้งานไม่ได้\" สูงผิดปกติ "
-            "อาจเป็นเพราะชนเพดานรายวัน ให้รอวันถัดไปแล้วรันใหม่  ",
-            "> *GitHub Models free tier: these numbers belong to this model, not to Claude. Free use is limited per "
-            "minute and per day; many \"unavailable\" answers usually mean the daily limit was reached.*", ""]
+    return ["> **หมายเหตุ:** รอบนี้ใช้ AI จริง Typhoon ของ SCB 10X (ใช้ฟรี ช่วงทดลอง) รุ่น `" + llm["model"] + "` "
+            "ผลนี้เป็นของรุ่นนี้ ไม่ใช่ของ Claude บริการนี้เก็บข้อมูลการใช้งานไปปรับปรุงโมเดล ซึ่งรับได้เพราะทุกเคสเป็นข้อมูลสมมุติ "
+            "ถ้าช่อง \"AI ใช้งานไม่ได้\" สูงผิดปกติ ให้ดูหัวข้อ \"ตรวจการเชื่อมต่อ AI\" ด้านบน  ",
+            "> *Typhoon (free research API): these numbers belong to this model, not to Claude. The service collects "
+            "usage data to improve its models; acceptable only because every case is synthetic.*", ""]
+
 
 def reason_line(rows, status_key, reason_key):
     """Why the AI did not answer, counted by reason (Thai first); empty when every call answered."""

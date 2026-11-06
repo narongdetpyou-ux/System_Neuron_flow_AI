@@ -1,11 +1,12 @@
-"""One connection check against GitHub Models, written to the run summary, before a scorecard run.
+"""One connection check against an OpenAI-format provider (Typhoon), written to the run summary, before a
+scorecard run.
 
 It sends one fixed synthetic sentence (never a case from the set) with the same request the provider sends,
 then reports what came back (one request; the verdict is about the reply shown): HTTP status, content type and encoding, rate-limit headers, the body's size
 and its first characters, and how the provider itself classified the reply. The token is never printed.
 A broken connection only writes the findings: the scorecard step runs either way.
 
-Run from the repository root: ``PYTHONPATH=. python .github/scripts/github_models_probe.py "$GITHUB_STEP_SUMMARY"``
+Run from the repository root: ``PYTHONPATH=. python .github/scripts/llm_probe.py "$GITHUB_STEP_SUMMARY"``
 """
 
 import io
@@ -17,25 +18,23 @@ import urllib.request
 
 from app.llm import InvalidModelOutput, LLMConfig, ModelDeclined, load_prompt
 from app.llm.gateway import _CUT_OFF, parse_answer
-from app.llm.config import DEFAULT_GITHUB_MODELS_BASE_URL, GITHUB_TOKEN_ENV
-from app.llm.providers import github_models
+from app.llm.config import KEY_ENVS
+from app.llm.providers import openai_compat
 
 SENTENCE = "I cannot upload a file to my ticket."  # fixed and synthetic: safe to send and to show
 SHOWN_HEADERS = ("content-type", "content-encoding", "content-length", "x-ratelimit-limit-requests",
-                 "x-ratelimit-remaining-requests", "retry-after", "x-github-request-id")
+                 "x-ratelimit-remaining-requests", "retry-after")
 PREVIEW_CHARS = 600
 
 
 def raw_call(config, token):
     """The provider's own request, sent without its parsing, so the reply can be shown as it arrived."""
     prompt = load_prompt("triage_classify_v1")
-    url = (config.base_url or DEFAULT_GITHUB_MODELS_BASE_URL).rstrip("/") + "/chat/completions"
-    body = json.dumps(github_models.build_request_body(config, prompt, SENTENCE), ensure_ascii=False).encode()
-    request = urllib.request.Request(url, data=body, method="POST", headers={
-        "authorization": f"Bearer {token}", "x-github-api-version": github_models.API_VERSION,
-        "content-type": "application/json", "accept": "application/vnd.github+json"})
+    body = json.dumps(openai_compat.build_request_body(config, prompt, SENTENCE), ensure_ascii=False).encode()
+    request = urllib.request.Request(openai_compat.endpoint(config), data=body, method="POST",
+                                     headers=openai_compat.request_headers(config, token))
     try:
-        with github_models.OPENER.open(request, timeout=config.request_timeout_s) as response:
+        with openai_compat.OPENER.open(request, timeout=config.request_timeout_s) as response:
             return response.status, response.headers, response.read(200_000)
     except urllib.error.HTTPError as exc:
         with exc:
@@ -46,9 +45,9 @@ def verdict(config, prompt, status, headers, raw):
     """How the provider and gateway classify this very reply (no second request): the answer, or the error."""
     if status >= 300:
         error = urllib.error.HTTPError("probe", status, "probe", headers, io.BytesIO(raw))
-        reply = github_models._for_status(error, config)  # raises, unless content safety blocked the sentence
+        reply = openai_compat.for_status(error, config)  # raises, unless a content filter blocked the sentence
     else:
-        reply = github_models._parse_completion(raw, config)
+        reply = openai_compat.parse_completion(raw, config)
     if reply["stop_reason"] == "refusal":
         raise ModelDeclined("The model declined to answer")
     if reply["stop_reason"] in _CUT_OFF:
@@ -69,12 +68,16 @@ def describe(status, headers, raw):
 
 
 def main(summary_path):
-    lines = ["### ตรวจการเชื่อมต่อ GitHub Models (connection check)", "",
+    lines = ["### ตรวจการเชื่อมต่อ AI (connection check)", "",
              f"ส่งประโยคทดสอบ 1 ประโยค: \"{SENTENCE}\" (One fixed synthetic sentence, not a case.)", ""]
-    token = os.environ.get(GITHUB_TOKEN_ENV, "").strip()
+    token = ""
     try:
         config = LLMConfig.from_env()
-        lines.append(f"- model: `{config.model}`, token present: {'yes' if token else 'no'}")
+        if config.provider not in KEY_ENVS or config.provider == "anthropic":
+            raise ValueError(f"the check covers OpenAI-format providers, not {config.provider}")
+        token = os.environ.get(KEY_ENVS[config.provider], "").strip()
+        lines.append(f"- provider: `{config.provider}`, model: `{config.model}`, "
+                     f"key present: {'yes' if token else 'no'}")
         status, headers, raw = raw_call(config, token)
         lines += describe(status, headers, raw)
         try:

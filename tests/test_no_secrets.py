@@ -4,7 +4,7 @@
 check of the files as they are now, with the standard library only, so a cloud session catches a pasted key
 before it is pushed. It covers the formats this project could meet: Anthropic, OpenAI, GitHub, AWS, Slack,
 Google, Stripe, Render and Honeycomb keys, private keys, Sentry DSNs and URLs that carry a password. The
-fake keys the tests use on purpose (``sk-ant-test-…``, ``gh-models-test-…``) do not match. Findings name the file, the line and
+fake keys the tests use on purpose (``sk-ant-test-…``, ``typhoon-test-…``) do not match. Findings name the file, the line and
 the kind, never the value.
 """
 
@@ -65,7 +65,7 @@ class NoSecretsTests(unittest.TestCase):
         self.assertEqual(set(samples), set(PATTERNS))
         for kind, sample in samples.items():
             self.assertIn(kind, [found for _, found in findings(f"value = '{sample}'")], kind)
-        for fake in ("sk-ant-test-SECRET-123", "sk-ant-test-0123", "gh-models-test-SECRET-789",
+        for fake in ("sk-ant-test-SECRET-123", "sk-ant-test-0123", "typhoon-test-SECRET-789",
                      "test-access-key-0123456789", "https://user:pw@proxy.example",
                      "https://api.example.com/v1/messages"):
             self.assertEqual(findings(f"value = '{fake}'"), [], fake)

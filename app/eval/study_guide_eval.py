@@ -270,7 +270,7 @@ def answer_changes(reference, candidate):
 
 def gate_markdown(changes, compared_with, cases):
     return common.gate_markdown(changes, compared_with, cases, module="app.eval.study_guide_eval",
-                                live_run="Study guide eval with Claude หรือ with GitHub Models")
+                                live_run="Study guide eval with Claude หรือ with Typhoon")
 
 
 # -- the report ---------------------------------------------------------------------------------------
@@ -287,7 +287,7 @@ def summary_markdown(report):
                   "> *Mock provider: a keyword simulation built from the catalog examples before this set was written, "
                   "and not tuned to it. It proves the pipeline, the measurement and the two promises, not understanding.*",
                   ""]
-    lines += common.github_models_note(llm)
+    lines += common.provider_note(llm)
     links = m["links_outside_library"]
     over = m["answers_over_five"]
     lines += [f"ชุดข้อสอบ `{p['golden']['name']}` ({p['golden']['cases']} คำขอ) · AI `{llm['provider']}/{llm['model']}` · "

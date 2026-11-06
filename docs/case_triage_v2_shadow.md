@@ -1,9 +1,9 @@
 # case_triage v2 — shadow mode (AI second opinion)
 
 **Status:** on `main` since 2026-11-01 (PR #9). Implemented and tested with the offline mock AI. The
-Claude and GitHub Models code paths are tested against a local fake API server. **No real model has run
-yet**: Claude needs a paid `ANTHROPIC_API_KEY` (D2), and the free GitHub Models path (ADR-020, added
-2026-11-06) waits for its first manual run. Synthetic data only. This is not a production
+Claude and Typhoon code paths are tested against a local fake API server. **No real model has run yet**:
+Claude needs a paid `ANTHROPIC_API_KEY` (D2), and the free Typhoon path (ADR-021, added 2026-11-06 after
+GitHub Models turned out to be retired) waits for its first manual run. Synthetic data only.
 service, public API or human-review service. No Core (`neuron_flow/`) file was changed. Design principles:
 [design_philosophy.md](design_philosophy.md).
 
@@ -19,7 +19,7 @@ service, public API or human-review service. No Core (`neuron_flow/`) file was c
 5. ผู้รีวิวได้รับข้อเสนอที่ **รอคนตัดสินเสมอ** (PENDING_HUMAN_REVIEW) AI ไม่มีสิทธิ์ตัดสินหรือเปลี่ยนคิวเอง
 6. ทุกคำตอบของ AI ถูกบันทึกว่ามาจากรุ่นไหน ใช้ prompt ฉบับไหน ถ้าเปลี่ยน prompt หรือรุ่น AI งานเก่าจะไม่ถูกรันซ้ำด้วยค่าใหม่โดยไม่รู้ตัว
 7. **ด่านตรวจผลรายเคส (eval gate, ขั้น 5.2)** ทุกครั้งที่มีการส่งโค้ดขึ้น GitHub ระบบรันเคสทดสอบ 61 เคสด้วย AI จำลอง แล้วเทียบคำตอบของทุกเคสกับไฟล์ต้นแบบ (`tests/baselines/shadow_eval_mock.json`) ถ้ามีเคสไหนตอบต่างจากเดิม แม้แต่ช่องเดียว (หมวดของกฎ หมวดของ AI ความมั่นใจ การเห็นตรงกัน ความสำคัญ หรือเหตุผล) ช่องตรวจ *Core logic tests* จะเป็นสีแดง และหน้าผลรันจะบอกว่าเคสไหนเปลี่ยนอะไร ถ้าตั้งใจเปลี่ยน ต้องอัปเดตไฟล์ต้นแบบใน PR เดียวกันและเขียนเหตุผลไว้ ถ้าเปลี่ยน prompt หรือรุ่น AI ต้องแนบผลรันกับ AI จริงด้วย
-8. **ใช้ AI จริงได้ฟรีผ่าน GitHub Models (ADR-020)** ไม่ต้องมีบัตรและไม่ต้องสร้างคีย์ ปุ่ม *Shadow eval with GitHub Models (manual)* ใน Actions ใช้สิทธิ์ของ GitHub เอง (`GITHUB_TOKEN` ที่อ่านรุ่น AI ได้อย่างเดียว) ส่งเคสสมมุติทั้ง 61 เคสให้รุ่นที่เลือก (ค่าเริ่มต้น `openai/gpt-4.1-mini`) ระดับฟรีจำกัดราว 15 ครั้งต่อนาทีและ 150 ครั้งต่อวัน ระบบจึงเว้นเคสละ 5 วินาที ผลที่ได้เป็นของรุ่นนั้น ไม่ใช่ของ Claude และหน้าผลจะเขียนบอกไว้ ถ้าระบบความปลอดภัยของผู้ให้บริการบล็อกข้อความเคสไหน (content filter) เคสนั้นนับเป็น "AI ไม่ตอบ" และไปถึงผู้รีวิวตามปกติ ไม่ทำให้งานล้ม
+8. **ใช้ AI จริงได้ฟรีผ่าน Typhoon ของ SCB 10X (ADR-021)** ไม่ต้องมีบัตร ปุ่ม *Shadow eval with Typhoon (manual)* ใน Actions ใช้คีย์จาก secret `TYPHOON_API_KEY` ส่งเคสสมมุติทั้ง 61 เคสให้ Typhoon (ค่าเริ่มต้น `typhoon-v2.5-30b-a3b-instruct`) ก่อนเริ่มจะลองส่งประโยคทดสอบ 1 ประโยค และแสดงคำตอบดิบให้เห็นว่าการเชื่อมต่อใช้ได้ไหม ผลที่ได้เป็นของ Typhoon ไม่ใช่ของ Claude Typhoon เก็บข้อมูลการใช้งานไปปรับปรุงโมเดล จึงใช้ได้กับข้อมูลสมมุติเท่านั้น ถ้าตัวกรองของผู้ให้บริการบล็อกข้อความเคสไหน เคสนั้นนับเป็น "AI ไม่ตอบ" และไปถึงผู้รีวิวตามปกติ ไม่ทำให้งานล้ม (GitHub Models ที่ใช้ก่อนหน้านี้ปิดบริการไปแล้วตั้งแต่ 30 ก.ค. 2026)
 
 ## How one case flows
 
@@ -77,33 +77,33 @@ they were degraded quietly, a broken setup could go unnoticed.
   text that did not go through `mask()`. The output's `masked` field counts each kind, never the values.
   Not detected: names without a title or label, Thai surnames after a given name, addresses, short numbers,
   mixed letter-and-digit identifiers. The keywords the rules and the AI need stay readable.
-- **The API key is never stored.** It is read from `ANTHROPIC_API_KEY` (Claude) or `GITHUB_MODELS_TOKEN`
-  (GitHub Models) at call time, never placed in the job, and the tests scan every stored file to confirm it
+- **The API key is never stored.** It is read from `ANTHROPIC_API_KEY` (Claude) or `TYPHOON_API_KEY`
+  (Typhoon) at call time, never placed in the job, and the tests scan every stored file to confirm it
   is absent. Provider error messages are not copied
   (only the HTTP status and error type).
 - **Every answer is traceable.** Each AI output records the provider, model, prompt id and prompt SHA-256.
   The served model and token usage are recorded too.
 - **Current API rules are followed.** The Claude client uses structured output (`output_config.format`) and
   sends no `temperature`/`top_p`, because current Claude 5.5 models reject forced tool choice and sampling
-  parameters. The GitHub Models client uses `response_format` with a strict `json_schema` built from the
-  same answer schema, and sends no sampling parameters, tools or effort either.
-- **A content-safety block is one declined case.** GitHub Models runs behind Azure AI content safety. An
-  HTTP 400 `content_filter` reply (or `finish_reason: content_filter`, or a `refusal` message) becomes
-  `unavailable: model_declined` at once, so the case still reaches review instead of failing the job.
+  parameters. The OpenAI-format client (Typhoon) uses `response_format` with a strict `json_schema` built
+  from the same answer schema, and sends no sampling parameters, tools or effort either.
+- **A content-filter block is one declined case.** On an OpenAI-format service, an HTTP 400
+  `content_filter` reply (or `finish_reason: content_filter`, or a `refusal` message) becomes
+  `unavailable: model_declined` at once
 
 ## Configuration (environment variables)
 
 | Variable | Default | Meaning |
 |---|---|---|
-| `NEURON_FLOW_LLM_PROVIDER` | `mock` | `mock` (offline keyword simulation), `anthropic` (Claude) or `github` (GitHub Models) |
-| `NEURON_FLOW_LLM_MODEL` | `mock-keyword-1` / `claude-haiku-5-5` / `openai/gpt-4.1-mini` | model id; GitHub Models ids are `publisher/model` |
+| `NEURON_FLOW_LLM_PROVIDER` | `mock` | `mock` (offline keyword simulation), `anthropic` (Claude) or `typhoon` (Typhoon) |
+| `NEURON_FLOW_LLM_MODEL` | `mock-keyword-1` / `claude-haiku-5-5` / `typhoon-v2.5-30b-a3b-instruct` | model id |
 | `ANTHROPIC_API_KEY` | — | required for `anthropic`; checked before any job is submitted |
-| `GITHUB_MODELS_TOKEN` | — | required for `github`; a token with the *Models: read* permission (in Actions, the workflow's `GITHUB_TOKEN` with `models: read`); checked before any job is submitted. A plain `GITHUB_TOKEN` is never picked up by itself |
+| `TYPHOON_API_KEY` | — | required for `typhoon` (a key from opentyphoon.ai; a repository secret for Actions); checked before any job is submitted |
 | `NEURON_FLOW_LLM_MAX_TOKENS` | `2048` | answer budget (thinking tokens count too) |
 | `NEURON_FLOW_LLM_TIMEOUT_S` | `30` | HTTP timeout; the step timeout is 15 s longer, so the agent can still report `unavailable` itself |
 | `NEURON_FLOW_LLM_EFFORT` | not sent | optional `output_config.effort` for Claude models that support it; refused with `github` |
 | `NEURON_FLOW_ANTHROPIC_BASE_URL` | `https://api.anthropic.com` | Claude only; HTTPS only; no credentials in the URL |
-| `NEURON_FLOW_GITHUB_MODELS_BASE_URL` | `https://models.github.ai/inference` | GitHub Models only (for example an organisation's `…/orgs/<org>/inference`); same URL rules |
+| `NEURON_FLOW_TYPHOON_BASE_URL` | `https://api.opentyphoon.ai/v1` | Typhoon only; same URL rules |
 
 ## Measuring it: the scorecard
 
@@ -158,22 +158,21 @@ The mock AI's keyword list was written alongside the synthetic case set, so its
 score is inflated by design. The mock run proves that the pipeline and the measurement work.
 It does not show AI accuracy.
 
-## Turning on a real model for free: GitHub Models (no key, no card)
+## Turning on a real model for free: Typhoon (no card)
 
-1. Open **Actions → Shadow eval with GitHub Models (manual) → Run workflow**. Keep the model
-   (`openai/gpt-4.1-mini`) and set `limit` to 5 for a first try. Nothing needs to be set up: the workflow
-   grants its own `GITHUB_TOKEN` only `contents: read` and `models: read`.
-2. The run first lists the model ids GitHub offers today, with their rate-limit tier, in a folded section
-   of the run page, then sends one fixed synthetic sentence and shows the reply as it arrived (status, content
-   type, rate-limit headers, first characters) and how the provider classified it
-   (`.github/scripts/github_models_probe.py`; never the token, never a case). OpenAI retires `gpt-4.1-mini` on 2027-01-14; pick another low-tier id from that list
-   then.
-3. Cases start at least 5 seconds apart (`--min-interval-s 5`), because the free low tier allows about 15
-   requests a minute and 150 a day per model. All 61 cases take about 6 minutes.
-4. Read the scorecard on the run page, or download `shadow-eval-github-models.json`. When the AI gave no
-   answer, a line under the table counts why (for example `unavailable: invalid_model_output 5`). The page says the
-   numbers belong to that model, not to Claude. Many "unavailable" answers usually mean the daily limit
-   was reached: run again the next day.
+1. The owner creates a free key at opentyphoon.ai and stores it as the repository secret `TYPHOON_API_KEY`
+   (done on 2026-11-06).
+2. Open **Actions → Shadow eval with Typhoon (manual) → Run workflow**. Keep the model
+   (`typhoon-v2.5-30b-a3b-instruct`) and set `limit` to 5 for a first try.
+3. The run first sends one fixed synthetic sentence and shows the reply as it arrived (status, content type,
+   rate-limit headers, first characters) and how the provider classified it (`.github/scripts/llm_probe.py`;
+   never the key, never a case). Cases then start at least 1 second apart (`--min-interval-s 1`).
+4. Read the scorecard on the run page, or download `shadow-eval-typhoon.json`. When the AI gave no answer,
+   a line under the table counts why (for example `unavailable: invalid_model_output 5`). The page says the
+   numbers belong to Typhoon, not to Claude.
+
+GitHub Models (ADR-020) was the first free path, but GitHub retired it on 2026-07-30; its first run got only a
+bare `OK` back, which the connection check above made visible.
 
 ## Turning on real Claude (no local computer needed; needs D2)
 
@@ -192,9 +191,9 @@ It does not show AI accuracy.
 | `app/llm/prompt_library/triage_classify_v1.json` | the prompt and answer schema (one file, one SHA-256) |
 | `app/llm/gateway.py` | asks the provider and checks the answer's shape |
 | `app/llm/providers/anthropic.py` | Claude Messages API over the standard library |
-| `app/llm/providers/github_models.py` | GitHub Models chat completions over the standard library (ADR-020) |
+| `app/llm/providers/openai_compat.py` | OpenAI-format chat completions (Typhoon) over the standard library (ADR-021) |
 | `app/llm/providers/_http.py` | the shared HTTP opener that refuses every redirect |
-| `.github/workflows/shadow-eval-github-models.yml` | the free live run; `.github/scripts/github_models_catalog.py` lists the model ids |
+| `.github/workflows/shadow-eval-typhoon.yml` | the free live run; `.github/scripts/llm_probe.py` checks the connection first |
 | `app/llm/providers/mock.py` | offline keyword simulation + failure scenarios for tests |
 | `app/domains/case_triage/shadow_agents.py` | the AI, compare and prepare agents and their validators |
 | `app/domains/case_triage/shadow_workflow.py` | trusted registry and the four-step DAG |
@@ -207,9 +206,9 @@ It does not show AI accuracy.
 - Synthetic cases labelled by the developer. These are not real customer data and not independent ground truth.
 - Masking is pattern-based (see "Safety rules built in"). It lowers the risk; it does not make real
   personal data safe to send.
-- No real model has run yet, so there are no accuracy, latency or cost claims for Claude or for any GitHub
-  Models model. A GitHub Models result, once measured, describes that model only.
-- GitHub's free tier is rate-limited and its data terms were not reviewed here; synthetic data only.
+- No real model has run yet, so there are no accuracy, latency or cost claims for Claude or Typhoon. A
+  Typhoon result, once measured, describes that model only.
+- Typhoon's API is a free beta research showcase that collects usage data; synthetic data only.
 - Token counts cover answered calls only. No money estimate is made, because prices change.
 - Shadow mode does not reduce reviewer work. It orders that work and explains it.
 - Core's single-machine limits still apply. Agent child processes are not a security sandbox.
