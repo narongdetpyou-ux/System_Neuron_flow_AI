@@ -35,6 +35,9 @@ jobs:
       - name: List the models GitHub offers
         continue-on-error: true
         run: python .github/scripts/github_models_catalog.py "$GITHUB_STEP_SUMMARY"
+      - name: Check the connection with one fixed sentence
+        continue-on-error: true
+        run: PYTHONPATH=. python .github/scripts/github_models_probe.py "$GITHUB_STEP_SUMMARY"
       - name: Score the study guide with GitHub Models
         run: |
           ARGS=()

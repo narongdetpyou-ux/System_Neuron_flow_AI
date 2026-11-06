@@ -59,6 +59,19 @@ def github_models_note(llm):
             "> *GitHub Models free tier: these numbers belong to this model, not to Claude. Free use is limited per "
             "minute and per day; many \"unavailable\" answers usually mean the daily limit was reached.*", ""]
 
+def reason_line(rows, status_key, reason_key):
+    """Why the AI did not answer, counted by reason (Thai first); empty when every call answered."""
+    counts = {}
+    for row in rows:
+        if row[status_key] in ("unavailable", "failed"):
+            key = f"{row[status_key]}: {row[reason_key] or 'unknown'}"
+            counts[key] = counts.get(key, 0) + 1
+    if not counts:
+        return []
+    listed = ", ".join(f"`{key}` {count}" for key, count in sorted(counts.items()))
+    return [f"เหตุที่ AI ไม่ได้ตอบ (why the AI gave no answer): {listed}", ""]
+
+
 def git_sha():
     try:
         result = subprocess.run(["git", "rev-parse", "HEAD"], capture_output=True, text=True, timeout=5,

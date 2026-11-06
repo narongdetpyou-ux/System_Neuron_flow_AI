@@ -175,6 +175,18 @@ class HttpTests(unittest.TestCase):
                 with self.assertRaises(expected, msg=json.dumps(reply[1])[:80]):
                     ask(fake.base_url)
 
+    def test_a_byte_order_mark_before_the_json_is_tolerated(self):
+        body = b"\xef\xbb\xbf" + json.dumps(completion(GOOD)).encode()
+        with FakeServer([(200, body.decode("utf-8"))]) as fake:
+            self.assertEqual(ask(fake.base_url)["answer"], GOOD)
+        with FakeServer([(200, "\ufeff" + json.dumps({"error": {"code": "content_filter"}}))]) as fake:
+            fake.replies = [(400, fake.replies[0][1])]
+            with self.assertRaises(ModelDeclined):
+                ask(fake.base_url)
+        with FakeServer([(200, "data: {}")]) as fake:
+            with self.assertRaisesRegex(InvalidModelOutput, r"not JSON \(8 bytes\)"):
+                ask(fake.base_url)
+
     def test_text_parts_and_unknown_served_models(self):
         reply = completion(GOOD, model="<script>")
         reply["choices"][0]["message"]["content"] = [{"type": "text", "text": json.dumps(GOOD)}]
@@ -255,6 +267,50 @@ class EndToEndTests(unittest.TestCase):
         self.assertNotIn("081-234-5678", sent)
         self.assertIn("[PHONE]", sent)
         self.assertNotIn(TOKEN.encode(), stored)
+
+
+class DiagnosticsTests(unittest.TestCase):
+    def test_reason_line_counts_why_the_ai_gave_no_answer(self):
+        rows = [{"s": "ok", "r": None}, {"s": "unavailable", "r": "invalid_model_output"},
+                {"s": "unavailable", "r": "invalid_model_output"}, {"s": "failed", "r": None}]
+        self.assertEqual(common.reason_line(rows, "s", "r")[0],
+                         "เหตุที่ AI ไม่ได้ตอบ (why the AI gave no answer): `failed: unknown` 1, "
+                         "`unavailable: invalid_model_output` 2")
+        self.assertEqual(common.reason_line(rows[:1], "s", "r"), [])
+
+    def test_connection_check_shows_the_reply_and_never_the_token(self):
+        import importlib.util
+        spec = importlib.util.spec_from_file_location(
+            "probe", Path(__file__).resolve().parent.parent / ".github" / "scripts" / "github_models_probe.py")
+        probe = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(probe)
+        with FakeServer([(200, "\ufeff" + json.dumps(completion(GOOD)))]) as fake, \
+                tempfile.NamedTemporaryFile("r", suffix=".md") as summary, \
+                patch.patch.dict(os.environ, {"GITHUB_MODELS_TOKEN": TOKEN, "NEURON_FLOW_LLM_PROVIDER": "github",
+                                              "NEURON_FLOW_GITHUB_MODELS_BASE_URL": fake.base_url}), \
+                patch.patch("builtins.print"):
+            probe.main(summary.name)
+            text = Path(summary.name).read_text("utf-8")
+        self.assertIn("HTTP status: `200`", text)
+        self.assertIn("(starts with a UTF-8 BOM)", text)
+        self.assertIn("provider verdict: **answered**", text)
+        self.assertNotIn(TOKEN, text)
+        self.assertEqual(fake.requests[0]["body"]["messages"][1]["content"].count(probe.SENTENCE), 1)
+        self.assertEqual(len(fake.requests), 1)  # one request: the verdict is about the reply shown
+        # The verdict follows the reply that is shown, even when a later reply would differ.
+        for first, expected in (((200, "data: {}"), "**InvalidModelOutput**"),
+                                (gh_error(429, "RateLimitReached"), "**LLMTransientError**: Provider temporarily"),
+                                (gh_error(400, "content_filter"), "**ModelDeclined**")):
+            with FakeServer([first, (200, completion(GOOD))]) as fake, \
+                    tempfile.NamedTemporaryFile("r", suffix=".md") as summary, \
+                    patch.patch.dict(os.environ, {"GITHUB_MODELS_TOKEN": TOKEN, "NEURON_FLOW_LLM_PROVIDER": "github",
+                                                  "NEURON_FLOW_GITHUB_MODELS_BASE_URL": fake.base_url}), \
+                    patch.patch("builtins.print"):
+                probe.main(summary.name)
+                text = Path(summary.name).read_text("utf-8")
+            self.assertIn(expected, text)
+            self.assertNotIn("**answered**", text)
+            self.assertEqual(len(fake.requests), 1)
 
 
 class PacingTests(unittest.TestCase):

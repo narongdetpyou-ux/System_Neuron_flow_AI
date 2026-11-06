@@ -312,6 +312,7 @@ def summary_markdown(report):
               f"| เวลาตอบของขั้นถอดความ p50 / p95 | {fmt_ms(m['detect_latency_ms']['p50'])} / {fmt_ms(m['detect_latency_ms']['p95'])} ms |",
               "", f"**คำมั่น (ลิงก์จากคลังเท่านั้น · ไม่เกิน 5 แหล่ง · งานจบครบ): "
               f"{'เป็นจริงทุกคำตอบ' if m['promises_kept'] else 'ไม่เป็นจริง — ต้องแก้ก่อน merge'}**", "",
+              *common.reason_line(report["cases"], "detect_status", "detect_reason"),
               "### แยกตามภาษา", "", "| ภาษา | คำขอ | หัวข้อถูก (ในกรอบ) | ตอบถูกทุกแบบ |", "|---|---|---|---|"]
     for lang, score in m["by_language"].items():
         lines.append(f"| {LANGUAGES[lang]} | {score['cases']} | {fmt_rate(score['topic_correct'])} | {fmt_rate(score['correct'])} |")

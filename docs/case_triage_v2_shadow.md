@@ -164,11 +164,14 @@ It does not show AI accuracy.
    (`openai/gpt-4.1-mini`) and set `limit` to 5 for a first try. Nothing needs to be set up: the workflow
    grants its own `GITHUB_TOKEN` only `contents: read` and `models: read`.
 2. The run first lists the model ids GitHub offers today, with their rate-limit tier, in a folded section
-   of the run page. OpenAI retires `gpt-4.1-mini` on 2027-01-14; pick another low-tier id from that list
+   of the run page, then sends one fixed synthetic sentence and shows the reply as it arrived (status, content
+   type, rate-limit headers, first characters) and how the provider classified it
+   (`.github/scripts/github_models_probe.py`; never the token, never a case). OpenAI retires `gpt-4.1-mini` on 2027-01-14; pick another low-tier id from that list
    then.
 3. Cases start at least 5 seconds apart (`--min-interval-s 5`), because the free low tier allows about 15
    requests a minute and 150 a day per model. All 61 cases take about 6 minutes.
-4. Read the scorecard on the run page, or download `shadow-eval-github-models.json`. The page says the
+4. Read the scorecard on the run page, or download `shadow-eval-github-models.json`. When the AI gave no
+   answer, a line under the table counts why (for example `unavailable: invalid_model_output 5`). The page says the
    numbers belong to that model, not to Claude. Many "unavailable" answers usually mean the daily limit
    was reached: run again the next day.
 
