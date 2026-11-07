@@ -327,7 +327,8 @@ Notes for cloud sessions (claude.ai/code):
     - a number too long to read, or half of an emoji (a lone surrogate), gets 400 instead of 500;
     - AI text holding half of an emoji is cleaned (U+FFFD), so the case still reaches review;
     - Core's `decode()` refuses everything it cannot read with `SpecError` (ADR-025, the second Core change).
-    The gate now shows 0 bugs and 215/270 own items passing. Waiting for the owner's test and merge.
+    The gate now shows 0 bugs and 215/270 own items passing. Merged on 2026-11-08; after the deploy the
+    owner's case on the live page still reached review.
   - The web page's chat layout from the owner's "Nocturne" mockup (PR #18, roadmap 1.6; live and
     owner-tested on 2026-11-03). Parts of the mockup that would break the rules in §3 (key and provider
     fields, editing steps, a "never ask" policy) are shown read-only or left out on purpose; see
@@ -337,13 +338,14 @@ Notes for cloud sessions (claude.ai/code):
     what it understood with "เข้าใจถูกไหม", where to start and the most important resource; then the study
     steps; then the details); out of scope lists the 11 topics. `/v1/status` gives the question limits, and
     the settings tab explains how to switch the online page to Typhoon or Claude. `tests/test_web_page.py`
-    holds the page to its contracts. Zero Core changes, so Phase 3 is built.
+    holds the page to its contracts. Zero Core changes, so Phase 3 is built. The owner tried it on the live
+    page on 2026-11-08 (with the mock AI) and it passed.
 - **Not done yet:**
   - Claude has never been run (D2). Typhoon has run only on the synthetic sets (two full triage runs, one
     full study guide run).
   - Review decisions and per-person identity (Milestone C) are not built.
-  - The owner has not tried the study guide on the live page yet (3.4 is 🟡 until then), and the live page
-    uses the mock AI unless the owner adds Typhoon (or Claude) in Render's Environment tab.
+  - The live page uses the mock AI unless the owner adds Typhoon (or Claude) in Render's Environment tab
+    (roadmap 0.4).
   - The rest of the roadmap is open.
 - **Next:** [docs/ROADMAP.md](docs/ROADMAP.md), the first item that is not ✅ and whose needs are met.
   - Waiting on the owner: 0.2 and 1.4 (D1, paid Render plan), 0.3 path B and 0.4 with Claude (D2, Claude
