@@ -78,6 +78,7 @@ guide** (`study_guide.v1`, the owner's first-response rule):
 | AI gateway: versioned prompt, mock, Claude and Typhoon providers | `app/llm/` | Working (see above); Typhoon (SCB 10X, Thai-first) is free within rate limits (ADR-021) and is told the answer format in words, because it ignores `response_format` (ADR-022) |
 | Error monitoring and tracing | `app/observability/` | Sentry errors, degraded-AI warnings and Runner recoveries; traces to Honeycomb (OTLP), off until a key is set; on for the Render service, first trace seen 2026-11-03 |
 | Scorecards: 61 synthetic labelled triage cases, and 67 study-guide requests (EN + TH, metaphors, out of scope, injection) | `app/eval/` | Run in CI as eval gates; mock scores test the pipeline, not AI accuracy |
+| Robustness benchmark, stage 1: 270 hard synthetic edge cases (EN + TH) and four pinned open datasets (BLNS, JSONTestSuite, CLINC150, BANKING77) through every layer, offline | `tests/robustness/` | Runs in CI as a gate on every outcome; the first run found 8 bugs to fix next (roadmap 5.5). Plan for stages 2–3: [benchmarking.md](docs/benchmarking.md) |
 | Intake API, durable job queue, single Runner with crash recovery, Thai web page | `app/api/`, `app/persistence/`, `app/services/`, `app/web/`, `app/serve.py` | Working (round 2), tested offline and as a container in CI; live on Render's free plan since 2026-11-01 |
 | Study guide (`study_guide.v1`): versioned topic catalog (11 topics, Thai and English), verified resource library (17 links) with a weekly link check, and the five-step workflow | `app/domains/study_guide/` | Working through the API and on the web page (roadmap 3.1–3.4); mock AI in CI; **first live run with Typhoon** on 2026-11-06 (synthetic set) |
 | Human-review decisions, n8n intake, reviewer notifications | — | **Not built yet** (Milestone C in [architecture](docs/architecture.md)) |
@@ -95,7 +96,9 @@ forgets its cases when it sleeps or redeploys; a paid plan with a disk keeps the
   The scorecard tables and the study guide's example answers appear on the run page. The eval gates then
   compare every case's answer with `tests/baselines/shadow_eval_mock.json` and
   `tests/baselines/study_guide_eval_mock.json` and fail on any change. The study guide's scorecard also
-  fails when an answer has a link outside the library or more than 5 resources.
+  fails when an answer has a link outside the library or more than 5 resources. Then the robustness benchmark sends
+  the edge cases and open datasets through every layer and compares every outcome with
+  `tests/baselines/robustness_v1.json` (docs/benchmarking.md). Its summary, in Thai, is on the run page too.
 - *Actions → Service container* checks `render.yaml`, builds the same container as Render, submits cases
   over HTTP, restarts it and checks that nothing was lost.
 - *Actions → Sentry smoke test* checks that error reporting reaches Sentry. It needs the repository secret
@@ -106,7 +109,8 @@ forgets its cases when it sleeps or redeploys; a paid plan with a disk keeps the
   every change to it, and fails when one is broken. It never edits the library.
 - *Actions → Shadow eval with Typhoon (manual)* and *Study guide eval with Typhoon (manual)* run the two
   scorecards against Typhoon, free within its rate limits. They need the repository secret
-  `TYPHOON_API_KEY`, and first check the connection with one fixed sentence (ADR-021).
+  `TYPHOON_API_KEY`, and first check the connection with one fixed sentence (ADR-021). The shadow eval can
+  run the 116 robustness edge cases instead of the 61 cases (`case_set: robustness_edge_v1`).
 - *Actions → Shadow eval with Claude (manual)* runs the scorecard against real Claude. It needs the
   repository secret `ANTHROPIC_API_KEY`.
 - *Actions → Study guide eval with Claude (manual)* runs the study guide's scorecard against real Claude, with
@@ -114,7 +118,7 @@ forgets its cases when it sleeps or redeploys; a paid plan with a disk keeps the
 
 **Locally (Python 3.10+):**
 ```bash
-python -m unittest discover -s tests -v        # 276 tests
+python -m unittest discover -s tests -v        # 284 tests
 python -m examples.case_triage_demo            # v1 rules, one synthetic case
 python -m examples.case_triage_shadow_demo     # v2 shadow mode, three synthetic cases (offline mock AI)
 python -m app.eval.triage_shadow_eval          # scorecard on 61 synthetic cases
@@ -149,8 +153,9 @@ most 1 MiB. The agent `version` is frozen into each job, so an old job refuses t
 | [Sentry error reporting](docs/observability_sentry.md) | What gets reported, privacy rules, alerts |
 | [Tracing to Honeycomb](docs/observability_tracing.md) | One trace per case: what a span carries and never carries, setup in Render, how it is checked |
 | [Study guide](docs/study_guide.md) | `study_guide.v1`: the workflow and its answer, failure handling, the mock's limits; the scorecard; the box and layered answer on the web page; the topic catalog and verified library, the weekly link check |
+| [Benchmarking plan](docs/benchmarking.md) | Three stages of testing beyond our own cases: the robustness gate (built), open benchmarks and attacks, privacy, load and live drift (planned); the datasets, their licences and the ones left out |
 | [Funding readiness pack](docs/funding/README.md) | Internal evidence register; not a submitted application |
-| [Evidence notes](docs/evidence/2026-11-03-render-operations.md) | Dated measurements; the first one covers Render operations (graceful stops, deploy filter, cold start), and [the first live AI runs](docs/evidence/2026-11-06-first-live-typhoon.md) are Typhoon's (2026-11-06) |
+| [Evidence notes](docs/evidence/2026-11-03-render-operations.md) | Dated measurements; the first one covers Render operations (graceful stops, deploy filter, cold start), and [the first live AI runs](docs/evidence/2026-11-06-first-live-typhoon.md) are Typhoon's (2026-11-06); [the first robustness run](docs/evidence/2026-11-07-robustness-stage1.md) is from 2026-11-07 |
 
 ## Scope and limits
 
@@ -158,7 +163,7 @@ most 1 MiB. The agent `version` is frozen into each job, so an old job refuses t
   key, not per-person accounts, and uses Python's standard-library HTTP server (fine for a pilot, not for
   public traffic).
 - Agent child processes isolate failures; they are **not** a security sandbox.
-- All test data is synthetic. Mock AI scores are not evidence of AI accuracy: the triage mock scores high because its keywords were written with its cases, and the study guide mock scores low (topic correct 2/48).
+- All test data is synthetic. The open datasets in the robustness benchmark were written for those datasets and hold no real people's records (ADR-024). Mock AI scores are not evidence of AI accuracy: the triage mock scores high because its keywords were written with its cases, and the study guide mock scores low (topic correct 2/48).
 - Masking personal data before AI calls is pattern-based; it lowers the risk but does not make real data safe.
 - The only live-model runs are Typhoon's first ones on the synthetic sets (2026-11-06, [evidence](docs/evidence/2026-11-06-first-live-typhoon.md)):
   triage AI correct 60/61 in two runs (the rules 29/61), study guide topic correct 46/48 with no link

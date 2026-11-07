@@ -15,6 +15,13 @@ on:
         description: "Only the first N cases (leave empty for all)"
         default: ""
         required: false
+      case_set:
+        description: "Which cases: synthetic_v1 (61 cases) or robustness_edge_v1 (116 edge cases, docs/benchmarking.md)"
+        type: choice
+        options:
+          - synthetic_v1
+          - robustness_edge_v1
+        default: synthetic_v1
 permissions:
   contents: read
 jobs:
@@ -25,6 +32,7 @@ jobs:
       NEURON_FLOW_LLM_PROVIDER: typhoon
       NEURON_FLOW_LLM_MODEL: ${{ inputs.model }}
       LIMIT: ${{ inputs.limit }}
+      CASE_SET: ${{ inputs.case_set }}
       TYPHOON_API_KEY: ${{ secrets.TYPHOON_API_KEY }}
     steps:
       - uses: actions/checkout@v7
@@ -43,7 +51,9 @@ jobs:
       - name: Score shadow mode with Typhoon
         run: |
           ARGS=()
-          if [ -n "$LIMIT" ]; then ARGS=(--limit "$LIMIT"); fi
+          if [ -n "$LIMIT" ]; then ARGS+=(--limit "$LIMIT"); fi
+          # The robustness edge cases (roadmap 5.4) instead of the 61 synthetic cases.
+          if [ "$CASE_SET" = "robustness_edge_v1" ]; then ARGS+=(--golden tests/robustness/triage_edge_golden_v1.json); fi
           python -m app.eval.triage_shadow_eval --min-interval-s 1 --summary "$GITHUB_STEP_SUMMARY" \
             --out shadow-eval-typhoon.json "${ARGS[@]}"
       - name: Keep the scorecard
