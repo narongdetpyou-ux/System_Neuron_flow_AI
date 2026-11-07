@@ -166,9 +166,10 @@ Built in round 2 (full reference in [intake_queue.md](intake_queue.md)):
   repeating it on a cancelled job returns `200` with the same record).
 - `GET /v1/jobs?limit=&before=` lists jobs newest first; `GET /v1/status` shows the Runner heartbeat, queue
   counts, queue and run-time figures (waiting count and oldest age; median and slowest wait and run times
-  per workflow over the newest 100 finished jobs; failures by reason; roadmap 5.3), AI mode, storage and
-  each workflow's steps (ids, agents, order, retry budget, time limit; never params); `GET /healthz` is the
-  unauthenticated liveness check.
+  per workflow over the newest 100 finished jobs; failures by reason; roadmap 5.3), AI mode, storage, the
+  input limits (a case's summary and a study question's message; roadmap 3.4) and each workflow's steps (ids,
+  agents, order, retry budget, time limit; never params); `GET /healthz` is the unauthenticated liveness
+  check.
 - Every response carries `X-Request-Id` (the client's id when it is safe to log, otherwise a new one). The
   same id ends the access log line and is stored in a new job's `job.queued` event (roadmap 1.2).
 
@@ -197,18 +198,18 @@ app/observability/             sentry.py (step failures, degraded AI, Runner rec
 app/persistence/               queue_store.py: the application job queue, events and Runner heartbeat (SQLite)
 app/services/                  workflows.py (catalog), admission.py, runner.py (with reconciliation), results.py, metrics.py
 app/api/                       routes.py (ApiApp), server.py (standard-library HTTP server), limits.py
-app/web/                       index.html, app.css, app.js: the Thai web page (chat layout, Flow and Trace, read-only settings)
+app/web/                       index.html, app.css, app.js: the Thai web page (chat layout with a case / study-question switch, the study guide's layered answer, Flow and Trace, read-only settings)
 app/boot.py                    process 1 of the image: takes the data folder, drops root, becomes tini
 app/settings.py, app/serve.py  environment settings; the launcher (API + supervised Runner in one container)
 Dockerfile, render.yaml        the container and the Render Blueprint (railway.json kept for Railway)
 examples/                      case_triage_demo, case_triage_shadow_demo, study_guide_demo, sentry_smoke_test, service_smoke_test
-tests/                         267 tests: core, triage v1/v2, AI gateway, Typhoon provider, masking, scorecards, eval gates, Sentry, tracing, API, queue, Runner, HTTP, metrics, study library, link check, study guide
+tests/                         276 tests: core, triage v1/v2, AI gateway, Typhoon provider, masking, scorecards, eval gates, Sentry, tracing, API, queue, Runner, HTTP, metrics, study library, link check, study guide, web page
 tests/baselines/               shadow_eval_mock.json, study_guide_eval_mock.json: every case's answer with the mock AI (the eval gates' baselines)
 .github/workflows/             core-tests, service-container, tracing-check, secret-scan, sentry-smoke, study-links (weekly), shadow-eval-claude and study-guide-eval-claude (manual)
 .github/gitleaks.toml          secret scan rules (gitleaks defaults + Sentry DSN + Honeycomb keys); .github/.gitleaksignore: reviewed findings
 .github/scripts/               check_render_blueprint.py: render.yaml structure, build filter, Render's schema; check_traces.py
 .github/otel/                  collector.yaml: the OpenTelemetry Collector that the tracing check sends to
-planned: review ledger and artifact store; the study guide's scorecard and page (3.3, 3.4)
+planned: review ledger and artifact store
 ```
 
 ## 8. Architecture decisions (ADRs)
@@ -237,6 +238,7 @@ planned: review ledger and artifact store; the study guide's scorecard and page 
 | 020 | A second real provider, GitHub Models (`github`), so the first live measurement does not wait for a paid Claude key: the owner's Anthropic account asks for card verification (2026-11-06). Same gateway, validators, masking and error classes as Claude; its own key variable (`GITHUB_MODELS_TOKEN`); the manual scorecard workflows pass the workflow's own `GITHUB_TOKEN` with only `contents: read` and `models: read`, so there is no key to create or store. A content-safety block of one case's text (HTTP 400 `content_filter`) counts as a refusal, not a setup error | **Superseded by ADR-021.** Built in PR #35 and #36; GitHub had retired GitHub Models on 2026-07-30 (found when the first run got a bare `OK` back), so the provider and its workflows were removed. Trade-offs: the free tier is rate-limited (about 15 requests a minute and 150 a day per low-tier model), so the scorecards pace cases (`--min-interval-s`); results belong to the chosen model, not to Claude, and say so on the run page; GitHub's data terms for the catalog were not reviewed here, so only synthetic data may go to it (rule 9; D4 decides real data) |
 | 021 | Typhoon (`typhoon`) replaces GitHub Models as the free real provider. SCB 10X hosts it as a free research API (no card; about 200 requests a minute, 5 a second) in the OpenAI chat-completions format, so it reuses the ADR-020 client, now `providers/openai_compat.py` with a provider table. Thai-first, which suits a case set that is half Thai. Key from `TYPHOON_API_KEY` (a repository secret; the owner created it on 2026-11-06). Every live run first checks the connection with one fixed synthetic sentence and shows the raw reply (`.github/scripts/llm_probe.py`) | In force (PR #37). Trade-offs: the API is a beta research showcase without formal support, and it collects usage data to improve its models, so it may only ever see synthetic data (rule 9; D4). The first run (2026-11-06) showed that it ignores strict `json_schema` output (ADR-022). Results describe Typhoon, never Claude |
 | 022 | An OpenAI-format client may also state the answer format in words. When a provider is listed in `ANSWER_FORMATS` (`app/llm/config.py`; today only `typhoon`, format `json-instruction-v1`), the client appends to the system prompt an instruction built from the prompt's own answer schema (the keys in order, each choice field's allowed values, one JSON object and nothing else), and reads the reply from its first `{` to its last `}` after removing a Markdown code fence. The same validators then check the object; plain `key: value` lines, extra keys, a wrong choice or two objects are still refused, never parsed. The format version is part of the agent version (`;format=json-instruction-v1`), so a job frozen before the change fails as `configuration_changed` (ADR-015). Claude's requests and versions are unchanged | In force (PR #38). Found on the first live run (2026-11-06): Typhoon answered HTTP 200 but ignored `response_format`, so all 5 answers were plain lines and were refused ([evidence](evidence/2026-11-06-first-live-typhoon.md)). Trade-off: the model sees text that is not in the prompt file, so the prompt's hash alone no longer names everything sent; the format version in the agent version closes that gap, and the instruction is a pure function of the answer schema |
+| 023 | On the web page, an informational request (today a study question, roadmap 3.4) is sent as soon as the person presses Enter, without the confirm card that a case shows first. Its answer asks back "เข้าใจถูกไหม" with what the system understood, and a "แก้คำถาม" button puts the question back in the box. A case still shows its steps and waits for "ยืนยันและส่ง". Until the plain-language router (roadmap 4.2) chooses by itself, a switch above the box ("เคสลูกค้า" / "อยากเรียน") says which kind the next message is | In force (PR #39). Trade-off: a mistyped question reaches the AI without a second look (personal data masked first, 7.1). It decides nothing and sends nothing outside (ADR-018), costs one or two AI calls, and its answer shows what was understood, so a wrong reading is visible and easy to correct. Anything that decides about a person or acts outside keeps the confirm step and human review (rule 4) |
 
 ## 9. Acceptance gates
 
@@ -283,7 +285,10 @@ planned: review ledger and artifact store; the study guide's scorecard and page 
   OpenTelemetry Collector in CI (PR #30, ROADMAP 5.1) and seen in Honeycomb on Render on 2026-11-03
   (`docs/evidence/2026-11-03-first-trace-honeycomb.md`); the study guide's scorecard and eval gate in CI, which
   fails when a link outside the library or more than 5 resources appears in any answer, or when any
-  request's answer changes (PR #34, ROADMAP 3.3; mock only).
+  request's answer changes (PR #34, ROADMAP 3.3; mock only); the page's contracts in CI: every example on
+  it passes its workflow's input contract, it names every step of every workflow and every code of a study
+  answer, it never inserts server data as HTML, and it links only to https addresses, opened without a
+  referrer (PR #39, ROADMAP 3.4, `tests/test_web_page.py`).
 - Open: retention and backup/restore drills (1.4, needs a disk), API authentication hardening (2.1, 7.2).
 
 **P2 (do not build early):** multi-tenancy, distributed workers, Postgres, object storage, SLAs, a hosted
@@ -300,7 +305,7 @@ dashboard.
 | C | Two-phase review, decision ledger, n8n notifications | Open |
 | D | OpenTelemetry tracing, eval gates in CI | Done: the per-case eval gates (5.2 for triage; 3.3 for the study guide), queue/run-time figures (5.3), Sentry, request ids, and tracing (5.1, PR #30), with the first trace seen in Honeycomb on 2026-11-03 |
 | E | Planner pattern (B), MCP server, second domain with zero Core changes | Open |
-| — | `study_guide.v1`: first-response study guide ([design_philosophy.md](design_philosophy.md), [study_guide.md](study_guide.md)) | Workflow and scorecard built: the topic catalog, the verified resource library, the weekly link check (3.1, PR #32), the five-step workflow in the catalog (3.2, PR #33) and the 67-request scorecard with its eval gate (3.3, PR #34), with the mock AI in CI; first live run with Typhoon on 2026-11-06: topic correct 46/48, 0 of 142 links outside the library ([evidence](evidence/2026-11-06-first-live-typhoon.md)); the page is not built (3.4); Claude after D2 |
+| — | `study_guide.v1`: first-response study guide ([design_philosophy.md](design_philosophy.md), [study_guide.md](study_guide.md)) | Workflow and scorecard built: the topic catalog, the verified resource library, the weekly link check (3.1, PR #32), the five-step workflow in the catalog (3.2, PR #33) and the 67-request scorecard with its eval gate (3.3, PR #34), with the mock AI in CI; first live run with Typhoon on 2026-11-06: topic correct 46/48, 0 of 142 links outside the library ([evidence](evidence/2026-11-06-first-live-typhoon.md)); on the web page with a layered answer (3.4, PR #39; questions sent without a confirm card, ADR-023), waiting for the owner's test on the live page; Claude after D2 |
 
 The order of the remaining work, with tasks, acceptance checks and owner decisions for each step, is in
 [ROADMAP.md](ROADMAP.md).

@@ -20,7 +20,8 @@ trusted agents in bounded child processes, retries, recovers after a crash and w
 - a second domain, the study guide (`study_guide.v1`): a versioned topic catalog, a verified resource
   library with a weekly link check, and a five-step workflow that answers a plain-language request with at
   most 5 library resources in study order (roadmap 3.1, 3.2). It ends `COMPLETED` without review (ADR-018).
-  The API accepts it; the page has no box for it yet (3.4).
+  The page has a box for it (3.4): a switch above the message box chooses a case or a study question, and a
+  question is sent without the confirm card that cases have (ADR-023), then answered in layers.
 
 All data is synthetic. Milestones A, A2 and B are done.
 
@@ -121,7 +122,7 @@ If a task seems to need breaking a rule:
 ## 4. Checking your work
 
 ```bash
-python -m unittest discover -s tests -v        # all tests (267 on 2026-11-06); Python 3.10–3.13
+python -m unittest discover -s tests -v        # all tests (276 on 2026-11-07); Python 3.10–3.13
 python -m examples.case_triage_demo            # v1 rules, one synthetic case
 python -m examples.case_triage_shadow_demo     # v2 shadow mode with the offline mock AI
 python -m examples.study_guide_demo            # the study guide's answers to four synthetic requests
@@ -208,7 +209,7 @@ Notes for cloud sessions (claude.ai/code):
 | `app/observability/tracing.py`, `job_spans.py` | tracing: the OTLP/JSON exporter with its attribute allow-list, and a finished job's spans (ADR-017) |
 | `app/persistence/queue_store.py` | the application queue in its own SQLite file (`<data>/app/queue.sqlite3`) |
 | `app/services/` | workflow catalog, admission, Runner with reconciliation, result summaries, queue and run-time figures |
-| `app/api/`, `app/web/` | standard-library HTTP API and the Thai web page (chat layout, Flow and Trace, read-only settings) |
+| `app/api/`, `app/web/` | standard-library HTTP API and the Thai web page (chat layout with a case / study-question switch, the study guide's layered answer, Flow and Trace, read-only settings); `tests/test_web_page.py` holds the page to its contracts |
 | `app/boot.py` | the image's process 1: takes the data folder as root, switches to `neuron`, becomes tini |
 | `app/settings.py`, `app/serve.py` | settings from the environment; the launcher (API + supervised Runner) |
 | `Dockerfile`, `render.yaml`, `railway.json` | the container, the Render Blueprint, the Railway config kept for later |
@@ -296,7 +297,7 @@ Notes for cloud sessions (claude.ai/code):
     GitHub Models first (ADR-020, PR #35, #36), but GitHub had retired it on 2026-07-30, so the first run got
     only "OK" back; replaced by Typhoon (ADR-021, PR #37), with a connection check on every live run and run
     pages that count why the AI gave no answer.
-  - The first live runs, with Typhoon (roadmap 0.3 path A, this PR; evidence note
+  - The first live runs, with Typhoon (roadmap 0.3 path A, PR #38; evidence note
     `docs/evidence/2026-11-06-first-live-typhoon.md`). The owner's first run got 0/5 answers: Typhoon
     ignores `response_format` and answered in plain `key: value` lines. The client now also states the
     answer format in words and reads the one JSON object; the format version is part of the agent version
@@ -307,16 +308,24 @@ Notes for cloud sessions (claude.ai/code):
     owner-tested on 2026-11-03). Parts of the mockup that would break the rules in §3 (key and provider
     fields, editing steps, a "never ask" policy) are shown read-only or left out on purpose; see
     intake_queue.md, "หน้าเว็บ: ใช้อย่างไร".
+  - The study guide on the web page (roadmap 3.4, this PR): a switch above the box ("เคสลูกค้า" /
+    "อยากเรียน"); a question is sent without the confirm card (ADR-023) and answered in layers (summary,
+    what it understood with "เข้าใจถูกไหม", where to start and the most important resource; then the study
+    steps; then the details); out of scope lists the 11 topics. `/v1/status` gives the question limits, and
+    the settings tab explains how to switch the online page to Typhoon or Claude. `tests/test_web_page.py`
+    holds the page to its contracts. Zero Core changes, so Phase 3 is built.
 - **Not done yet:**
   - Claude has never been run (D2). Typhoon has run only on the synthetic sets (two full triage runs, one
     full study guide run).
   - Review decisions and per-person identity (Milestone C) are not built.
-  - The study guide's page (roadmap 3.4) is not built.
+  - The owner has not tried the study guide on the live page yet (3.4 is 🟡 until then), and the live page
+    uses the mock AI unless the owner adds Typhoon (or Claude) in Render's Environment tab.
   - The rest of the roadmap is open.
 - **Next:** [docs/ROADMAP.md](docs/ROADMAP.md), the first item that is not ✅ and whose needs are met.
   - Waiting on the owner: 0.2 and 1.4 (D1, paid Render plan), 0.3 path B and 0.4 with Claude (D2, Claude
-    API key).
-  - Buildable now without an owner decision: Phase 3, 3.4 next (the owner chose Phase 3 before Phase 2 on
-    2026-11-05), and Phase 2 (2.1 first). The rest of 7.1 (who can read the AI key) needs an ADR first.
+    API key); 0.4 with Typhoon is free but sends what is typed on the page to Typhoon, so it is the owner's
+    choice too.
+  - Buildable now without an owner decision: Phase 2 (2.1 first) and Phase 4 (4.1 first; Phase 3, which it
+    needs, is built). The rest of 7.1 (who can read the AI key) needs an ADR first.
   - The owner decides which phase comes next; ask before starting a new phase.
 - Keep this section and the ROADMAP status table true in every PR.

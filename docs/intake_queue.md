@@ -1,6 +1,6 @@
 # Intake API, job queue, Runner and web page (round 2, Milestone B)
 
-**Status:** built in PR #11 and tested offline (267 tests on 2026-11-06, including killing the Runner
+**Status:** built in PR #11 and tested offline (276 tests on 2026-11-07, including killing the Runner
 mid-step). The container build is checked on every push by *Actions → Service container*. Live on
 Render's free plan since 2026-11-01 (`render.yaml`). Railway was the first choice, but it has paused new
 sign-ups since 22 Oct 2026 after a security incident; `railway.json` stays in the repository for later.
@@ -15,6 +15,9 @@ how long the oldest has waited, the median and slowest wait and run times per wo
 finished jobs, and failures by reason (see "ตัวเลขคิวและเวลา" and "Queue and run-time figures" below).
 Tracing (roadmap 5.1, PR #30): with `HONEYCOMB_API_KEY` set, every `/v1` request and every job become spans
 in Honeycomb, one trace per job ([observability_tracing.md](observability_tracing.md)).
+The study guide on the page (roadmap 3.4, PR #39): a switch above the message box chooses a case or a study
+question; a question is sent without the confirm card (ADR-023) and answered in layers (see "ถามเรื่องที่อยากเรียน"
+and "Web page" below, and [study_guide.md](study_guide.md#the-page-roadmap-34)).
 Design principles: [design_philosophy.md](design_philosophy.md).
 
 ## ภาพรวมการทำงาน (ภาษาไทย)
@@ -57,7 +60,7 @@ Design principles: [design_philosophy.md](design_philosophy.md).
 | ส่วน | มีอะไร |
 |---|---|
 | ซ้าย | ปุ่ม "＋ เคสใหม่", จำนวนเคสตามสถานะ (เมื่อมีเคสรอ จะบอกด้วยว่าเคสที่รอนานสุดรอมานานเท่าไร), รายการเคสล่าสุด (วันนี้ / เมื่อวาน), สถานะ AI ที่เก็บข้อมูล ตัวรันงาน และ "เวลาต่อเคส" (ปกติใช้เวลาเท่าไร), ปุ่ม "ล็อกหน้าจอ" |
-| กลาง (แท็บ "แชท") | ช่องพิมพ์เคส และบทสนทนาของเคสที่เลือก: ข้อความเคส → การ์ดขั้นตอน → ผลที่ระบบเสนอ |
+| กลาง (แท็บ "แชท") | ปุ่มเลือก "เคสลูกค้า" หรือ "อยากเรียน" เหนือช่องพิมพ์ ช่องพิมพ์ และบทสนทนาของเคสหรือคำถามที่เลือก: ข้อความ → การ์ดขั้นตอน → ผลที่ระบบเสนอ หรือคำตอบเป็นชั้น |
 | ขวา ("Flow") | แผนผังขั้นตอนของเคส (เส้นบอกว่าขั้นไหนต้องรอขั้นไหน) และ "ประวัติเหตุการณ์ (Trace)" ของเคสนั้น |
 
 ลำดับการใช้งาน:
@@ -90,8 +93,20 @@ Design principles: [design_philosophy.md](design_philosophy.md).
 - ตัวเลขมีแค่เวลา จำนวน ชื่อประเภทงาน และรหัสสาเหตุ ไม่มีข้อความเคสหรือรหัสงาน
 - ตอนนี้ระบบใช้ AI จำลอง เวลาที่เห็นจึงยังไม่ใช่เวลาของ Claude จริง
 
+### ถามเรื่องที่อยากเรียน (ขั้น 3.4)
+
+1. **เลือก "อยากเรียน"** เหนือช่องพิมพ์ (คู่กับ "เคสลูกค้า") ช่องพิมพ์ถามว่า "อยากเรียนเรื่องอะไร" ปุ่มส่งเปลี่ยนเป็น "ถาม" และมีตัวอย่าง 4 ปุ่ม
+2. **พิมพ์แล้วกด Enter** คำถามส่งทันที ไม่มีการ์ด "รอยืนยัน" แบบเคส เพราะเป็นแค่คำแนะนำ ไม่ได้ตัดสินอะไรแทนใคร (ADR-023) ยาว 4–500 ตัวอักษร
+   ถ้าเน็ตหลุดแล้วกดส่งข้อความเดิมอีกครั้ง ระบบใช้รหัสส่งงานเดิม จึงไม่เกิดงานซ้ำ
+3. **อ่านคำตอบชั้นแรก** สรุป 1 บรรทัด, ระบบเข้าใจว่าอะไรพร้อมถาม "เข้าใจถูกไหม", หัวข้อ, แหล่งที่ "เริ่มที่" และแหล่งที่ "สำคัญที่สุด"
+4. **เปิดดูเพิ่ม** "ดูขั้นตอนการเรียน" (ทุกแหล่งตามลำดับ) และ "ดูรายละเอียด" (เหตุผล ที่มาของคำอธิบาย ขั้นตอนที่ระบบทำ และรายละเอียดเชิงเทคนิค)
+5. **ถ้าไม่ตรง** กด "แก้คำถาม" คำถามเดิมกลับไปที่ช่องพิมพ์ เรื่องนอกกรอบ ระบบบอกตรง ๆ พร้อม 11 หัวข้อที่ช่วยได้
+6. **ในรายการด้านซ้าย** คำถามขึ้นเป็น "คำถามอยากเรียน" สถานะ "เสร็จแล้ว" (ไม่ต้องรอคนตรวจ) กดเปิดคำถามหรือเคสไหน ปุ่มเหนือช่องพิมพ์จะเปลี่ยนตามให้เอง
+
+ถ้า AI ยังเป็น "AI จำลอง" (ดูช่อง AI มุมซ้ายล่าง) คำเปรียบใหม่ ๆ จะถูกตอบว่านอกกรอบ และหน้าเว็บบอกเหตุผลไว้ วิธีเปลี่ยนเป็น Typhoon (ฟรี) หรือ Claude อยู่ในแท็บ "ตั้งค่า" → "AI ที่ใช้อยู่"
+
 ส่วนที่อยู่ในแบบ (mockup) แต่ยังไม่มีในระบบ:
-- ช่องคุยถาม-ตอบทั่วไป และคำสั่ง `/test` `/eval` `/backup` → ขั้น 4 และ 1.4 ในแผน (ตอนนี้ช่องแชทรับเฉพาะข้อความเคส)
+- ช่องคุยถาม-ตอบทั่วไปที่ระบบเลือกเองว่าเป็นงานแบบไหน และคำสั่ง `/test` `/eval` `/backup` → ขั้น 4 และ 1.4 ในแผน (ตอนนี้ช่องแชทรับข้อความเคส หรือคำถามอยากเรียนเมื่อกด "อยากเรียน")
 - ไฟบอกว่ากำลังทำขั้นไหนระหว่างรัน → ยังไม่อยู่ในแผนตอนนี้ (P2) จะพิจารณาอีกครั้งพร้อมระบบติดตามเส้นทางงาน (ขั้น 5)
 - ปุ่มหยุดงานที่กำลังทำอยู่ → ทำไม่ได้ เพราะแกนระบบหยุดงานกลางทางไม่ได้ (ยกเลิกได้เฉพาะเคสที่ยังรอคิว ทำแล้วในขั้น 1.3), ปุ่มอนุมัติ/ไม่อนุมัติ → ขั้น 2.4
 - ช่องใส่ API key, เปลี่ยน AI, ตั้งจำนวนครั้งลองใหม่, ตัวเลือก "ไม่ต้องถาม" และปุ่ม "แก้ไข JSON" → จะไม่ทำ เพราะขัดกฎของโปรเจกต์ (CLAUDE.md ข้อ 4–7)
@@ -169,6 +184,22 @@ container: app.boot (root) ─becomes─► tini ─► python -m app.serve
 - **Confirm step:** client-side. Nothing is sent before "ยืนยันและส่ง". The idempotency key is made with the
   draft, so "ส่งอีกครั้ง" after a network error cannot create a second job. "ส่งซ้ำ (ทดสอบว่าไม่เกิดงานซ้ำ)"
   stays on the last case sent from the tab.
+- **Case or study question (roadmap 3.4):** a switch above the box ("เคสลูกค้า" / "อยากเรียน", shown only
+  when the catalog has `study_guide.v1`) sets what the next message becomes: the placeholder, the four
+  examples, the limits (`limits.summary_*` or `limits.message_*` from `/v1/status`), the button ("ส่ง" or
+  "ถาม") and what Enter does. Pressing a mode button starts something new of that kind and keeps any typed
+  text; opening a case or a question (from the list or a link) switches the box to its kind. A question is
+  sent at once, without the confirm card (ADR-023); its idempotency key is kept until it is admitted, so
+  resending the same text after an error returns the same job. A late reply never moves the person: if the
+  tab, the mode, the case or question on screen, or a case draft changed while it was in flight, the page
+  stays and a toast points to the list (the case's resend button follows the same rule). The left list shows
+  a question as "คำถามอยากเรียน" with the message as its preview.
+- **A study answer:** shown in three layers (layer 1 always, "ดูขั้นตอนการเรียน" and "ดูรายละเอียด" as
+  `<details>` whose open state survives the 4-second refresh); full description in
+  [study_guide.md](study_guide.md#the-page-roadmap-34). Links come only from the answer's library URLs,
+  checked against `LIBRARY_LINK` (https, no spaces or quotes), and open in a new tab with
+  `rel="noopener noreferrer"`. The Flow panel names what each study step produced and ends "ตอบแล้ว ·
+  ไม่ต้องรอคนตรวจ".
 - **Settings are read-only by design:** no field accepts a key, a provider, a retry budget or a policy
   (CLAUDE.md rules 4–7). The page explains where each value is changed instead. The tracing panel
   (roadmap 5.1) shows `status.tracing`: on or off with the reason, the destination host, the last export
@@ -182,7 +213,11 @@ container: app.boot (root) ─becomes─► tini ─► python -m app.serve
 - **How it was checked (2026-11-03):** a headless-browser walkthrough of every state on desktop
   (1280 and 1440 px), tablet (1024 px) and phone (390 px): no console errors, no CSP violations, no
   horizontal overflow; keyboard sending, focus moves, drawers with Escape, the error paths (short text, bad
-  case id, wrong key) and "send again" returning the same job.
+  case id, wrong key) and "send again" returning the same job. Repeated for the study box on 2026-11-07
+  (roadmap 3.4; the states covered are listed in study_guide.md), with cases still confirmed and reviewed.
+- **Automated (since 2026-11-07):** `tests/test_web_page.py` holds the page to its contracts: the examples
+  pass their input contracts, every step and answer code has Thai words, no HTML insertion or inline
+  script or style, links only to https addresses with `rel="noopener noreferrer"`, and the script parses.
 
 ### Job states
 
@@ -238,7 +273,7 @@ app runs, carries an `X-Request-Id` header:
 | Method and path | What it does | Success | Errors |
 |---|---|---|---|
 | `GET /healthz` | Liveness for the host's health check (no key); also says whether an access key is set | 200 `{"ok": true, "access_key": "configured"}` | 503 |
-| `GET /v1/status` | Runner heartbeat, queue counts, queue and run-time figures (`metrics`, below), AI mode, tracing (`tracing`: on or off and why, where spans go, the last export), storage, limits, and each workflow's steps (`workflows[].steps`) | 200 | 401, 429 |
+| `GET /v1/status` | Runner heartbeat, queue counts, queue and run-time figures (`metrics`, below), AI mode, tracing (`tracing`: on or off and why, where spans go, the last export), storage, limits (`summary_min_chars`/`summary_max_chars` for a case, `message_min_chars`/`message_max_chars` for a study question, the queue and body caps), and each workflow's steps (`workflows[].steps`) | 200 | 401, 429 |
 | `POST /v1/jobs` | Admit a job | 202 new, 200 duplicate | 400, 401, 409, 411, 413, 415, 429, 503 |
 | `GET /v1/jobs?limit=20&before=<seq>` | Newest first; `next_before` is the next cursor | 200 | 400, 401 |
 | `GET /v1/jobs/{job_id}` | Status, the step plan frozen at claim (`plan`, `null` while queued), reviewer proposal, step timeline, AI provenance, receipt hash, the admitting `request_id`, and `trace_id` (the job's trace in Honeycomb; `null` when tracing was off) | 200 | 401, 404 |
@@ -371,5 +406,6 @@ job) belong to Milestone C and are still open.
   then every step's result when it finishes. Jobs with the mock AI finish in well under a second once the
   service is warm. On Render's free plan the first job after a start took 9–10 s (two starts measured on
   2026-11-01), later ones 0.1–0.4 s.
-- The chat box takes case text only. Plain-language conversation (the router) is roadmap Phase 4.
+- The chat box takes a case or a study question, chosen with the switch above it. Plain-language
+  conversation, where the system chooses (the router), is roadmap Phase 4.
 - Review decisions, the n8n intake and reviewer notifications are Milestone C.
