@@ -1,15 +1,17 @@
 # Study guide (`study_guide.v1`) — the first-response study guide
 
-**Status (2026-11-06):**
+**Status (2026-11-07):**
 - Roadmap 3.1 (PR #32) is built: the versioned topic catalog, the verified resource library, their checks
   and hash, and the weekly link check.
 - Roadmap 3.2 (PR #33) is built: the `study_guide.v1` workflow. A plain-language request goes in; up to 5
   verified resources in study order come out, as a layered answer. It is in the workflow catalog, so the
-  API accepts it; the page has no box for it yet (3.4).
+  API accepts it.
 - Roadmap 3.3 (PR #34) is built: 67 labelled synthetic requests and a scorecard. CI runs the scorecard
   with the mock AI on every push, as an eval gate; manual workflows run it with Typhoon (free; ADR-021) or with
   Claude (D2).
-- Not built: the page (3.4).
+- Roadmap 3.4 (PR #39) is built: the box on the web page and the layered answer, with a switch between a
+  case and a study question; a question is sent without a confirm card (ADR-023). See
+  [The page](#the-page-roadmap-34). The owner's test on the live page follows the merge.
 - CI runs it with the offline mock AI, a keyword simulation. The first live run, with Typhoon on 2026-11-06,
   found the labelled topic for 46 of 48 in-scope requests, with 0 of 142 links outside the library
   ([evidence](evidence/2026-11-06-first-live-typhoon.md)). The requests and labels are the developer's and it ran once, so this is
@@ -17,8 +19,8 @@
 
 ## ภาพรวมสำหรับเจ้าของโปรเจกต์
 
-**สรุป:** ผู้ช่วยแนะนำแหล่งเรียนทำงานได้แล้วผ่าน API คุณพิมพ์เรื่องที่อยากรู้ด้วยคำธรรมดา แล้วได้แหล่งเรียนไม่เกิน 5 แหล่ง
-เรียงว่าเรียนอะไรก่อน พร้อมบอกว่าแต่ละแหล่งใช้ทำอะไร ทุกลิงก์มาจากคลังที่ตรวจแล้วเท่านั้น และยังไม่มีช่องให้ใช้บนหน้าเว็บ (ขั้น 3.4)
+**สรุป:** ผู้ช่วยแนะนำแหล่งเรียนใช้ได้บนหน้าเว็บแล้ว กด "อยากเรียน" เหนือช่องพิมพ์ พิมพ์เรื่องที่อยากรู้ด้วยคำธรรมดา
+แล้วได้แหล่งเรียนไม่เกิน 5 แหล่ง เรียงว่าเรียนอะไรก่อน พร้อมบอกว่าแต่ละแหล่งใช้ทำอะไร ทุกลิงก์มาจากคลังที่ตรวจแล้วเท่านั้น (ขั้น 3.4)
 
 **ผู้ช่วยทำงานอย่างไร (ทีละขั้น)**
 1. **ถอดความ (detect_topic, AI):** ระบบปิดข้อมูลส่วนตัวในข้อความก่อน แล้วให้ AI บอกว่าเป็นหัวข้อไหนในสมุดหัวข้อ
@@ -69,7 +71,9 @@
 - **ในคลังมีแหล่งภาษาไทยแหล่งเดียว** คือ Thai MOOC
 - **หัวข้อภาษาธรรมดามีแค่มาตรฐาน ISO** ซึ่งฉบับเต็มต้องซื้อ
 - **หัวข้อระบบแนะนำมีแหล่งเดียว** และเป็นรายงานเทคนิคระดับลึก
-- **ยังไม่มีช่องใช้บนหน้าเว็บ** หน้าเว็บแค่แสดงขั้นตอนของผู้ช่วยในแท็บ "ตั้งค่า" ช่องพิมพ์คำถามจะมาในขั้น 3.4
+- **หน้าเว็บบน Render ใช้ AI จำลองอยู่** จนกว่าคุณจะเพิ่ม Typhoon (หรือ Claude) ในแท็บ Environment ของ Render
+  ระหว่างนั้นคำเปรียบใหม่ ๆ บนหน้าเว็บจะถูกตอบว่านอกกรอบ และหน้าเว็บบอกเหตุผลไว้ (ขั้นตอนเปิดอยู่ในแท็บ "ตั้งค่า")
+- **ยังต้องเลือกเองว่าเป็นเคสหรือคำถาม** ด้วยปุ่มเหนือช่องพิมพ์ ช่องคุยที่ระบบเลือกให้เองคือขั้น 4
 
 **คุณลองดูได้ (ไม่ต้องติดตั้งอะไร)**
 1. เปิด GitHub → แท็บ Actions → *Core logic tests* → รันล่าสุด → กด Summary
@@ -78,9 +82,26 @@
    - "How do I write a good prompt?" ได้แผนภาษาอังกฤษ 2 แหล่ง
    - "บรรณารักษ์ที่รู้ใจ" ขึ้นว่า "อยู่นอกกรอบ" เพราะเป็น AI จำลอง (ข้อจำกัดข้างบน)
    - "สูตรต้มยำ" ขึ้นว่า "อยู่นอกกรอบ" พร้อมรายการหัวข้อที่ช่วยได้
-3. ในแท็บ "ตั้งค่า" ของหน้าเว็บ (หลัง merge และ Render ขึ้นเวอร์ชันใหม่) ต้องเห็นกล่อง "ผู้ช่วยแนะนำแหล่งเรียน"
-   ที่มี 5 ขั้นตอน
+3. ในแท็บ "ตั้งค่า" ของหน้าเว็บ ต้องเห็นกล่อง "ผู้ช่วยแนะนำแหล่งเรียน" ที่มี 5 ขั้นตอน
 4. ตรวจลิงก์: Actions → *Study library link check* → รันล่าสุด ต้องขึ้น "ผ่าน" และตาราง 17 แถว
+5. ลองบนหน้าเว็บ: ดูหัวข้อถัดไป
+
+**ใช้บนหน้าเว็บ (ขั้น 3.4)**
+1. **เลือก "อยากเรียน"** ปุ่มอยู่เหนือช่องพิมพ์ คู่กับ "เคสลูกค้า" ช่องพิมพ์จะถามว่า "อยากเรียนเรื่องอะไร" และมีตัวอย่าง 4 ปุ่ม
+   (คำขอ 4 แบบเดียวกับข้างบน ผลของแต่ละปุ่มกับ AI จำลองจึงดูล่วงหน้าได้ในหน้า Actions)
+2. **พิมพ์แล้วกด Enter** (หรือปุ่ม "ถาม") คำถามส่งทันที ไม่มีการ์ด "รอยืนยัน" แบบเคส เพราะเป็นแค่คำแนะนำ ไม่ได้ตัดสินอะไรแทนใคร
+   (ADR-023) ยาว 4–500 ตัวอักษร
+3. **อ่านชั้นแรก** กล่องคำตอบบอก
+   - สรุป 1 บรรทัด
+   - ระบบเข้าใจว่าคุณอยากเรียนอะไร พร้อมความมั่นใจ และถามว่า "เข้าใจถูกไหม"
+   - หัวข้อและระดับ แหล่งที่ "เริ่มที่" และแหล่งที่ "สำคัญที่สุด" (ถ้าเป็นคนละแหล่งกัน) และจำนวนแหล่งทั้งหมด
+4. **เปิดดูเพิ่มเมื่ออยากรู้**
+   - "ดูขั้นตอนการเรียน": ทุกแหล่งตามลำดับ บอกความสำคัญ ระดับ ภาษา ฟรีหรือเสียเงิน ใช้ทำอะไร ควรเน้นส่วนไหน และคำอธิบายสั้น
+     กดชื่อแหล่งแล้วลิงก์เปิดในแท็บใหม่
+   - "ดูรายละเอียด": ทำไมเรียงแบบนี้ หัวข้อพื้นฐานที่ไม่ได้ใส่เพราะเกิน 5 แหล่ง คำอธิบายมาจาก AI หรือจากคลัง ข้อมูลส่วนตัวที่ปิดไป
+     5 ขั้นตอนที่ระบบทำ และรายละเอียดเชิงเทคนิค
+5. **ถ้าไม่ตรง** กด "แก้คำถาม" คำถามเดิมกลับไปอยู่ในช่องพิมพ์ แก้แล้วถามใหม่ได้
+6. **เรื่องนอกกรอบ** ระบบบอกตรง ๆ และแสดง 11 หัวข้อที่ช่วยได้ ถ้า AI ใช้งานไม่ได้ตอนนั้น ระบบบอกว่ายังเข้าใจไม่ได้ ไม่เดา
 
 **ชุดข้อสอบ (ขั้น 3.3): วัดว่าผู้ช่วยเข้าใจคำขอได้แค่ไหน**
 1. **มีอะไรบ้าง:** คำขอสมมุติ 67 ข้อ ภาษาไทย 33 ข้อ ภาษาอังกฤษ 34 ข้อ ทุกข้อมีเฉลยว่าควรเป็นหัวข้อไหน หรือ "นอกกรอบ"
@@ -287,6 +308,57 @@ latency p50 1,578.6 ms and p95 2,287.0 ms. The five misses (two out-of-scope req
 word, one metaphor read as a neighbouring topic, two injections answered with the wrong topic) are listed
 in the note. No prompt or catalog was changed to fit them.
 
+## The page (roadmap 3.4)
+
+Code: `app/web/` (`index.html`, `app.js`, `app.css`); the page's general design is in
+[intake_queue.md](intake_queue.md#web-page). Nothing outside the page changed except one read-only addition
+to `/v1/status`: `limits.message_min_chars` and `limits.message_max_chars` (4 and 500, from
+`contracts.py`), so the box checks the same bounds as admission.
+
+**Where it is.** A switch above the message box chooses what the next message is: "เคสลูกค้า" (case triage,
+as before) or "อยากเรียน" (`study_guide.v1`). It is shown only when the catalog has the study guide. In study
+mode the box asks "อยากเรียนเรื่องอะไร", the button reads "ถาม", the case-id field is hidden, and four
+examples replace the case examples. They are the four requests of `examples/study_guide_demo.py`, so the
+run page of *Core logic tests* shows what each answers with the mock. Opening a case or a question from the
+list, or a link to one, switches the box to that kind; pressing a mode button starts something new of that
+kind and keeps any text already typed. The switch is temporary: the plain-language router (roadmap 4.2)
+will choose by itself.
+
+**Sending (ADR-023).** A question is sent when the person presses Enter, without the confirm card that a
+case shows first: it is information only (ADR-018), and the answer itself asks back. The idempotency key is
+kept until the question is admitted, so sending the same text again after a network error returns the same
+job instead of making a second one. The left list marks questions as "คำถามอยากเรียน" with the message as
+the preview, and a queued question can be cancelled like a case.
+
+**The answer** (`result.output`, read only when the job is `COMPLETED`):
+
+| Layer | Shown | Content |
+|---|---|---|
+| 1 | always | the status (ได้แผนการเรียน / อยู่นอกกรอบ / ยังเข้าใจคำขอไม่ได้) and the confidence; the one-line `summary`; the `restatement` with the `confirm_question`; the topic and its level; where to start (`start_with`) and, when that one is background, the `core` resource; how many resources; or, without a guide, every topic in `can_help_with`; a "แก้คำถาม" button that puts the question back in the box |
+| 2 | "ดูขั้นตอนการเรียน" | every step in order: the title as a link, kind, author and site, priority, level, language, cost, `purpose`, `focus` and the AI's `note`; the start marked "เริ่มที่นี่" |
+| 3 | "ดูรายละเอียด" | `why_this_order`, `prerequisites_left_out`, the explanation's source and why the AI's was unavailable, why detection was unavailable, masked personal data, the library tag (shortened) and the rules version, the five steps with their results, and the technical record (job, request and trace ids, AI, prompt, tokens, receipt) |
+
+- Labels come from the answer's codes (`status`, `level`, `priority`, `language`, `access`, `kind`) in
+  the page's own Thai words, equal to the study guide's Thai labels where it has them; the answer's own
+  texts stay in the person's language. A test keeps both vocabularies in step.
+- A link is made only for an `https://` address without spaces or quotes (`LIBRARY_LINK`), the only kind
+  the library holds; it opens in a new tab with `rel="noopener noreferrer"`, and the page sends no
+  referrer. Everything else from the server is inserted as text, as everywhere on the page.
+- With the mock AI the page says so: a note under a guide, and under an out-of-scope answer a warning that
+  a new phrasing or metaphor (such as "บรรณารักษ์ที่รู้ใจ") is out of scope for the mock, with the way to a real
+  model (the settings tab, which lists the Typhoon and Claude steps for Render).
+- The Flow panel says what each step produced (the topic and confidence, how many resources, where to
+  start, whether the AI or the library explained, the answer's status) and ends "ตอบแล้ว · ไม่ต้องรอคนตรวจ".
+- A failed, queued, running or cancelled question shows the step card, as a case does.
+
+**How it was checked (2026-11-07).** `tests/test_web_page.py` (below), and a headless-browser walkthrough of
+a local service with the mock AI: desktop (1440 and 1280 px), tablet (1024 px) and phone (390 px). It
+covered a Thai guide, an English guide, out of scope, the owner's metaphor, a refused short question,
+"แก้คำถาม", open layers surviving the 4-second refresh, switching modes and back, opening cases and questions
+from the list and from a link, and, served with answers the workflow produced under fault scenarios, AI
+unavailable for detection, the library's own text, masked personal data, and a failed, queued and running
+question. No console errors, no Content-Security-Policy violations, no horizontal overflow.
+
 ## What is in the library
 
 Data lives in `app/domains/study_guide/catalog/`; the loader and its checks are in
@@ -424,6 +496,14 @@ detection must be tested on phrases it was not shown.
     case-shaped input; `/v1/status` describes the five steps.
 - `examples/study_guide_demo.py`: *Core logic tests* runs four synthetic requests and shows the answers on
   the run page.
+- `tests/test_web_page.py` (roadmap 3.4): every example on the page passes its workflow's input contract;
+  the study examples are the demo's four requests and answer with the mock as the owner test says (a guide
+  of 5, an English guide of 2, and out of scope twice, the owner's metaphor included, with all 11 topics);
+  `/v1/status` gives both input limits; the page names every step of every workflow and has Thai words for
+  every answer code, equal to the study guide's own Thai labels; it never inserts server data as HTML and
+  has no inline script or style; it links only to https addresses, checked by its own pattern against every
+  library URL and seven bad addresses, and opens them with `rel="noopener noreferrer"`; the script parses
+  (Node.js, skipped when absent); the stylesheet's braces balance.
 - `tests/test_study_guide_eval.py` (roadmap 3.3):
   - **the request set:** what the roadmap asks for (both languages, every topic in both, metaphors,
     paraphrases, out of scope, injection, the owner's example), no catalog example, and 13 kinds of broken
@@ -437,10 +517,11 @@ detection must be tested on phrases it was not shown.
     and refuses a malformed baseline;
   - **the command line:** write, compare pass, compare fail (exit 3), and a broken promise (exit 1).
 
-## Not built yet (roadmap 3.4)
+## Still open
 
-- **3.4:** a box on the web page, and showing the layered answer.
-- **Also open:** a `chat` span for the `explain` call, and the first live Claude run of the scorecard (D2).
-  Its result goes into a dated evidence note, failures included, like Typhoon's first run.
+- **The owner's test of 3.4 on the live page** (ROADMAP 3.4). On the free plan the live page uses the mock
+  until the owner adds a real model in Render's Environment tab (ROADMAP 0.4).
+- A `chat` span for the `explain` call, and the first live Claude run of the scorecard (D2). Its result goes
+  into a dated evidence note, failures included, like Typhoon's first run.
 
 See [ROADMAP.md](ROADMAP.md#phase-3--study_guidev1-the-first-response-study-guide-the-second-domain).

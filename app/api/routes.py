@@ -37,6 +37,7 @@ from neuron_flow import __version__
 from neuron_flow.model import SpecError, decode
 
 from app.domains.case_triage.contracts import SUMMARY_MAX_CHARS, SUMMARY_MIN_CHARS
+from app.domains.study_guide.contracts import MESSAGE_MAX_CHARS, MESSAGE_MIN_CHARS
 from app.llm import LLMConfig, LLMConfigError
 from app.observability.tracing import Tracing, parse_traceparent
 from app.persistence import QUEUED, StateError
@@ -248,8 +249,10 @@ class ApiApp:
             "ai": {**llm, "simulated": llm.get("provider") == "mock", "problem": problem},
             "tracing": self.tracing.status(),
             "storage": {"kind": self.settings.storage, "persistent": self.settings.persistent},
+            # A case's summary (case_triage) and a study request's message (study_guide.v1), checked at admission.
             "limits": {"max_queued": self.settings.max_queued, "submit_per_minute": self.settings.submit_per_minute,
                        "summary_min_chars": SUMMARY_MIN_CHARS, "summary_max_chars": SUMMARY_MAX_CHARS,
+                       "message_min_chars": MESSAGE_MIN_CHARS, "message_max_chars": MESSAGE_MAX_CHARS,
                        "max_body_bytes": MAX_BODY_BYTES},
             "workflows": [{"name": w.name, "description": w.description, "steps": self._steps(w)}
                           for w in self.catalog.values()],

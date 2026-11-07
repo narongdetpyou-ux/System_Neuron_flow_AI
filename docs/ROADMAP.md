@@ -21,7 +21,7 @@ differs, this file and architecture.md win.
   - ถ้าสองฝ่ายเห็นไม่ตรงกัน เคสจะถูกยกให้คนดูก่อน
 - ถ้าเครื่องดับกลางทาง ระบบทำต่อได้ ส่งซ้ำก็ไม่เกิดงานซ้ำ
 - ยกเลิกเคสที่ยังรอคิวได้ และทุกคำขอมีรหัสคำขอ (request id) ไว้ไล่ดูใน log (ขั้น 1.2, 1.3)
-- ผ่านชุดทดสอบอัตโนมัติ 267 ข้อ และเปิดใช้ออนไลน์บน Render แล้ว ระบบปิดตัวอย่างเรียบร้อย และการแก้แค่เอกสารไม่ทำให้ Render ขึ้นเวอร์ชันใหม่ (ขั้น 0.1, 0.5)
+- ผ่านชุดทดสอบอัตโนมัติ 276 ข้อ และเปิดใช้ออนไลน์บน Render แล้ว ระบบปิดตัวอย่างเรียบร้อย และการแก้แค่เอกสารไม่ทำให้ Render ขึ้นเวอร์ชันใหม่ (ขั้น 0.1, 0.5)
 - หน้าเว็บเป็นแบบแชท: พิมพ์เคส ดูขั้นตอนก่อนส่ง กดยืนยัน แล้วติดตามใน Flow และประวัติเหตุการณ์ (ขั้น 1.6)
 - หน้าเว็บบอกว่ามีเคสรอกี่เคส เคสที่รอนานสุดรอมานานเท่าไร ปกติแต่ละเคสใช้เวลาเท่าไร และเคสที่ไม่สำเร็จล้มเพราะอะไร (ขั้น 5.3)
 - ถ้ามีคนแก้กฎหรือ prompt แล้วคำตอบของเคสทดสอบเคสไหนเปลี่ยน ช่องตรวจบน GitHub จะเป็นสีแดงและบอกว่าเคสไหนเปลี่ยนอะไร (ขั้น 5.2)
@@ -29,19 +29,20 @@ differs, this file and architecture.md win.
 - ทุกครั้งที่มีการส่งโค้ด GitHub สแกนหาคีย์หรือรหัสลับที่หลุดในประวัติโค้ดทั้งหมด และที่อยู่ Sentry (DSN) ไม่อยู่ในไฟล์แล้ว อ่านจากความลับ (secret) เท่านั้น (ขั้น 7.4 ส่วนเตรียมการ)
 - ส่งเส้นทางการทำงาน (trace) ของทุกเคสไป Honeycomb แล้ว: เห็นว่าแต่ละขั้นใช้เวลาเท่าไร ลองกี่ครั้ง และ AI ใช้ token เท่าไร โดยไม่ส่งข้อความเคสหรือคำตอบของ AI เปิดใช้บน Render แล้ว และเห็นเส้นทางแรกใน Honeycomb เมื่อ 4 พ.ย. 00:23 น. (ขั้น 5.1)
 - มีคลังแหล่งเรียนที่ตรวจแล้ว 17 แหล่งใน 11 หัวข้อ ทุกแหล่งบอกว่าใช้ทำอะไร ระดับไหน ภาษาอะไร และควรเน้นส่วนไหน และ GitHub เปิดทุกลิงก์ทุกวันจันทร์เพื่อจับลิงก์เสีย (ขั้น 3.1)
-- ผู้ช่วยแนะนำแหล่งเรียนทำงานได้แล้วผ่าน API: พิมพ์เรื่องที่อยากรู้ด้วยคำธรรมดา ได้แหล่งเรียนไม่เกิน 5 แหล่งเรียงพื้นฐานก่อน ทุกลิงก์มาจากคลัง ถ้าเรื่องอยู่นอกกรอบก็บอกตรง ๆ ว่าช่วยเรื่องไหนได้ ยังใช้แค่ AI จำลอง และยังไม่มีช่องบนหน้าเว็บ (ขั้น 3.2)
+- ผู้ช่วยแนะนำแหล่งเรียนทำงานได้แล้วผ่าน API: พิมพ์เรื่องที่อยากรู้ด้วยคำธรรมดา ได้แหล่งเรียนไม่เกิน 5 แหล่งเรียงพื้นฐานก่อน ทุกลิงก์มาจากคลัง ถ้าเรื่องอยู่นอกกรอบก็บอกตรง ๆ ว่าช่วยเรื่องไหนได้ (ขั้น 3.2) และตั้งแต่ขั้น 3.4 ใช้ได้บนหน้าเว็บ (ข้อสุดท้าย)
 - มีชุดข้อสอบของผู้ช่วยแนะนำแหล่งเรียน 67 ข้อ (ไทยและอังกฤษ คำเปรียบ คำพูดอ้อม เรื่องนอกกรอบ และคำสั่งแอบแฝง) GitHub รันทุกครั้งที่ส่งโค้ด ถ้ามีลิงก์นอกคลังหรือเกิน 5 แหล่งแม้ข้อเดียว หรือคำตอบข้อไหนเปลี่ยน ช่องตรวจจะเป็นสีแดง AI จำลองหาหัวข้อถูกแค่ 2 จาก 48 ข้อ ซึ่งไม่ใช่ความแม่นยำ ส่วนผลกับ AI จริงอยู่ในข้อถัดไป (ขั้น 3.3)
 - วัดผล AI จริงครั้งแรกแล้ว ฟรีผ่าน Typhoon ของ SCB 10X (เก่งภาษาไทย) เมื่อ 6 พ.ย.: รอบแรก AI ตอบไม่ได้เลย 0 จาก 5 เคส เพราะ Typhoon ไม่ทำตามช่องตั้งค่าที่ขอให้ตอบเป็น JSON แก้แล้วโดยบอกรูปแบบคำตอบเป็นคำพูดด้วย (ADR-022) หลังแก้ รันครบทั้งชุด: คัดแยกเคส AI ถูก 60 จาก 61 เคส ทั้ง 2 รอบ (กฎเดิมถูก 29) และผู้ช่วยแนะนำแหล่งเรียนหาหัวข้อถูก 46 จาก 48 ข้อ ไม่มีลิงก์นอกคลังเลย เคสเป็นของสมมุติที่ผู้พัฒนาเขียนเอง จึงยังไม่ใช่ความแม่นยำจริง และเป็นผลของ Typhoon ไม่ใช่ของ Claude ([บันทึกหลักฐาน](evidence/2026-11-06-first-live-typhoon.md); ขั้น 0.3, ADR-021, ADR-022)
+- หน้าเว็บมีช่อง "อยากเรียน" แล้ว: กดปุ่ม "อยากเรียน" เหนือช่องพิมพ์ พิมพ์เรื่องที่อยากรู้ แล้วกด Enter คำถามส่งทันที (ไม่มีขั้นยืนยันแบบเคส เพราะเป็นแค่คำแนะนำ) คำตอบขึ้นเป็นชั้น: สรุป 1 บรรทัด สิ่งที่ระบบเข้าใจพร้อมถามว่า "เข้าใจถูกไหม" แหล่งที่ควรเริ่มก่อนกับแหล่งที่สำคัญที่สุด แล้วกด "ดูขั้นตอนการเรียน" หรือ "ดูรายละเอียด" เมื่ออยากรู้เพิ่ม เรื่องนอกกรอบบอกตรง ๆ พร้อมรายการ 11 หัวข้อที่ช่วยได้ ถ้าช่อง AI มุมซ้ายล่างขึ้นว่า "AI จำลอง" คำเปรียบใหม่ ๆ อย่าง "บรรณารักษ์ที่รู้ใจ" จะถูกตอบว่านอกกรอบ และหน้าเว็บบอกเหตุผลไว้ เปิด Typhoon ได้ฟรีตามขั้นตอนในแท็บ "ตั้งค่า" (ขั้น 3.4, ADR-023)
 
 **ลำดับต่อจากนี้** แต่ละขั้นจบด้วยสิ่งที่คุณลองเองได้
 
-| ขั้น | ทำอะไร | คุณจะได้ลองอะไร | สถานะ (6 พ.ย. 2026) |
+| ขั้น | ทำอะไร | คุณจะได้ลองอะไร | สถานะ (7 พ.ย. 2026) |
 |---|---|---|---|
 | 0 | เปิดใช้ออนไลน์บน Render และวัดผล AI จริงครั้งแรก | ใส่เคสบนหน้าเว็บจริง และอ่านผลวัดของ AI จริง | ออนไลน์แล้ว; วัดผล AI จริงครั้งแรกแล้วด้วย Typhoon (0.3, 6 พ.ย.); ที่เหลือรอคุณตัดสินใจเรื่องเงิน (D1 แผน Render, D2 API key ของ Claude) |
 | 1 | เก็บงานเล็ก ๆ ให้ระบบแน่นขึ้น | ยกเลิกเคสที่ยังรอคิวได้ | เสร็จ ยกเว้น 1.4 (สำรองข้อมูล) ที่ต้องใช้แผน Render แบบเสียเงิน |
 | 2 | ให้คนรีวิวได้จริง: ผู้รีวิวมีรหัสของตัวเอง กดอนุมัติหรือไม่อนุมัติได้ และ n8n แจ้งเตือน | กล่อง "รอรีวิว" บนหน้าเว็บ และข้อความแจ้งเตือน | ยังไม่เริ่ม |
-| 3 | ผู้ช่วยแนะนำแหล่งเรียน (`study_guide.v1`) ตามหลักปรัชญาของคุณ | พิมพ์เรื่องที่อยากรู้ด้วยคำธรรมดา แล้วได้แหล่งเรียนไม่เกิน 5 แหล่งพร้อมลำดับการเรียน | เริ่มแล้ว (คุณเลือกขั้นนี้ก่อนขั้น 2 เมื่อ 5 พ.ย.): 3.1 คลังแหล่งเรียน 3.2 ตัวผู้ช่วย และ 3.3 ชุดข้อสอบ ทำแล้ว (ดูตัวอย่างคำตอบและผลข้อสอบใน Actions ได้); 3.4 ช่องบนหน้าเว็บ ยังไม่ทำ; รันกับ AI จริง (Typhoon) แล้ว หาหัวข้อถูก 46 จาก 48 ข้อ ไม่มีลิงก์นอกคลัง (Claude รอ D2) |
-| 4 | ช่องคุยภาษาธรรมดา: ระบบเข้าใจว่าคุณขออะไร บอกตรง ๆ เมื่อเรื่องอยู่นอกกรอบ และถามกลับ 1 คำถามเมื่อข้อมูลไม่พอ | คุยกับระบบได้เลย ไม่ต้องเลือกประเภทงานเอง | ยังไม่เริ่ม (ต้องรอขั้น 3) |
+| 3 | ผู้ช่วยแนะนำแหล่งเรียน (`study_guide.v1`) ตามหลักปรัชญาของคุณ | พิมพ์เรื่องที่อยากรู้ด้วยคำธรรมดา แล้วได้แหล่งเรียนไม่เกิน 5 แหล่งพร้อมลำดับการเรียน | เริ่มแล้ว (คุณเลือกขั้นนี้ก่อนขั้น 2 เมื่อ 5 พ.ย.): 3.1 คลังแหล่งเรียน 3.2 ตัวผู้ช่วย และ 3.3 ชุดข้อสอบ ทำแล้ว (ดูตัวอย่างคำตอบและผลข้อสอบใน Actions ได้); 3.4 ช่อง "อยากเรียน" บนหน้าเว็บ สร้างแล้ว รอคุณลองบนหน้าเว็บจริงหลัง merge; รันกับ AI จริง (Typhoon) แล้ว หาหัวข้อถูก 46 จาก 48 ข้อ ไม่มีลิงก์นอกคลัง (Claude รอ D2) |
+| 4 | ช่องคุยภาษาธรรมดา: ระบบเข้าใจว่าคุณขออะไร บอกตรง ๆ เมื่อเรื่องอยู่นอกกรอบ และถามกลับ 1 คำถามเมื่อข้อมูลไม่พอ | คุยกับระบบได้เลย ไม่ต้องเลือกประเภทงานเอง | ยังไม่เริ่ม (ขั้น 3 สร้างครบแล้ว เริ่มได้เมื่อคุณเลือก) |
 | 5 | ติดตามเส้นทางของแต่ละงาน (เวลา token จุดที่ช้า) และด่านตรวจผลรายเคส | ตัวเลขคิวและเวลาบนหน้าเว็บ ช่องตรวจบน PR แล้วต่อด้วยเส้นทางงานใน Honeycomb | เสร็จแล้วทั้ง 5.1, 5.2 และ 5.3; เส้นทางงานแรกเข้า Honeycomb เมื่อ 4 พ.ย. 00:23 น. |
 | 6 | AI วางแผนงานหลายขั้น ระบบตรวจแผนก่อนรัน และเครื่องมืออื่นเรียกใช้ผ่าน MCP ได้ | สั่งงานจากแอป Claude ได้ | ยังไม่เริ่ม (ต้องรอขั้น 2–4) |
 | 7 | เตรียมพร้อมก่อนให้คนอื่นใช้ หรือก่อนเปิด repo สาธารณะ | รายงานตรวจความปลอดภัย และรายการตรวจก่อนเปิดตัว | เริ่มแล้ว: 7.1 ปิดข้อมูลส่วนตัวก่อนส่งให้ AI ทำแล้ว ส่วนการจำกัดว่าใครเห็นคีย์ AI ได้ เขียนแผนไว้ ยังไม่ทำ; 7.4 ส่วนเตรียมการ (สแกนหาคีย์ที่หลุด และย้าย DSN ไปเป็นความลับ) ทำแล้ว ที่เหลือรอคุณตัดสินใจ (D5) |
@@ -104,7 +105,7 @@ Marks: ✅ done · 🟡 built or partly checked (the status says what is left) �
 | 3.1 | Topic catalog and verified resource library | ✅ PR #32; links checked by *Study library link check* on the PR ([evidence note](evidence/2026-11-05-study-library-links.md)); the weekly run starts after the merge | — |
 | 3.2 | `study_guide.v1` workflow | ✅ PR #33; mock AI only, no live run yet (Typhoon ready, Claude needs D2) | 3.1 |
 | 3.3 | Study-guide evaluation set and scorecard | ✅ PR #34 with the mock in CI (an eval gate); first live run with Typhoon on 2026-11-06 (PR #38): topic correct 46/48, 0 of 142 links outside the library; Claude after D2 | 3.2 |
-| 3.4 | Study guide on the web page | ⬜ | 3.2 |
+| 3.4 | Study guide on the web page | 🟡 built in PR #39: a case / study switch above the box, a layered answer, questions sent without a confirm card (ADR-023); the owner test runs on the live page after the merge | 3.2 |
 | 4.1 | The frame: a versioned catalog of what the system can do | ⬜ | 3.2 |
 | 4.2 | `intake.route.v1`: the plain-language router | ⬜ | 4.1 |
 | 4.3 | Layered answers (summary → steps → details) | ⬜ | 4.2 |
@@ -258,6 +259,11 @@ decisions would vanish on every sleep.
   3. Submit three cases and check that the AI's second opinion and reason appear.
   4. Check Sentry for warnings.
 - **Cost:** each case makes one short Claude request.
+- **Free option (added 2026-11-07, with 3.4):** Typhoon instead of Claude (ADR-021). The owner adds
+  `NEURON_FLOW_LLM_PROVIDER=typhoon` and `TYPHOON_API_KEY` as new rows in the Environment tab, then the
+  same checks. Case triage and the study guide then both use it; a study question makes one or two calls.
+  Typhoon collects usage data, so synthetic data only. The settings tab of the page lists these steps, and
+  how to go back to the mock.
 - **Changing the model or prompt later** is a new agent version. Jobs caught mid-way then fail as
   `configuration_changed`, by design.
 
@@ -674,7 +680,7 @@ detect_topic (AI) ─► pick_resources (rules) ─► build_path (rules) ─►
     library fails with `LibraryChanged`, and Core refuses changed agent versions.
   - The decision to end `COMPLETED` is ADR-018 in architecture.md.
   - In the catalog as `study_guide.v1`, so the API accepts `{"message": …}`. The page's settings tab lists its
-    steps; the page has no box for it yet (3.4).
+    steps; the box on the page came with 3.4.
   - `examples/study_guide_demo.py` runs in *Core logic tests* and shows four answers on the run page.
   - The mock provider now has one simulation per prompt. The study guide's mock counts words taken from
     the catalog examples (all 66 map to their own topic), so it cannot read a new metaphor: the owner's
@@ -731,10 +737,56 @@ detect_topic (AI) ─► pick_resources (rules) ─► build_path (rules) ─►
 
 - **The page:** a form, "อยากเรียนเรื่องอะไร". The answer shows the summary first, with "ดูขั้นตอน" and
   "ดูรายละเอียด" to expand.
-- **Owner test (ไทย):**
-  1. พิมพ์ "อยากให้ระบบเป็นเหมือนบรรณารักษ์ที่รู้ใจ" ต้องได้แหล่งเรียนไม่เกิน 5 แหล่ง ทุกแหล่งบอกว่าใช้ทำอะไร
-     ระดับไหน ภาษาอะไร และควรเริ่มอันไหนก่อน
-  2. พิมพ์เรื่องนอกกรอบ เช่น สูตรต้มยำ ระบบต้องบอกตรง ๆ ว่าเรื่องนี้อยู่นอกสิ่งที่ช่วยได้
+- **Status (2026-11-07): built in PR #39; the owner test on the live page follows the merge.** Details:
+  [study_guide.md](study_guide.md#the-page-roadmap-34) and [intake_queue.md](intake_queue.md#web-page).
+  - *Where the box is:* a switch above the message box, "เคสลูกค้า" or "อยากเรียน". In study mode the box
+    asks "อยากเรียนเรื่องอะไร", accepts 4–500 characters, offers four examples and sends with Enter (button
+    "ถาม"). The examples are the four requests of `examples/study_guide_demo.py`, so the run page of *Core
+    logic tests* shows what each one answers. Opening a case or a question from the list switches the box to
+    that kind. The switch is temporary: the router (4.2) will choose by itself.
+  - *Changed from the plan:* a question is sent at once, without the confirm card that cases have (ADR-023).
+    It decides nothing (ADR-018), and the answer itself asks "เข้าใจถูกไหม", with a "แก้คำถาม" button that puts
+    the question back in the box. The settings tab states the rule; a case still waits for "ยืนยันและส่ง".
+  - *The layers:* (1) always shown: the one-line summary, what the system understood with its confidence
+    and "เข้าใจถูกไหม", the topic and its level, where to start, and the most important resource when that is
+    a different one (design_philosophy.md, first-response rule 4); (2) "ดูขั้นตอนการเรียน": every resource in
+    order with its priority, level, language, cost, kind and author, what it is for, which parts to read
+    first, and the AI's note; (3) "ดูรายละเอียด": why this order, background topics left out by the budget
+    of 5, where the explanation came from and why, masked personal data, the library tag and rules version,
+    the five steps with their results, and the technical record. Out of scope and "could not understand"
+    list the 11 topics the guide covers instead of a plan. Labels come from the answer's codes, in Thai;
+    the answer's own texts stay in the person's language.
+  - *Also added:* `/v1/status` gives the question limits (`message_min_chars`, `message_max_chars`); the
+    Flow panel says what each study step produced and ends "ตอบแล้ว · ไม่ต้องรอคนตรวจ"; the settings tab
+    explains how to switch the online page to Typhoon (free) or Claude, and back (see 0.4).
+  - *Honest about the mock:* with the mock AI the page says it is a keyword simulation and that a new
+    metaphor such as "บรรณารักษ์ที่รู้ใจ" is answered as out of scope, and points to the settings tab.
+  - *Checks:* `tests/test_web_page.py` (9 tests): every example passes its input contract, and the study
+    examples answer with the mock as this owner test says; both limits in `/v1/status`; a Thai name for
+    every step of every workflow and Thai words for every answer code, equal to the study guide's own Thai
+    labels; no HTML insertion, no inline script or style; links only to https addresses, opened in a new
+    tab with `rel="noopener noreferrer"`; the script parses (Node.js, present on GitHub's runners). Fed
+    deliberately broken copies of the page, the tests failed every time (8 of 8). A headless-browser
+    walkthrough (desktop 1440 and 1280 px, tablet 1024 px, phone 390 px) covered every state, including AI
+    unavailable, the library's own text, masked personal data, and a failed, queued and running question,
+    with no console errors, CSP violations or horizontal overflow.
+  - *Phase gate:* zero Core changes (`git diff main -- neuron_flow/` is empty in this PR); every validator
+    was tested in 3.2; the scorecard is recorded (3.3, mock in CI and Typhoon by hand). Both eval gates
+    still pass unchanged.
+- **Owner test (ไทย)** หลัง merge รอ Render ขึ้นเวอร์ชันใหม่ประมาณ 3–5 นาที แล้ว:
+  1. เปิดหน้าเว็บ ใส่รหัสเข้าใช้ เหนือช่องพิมพ์ต้องมีปุ่ม "เคสลูกค้า" กับ "อยากเรียน" กด "อยากเรียน"
+     ช่องพิมพ์ต้องขึ้นว่า "อยากเรียนเรื่องอะไร" และมีตัวอย่าง 4 ปุ่ม
+  2. กดตัวอย่าง "รั้วกั้น AI" แล้วกด Enter ภายในไม่กี่วินาทีต้องขึ้นกล่องคำตอบ: สรุป 1 บรรทัด, "ระบบเข้าใจว่า … เข้าใจถูกไหม",
+     แหล่งที่ "เริ่มที่" กับแหล่งที่ "สำคัญที่สุด" และ "ทั้งหมด 5 แหล่ง"
+  3. กด "ดูขั้นตอนการเรียน" ต้องเห็น 5 แหล่งเรียงกัน ทุกแหล่งบอกว่าใช้ทำอะไร ระดับไหน ภาษาอะไร ฟรีหรือเสียเงิน แหล่งแรกมีป้าย
+     "เริ่มที่นี่" และกดชื่อแหล่งแล้วลิงก์เปิดในแท็บใหม่ จากนั้นกด "ดูรายละเอียด" ต้องเห็นเหตุผลที่เรียงแบบนี้และ 5 ขั้นตอนที่ระบบทำ
+  4. กดตัวอย่าง "สูตรต้มยำ (นอกกรอบ)" แล้วกด Enter ต้องขึ้น "อยู่นอกกรอบ" พร้อมรายการ 11 หัวข้อที่ผู้ช่วยแนะนำได้
+  5. กดตัวอย่าง "บรรณารักษ์ที่รู้ใจ" แล้วกด Enter
+     - ถ้าช่อง AI มุมซ้ายล่างขึ้นว่า "AI จำลอง": ต้องขึ้น "อยู่นอกกรอบ" พร้อมกล่องสีเหลืองบอกว่า AI จำลองอ่านคำเปรียบไม่ออก
+       (เป็นข้อจำกัดที่หน้าเว็บบอกตรง ๆ ไม่ใช่ระบบพัง)
+     - ถ้าเปิด Typhoon แล้ว (แท็บ "ตั้งค่า" → "AI ที่ใช้อยู่" มีขั้นตอน): ต้องได้แหล่งเรียนไม่เกิน 5 แหล่ง ทุกแหล่งบอกว่าใช้ทำอะไร
+       ระดับไหน ภาษาอะไร และควรเริ่มอันไหนก่อน
+  6. กด "แก้คำถาม" คำถามเดิมต้องกลับไปอยู่ในช่องพิมพ์ แล้วกด "เคสลูกค้า" ส่งเคสตัวอย่าง เคสต้องยังขึ้นการ์ด "รอยืนยัน" เหมือนเดิม
 - **Phase gate:**
   - zero Core changes (show the Core diff in the PR);
   - every validator tested;
@@ -1140,3 +1192,8 @@ workflow types.
   0 of 142 links outside the library; 0.3 path A is done ([evidence note](evidence/2026-11-06-first-live-typhoon.md)).
   The triage run page now also lists the AI's own mistakes, because this session cannot download a run's
   per-case report.
+- 2026-11-07: 3.4 built in PR #39 (the owner asked to start it). A switch above the box chooses a case or a
+  study question; a question is sent without the confirm card (ADR-023), because it decides nothing and its
+  answer asks "เข้าใจถูกไหม". The layered answer also names the most important resource when the first one is
+  background (first-response rule 4). 0.4 gained the free Typhoon option, because the owner test's metaphor
+  needs a real model on the online page. Marked 🟡 until the owner tests it on the live page.
