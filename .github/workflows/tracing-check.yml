@@ -6,6 +6,9 @@ name: Tracing check (OpenTelemetry Collector)
 on:
   push:
   pull_request:
+permissions:
+  contents: read
+
 jobs:
   otlp:
     runs-on: ubuntu-latest

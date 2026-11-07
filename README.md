@@ -6,6 +6,21 @@ the Python standard library; `sentry-sdk` is an optional extra.
 
 > ภาษาไทย: ระบบที่คุยด้วยภาษาธรรมดา แต่ภายในทำงานลึกและตรวจสอบได้ ดู [หลักปรัชญาการออกแบบ](docs/design_philosophy.md)
 
+## For visitors
+
+- **Status:** an early prototype kept by one person. It runs on synthetic data only and is not ready for real
+  users; see [Scope and limits](#scope-and-limits). The online demo answers `/v1` requests only with an access
+  key that is not published.
+- **How it is built:** the code and docs are written by Claude Code, Anthropic's AI coding agent, under the
+  owner's direction. Changes go through pull requests with automated tests and an automated review, and the
+  owner decides what is merged. Numbers in the docs are measured, and the docs say when a result comes from
+  the mock AI or from one live model.
+- **History:** the git history is kept in full, including the earlier application this project was extracted
+  from ([Origin](#origin)).
+- **Questions and bugs:** open an issue. **Security problems:** report them privately, as
+  [SECURITY.md](SECURITY.md) describes.
+- **License:** [GPL-3.0-only](LICENSE).
+
 ## Design philosophy
 
 Set by the project owner, and the compass for every feature ([full text](docs/design_philosophy.md)):
@@ -118,7 +133,7 @@ forgets its cases when it sleeps or redeploys; a paid plan with a disk keeps the
 
 **Locally (Python 3.10+):**
 ```bash
-python -m unittest discover -s tests -v        # 289 tests
+python -m unittest discover -s tests -v        # 291 tests
 python -m examples.case_triage_demo            # v1 rules, one synthetic case
 python -m examples.case_triage_shadow_demo     # v2 shadow mode, three synthetic cases (offline mock AI)
 python -m app.eval.triage_shadow_eval          # scorecard on 61 synthetic cases
@@ -145,6 +160,7 @@ most 1 MiB. The agent `version` is frozen into each job, so an old job refuses t
 |---|---|
 | [Roadmap](docs/ROADMAP.md) | What to build next, in order: tasks, acceptance checks, owner tests and owner decisions |
 | [CLAUDE.md](CLAUDE.md) | How Claude Code works on this repo: working with the owner, rules, checks, definition of done |
+| [Security policy](SECURITY.md) | How to report a vulnerability privately, and what is in scope |
 | [Design philosophy](docs/design_philosophy.md) | The owner's principles, the first-response rule and study resources (mostly Thai) |
 | [Architecture](docs/architecture.md) | Layers, Core constraints, how AI fits, decisions (ADRs), milestones and their status |
 | [case_triage v1](docs/case_triage_pilot.md) | The deterministic keyword rules |

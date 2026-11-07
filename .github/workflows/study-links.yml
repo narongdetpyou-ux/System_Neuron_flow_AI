@@ -16,6 +16,9 @@ on:
     paths:
       - "app/domains/study_guide/**"
       - ".github/workflows/study-links.yml"
+permissions:
+  contents: read
+
 jobs:
   links:
     runs-on: ubuntu-latest

@@ -7,6 +7,9 @@ name: Service container (same build as Render)
 on:
   push:
   pull_request:
+permissions:
+  contents: read
+
 jobs:
   blueprint:
     runs-on: ubuntu-latest
