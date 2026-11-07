@@ -60,13 +60,13 @@ These facts do **not** imply any of the following:
 
 ## Non-negotiable before a public open-source application
 
-- **The repository is private.** A license in a private repository does not create public availability or
-  user adoption. Before publishing anything, the owner must decide what to publish and check secrets,
-  provenance and rights.
+- **The repository has been public since 2026-11-08, with its full history** (ROADMAP 7.4, D5). Being
+  public does not show user adoption, and provenance and rights stay the owner's to confirm in any
+  application.
   - Since 2026-11-03 (PR #29) the Sentry smoke workflow reads its DSN only from a repository secret, and
     *Actions → Secret scan* checks every commit of every branch with gitleaks. Its one reviewed finding is
-    the old DSN, still in the history: revoke that key in Sentry before going public. It is submit-only and
-    rate-limited, but it should not be public.
+    the old DSN, still in the history; before the switch the owner replaced it and reported it disabled.
+    It was submit-only and rate-limited.
 - **No outside evidence yet.** No third-party users, testimonials or security certifications have been
   evidenced. Never fill these fields with synthetic numbers.
 - **Applicant facts are unverified.** This pack does not verify the applicant's identity, residence and

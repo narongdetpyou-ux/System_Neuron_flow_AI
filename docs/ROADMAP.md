@@ -46,7 +46,7 @@ differs, this file and architecture.md win.
 | 4 | ช่องคุยภาษาธรรมดา: ระบบเข้าใจว่าคุณขออะไร บอกตรง ๆ เมื่อเรื่องอยู่นอกกรอบ และถามกลับ 1 คำถามเมื่อข้อมูลไม่พอ | คุยกับระบบได้เลย ไม่ต้องเลือกประเภทงานเอง | ยังไม่เริ่ม (ขั้น 3 สร้างครบแล้ว เริ่มได้เมื่อคุณเลือก) |
 | 5 | ติดตามเส้นทางของแต่ละงาน (เวลา token จุดที่ช้า) ด่านตรวจผลรายเคส และแผนทดสอบ 3 ขั้นด้วยข้อมูลเปิด | ตัวเลขคิวและเวลาบนหน้าเว็บ ช่องตรวจบน PR แล้วต่อด้วยเส้นทางงานใน Honeycomb; ผลด่านความทนทานในหน้าสรุปของ *Core logic tests* | เสร็จแล้วทั้ง 5.1, 5.2, 5.3 และ 5.4; เส้นทางงานแรกเข้า Honeycomb เมื่อ 4 พ.ย. 00:23 น.; ด่านความทนทาน (5.4) รวมเข้า main แล้ว 7 พ.ย.; แก้ 8 bug ที่เจอแล้ว (5.5, PR #42 รวมแล้วเมื่อ 8 พ.ย.); ต่อไปคือตัดสินใจเรื่องจุดอ่อน (gap) 44 จุดที่เหลือ แล้วขั้นข้อสอบกลาง (5.6) และขั้นโจมตีกับใช้งานจริง (5.7) |
 | 6 | AI วางแผนงานหลายขั้น ระบบตรวจแผนก่อนรัน และเครื่องมืออื่นเรียกใช้ผ่าน MCP ได้ | สั่งงานจากแอป Claude ได้ | ยังไม่เริ่ม (ต้องรอขั้น 2–4) |
-| 7 | เตรียมพร้อมก่อนให้คนอื่นใช้ หรือก่อนเปิด repo สาธารณะ | รายงานตรวจความปลอดภัย และรายการตรวจก่อนเปิดตัว | เริ่มแล้ว: 7.1 ปิดข้อมูลส่วนตัวก่อนส่งให้ AI ทำแล้ว ส่วนการจำกัดว่าใครเห็นคีย์ AI ได้ เขียนแผนไว้ ยังไม่ทำ; 7.4 เตรียมเปิด repo นี้เป็นสาธารณะพร้อมประวัติทั้งหมดแล้ว (คุณเลือกเมื่อ 8 พ.ย.) เหลือขั้นที่คุณกดเอง: เปลี่ยนคีย์ Sentry เก่า ลบ branch เก่า แล้วกดเปิด (D5) |
+| 7 | เตรียมพร้อมก่อนให้คนอื่นใช้ หรือก่อนเปิด repo สาธารณะ | รายงานตรวจความปลอดภัย และรายการตรวจก่อนเปิดตัว | เริ่มแล้ว: 7.1 ปิดข้อมูลส่วนตัวก่อนส่งให้ AI ทำแล้ว ส่วนการจำกัดว่าใครเห็นคีย์ AI ได้ เขียนแผนไว้ ยังไม่ทำ; 7.4 เสร็จ: repo นี้เป็นสาธารณะพร้อมประวัติทั้งหมดตั้งแต่ 8 พ.ย. (D5) เปลี่ยนคีย์ Sentry แล้ว และเปิดระบบสแกนคีย์ของ GitHub แล้ว |
 
 **เรื่องที่คุณต้องตัดสินใจเอง** อยู่ในตาราง [Owner decisions](#owner-decisions) ข้างล่าง เช่น
 - จะจ่ายค่า Render เพื่อให้เคสไม่หายหรือไม่
@@ -124,7 +124,7 @@ Marks: ✅ done · 🟡 built or partly checked (the status says what is left) �
 | 7.1 | Mask personal data before AI calls; narrow key exposure | 🟡 masking built in PR #28; key exposure: design note only | before any real data |
 | 7.2 | Production HTTP server and authentication hardening | ⬜ | before other users |
 | 7.3 | Independent security review | ⬜ owner | 7.1, 7.2 |
-| 7.4 | Public-release checklist | 🟡 ready except the owner's clicks: D5 chosen on 2026-11-08 (publish this repository with its full history); history audited, the 7 run logs that could print the old DSN deleted, read-only workflow tokens, README section for visitors and SECURITY.md (PR #44); the owner replaces the old DSN, deletes the merged branches and switches the visibility | — |
+| 7.4 | Public-release checklist | ✅ public since 2026-11-08 with its full history (D5): history audited, the 7 run logs that could print the old DSN deleted, read-only workflow tokens, README section for visitors and SECURITY.md (PR #44); the owner replaced the Sentry DSN, deleted the merged branches, switched the visibility and turned on secret scanning, push protection and private vulnerability reporting | — |
 | 7.5 | Consented pilot with real volunteers | ⬜ owner decision D4 | 7.1–7.3 |
 
 Phase 2 can be built and tested without a disk. Real use needs D1 = paid: on the free plan, tokens and
@@ -1170,13 +1170,16 @@ workflow types.
     session without gitleaks catches a pasted key before it is pushed.
   - [x] **Owner:** the DSN is in the repository secret `SENTRY_DSN` (the smoke test sent its event on
     2026-11-03).
-  - [ ] **Owner, before going public:** revoke the old DSN in Sentry (Settings → Client Keys), create a new
-    one and put it in the secret, because the old one stays readable in the history.
-  - [ ] **Owner, when going public:** turn on GitHub's secret scanning, push protection and private
+  - [x] **Owner, before going public:** revoke the old DSN in Sentry (Settings → Client Keys), create a new
+    one and put it in the secret, because the old one stays readable in the history. Done on 2026-11-08: a
+    new client key is in the secret (the smoke test's events arrived in Sentry) and in Render, and the owner
+    reported the old key disabled (it stays in Sentry's list of keys).
+  - [x] **Owner, when going public:** turn on GitHub's secret scanning, push protection and private
     vulnerability reporting (free for public repositories); confirm the rights and the license. The AI
-    disclosure and the README section for outsiders are done (PR #44).
-- **Status (2026-11-08): the owner chose D5 = publish this repository with its full history** (offered: a
-  clean public copy, the full history, or a rewrite). Ready except the owner's clicks.
+    disclosure and the README section for outsiders are done (PR #44). All three are on (checked through
+    the API on 2026-11-08), and the owner published the repository under GPL-3.0-only.
+- **Status (2026-11-08): ✅ public with its full history (D5)** (offered: a clean public copy, the full
+  history, or a rewrite). The owner did the clicks below the same day.
   - Audit of everything that becomes public: 107 commits on every branch and the 43 pull-request refs (989
     blobs), 473 Actions runs and the current files. One secret: the old DSN, the "CI and development" client
     key, the only one of the project's 3 client keys that appears in the history. No other key.
@@ -1190,10 +1193,12 @@ workflow types.
   - [x] Every workflow's token is read-only and none uses `pull_request_target`
     (`tests/test_workflow_permissions.py`, PR #44).
   - [x] A README section for visitors with the AI-assistance disclosure, and `SECURITY.md` (PR #44).
-  - [ ] **Owner, before the switch:** replace the old DSN (owner test steps 1–5); delete the 8 merged branches,
+  - [x] **Owner, before the switch:** replace the old DSN (owner test steps 1–5); delete the 8 merged branches,
     which hold no unmerged commit (this session's proxy refuses branch deletion), and turn on "Automatically
-    delete head branches"; optionally keep new commits' e-mail private (GitHub Settings → Emails).
-  - [ ] **Owner, the switch (D5):** Settings → Danger Zone → Change visibility → Public.
+    delete head branches"; optionally keep new commits' e-mail private (GitHub Settings → Emails). Done: only `main` is left, and
+    head branches are deleted automatically.
+  - [x] **Owner, the switch (D5):** Settings → Danger Zone → Change visibility → Public. Public since
+    2026-11-08: a request without a token sees the repository and its GPL-3.0 license.
 - **Owner test (ไทย) — ขั้นตอนก่อนและหลังกดเปิดสาธารณะ:**
   1. **เปลี่ยนคีย์ Sentry:** เปิด Sentry → Settings → Projects → neuron-flow-runtime → Client Keys (DSN)
      → Generate New Key แล้วคัดลอกค่า DSN ของคีย์ใหม่
@@ -1237,7 +1242,7 @@ workflow types.
 | D2 | Claude API key and monthly spend limit | 0.3 path B, 0.4 with Claude | Key as a GitHub secret and/or in Render's Environment tab; spend limit in the Claude Console | Typhoon (free, rate-limited) for live measurement; the mock everywhere else |
 | D3 | Who reviews, and how they are told | 2.5 | Owner only · named reviewers; e-mail, LINE or Slack | Owner only, no notifications |
 | D4 | Real data | 7.5 | Synthetic only · consented pilot | Synthetic only |
-| D5 | Public repository and funding application | 7.4 | Stay private · publish an approved snapshot · publish this repository with its full history (chosen on 2026-11-08) | Private until the owner switches it after the 7.4 owner steps |
+| D5 | Public repository and funding application | 7.4 | Stay private · publish an approved snapshot · publish this repository with its full history (chosen on 2026-11-08) | Public since 2026-11-08 |
 | D6 | The AI's role in triage | after 2.8 has enough reviewed cases | Keep shadow mode · AI suggestion first, still with human review | Shadow mode (ADR-010) |
 
 ## Evidence track
@@ -1339,3 +1344,4 @@ workflow types.
 - 2026-11-08: 5.4 marked ✅ (PR #41 merged after the owner checked the run page). 5.5's 8 bugs fixed in PR #42, because the owner asked to start. Intake turns every parse failure and every input Core cannot store into 400, and the gateway cleans a lone surrogate in AI text to U+FFFD instead of refusing the answer as planned, so the case keeps the AI's second opinion. Correction: the stage-1 note said all 8 were fixable outside Core. Seven are; SYN-COR-040 tests Core's own `decode()`, so it needed a Core change, recorded as ADR-025 and kept as its own commit. Re-run: 215/270 pass, 0 bugs, 44 gaps (the gap SYN-COR-041 passes too). 5.5 stays 🟡 for the gap decisions.
 - 2026-11-08: 3.4 marked ✅: the owner tried the study box on the live page with the mock AI (the example "รั้วกั้น AI" got the layered answer: a one-line summary, "เข้าใจถูกไหม", where to start, the most important resource, the study steps and the details). PR #42 merged; after its deploy the owner's case `WEB-261108-7C8Z` still reached review (rules and the mock AI disagreed, so it was escalated). The docs that still called both of them waiting now say they are done.
 - 2026-11-08: 7.4: the owner chose D5 = publish this repository with its full history, from three options (a clean public copy, the full history, a rewrite; a rewrite cannot hide what GitHub's read-only pull-request refs keep). Everything that becomes public was audited; the 7 *Sentry smoke test* runs whose logs could print the old DSN were deleted; every workflow's token is now read-only, with a test; the README has a section for visitors with the AI-assistance disclosure, and `SECURITY.md` was added (PR #44). Left for the owner: replace the old DSN, delete the 8 merged branches, then the switch.
+- 2026-11-08: 7.4 marked ✅ and D5 done: the owner replaced the Sentry DSN (a new key in the secret and in Render, the old key reported disabled), deleted the merged branches, turned on automatic branch deletion, switched the repository to public and turned on secret scanning, push protection and private vulnerability reporting. Checked through the GitHub API, the Render log and Sentry.
