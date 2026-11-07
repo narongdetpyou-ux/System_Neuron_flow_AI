@@ -22,6 +22,10 @@ trusted agents in bounded child processes, retries, recovers after a crash and w
   most 5 library resources in study order (roadmap 3.1, 3.2). It ends `COMPLETED` without review (ADR-018).
   The page has a box for it (3.4): a switch above the message box chooses a case or a study question, and a
   question is sent without the confirm card that cases have (ADR-023), then answered in layers.
+- a robustness benchmark (`tests/robustness/`, roadmap 5.4; plan in
+  [docs/benchmarking.md](docs/benchmarking.md)): 270 hard synthetic edge cases and four pinned open datasets
+  (BLNS, JSONTestSuite, CLINC150, BANKING77; ADR-024) through every layer. It is a CI gate on every outcome,
+  failures included; its first run found 8 bugs that 5.5 fixes.
 
 All data is synthetic. Milestones A, A2 and B are done.
 
@@ -108,7 +112,8 @@ Read in this order when you need depth:
    - Core has no dependencies. The app's only dependency is the optional `sentry-sdk`.
    - A new dependency needs a reason in the PR, should be optional where possible, and is added to the
      `Dockerfile`, `pyproject.toml` and `.claude/hooks/session-start.sh` together.
-9. **Synthetic data only.** Personal data is masked before every AI call (ROADMAP 7.1, `app/llm/redaction.py`),
+9. **Synthetic data only.** Open datasets count as synthetic only under ADR-024 (written for the dataset, openly
+   licensed, no real people's records, pinned and attributed). Personal data is masked before every AI call (ROADMAP 7.1, `app/llm/redaction.py`),
    but the masking is pattern-based and misses names without a title, addresses and more. Real data waits
    for the owner's decision D4, after 7.2 and 7.3.
 10. **Do not build P2 items early.** That means multi-tenancy, distributed workers, Postgres, object
@@ -122,12 +127,13 @@ If a task seems to need breaking a rule:
 ## 4. Checking your work
 
 ```bash
-python -m unittest discover -s tests -v        # all tests (276 on 2026-11-07); Python 3.10–3.13
+python -m unittest discover -s tests -v        # all tests (284 on 2026-11-07); Python 3.10–3.13
 python -m examples.case_triage_demo            # v1 rules, one synthetic case
 python -m examples.case_triage_shadow_demo     # v2 shadow mode with the offline mock AI
 python -m examples.study_guide_demo            # the study guide's answers to four synthetic requests
 python -m app.eval.triage_shadow_eval --compare-with tests/baselines/shadow_eval_mock.json  # scorecard + eval gate
 python -m app.eval.study_guide_eval --compare-with tests/baselines/study_guide_eval_mock.json  # study guide's
+python -m tests.robustness.bench --compare-with tests/baselines/robustness_v1.json  # robustness gate (~25 s)
 NEURON_FLOW_ACCESS_KEY=$(python -c "import secrets; print(secrets.token_urlsafe(24))") python -m app.serve
 ```
 
@@ -136,7 +142,9 @@ GitHub Actions (the owner can open these; the first three run on every push and 
   demo writes its four answers to the run summary) and both scorecards, then the eval gates: they fail when
   any case answers differently from `tests/baselines/shadow_eval_mock.json` (roadmap 5.2) or
   `tests/baselines/study_guide_eval_mock.json` (roadmap 3.3), and the study guide's also fails when an answer
-  has a link outside the library or more than 5 resources.
+  has a link outside the library or more than 5 resources. Last, the robustness benchmark (roadmap 5.4) fails when
+  any item's outcome or sweep differs from `tests/baselines/robustness_v1.json`; its Thai summary lists the
+  open bugs.
 - *Service container* (`service-container.yml`):
   - checks `render.yaml` against Render's schema;
   - builds the same container as Render and submits cases over HTTP;
@@ -156,7 +164,7 @@ GitHub Actions (the owner can open these; the first three run on every push and 
   of those sites, so read this check's summary instead of fetching the links yourself.
 - *Shadow eval with Typhoon (manual)* and *Study guide eval with Typhoon (manual)* run the two scorecards
   against Typhoon (default `typhoon-v2.5-30b-a3b-instruct`) and need the repository secret `TYPHOON_API_KEY` (set by the
-  owner on 2026-11-06). Typhoon's hosted API is free, rate-limited (about 200 requests a minute, 5 a second)
+  owner on 2026-11-06). The shadow eval's `case_set` can be `robustness_edge_v1`, the 116 robustness edge cases. Typhoon's hosted API is free, rate-limited (about 200 requests a minute, 5 a second)
   and collects usage data, so synthetic data only. Each run first sends one fixed sentence and shows the raw
   reply (`.github/scripts/llm_probe.py`), then paces cases 1 s apart (ADR-021). This session cannot reach
   `api.opentyphoon.ai`; read the run page instead. Nor can it download a run's artifacts (their storage
@@ -187,6 +195,10 @@ Notes for cloud sessions (claude.ai/code):
     test fails CI otherwise (roadmap 1.5);
   - the status table in docs/ROADMAP.md.
   - Anything the owner uses also gets a Thai overview section.
+- **Robustness gate.** If a robustness outcome changes on purpose (a fix, a new item, a changed rule), regenerate
+  `tests/baselines/robustness_v1.json` (`python -m tests.robustness.bench --write-baseline
+  tests/baselines/robustness_v1.json`), and after editing the sets also `--export-golden
+  tests/robustness/triage_edge_golden_v1.json`; say in the description which items changed and why.
 - **Eval gate.** If the scorecard's per-case answers change on purpose (rules, prompt, model, cases),
   regenerate `tests/baselines/shadow_eval_mock.json` in the same PR
   (`python -m app.eval.triage_shadow_eval --write-baseline tests/baselines/shadow_eval_mock.json`) and say
@@ -213,6 +225,7 @@ Notes for cloud sessions (claude.ai/code):
 | `app/boot.py` | the image's process 1: takes the data folder as root, switches to `neuron`, becomes tini |
 | `app/settings.py`, `app/serve.py` | settings from the environment; the launcher (API + supervised Runner) |
 | `Dockerfile`, `render.yaml`, `railway.json` | the container, the Render Blueprint, the Railway config kept for later |
+| `tests/robustness/` | the robustness benchmark (docs/benchmarking.md): the synthetic set, the pinned open extract with its licences (`NOTICE.md`), the runner `bench.py`, the extract builder (`build_open_extract.py verify` re-checks the upstream files) and the 116-case file for live runs |
 | `tests/`, `examples/`, `.github/` | tests (`tests/baselines/` holds the eval gate's baseline), demos and smoke tests, CI (`.github/scripts/` holds the `render.yaml` and trace checks, `.github/otel/` the tracing check's collector; `.github/gitleaks.toml` and `.github/.gitleaksignore` the secret scan's rules and reviewed findings) |
 | `.claude/` | the session-start hook for Claude Code cloud sessions |
 
@@ -304,6 +317,11 @@ Notes for cloud sessions (claude.ai/code):
     (ADR-022). On the full synthetic sets: triage AI correct 60/61 in two runs (rules 29/61), study guide
     topic correct 46/48 with 0 of 142 links outside the library. Developer-labelled cases and few runs:
     a first measurement of that model, not accuracy.
+  - The robustness benchmark, stage 1 of the 3-stage plan the owner asked for (roadmap 5.4, built on
+    2026-11-07): 270 synthetic items and BLNS, JSONTestSuite, CLINC150 and BANKING77 (ADR-024), a CI gate on
+    every outcome. First run: 206/270 own items pass, 8 bugs (a 500 for huge integers or a lone surrogate, and
+    a whole case failing when the AI's text holds a lone surrogate), 45 gaps, 0 of 4,680 sweep checks broken
+    (`docs/evidence/2026-11-07-robustness-stage1.md`). Waiting for the owner's look at the run page.
   - The web page's chat layout from the owner's "Nocturne" mockup (PR #18, roadmap 1.6; live and
     owner-tested on 2026-11-03). Parts of the mockup that would break the rules in §3 (key and provider
     fields, editing steps, a "never ask" policy) are shown read-only or left out on purpose; see
@@ -325,7 +343,8 @@ Notes for cloud sessions (claude.ai/code):
   - Waiting on the owner: 0.2 and 1.4 (D1, paid Render plan), 0.3 path B and 0.4 with Claude (D2, Claude
     API key); 0.4 with Typhoon is free but sends what is typed on the page to Typhoon, so it is the owner's
     choice too.
-  - Buildable now without an owner decision: Phase 2 (2.1 first) and Phase 4 (4.1 first; Phase 3, which it
+  - Buildable now without an owner decision: 5.5 (fix the 8 bugs stage 1 found; recommended first, small and
+    zero Core changes), then 5.6 and 5.7, Phase 2 (2.1 first) and Phase 4 (4.1 first; Phase 3, which it
     needs, is built). The rest of 7.1 (who can read the AI key) needs an ADR first.
   - The owner decides which phase comes next; ask before starting a new phase.
 - Keep this section and the ROADMAP status table true in every PR.

@@ -35,6 +35,14 @@ jobs:
         run: >-
           python -m app.eval.study_guide_eval --summary "$GITHUB_STEP_SUMMARY" --out study-guide-eval-mock.json
           --compare-with tests/baselines/study_guide_eval_mock.json
+      # Robustness benchmark, stage 1 (roadmap 5.4, docs/benchmarking.md): 270 synthetic edge cases and four pinned open
+      # datasets through intake, rules, masking, AI replies, Core contracts and whole jobs, offline (mock AI and a local
+      # fake of the Typhoon API). Fails when any item's outcome differs from the baseline, which records failures too.
+      - name: Robustness benchmark, stage 1 (compares every item with the baseline)
+        if: ${{ !cancelled() }}
+        run: >-
+          python -m tests.robustness.bench --summary "$GITHUB_STEP_SUMMARY" --out robustness.json
+          --compare-with tests/baselines/robustness_v1.json
       - name: Keep the scorecards
         if: ${{ !cancelled() && matrix.python-version == '3.12' }}
         uses: actions/upload-artifact@v7
@@ -43,3 +51,4 @@ jobs:
           path: |
             shadow-eval-mock.json
             study-guide-eval-mock.json
+            robustness.json
