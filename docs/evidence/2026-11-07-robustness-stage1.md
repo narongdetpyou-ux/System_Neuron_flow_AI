@@ -35,6 +35,8 @@
      - ในคำขอ ระบบตอบ 500
      - ในคำตอบของ AI เคสทั้งเคสล้มและไม่ถึงคนตรวจ
 - **ทั้งหมดแก้ได้นอก Core** อยู่ในขั้น 5.5
+  - แก้คำ (8 พ.ย.): ข้อนี้ไม่ถูกทั้งหมด 7 จุดแก้นอก Core ได้ แต่ SYN-COR-040 ตรวจตัวอ่าน JSON ของ Core โดยตรง
+    จึงต้องแก้ Core 1 ฟังก์ชัน (ADR-025) ดูหัวข้อ "Re-run after the fixes" ท้ายบันทึก
 - **คำขอจาก CLINC150 และ BANKING77:** กฎคำสำคัญตรงกับป้ายที่ผู้พัฒนาจับคู่ไว้ 32/73
   - CLINC150 18/39
   - BANKING77 14/34
@@ -126,3 +128,55 @@ one case can make itself fail instead of reaching review.
 - Open-dataset labels are the developer's mapping (tests/robustness/NOTICE.md), so 32/73 is not an accuracy
   figure.
 - The synthetic items and their expectations are the developer's. No independent reviewer checked them.
+
+## Re-run after the fixes (2026-11-08, roadmap 5.5, PR #42)
+
+**Where:** a Claude Code cloud session, on `main` @ `26128e4` plus the branch `claude/fix-robustness-bugs`.
+- Python 3.13.18 for the figures below.
+- The same run on 3.10.20 and 3.12.13 gave identical outcomes for every item and sweep, and the gate passed on
+  all three.
+- Full run 25.6 s.
+
+**Data:**
+- `synthetic_v1.json` is now SHA-256 `e0fcba2d…`, because one expectation changed (SYN-AIR-040, below).
+- `open_extract_v1.json` is unchanged (`510483c1…`).
+
+### สรุปสำหรับเจ้าของโปรเจกต์
+
+- **เคสที่เขียนเอง 270 ข้อ ผ่าน 215** (เดิม 206) ปัญหาร้ายแรง (bug) **0** (เดิม 8) จุดอ่อน (gap) 44 (เดิม 45)
+  ข้อสังเกต (info) 11 เท่าเดิม
+- **กวาดข้อมูลเปิด 4,680 ครั้ง ยังไม่ผิดคำสัญญาเลย** และได้ผลเหมือนรอบแรกทุกครั้ง
+- **เคสที่ AI ตอบมีตัวอักษรพัง ถึงมือคนตรวจแล้ว** พร้อมความเห็นของ AI (ตัวอักษรพังกลายเป็นเครื่องหมาย �)
+- **แก้คำพูดในบันทึกรอบแรก:** รอบแรกเขียนว่า "ทั้งหมดแก้ได้นอก Core" ซึ่งไม่ถูกทั้งหมด
+  - 7 จุดแก้นอก Core
+  - SYN-COR-040 ตรวจตัวอ่าน JSON ของ Core โดยตรง จึงผ่านได้ก็ต่อเมื่อแก้ Core (1 ฟังก์ชัน, ADR-025)
+
+### What changed, item by item
+
+Exactly 9 items changed in `tests/baselines/robustness_v1.json`: the 8 bugs and one gap.
+
+| Item | Stage 1 | Now | Fix |
+|---|---|---|---|
+| SYN-INT-036, SYN-INT-037 | 500 `internal_error` | 400 `invalid_json` | `routes._submit` treats every `ValueError` from `decode()` as the client's input |
+| SYN-INT-038, SYN-INT-039 | 500 `internal_error` | 400 `invalid_input` | `admit()` turns a `SpecError` from the request fingerprint into 400 |
+| SYN-AIR-040 | accepted, with the lone surrogate kept | accepted, with the surrogate replaced by U+FFFD (`bad � text`) | `parse_answer` cleans lone surrogates out of free-text fields |
+| SYN-E2E-029 | job `FAILED` at `classify_llm` (`SpecError`), never reviewed | `SUCCEEDED`, `PENDING_HUMAN_REVIEW`, second opinion `ok` | the same cleaning |
+| SYN-E2E-044 | study guide job `FAILED` at `detect_topic` | `SUCCEEDED`: a guide of 2 steps, every link from the library | the same cleaning |
+| SYN-COR-040 | `ValueError` escaped `decode()` | `SpecError` | ADR-025 |
+| SYN-COR-041 (gap) | `UnicodeEncodeError` escaped `decode()` | `SpecError` | ADR-025 |
+
+- No other item changed, and every sweep gave the same result as in stage 1.
+- In the fake-Typhoon items (SYN-E2E-020 to SYN-E2E-033) the case now reaches review in 13 of 14. The one left
+  is the rejected key (401, SYN-E2E-031), which fails loudly by design.
+
+**One expectation changed, on purpose.** SYN-AIR-040 used to expect the answer to be refused (`invalid`), which
+would have sent the case on as "rules only". The fix cleans the one character instead, because the rest of the
+answer is valid and still passes every check; refusing would cost the case the AI's second opinion. The new
+expectation is stricter about the text: the item fails unless the rationale is exactly `bad � text`, so
+keeping the surrogate, or refusing the answer, both fail it.
+
+**Without the Core commit:** the app fixes do not depend on ADR-025. Their unit tests pass with Core at 0.4.0, and
+only SYN-COR-040 and SYN-COR-041 would fail again. If the owner does not want a Core change, that commit is dropped
+and the baseline regenerated.
+
+**Limits:** as in stage 1. No real model was called, and the items and their expectations are the developer's.

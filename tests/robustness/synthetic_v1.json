@@ -3487,8 +3487,8 @@
   {
    "id": "SYN-AIR-040",
    "layer": "ai_reply",
-   "title_th": "เหตุผลมีตัวอักษรพัง (\\ud800) ซึ่งระบบเก็บไม่ได้",
-   "title_en": "rationale with an escaped lone surrogate, which Core cannot store",
+   "title_th": "เหตุผลมีตัวอักษรพัง (\\ud800) ต้องถูกล้างจนระบบเก็บได้",
+   "title_en": "rationale with an escaped lone surrogate, cleaned so that Core can store it",
    "checklist": "MFT",
    "capability": "unicode_invalid",
    "lang": "none",
@@ -3499,8 +3499,11 @@
     "via": "answer_text"
    },
    "expect": {
-    "outcome": "invalid",
-    "storable": true
+    "outcome": "ok",
+    "fields": {
+     "category": "access",
+     "rationale": "bad \ufffd text"
+    }
    }
   },
   {
