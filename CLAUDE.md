@@ -317,7 +317,7 @@ Notes for cloud sessions (claude.ai/code):
     (ADR-022). On the full synthetic sets: triage AI correct 60/61 in two runs (rules 29/61), study guide
     topic correct 46/48 with 0 of 142 links outside the library. Developer-labelled cases and few runs:
     a first measurement of that model, not accuracy.
-  - The robustness benchmark, stage 1 of the 3-stage plan the owner asked for (roadmap 5.4, built on
+  - The robustness benchmark, stage 1 of the 3-stage plan the owner asked for (roadmap 5.4, PR #41, built on
     2026-11-07): 270 synthetic items and BLNS, JSONTestSuite, CLINC150 and BANKING77 (ADR-024), a CI gate on
     every outcome. First run: 206/270 own items pass, 8 bugs (a 500 for huge integers or a lone surrogate, and
     a whole case failing when the AI's text holds a lone surrogate), 45 gaps, 0 of 4,680 sweep checks broken

@@ -114,7 +114,7 @@ Marks: ✅ done · 🟡 built or partly checked (the status says what is left) �
 | 5.1 | OpenTelemetry tracing to Honeycomb | ✅ PR #30; the first trace seen in Honeycomb on 2026-11-03 ([evidence note](evidence/2026-11-03-first-trace-honeycomb.md)), and the gap it found (steps' agent versions) fixed after it | 1.1, 1.2 |
 | 5.2 | Evaluation gate in CI | ✅ PR #27 | — |
 | 5.3 | Queue and run-time metrics on the status page | ✅ PR #26 | — |
-| 5.4 | Robustness benchmark, stage 1: open and synthetic edge cases as a CI gate | 🟡 built on 2026-11-07; first run: 206/270 own items pass, 8 bugs, 0 of 4,680 sweep checks broke a promise ([evidence note](evidence/2026-11-07-robustness-stage1.md)); waiting for the owner's look at the run page | — |
+| 5.4 | Robustness benchmark, stage 1: open and synthetic edge cases as a CI gate | 🟡 built in PR #41 (2026-11-07); first run: 206/270 own items pass, 8 bugs, 0 of 4,680 sweep checks broke a promise ([evidence note](evidence/2026-11-07-robustness-stage1.md)); waiting for the owner's look at the run page | — |
 | 5.5 | Fix what stage 1 found (the 8 bugs; zero Core changes) | ⬜ next | 5.4 |
 | 5.6 | Stage 2: open benchmarks (CLINC150, BANKING77, MASSIVE th-TH/en-US) with Typhoon | ⬜ | 5.4 |
 | 5.7 | Stage 3: prompt injection, personal data, load and restarts, weekly live drift | ⬜ | 5.4; drift schedule is the owner's choice |
@@ -962,7 +962,7 @@ workflow types.
   a gate in CI. The full three-stage plan is in [benchmarking.md](benchmarking.md).
 - **Why:** the owner asked for testing "beyond the private lab" with open datasets (2026-11-07). The existing
   scorecards use 61 and 67 developer-written cases that follow the happy paths.
-- **Status (2026-11-07): built.**
+- **Status (2026-11-07): built in PR #41.**
   - `tests/robustness/`:
     - 270 synthetic items across six layers (intake, rules, masking, AI replies, Core contracts, whole jobs
       through Core);
@@ -977,7 +977,7 @@ workflow types.
 - **Done when:** the owner has seen the summary on the run page (owner test). The benchmark itself is tested:
   8 unit tests, and identical outcomes on Python 3.10, 3.12 and 3.13.
 - **Owner test (ไทย):**
-  1. เปิด PR ของขั้นนี้ กดแท็บ Checks เลือก *Core logic tests* (3.12) แล้วกด Summary
+  1. เปิด PR #41 กดแท็บ Checks เลือก *Core logic tests* (3.12) แล้วกด Summary
   2. เลื่อนหา "ด่านความทนทาน (Robustness benchmark ขั้นที่ 1)" ต้องเห็นตาราง 6 ชั้น, "ปัญหาร้ายแรง (bug) **8**"
      และ "ด่านตรวจผลรายรายการ (gate): **ผ่าน**"
   3. (ไม่บังคับ ฟรี) แท็บ Actions เลือก *Shadow eval with Typhoon (manual)* แล้วกด Run workflow เลือก case_set
@@ -1285,4 +1285,4 @@ workflow types.
   answer asks "เข้าใจถูกไหม". The layered answer also names the most important resource when the first one is
   background (first-response rule 4). 0.4 gained the free Typhoon option, because the owner test's metaphor
   needs a real model on the online page. Marked 🟡 until the owner tests it on the live page.
-- 2026-11-07: Phase 5 gained 5.4–5.7, because the owner asked for a 3-stage benchmarking plan with open datasets and hard edge cases. 5.4 is built: a robustness benchmark over 270 synthetic items and four open datasets, as a CI gate with a baseline that records failures too. Its first run found 8 bugs (two causes, both fixable outside Core), so 5.5 fixes them next. ADR-024 records which open data counts as synthetic (written for a dataset, openly licensed, no real people's records); ai4privacy was left out for its licence.
+- 2026-11-07: Phase 5 gained 5.4–5.7, because the owner asked for a 3-stage benchmarking plan with open datasets and hard edge cases. 5.4 is built in PR #41: a robustness benchmark over 270 synthetic items and four open datasets, as a CI gate with a baseline that records failures too. Its first run found 8 bugs (two causes, both fixable outside Core), so 5.5 fixes them next. ADR-024 records which open data counts as synthetic (written for a dataset, openly licensed, no real people's records); ai4privacy was left out for its licence.

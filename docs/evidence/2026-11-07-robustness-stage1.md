@@ -6,7 +6,7 @@
 - Python 3.13.18 for the report below.
 - The same run on 3.10.20 and 3.12.13 gave identical outcomes for every item and sweep (the gate passed on
   all three).
-- *Core logic tests* repeats it on 3.10 and 3.12 in GitHub Actions, on the pull request's Checks tab.
+- *Core logic tests* repeats it on 3.10 and 3.12 in GitHub Actions, on the Checks tab of PR #41.
 
 **What ran:** `python -m tests.robustness.bench` (docs/benchmarking.md, stage 1).
 - 270 synthetic items plus 73 open-dataset requests.

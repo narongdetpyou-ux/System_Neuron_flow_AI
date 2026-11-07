@@ -1,7 +1,7 @@
 # Benchmarking plan: robustness, open benchmarks, attacks and live conditions
 
 **Status (2026-11-07):**
-- Stage 1, the robustness gate, is built and runs in CI on every push (roadmap 5.4). Its first run found 8 bugs,
+- Stage 1, the robustness gate, is built and runs in CI on every push (roadmap 5.4, PR #41). Its first run found 8 bugs,
   45 gaps and 11 notes ([evidence note](evidence/2026-11-07-robustness-stage1.md)).
 - Fixing those bugs is the next package (5.5).
 - Stage 2 (open benchmarks, 5.6) and stage 3 (attacks, privacy, load and live drift, 5.7) are planned below.
@@ -99,7 +99,7 @@ that was written for a dataset, with no real people's records. Real data still w
 ### คุณต้องทำอะไร (owner test)
 
 1. **ดูผลขั้นที่ 1**
-   - เปิด PR นี้บน GitHub แล้วกดแท็บ Checks เลือก *Core logic tests* (3.12) แล้วกด Summary
+   - เปิด PR #41 บน GitHub แล้วกดแท็บ Checks เลือก *Core logic tests* (3.12) แล้วกด Summary
    - เลื่อนหาหัวข้อ "ด่านความทนทาน (Robustness benchmark ขั้นที่ 1)"
    - ต้องเห็นตาราง 6 ชั้น, "ปัญหาร้ายแรง (bug) 8" และบรรทัด "ด่านตรวจผลรายรายการ (gate): **ผ่าน**"
 2. **ลองกับ AI จริง (ไม่บังคับ และฟรี)**
@@ -129,7 +129,7 @@ that was written for a dataset, with no real people's records. Real data still w
    - ใช้ทำอะไร: รู้จักการโจมตีด้วยคำสั่งแอบแฝง และวิธีป้องกันที่วงการแนะนำ
    - ใช้ในขั้นที่ 3
 
-## Stage 1 — the robustness gate (built, roadmap 5.4)
+## Stage 1 — the robustness gate (built, roadmap 5.4, PR #41)
 
 ### What it checks
 
