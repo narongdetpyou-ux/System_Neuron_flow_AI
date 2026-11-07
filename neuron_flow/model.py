@@ -52,7 +52,12 @@ def fingerprint(value):
 
 
 def decode(data):
-    """Reject duplicate JSON fields instead of silently discarding one value."""
+    """Reject duplicate JSON fields instead of silently discarding one value.
+
+    Every input it cannot read raises ``SpecError`` (ADR-025): besides invalid JSON and invalid UTF-8, also text
+    holding a lone surrogate and a number too long for Python to convert (more than 4,300 digits), which used to
+    escape as ``UnicodeEncodeError`` and ``ValueError``.
+    """
     def unique_fields(pairs):
         result = {}
         for key, value in pairs:
@@ -64,12 +69,17 @@ def decode(data):
     def invalid_constant(value):
         raise SpecError(f"Non-finite JSON number: {value}")
 
-    input_bytes = len(data.encode("utf-8") if isinstance(data, str) else data)
+    try:
+        input_bytes = len(data.encode("utf-8") if isinstance(data, str) else data)
+    except UnicodeEncodeError as exc:
+        raise SpecError("Invalid JSON input: the text is not valid Unicode") from exc
     if input_bytes > MAX_MESSAGE_BYTES:
         raise MessageSizeError(input_bytes, phase="json_input")
     try:
         return json.loads(data, object_pairs_hook=unique_fields, parse_constant=invalid_constant)
-    except (json.JSONDecodeError, UnicodeDecodeError, RecursionError) as exc:
+    except SpecError:
+        raise  # a repeated field or a non-finite constant, with its own message
+    except (ValueError, RecursionError) as exc:  # JSONDecodeError, UnicodeDecodeError, the int-digit limit
         raise SpecError("Invalid JSON input") from exc
 
 
