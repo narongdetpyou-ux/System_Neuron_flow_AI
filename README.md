@@ -158,7 +158,7 @@ most 1 MiB. The agent `version` is frozen into each job, so an old job refuses t
   key, not per-person accounts, and uses Python's standard-library HTTP server (fine for a pilot, not for
   public traffic).
 - Agent child processes isolate failures; they are **not** a security sandbox.
-- All test data is synthetic. Mock AI scores are inflated by design and are not evidence of AI accuracy.
+- All test data is synthetic. Mock AI scores are not evidence of AI accuracy: the triage mock scores high because its keywords were written with its cases, and the study guide mock scores low (topic correct 2/48).
 - Masking personal data before AI calls is pattern-based; it lowers the risk but does not make real data safe.
 - The only live-model runs are Typhoon's first ones on the synthetic sets (2026-11-06, [evidence](docs/evidence/2026-11-06-first-live-typhoon.md)):
   triage AI correct 60/61 in two runs (the rules 29/61), study guide topic correct 46/48 with no link

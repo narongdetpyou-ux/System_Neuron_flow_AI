@@ -1,8 +1,7 @@
 # System Neuron Flow AI — Architecture
 
-**Current as of 2026-11-06** (`main` @ `88cbbea`, after the `study_guide.v1` workflow (PR #33), plus the
-study guide's scorecard of roadmap 3.3 on its branch; first written for
-round 2, PR #11, on top of `59c6889`). This file replaces
+**Current as of 2026-11-07** (`main` @ `cf06f4d`, after the study guide on the web page (PR #39); first
+written for round 2, PR #11, on top of `59c6889`). This file replaces
 "Architecture Review & Revised Architecture v2" (31 Oct 2026). That review's dated code observations were
 re-checked against the current code and folded into §3. The AI design comes from the v3 roadmap, and its
 round 1 is built (§4). Round 2 adds the intake API, the durable job queue, the single Runner with crash
@@ -32,14 +31,14 @@ flowchart TD
     end
     subgraph L3[Layer 3: Application services]
       EV[Scorecards app/eval: triage and study guide - built]
-      OBS[Sentry reporting app/observability - built]
+      OBS[Sentry reporting and Honeycomb tracing app/observability - built]
       Q[Admission queue + single Runner + reconciliation app/persistence, app/services - built in round 2]
       REV[Review ledger + linked phase-B jobs - planned]
     end
     subgraph L2[Layer 2: Domains, agents, AI gateway]
       TRI[case_triage v1 rules + v2 shadow mode - built]
       LLM[app/llm gateway: prompt library, mock + Claude + Typhoon - built]
-      SG[study_guide.v1: topic catalog, verified library and workflow - built; page planned]
+      SG[study_guide.v1: topic catalog, verified library and workflow - built; on the web page]
     end
     subgraph L1[Layer 1: Core neuron_flow - one planned fix since extraction]
       CORE[Dendrite -> Synapse -> Axon -> Soma -> AxonTerminal]
@@ -285,7 +284,7 @@ planned: review ledger and artifact store
   OpenTelemetry Collector in CI (PR #30, ROADMAP 5.1) and seen in Honeycomb on Render on 2026-11-03
   (`docs/evidence/2026-11-03-first-trace-honeycomb.md`); the study guide's scorecard and eval gate in CI, which
   fails when a link outside the library or more than 5 resources appears in any answer, or when any
-  request's answer changes (PR #34, ROADMAP 3.3; mock only); the page's contracts in CI: every example on
+  request's answer changes (PR #34, ROADMAP 3.3; mock in CI, Typhoon runs by hand); the page's contracts in CI: every example on
   it passes its workflow's input contract, it names every step of every workflow and every code of a study
   answer, it never inserts server data as HTML, and it links only to https addresses, opened without a
   referrer (PR #39, ROADMAP 3.4, `tests/test_web_page.py`).

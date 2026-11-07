@@ -1,6 +1,6 @@
 # Grant diligence: evidence register and eligibility blockers
 
-**Prepared:** 2026-10-31. **Evidence register updated:** 2026-11-03 (`main` @ `0b03735`).
+**Prepared:** 2026-10-31. **Evidence register updated:** 2026-11-07 (`main` @ `cf06f4d`).
 **Internal working reference only.**
 The funder notes below are a **snapshot researched on 2026-10-31**. Funding calls, terms and legal
 eligibility can change, so recheck every original program page on the day of application.
@@ -10,13 +10,13 @@ eligibility can change, so recheck every original program page on the day of app
 | Claim | Source | Confidence / limitation |
 |---|---|---|
 | Portable Core exists | `neuron_flow/`, root README; source-controlled on GitHub | Verified code, not external production adoption |
-| Automated tests pass | 119 tests in `tests/`; green CI on `main` @ `0b03735` (Python 3.10, 3.12): https://github.com/narongdetpyou-ux/System_Neuron_flow_AI/actions/runs/41550257103 | Synthetic tests; not production evidence |
+| Automated tests pass | 276 tests in `tests/`; green CI on `main` @ `cf06f4d` (Python 3.10, 3.12): https://github.com/narongdetpyou-ux/System_Neuron_flow_AI/actions/runs/42372717144 | Synthetic tests; not production evidence |
 | Architecture documented | `docs/architecture.md` | Core, domains, intake queue, Runner, API and web page implemented; the human-review service (Milestone C) is design only |
 | Online service runs | Render free plan since 2026-11-01; `docs/evidence/2026-11-03-render-operations.md` (graceful stops, deploy filter, cold start) | Synthetic data, one owner, no SLA; a free-plan restart loses queued cases |
 | Case-triage domain, v1 rules and v2 AI shadow mode | `app/domains/case_triage/`, `examples/`, `tests/test_case_triage*.py` | Synthetic data. The AI path was tested offline with a mock and a fake API server; **the only live runs are a free model's** (Typhoon, 2026-11-06, `docs/evidence/2026-11-06-first-live-typhoon.md`), on developer-labelled synthetic cases; Claude has not been run |
-| No Core changes needed for new domain versions | `git diff 09100f7 main -- neuron_flow/` shows only the planned telemetry fix (PR #21, not driven by a domain) | Shows the no-Core-change rule so far; a second unrelated domain is still to come |
+| No Core changes needed for new domain versions | `git diff 09100f7 main -- neuron_flow/` shows only the planned telemetry fix (PR #21, not driven by a domain); the second domain, the study guide (PR #32–#39), changed no Core file | Shows the no-Core-change rule for two domains, both built by the same developer; not independently reviewed |
 | Error monitoring works end to end | Sentry project `neuron-flow-runtime` received CI smoke-test events | Integration check only |
-| Measurement harness exists | `app/eval/` scorecard, 61 synthetic labelled cases (EN + TH), shown on the CI run page | Mock scores are inflated by design; no AI accuracy claim |
+| Measurement harness exists | `app/eval/`: two scorecards, 61 synthetic labelled triage cases and 67 synthetic study-guide requests (EN + TH), shown on the CI run page; first live runs with Typhoon on 2026-11-06 (`docs/evidence/2026-11-06-first-live-typhoon.md`) | Mock scores test the pipeline, not accuracy; the Typhoon results are a first measurement of that model on developer-labelled cases; Claude has never run |
 | Open-source deployment | Repository currently **private** | Not demonstrated. GPL license alone is insufficient to claim public distribution |
 | Real user needs / traction | None independently verified | **Missing**; interview real users if applying to adoption-based programs |
 | Independent review / security certification | None independently verified | **Missing** |
