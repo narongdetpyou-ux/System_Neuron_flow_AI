@@ -38,10 +38,10 @@ differs, this file and architecture.md win.
 
 | ขั้น | ทำอะไร | คุณจะได้ลองอะไร | สถานะ (7 พ.ย. 2026) |
 |---|---|---|---|
-| 0 | เปิดใช้ออนไลน์บน Render และวัดผล AI จริงครั้งแรก | ใส่เคสบนหน้าเว็บจริง และอ่านผลวัดของ AI จริง | ออนไลน์แล้ว; วัดผล AI จริงครั้งแรกแล้วด้วย Typhoon (0.3, 6 พ.ย.); ที่เหลือรอคุณตัดสินใจเรื่องเงิน (D1 แผน Render, D2 API key ของ Claude) |
+| 0 | เปิดใช้ออนไลน์บน Render และวัดผล AI จริงครั้งแรก | ใส่เคสบนหน้าเว็บจริง และอ่านผลวัดของ AI จริง | ออนไลน์แล้ว; วัดผล AI จริงครั้งแรกแล้วด้วย Typhoon (0.3, 6 พ.ย.); ที่เหลือรอคุณตัดสินใจ: D1 แผน Render แบบเสียเงิน, D2 API key ของ Claude และ 0.4 กับ Typhoon (ฟรี แต่ข้อความที่พิมพ์บนหน้าเว็บจะถูกส่งไป Typhoon) |
 | 1 | เก็บงานเล็ก ๆ ให้ระบบแน่นขึ้น | ยกเลิกเคสที่ยังรอคิวได้ | เสร็จ ยกเว้น 1.4 (สำรองข้อมูล) ที่ต้องใช้แผน Render แบบเสียเงิน |
 | 2 | ให้คนรีวิวได้จริง: ผู้รีวิวมีรหัสของตัวเอง กดอนุมัติหรือไม่อนุมัติได้ และ n8n แจ้งเตือน | กล่อง "รอรีวิว" บนหน้าเว็บ และข้อความแจ้งเตือน | ยังไม่เริ่ม |
-| 3 | ผู้ช่วยแนะนำแหล่งเรียน (`study_guide.v1`) ตามหลักปรัชญาของคุณ | พิมพ์เรื่องที่อยากรู้ด้วยคำธรรมดา แล้วได้แหล่งเรียนไม่เกิน 5 แหล่งพร้อมลำดับการเรียน | เริ่มแล้ว (คุณเลือกขั้นนี้ก่อนขั้น 2 เมื่อ 5 พ.ย.): 3.1 คลังแหล่งเรียน 3.2 ตัวผู้ช่วย และ 3.3 ชุดข้อสอบ ทำแล้ว (ดูตัวอย่างคำตอบและผลข้อสอบใน Actions ได้); 3.4 ช่อง "อยากเรียน" บนหน้าเว็บ สร้างแล้ว รอคุณลองบนหน้าเว็บจริงหลัง merge; รันกับ AI จริง (Typhoon) แล้ว หาหัวข้อถูก 46 จาก 48 ข้อ ไม่มีลิงก์นอกคลัง (Claude รอ D2) |
+| 3 | ผู้ช่วยแนะนำแหล่งเรียน (`study_guide.v1`) ตามหลักปรัชญาของคุณ | พิมพ์เรื่องที่อยากรู้ด้วยคำธรรมดา แล้วได้แหล่งเรียนไม่เกิน 5 แหล่งพร้อมลำดับการเรียน | สร้างครบทุกขั้นแล้ว (คุณเลือกขั้นนี้ก่อนขั้น 2 เมื่อ 5 พ.ย.): 3.1 คลังแหล่งเรียน 3.2 ตัวผู้ช่วย และ 3.3 ชุดข้อสอบ ทำแล้ว (ดูตัวอย่างคำตอบและผลข้อสอบใน Actions ได้); 3.4 ช่อง "อยากเรียน" บนหน้าเว็บ สร้างและ merge แล้ว (7 พ.ย.) รอคุณลองบนหน้าเว็บจริง; รันกับ AI จริง (Typhoon) แล้ว หาหัวข้อถูก 46 จาก 48 ข้อ ไม่มีลิงก์นอกคลัง (Claude รอ D2) |
 | 4 | ช่องคุยภาษาธรรมดา: ระบบเข้าใจว่าคุณขออะไร บอกตรง ๆ เมื่อเรื่องอยู่นอกกรอบ และถามกลับ 1 คำถามเมื่อข้อมูลไม่พอ | คุยกับระบบได้เลย ไม่ต้องเลือกประเภทงานเอง | ยังไม่เริ่ม (ขั้น 3 สร้างครบแล้ว เริ่มได้เมื่อคุณเลือก) |
 | 5 | ติดตามเส้นทางของแต่ละงาน (เวลา token จุดที่ช้า) และด่านตรวจผลรายเคส | ตัวเลขคิวและเวลาบนหน้าเว็บ ช่องตรวจบน PR แล้วต่อด้วยเส้นทางงานใน Honeycomb | เสร็จแล้วทั้ง 5.1, 5.2 และ 5.3; เส้นทางงานแรกเข้า Honeycomb เมื่อ 4 พ.ย. 00:23 น. |
 | 6 | AI วางแผนงานหลายขั้น ระบบตรวจแผนก่อนรัน และเครื่องมืออื่นเรียกใช้ผ่าน MCP ได้ | สั่งงานจากแอป Claude ได้ | ยังไม่เริ่ม (ต้องรอขั้น 2–4) |
@@ -103,9 +103,9 @@ Marks: ✅ done · 🟡 built or partly checked (the status says what is left) �
 | 2.7 | Artifact store with hash checks | ⬜ when needed | — |
 | 2.8 | Measure rules vs AI against reviewer labels | ⬜ | 2.2, 0.3 |
 | 3.1 | Topic catalog and verified resource library | ✅ PR #32; links checked by *Study library link check* on the PR ([evidence note](evidence/2026-11-05-study-library-links.md)); the weekly run starts after the merge | — |
-| 3.2 | `study_guide.v1` workflow | ✅ PR #33; mock AI only, no live run yet (Typhoon ready, Claude needs D2) | 3.1 |
+| 3.2 | `study_guide.v1` workflow | ✅ PR #33; first live run with Typhoon in PR #38 (topic correct 46/48, 0 of 142 links outside the library); Claude needs D2 | 3.1 |
 | 3.3 | Study-guide evaluation set and scorecard | ✅ PR #34 with the mock in CI (an eval gate); first live run with Typhoon on 2026-11-06 (PR #38): topic correct 46/48, 0 of 142 links outside the library; Claude after D2 | 3.2 |
-| 3.4 | Study guide on the web page | 🟡 built in PR #39: a case / study switch above the box, a layered answer, questions sent without a confirm card (ADR-023); the owner test runs on the live page after the merge | 3.2 |
+| 3.4 | Study guide on the web page | 🟡 built and merged in PR #39 (2026-11-07): a case / study switch above the box, a layered answer, questions sent without a confirm card (ADR-023); waiting for the owner's test on the live page | 3.2 |
 | 4.1 | The frame: a versioned catalog of what the system can do | ⬜ | 3.2 |
 | 4.2 | `intake.route.v1`: the plain-language router | ⬜ | 4.1 |
 | 4.3 | Layered answers (summary → steps → details) | ⬜ | 4.2 |
@@ -737,7 +737,7 @@ detect_topic (AI) ─► pick_resources (rules) ─► build_path (rules) ─►
 
 - **The page:** a form, "อยากเรียนเรื่องอะไร". The answer shows the summary first, with "ดูขั้นตอน" and
   "ดูรายละเอียด" to expand.
-- **Status (2026-11-07): built in PR #39; the owner test on the live page follows the merge.** Details:
+- **Status (2026-11-07): built and merged in PR #39 (`cf06f4d`); waiting for the owner's test on the live page.** Details:
   [study_guide.md](study_guide.md#the-page-roadmap-34) and [intake_queue.md](intake_queue.md#web-page).
   - *Where the box is:* a switch above the message box, "เคสลูกค้า" or "อยากเรียน". In study mode the box
     asks "อยากเรียนเรื่องอะไร", accepts 4–500 characters, offers four examples and sends with Enter (button
@@ -770,7 +770,7 @@ detect_topic (AI) ─► pick_resources (rules) ─► build_path (rules) ─►
     walkthrough (desktop 1440 and 1280 px, tablet 1024 px, phone 390 px) covered every state, including AI
     unavailable, the library's own text, masked personal data, and a failed, queued and running question,
     with no console errors, CSP violations or horizontal overflow.
-  - *Phase gate:* zero Core changes (`git diff main -- neuron_flow/` is empty in this PR); every validator
+  - *Phase gate:* zero Core changes (`git diff main -- neuron_flow/` is empty in PR #39); every validator
     was tested in 3.2; the scorecard is recorded (3.3, mock in CI and Typhoon by hand). Both eval gates
     still pass unchanged.
 - **Owner test (ไทย)** หลัง merge รอ Render ขึ้นเวอร์ชันใหม่ประมาณ 3–5 นาที แล้ว:

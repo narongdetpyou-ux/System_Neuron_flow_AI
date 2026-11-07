@@ -33,6 +33,10 @@ before submission; no vendor quotation has been collected.
 | M3 — Human review + artifact checks | Weeks 7–9 | Authenticated accept/reject; single linked phase-B job; unauthorized decision rejected; changed artifact detected |
 | M4 — Independent review + repeatable release | Weeks 10–12 | Recorded findings and resolutions; second unrelated domain without Core changes; reproducible CI and docs |
 
+**Note (2026-11-07):** M1, parts of M2 and a first second domain already exist (the admission queue, the
+Runner with recovery, and the study guide built without Core changes). Re-cut these gates before any
+submission; that is the owner's decision.
+
 **Funding disbursement must follow each funder's own rules**; these windows
 are proposal assumptions only, not guaranteed program tranches.
 

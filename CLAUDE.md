@@ -288,7 +288,7 @@ Notes for cloud sessions (claude.ai/code):
     SHA-256 over both files for agent versions, and a weekly link check in CI (PR #32, roadmap 3.1).
   - The `study_guide.v1` workflow: topic detection (AI), at most 5 library resources picked and ordered by
     rules, a plain-language explanation (AI), and a layered answer whose links code inserts; it ends
-    `COMPLETED` (ADR-018) and its prompts are completed from the library (ADR-019). Mock AI only (PR #33,
+    `COMPLETED` (ADR-018) and its prompts are completed from the library (ADR-019). Built with the mock AI; first live run with Typhoon in PR #38 (PR #33,
     roadmap 3.2).
   - The study guide's scorecard: 67 synthetic requests (Thai and English, metaphors, out of scope,
     injection), run in CI with the mock as an eval gate that also fails on a link outside the library or more
@@ -308,7 +308,7 @@ Notes for cloud sessions (claude.ai/code):
     owner-tested on 2026-11-03). Parts of the mockup that would break the rules in §3 (key and provider
     fields, editing steps, a "never ask" policy) are shown read-only or left out on purpose; see
     intake_queue.md, "หน้าเว็บ: ใช้อย่างไร".
-  - The study guide on the web page (roadmap 3.4, this PR): a switch above the box ("เคสลูกค้า" /
+  - The study guide on the web page (roadmap 3.4, PR #39, merged 2026-11-07): a switch above the box ("เคสลูกค้า" /
     "อยากเรียน"); a question is sent without the confirm card (ADR-023) and answered in layers (summary,
     what it understood with "เข้าใจถูกไหม", where to start and the most important resource; then the study
     steps; then the details); out of scope lists the 11 topics. `/v1/status` gives the question limits, and

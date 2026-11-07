@@ -1,7 +1,7 @@
 # Internal technical project brief — System Neuron Flow AI
 
 **Status:** Internal working brief. Not a completed funder application.
-**Date:** 2026-10-31; implementation section updated 2026-11-03 (`main` @ `0b03735`).
+**Date:** 2026-10-31; implementation section updated 2026-11-07 (`main` @ `cf06f4d`).
 **Applicant:** Independent developer (name, legal status and country-specific
 eligibility to be supplied and confirmed by the applicant).
 **Code:** https://github.com/narongdetpyou-ux/System_Neuron_flow_AI
@@ -49,14 +49,18 @@ yet been benchmarked or validated with prospective users.
     suggestion and every proposal waits for a human; nothing is approved
     automatically.
   - Both versions run on the same Core; its only change since extraction is a planned telemetry fix.
+- Second domain: the study guide in `app/domains/study_guide/` (roadmap 3.1–3.4). It answers a
+  plain-language learning request with at most 5 resources from a verified library, is on the web
+  page, and was built without any Core change.
 - AI gateway in `app/llm/` (offline mock, Claude provider, and Typhoon, a free
   model by SCB 10X). It handles outages, off-contract answers, prompt injection
   and secrets as documented. **Claude has not been called.** Typhoon was run on
   the synthetic sets on 2026-11-06: a first measurement on developer-labelled
   cases, not accuracy.
 - Measurement and monitoring:
-  - A scorecard over 61 synthetic labelled cases in English and Thai runs in
-    CI. Its mock scores test the pipeline, not accuracy.
+  - Two scorecards run in CI: 61 synthetic labelled triage cases and 67
+    synthetic study-guide requests, in English and Thai. Their mock scores
+    test the pipeline, not accuracy.
   - Sentry error monitoring, with live smoke-test events received.
   - 276 automated tests.
 - Architecture: [architecture](../architecture.md) covers the layers, decisions
@@ -82,6 +86,9 @@ yet been benchmarked or validated with prospective users.
 4. Bounded artifact access, checksums, backup exercise and documentation.
 5. Reproducible test scenarios and a second independent domain to test the
    no-core-modification rule.
+
+**Note (2026-11-07):** items 1 and 2 and a first second domain already exist (Milestone B and roadmap
+Phase 3), so this scope must be re-cut before any submission. That is the owner's decision.
 
 Out of scope: untrusted Python sandboxing, distributed worker claims,
 multi-tenancy, arbitrary user code, unreviewed payment side effects,

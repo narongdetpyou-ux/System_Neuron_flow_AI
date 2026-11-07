@@ -1,15 +1,16 @@
 # Funding readiness — internal evidence pack
 
-**As of:** 2026-11-03 (`main` @ `0b03735`). **Use:** planning, technical due diligence, and an honest evidence
+**As of:** 2026-11-07 (`main` @ `cf06f4d`). **Use:** planning, technical due diligence, and an honest evidence
 register. **Not:** a completed grant application, or an assertion that any grant program will accept this
 project.
 
 ## What exists
 
 - **Core runtime** (`neuron_flow/`). Since its extraction on 2026-10-31 it has changed once, for the planned telemetry fix (PR #21).
+- **Two domains on the same Core:** synthetic case triage (v1 rules, v2 AI second opinion in shadow mode) and the study guide (`study_guide.v1`, roadmap 3.1–3.4: at most 5 resources per answer from a verified library of 17 links, on the web page since PR #39). Neither needed a Core change.
 - **276 automated tests** passing on Python 3.10 and 3.12 in CI, and on 3.13 in a development session
   (3.11 was last checked on 2026-11-01, at 53 tests).
-  - Last pinned green run on `main` (`0b03735`, 119 tests): https://github.com/narongdetpyou-ux/System_Neuron_flow_AI/actions/runs/41550257103
+  - Last pinned green run on `main` (`cf06f4d`, 276 tests): https://github.com/narongdetpyou-ux/System_Neuron_flow_AI/actions/runs/42372717144
 - **Support-case triage domain:**
   - v1: deterministic keyword rules.
   - v2: shadow mode, where an AI gives a second opinion. Rules stay official and a human always decides.

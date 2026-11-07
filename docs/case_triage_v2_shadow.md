@@ -6,7 +6,8 @@ on 2026-11-06** (the free path, ADR-021): the first got 0/5 answers because Typh
 `response_format`; after the fix (ADR-022) the AI answered 61/61 and was correct on 60/61 of the synthetic
 cases, in two runs ([evidence](evidence/2026-11-06-first-live-typhoon.md)). Claude has not been run (it needs a paid
 `ANTHROPIC_API_KEY`, D2). Synthetic data only.
-service, public API or human-review service. No Core (`neuron_flow/`) file was changed. Design principles:
+It is not a production service: since round 2 it runs behind the intake API and the web page as a
+single-owner pilot on Render's free plan, and there is no human-review service yet (Milestone C). No Core (`neuron_flow/`) file was changed. Design principles:
 [design_philosophy.md](design_philosophy.md).
 
 ## ภาพรวมการทำงาน (สรุปภาษาไทย)
