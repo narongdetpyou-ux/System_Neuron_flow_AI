@@ -7,7 +7,10 @@ Flow for one call:
 3. treat a refusal as ``ModelDeclined`` and a cut-off answer as ``InvalidModelOutput``;
 4. parse the JSON answer and check it against the prompt's answer schema
    (every field present, no extra fields, fixed choices respected);
-5. clean free-text fields (no control characters, at most 200 characters).
+5. clean free-text fields: no control characters, at most 200 characters, and no lone surrogates (half of an
+   emoji, written by the model as an escape such as ``\\ud800``). They become U+FFFD, because Core cannot store
+   them: before this, one such character failed the whole case instead of reaching review (robustness
+   benchmark, SYN-E2E-029).
 """
 
 import re
@@ -22,6 +25,7 @@ from .redaction import MaskedText
 TEXT_LIMIT = 200
 _CUT_OFF = {"max_tokens", "model_context_window_exceeded"}
 _CONTROL = re.compile(r"[\x00-\x1f\x7f  ]+")
+_LONE_SURROGATE = re.compile(r"[\ud800-\udfff]")  # json.loads joins valid pairs, so any surrogate left is alone
 _PROVIDERS = {"mock": mock, "anthropic": anthropic, "typhoon": openai_compat}
 
 
@@ -61,6 +65,6 @@ def parse_answer(text, schema):
             if item not in spec["enum"]:
                 raise InvalidModelOutput(f"The model answer has an unknown {name} value")
         else:
-            item = " ".join(_CONTROL.sub(" ", item).split())[:TEXT_LIMIT]
+            item = " ".join(_CONTROL.sub(" ", _LONE_SURROGATE.sub("\ufffd", item)).split())[:TEXT_LIMIT]
         result[name] = item
     return result

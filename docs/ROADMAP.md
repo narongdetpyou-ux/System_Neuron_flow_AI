@@ -21,7 +21,7 @@ differs, this file and architecture.md win.
   - ถ้าสองฝ่ายเห็นไม่ตรงกัน เคสจะถูกยกให้คนดูก่อน
 - ถ้าเครื่องดับกลางทาง ระบบทำต่อได้ ส่งซ้ำก็ไม่เกิดงานซ้ำ
 - ยกเลิกเคสที่ยังรอคิวได้ และทุกคำขอมีรหัสคำขอ (request id) ไว้ไล่ดูใน log (ขั้น 1.2, 1.3)
-- ผ่านชุดทดสอบอัตโนมัติ 284 ข้อ และเปิดใช้ออนไลน์บน Render แล้ว ระบบปิดตัวอย่างเรียบร้อย และการแก้แค่เอกสารไม่ทำให้ Render ขึ้นเวอร์ชันใหม่ (ขั้น 0.1, 0.5)
+- ผ่านชุดทดสอบอัตโนมัติ 289 ข้อ และเปิดใช้ออนไลน์บน Render แล้ว ระบบปิดตัวอย่างเรียบร้อย และการแก้แค่เอกสารไม่ทำให้ Render ขึ้นเวอร์ชันใหม่ (ขั้น 0.1, 0.5)
 - หน้าเว็บเป็นแบบแชท: พิมพ์เคส ดูขั้นตอนก่อนส่ง กดยืนยัน แล้วติดตามใน Flow และประวัติเหตุการณ์ (ขั้น 1.6)
 - หน้าเว็บบอกว่ามีเคสรอกี่เคส เคสที่รอนานสุดรอมานานเท่าไร ปกติแต่ละเคสใช้เวลาเท่าไร และเคสที่ไม่สำเร็จล้มเพราะอะไร (ขั้น 5.3)
 - ถ้ามีคนแก้กฎหรือ prompt แล้วคำตอบของเคสทดสอบเคสไหนเปลี่ยน ช่องตรวจบน GitHub จะเป็นสีแดงและบอกว่าเคสไหนเปลี่ยนอะไร (ขั้น 5.2)
@@ -33,18 +33,18 @@ differs, this file and architecture.md win.
 - มีชุดข้อสอบของผู้ช่วยแนะนำแหล่งเรียน 67 ข้อ (ไทยและอังกฤษ คำเปรียบ คำพูดอ้อม เรื่องนอกกรอบ และคำสั่งแอบแฝง) GitHub รันทุกครั้งที่ส่งโค้ด ถ้ามีลิงก์นอกคลังหรือเกิน 5 แหล่งแม้ข้อเดียว หรือคำตอบข้อไหนเปลี่ยน ช่องตรวจจะเป็นสีแดง AI จำลองหาหัวข้อถูกแค่ 2 จาก 48 ข้อ ซึ่งไม่ใช่ความแม่นยำ ส่วนผลกับ AI จริงอยู่ในข้อถัดไป (ขั้น 3.3)
 - วัดผล AI จริงครั้งแรกแล้ว ฟรีผ่าน Typhoon ของ SCB 10X (เก่งภาษาไทย) เมื่อ 6 พ.ย.: รอบแรก AI ตอบไม่ได้เลย 0 จาก 5 เคส เพราะ Typhoon ไม่ทำตามช่องตั้งค่าที่ขอให้ตอบเป็น JSON แก้แล้วโดยบอกรูปแบบคำตอบเป็นคำพูดด้วย (ADR-022) หลังแก้ รันครบทั้งชุด: คัดแยกเคส AI ถูก 60 จาก 61 เคส ทั้ง 2 รอบ (กฎเดิมถูก 29) และผู้ช่วยแนะนำแหล่งเรียนหาหัวข้อถูก 46 จาก 48 ข้อ ไม่มีลิงก์นอกคลังเลย เคสเป็นของสมมุติที่ผู้พัฒนาเขียนเอง จึงยังไม่ใช่ความแม่นยำจริง และเป็นผลของ Typhoon ไม่ใช่ของ Claude ([บันทึกหลักฐาน](evidence/2026-11-06-first-live-typhoon.md); ขั้น 0.3, ADR-021, ADR-022)
 - หน้าเว็บมีช่อง "อยากเรียน" แล้ว: กดปุ่ม "อยากเรียน" เหนือช่องพิมพ์ พิมพ์เรื่องที่อยากรู้ แล้วกด Enter คำถามส่งทันที (ไม่มีขั้นยืนยันแบบเคส เพราะเป็นแค่คำแนะนำ) คำตอบขึ้นเป็นชั้น: สรุป 1 บรรทัด สิ่งที่ระบบเข้าใจพร้อมถามว่า "เข้าใจถูกไหม" แหล่งที่ควรเริ่มก่อนกับแหล่งที่สำคัญที่สุด แล้วกด "ดูขั้นตอนการเรียน" หรือ "ดูรายละเอียด" เมื่ออยากรู้เพิ่ม เรื่องนอกกรอบบอกตรง ๆ พร้อมรายการ 11 หัวข้อที่ช่วยได้ ถ้าช่อง AI มุมซ้ายล่างขึ้นว่า "AI จำลอง" คำเปรียบใหม่ ๆ อย่าง "บรรณารักษ์ที่รู้ใจ" จะถูกตอบว่านอกกรอบ และหน้าเว็บบอกเหตุผลไว้ เปิด Typhoon ได้ฟรีตามขั้นตอนในแท็บ "ตั้งค่า" (ขั้น 3.4, ADR-023)
-- มีด่านความทนทาน (robustness benchmark ขั้นที่ 1) แล้ว: ทุกครั้งที่ส่งโค้ด GitHub ป้อนเคสสุดโหดที่เขียนเอง 270 ข้อ และข้อมูลเปิดที่นักพัฒนาทั่วโลกใช้ (ข้อความแปลก 515 แบบ ไฟล์ทดสอบ JSON 318 ไฟล์ และคำขอจาก CLINC150 กับ BANKING77) เข้าทุกชั้นของระบบ รอบแรกเจอปัญหาร้ายแรง 8 จุด ที่สำคัญที่สุดคือถ้า AI ตอบมี "ตัวอักษรพัง" เคสทั้งเคสจะล้มและไม่ถึงคนตรวจ ทั้งหมดแก้ได้นอก Core (ขั้น 5.4–5.5, [แผนทดสอบ 3 ขั้น](benchmarking.md), [บันทึกหลักฐาน](evidence/2026-11-07-robustness-stage1.md))
+- มีด่านความทนทาน (robustness benchmark ขั้นที่ 1) แล้ว: ทุกครั้งที่ส่งโค้ด GitHub ป้อนเคสสุดโหดที่เขียนเอง 270 ข้อ และข้อมูลเปิดที่นักพัฒนาทั่วโลกใช้ (ข้อความแปลก 515 แบบ ไฟล์ทดสอบ JSON 318 ไฟล์ และคำขอจาก CLINC150 กับ BANKING77) เข้าทุกชั้นของระบบ รอบแรกเจอปัญหาร้ายแรง 8 จุด ที่สำคัญที่สุดคือถ้า AI ตอบมี "ตัวอักษรพัง" เคสทั้งเคสจะล้มและไม่ถึงคนตรวจ แก้ครบทั้ง 8 จุดแล้วใน PR #42 (รอคุณลองและสั่งรวม (merge)): ข้อมูลแปลกได้ "ข้อมูลไม่ถูกต้อง (400)" แทน "เซิร์ฟเวอร์พัง (500)" และเคสที่ AI ตอบมีตัวอักษรพังยังถึงคนตรวจพร้อมความเห็นของ AI 7 จุดแก้นอก Core ส่วนจุดที่ 8 ตรวจตัวอ่าน JSON ของ Core เอง จึงแก้ Core 1 ฟังก์ชันพร้อมบันทึกข้อตัดสินใจ (ADR-025) ตอนนี้ผ่าน 215 จาก 270 ข้อ (ขั้น 5.4–5.5, [แผนทดสอบ 3 ขั้น](benchmarking.md), [บันทึกหลักฐาน](evidence/2026-11-07-robustness-stage1.md))
 
 **ลำดับต่อจากนี้** แต่ละขั้นจบด้วยสิ่งที่คุณลองเองได้
 
-| ขั้น | ทำอะไร | คุณจะได้ลองอะไร | สถานะ (7 พ.ย. 2026) |
+| ขั้น | ทำอะไร | คุณจะได้ลองอะไร | สถานะ (8 พ.ย. 2026) |
 |---|---|---|---|
 | 0 | เปิดใช้ออนไลน์บน Render และวัดผล AI จริงครั้งแรก | ใส่เคสบนหน้าเว็บจริง และอ่านผลวัดของ AI จริง | ออนไลน์แล้ว; วัดผล AI จริงครั้งแรกแล้วด้วย Typhoon (0.3, 6 พ.ย.); ที่เหลือรอคุณตัดสินใจ: D1 แผน Render แบบเสียเงิน, D2 API key ของ Claude และ 0.4 กับ Typhoon (ฟรี แต่ข้อความที่พิมพ์บนหน้าเว็บจะถูกส่งไป Typhoon) |
 | 1 | เก็บงานเล็ก ๆ ให้ระบบแน่นขึ้น | ยกเลิกเคสที่ยังรอคิวได้ | เสร็จ ยกเว้น 1.4 (สำรองข้อมูล) ที่ต้องใช้แผน Render แบบเสียเงิน |
 | 2 | ให้คนรีวิวได้จริง: ผู้รีวิวมีรหัสของตัวเอง กดอนุมัติหรือไม่อนุมัติได้ และ n8n แจ้งเตือน | กล่อง "รอรีวิว" บนหน้าเว็บ และข้อความแจ้งเตือน | ยังไม่เริ่ม |
 | 3 | ผู้ช่วยแนะนำแหล่งเรียน (`study_guide.v1`) ตามหลักปรัชญาของคุณ | พิมพ์เรื่องที่อยากรู้ด้วยคำธรรมดา แล้วได้แหล่งเรียนไม่เกิน 5 แหล่งพร้อมลำดับการเรียน | สร้างครบทุกขั้นแล้ว (คุณเลือกขั้นนี้ก่อนขั้น 2 เมื่อ 5 พ.ย.): 3.1 คลังแหล่งเรียน 3.2 ตัวผู้ช่วย และ 3.3 ชุดข้อสอบ ทำแล้ว (ดูตัวอย่างคำตอบและผลข้อสอบใน Actions ได้); 3.4 ช่อง "อยากเรียน" บนหน้าเว็บ สร้างและ merge แล้ว (7 พ.ย.) รอคุณลองบนหน้าเว็บจริง; รันกับ AI จริง (Typhoon) แล้ว หาหัวข้อถูก 46 จาก 48 ข้อ ไม่มีลิงก์นอกคลัง (Claude รอ D2) |
 | 4 | ช่องคุยภาษาธรรมดา: ระบบเข้าใจว่าคุณขออะไร บอกตรง ๆ เมื่อเรื่องอยู่นอกกรอบ และถามกลับ 1 คำถามเมื่อข้อมูลไม่พอ | คุยกับระบบได้เลย ไม่ต้องเลือกประเภทงานเอง | ยังไม่เริ่ม (ขั้น 3 สร้างครบแล้ว เริ่มได้เมื่อคุณเลือก) |
-| 5 | ติดตามเส้นทางของแต่ละงาน (เวลา token จุดที่ช้า) ด่านตรวจผลรายเคส และแผนทดสอบ 3 ขั้นด้วยข้อมูลเปิด | ตัวเลขคิวและเวลาบนหน้าเว็บ ช่องตรวจบน PR แล้วต่อด้วยเส้นทางงานใน Honeycomb; ผลด่านความทนทานในหน้าสรุปของ *Core logic tests* | เสร็จแล้วทั้ง 5.1, 5.2 และ 5.3; เส้นทางงานแรกเข้า Honeycomb เมื่อ 4 พ.ย. 00:23 น.; ด่านความทนทาน (5.4) สร้างแล้ว 7 พ.ย. เจอ 8 bug รอคุณดูผล; ต่อไปคือแก้ 8 bug (5.5) แล้วขั้นข้อสอบกลาง (5.6) และขั้นโจมตีกับใช้งานจริง (5.7) |
+| 5 | ติดตามเส้นทางของแต่ละงาน (เวลา token จุดที่ช้า) ด่านตรวจผลรายเคส และแผนทดสอบ 3 ขั้นด้วยข้อมูลเปิด | ตัวเลขคิวและเวลาบนหน้าเว็บ ช่องตรวจบน PR แล้วต่อด้วยเส้นทางงานใน Honeycomb; ผลด่านความทนทานในหน้าสรุปของ *Core logic tests* | เสร็จแล้วทั้ง 5.1, 5.2, 5.3 และ 5.4; เส้นทางงานแรกเข้า Honeycomb เมื่อ 4 พ.ย. 00:23 น.; ด่านความทนทาน (5.4) รวมเข้า main แล้ว 7 พ.ย.; แก้ 8 bug ที่เจอแล้ว (5.5, PR #42 รอคุณลองและสั่งรวม); ต่อไปคือตัดสินใจเรื่องจุดอ่อน (gap) 44 จุดที่เหลือ แล้วขั้นข้อสอบกลาง (5.6) และขั้นโจมตีกับใช้งานจริง (5.7) |
 | 6 | AI วางแผนงานหลายขั้น ระบบตรวจแผนก่อนรัน และเครื่องมืออื่นเรียกใช้ผ่าน MCP ได้ | สั่งงานจากแอป Claude ได้ | ยังไม่เริ่ม (ต้องรอขั้น 2–4) |
 | 7 | เตรียมพร้อมก่อนให้คนอื่นใช้ หรือก่อนเปิด repo สาธารณะ | รายงานตรวจความปลอดภัย และรายการตรวจก่อนเปิดตัว | เริ่มแล้ว: 7.1 ปิดข้อมูลส่วนตัวก่อนส่งให้ AI ทำแล้ว ส่วนการจำกัดว่าใครเห็นคีย์ AI ได้ เขียนแผนไว้ ยังไม่ทำ; 7.4 ส่วนเตรียมการ (สแกนหาคีย์ที่หลุด และย้าย DSN ไปเป็นความลับ) ทำแล้ว ที่เหลือรอคุณตัดสินใจ (D5) |
 
@@ -114,8 +114,8 @@ Marks: ✅ done · 🟡 built or partly checked (the status says what is left) �
 | 5.1 | OpenTelemetry tracing to Honeycomb | ✅ PR #30; the first trace seen in Honeycomb on 2026-11-03 ([evidence note](evidence/2026-11-03-first-trace-honeycomb.md)), and the gap it found (steps' agent versions) fixed after it | 1.1, 1.2 |
 | 5.2 | Evaluation gate in CI | ✅ PR #27 | — |
 | 5.3 | Queue and run-time metrics on the status page | ✅ PR #26 | — |
-| 5.4 | Robustness benchmark, stage 1: open and synthetic edge cases as a CI gate | 🟡 built in PR #41 (2026-11-07); first run: 206/270 own items pass, 8 bugs, 0 of 4,680 sweep checks broke a promise ([evidence note](evidence/2026-11-07-robustness-stage1.md)); waiting for the owner's look at the run page | — |
-| 5.5 | Fix what stage 1 found (the 8 bugs; zero Core changes) | ⬜ next | 5.4 |
+| 5.4 | Robustness benchmark, stage 1: open and synthetic edge cases as a CI gate | ✅ PR #41 (2026-11-07), merged after the owner checked the run page; first run: 206/270 own items pass, 8 bugs, 0 of 4,680 sweep checks broke a promise ([evidence note](evidence/2026-11-07-robustness-stage1.md)) | — |
+| 5.5 | Fix what stage 1 found (the 8 bugs, then the gaps) | 🟡 the 8 bugs fixed in PR #42 (2026-11-08): 215/270 own items pass, 0 bugs; one small Core change (ADR-025); deciding the 44 gaps is next | 5.4 |
 | 5.6 | Stage 2: open benchmarks (CLINC150, BANKING77, MASSIVE th-TH/en-US) with Typhoon | ⬜ | 5.4 |
 | 5.7 | Stage 3: prompt injection, personal data, load and restarts, weekly live drift | ⬜ | 5.4; drift schedule is the owner's choice |
 | 6.1 | Pattern A: bounded read-only tool loop | ⬜ | 3.2 |
@@ -962,7 +962,7 @@ workflow types.
   a gate in CI. The full three-stage plan is in [benchmarking.md](benchmarking.md).
 - **Why:** the owner asked for testing "beyond the private lab" with open datasets (2026-11-07). The existing
   scorecards use 61 and 67 developer-written cases that follow the happy paths.
-- **Status (2026-11-07): built in PR #41.**
+- **Status: ✅ built in PR #41 and merged on 2026-11-07,** after the owner checked the run page.
   - `tests/robustness/`:
     - 270 synthetic items across six layers (intake, rules, masking, AI replies, Core contracts, whole jobs
       through Core);
@@ -979,21 +979,31 @@ workflow types.
 - **Owner test (ไทย):**
   1. เปิด PR #41 กดแท็บ Checks เลือก *Core logic tests* (3.12) แล้วกด Summary
   2. เลื่อนหา "ด่านความทนทาน (Robustness benchmark ขั้นที่ 1)" ต้องเห็นตาราง 6 ชั้น, "ปัญหาร้ายแรง (bug) **8**"
-     และ "ด่านตรวจผลรายรายการ (gate): **ผ่าน**"
+     และ "ด่านตรวจผลรายรายการ (gate): **ผ่าน**" (ตั้งแต่ขั้น 5.5 ตัวเลข bug บนหน้าสรุปของ PR ใหม่เป็น **0**)
   3. (ไม่บังคับ ฟรี) แท็บ Actions เลือก *Shadow eval with Typhoon (manual)* แล้วกด Run workflow เลือก case_set
      `robustness_edge_v1` ต้องเห็นผล 116 เคส แยกกฎกับ AI
 - **Don't:** use real people's text (rule 9, ADR-024), or call a real AI from CI.
 
-### 5.5 Fix what stage 1 found (zero Core changes)
+### 5.5 Fix what stage 1 found
 
+- **Status (2026-11-08): the 8 bugs are fixed in PR #42** (the owner asked to start); deciding the gaps
+  (task 3) is next.
+  - Re-run: 215/270 own items pass, with 0 bugs, 44 gaps and 11 notes; 0 of 4,680 sweep checks broke a
+    promise; identical on Python 3.10, 3.12 and 3.13.
+  - Exactly 9 items changed in the baseline: the 8 bugs and the gap SYN-COR-041
+    ([evidence note](evidence/2026-11-07-robustness-stage1.md), "Re-run after the fixes").
 - **Tasks:**
-  1. **Intake:**
+  1. **Intake** ✅:
      - `routes._submit` and `_cancel` turn any `ValueError` from `decode()` into 400 `invalid_json`.
-       `SpecError` is a `ValueError`, so this covers the int-digit limit without touching Core.
+       `SpecError` is a `ValueError`, so this covers the int-digit limit even without the Core change in task 4.
      - `admit()` converts a `SpecError` from the fingerprint into 400 `invalid_input`.
-  2. **Gateway:** `parse_answer` refuses text that cannot be stored, so a lone surrogate becomes
-     `InvalidModelOutput`. The case then retries and degrades to "rules only" (ADR-012), and the study guide
-     degrades the same way.
+  2. **Gateway** ✅: `parse_answer` replaces a lone surrogate in a free-text field with U+FFFD, so Core can
+     store the answer.
+     - This differs from the plan, which was to refuse the answer (`InvalidModelOutput`, then "rules only").
+       Refusing would cost the case the AI's second opinion for one broken character, while the rest of the
+       answer is valid and still checked.
+     - A lone surrogate in a fixed-choice field cannot match the choices, so that answer is still refused.
+     - The study guide's answers go through the same gateway, so they are cleaned the same way.
   3. Decide each gap and write the decision down. Proposed:
      - strip or refuse bidi controls in case text and AI text;
      - count visible characters for the minimum length;
@@ -1001,14 +1011,23 @@ workflow types.
      - NFC-normalize text before the fingerprint, as an ADR, because it changes which requests count as the
        same.
      A masking change is a new `REDACTION_VERSION`.
-  4. Core's `decode()` contract gap (SYN-COR-040, SYN-COR-041) needs an ADR before any Core change (rule 1).
-     Until then the app guards cover it.
+  4. **Core** ✅ (ADR-025): `decode()` raises `SpecError` for everything it cannot read, including the int-digit
+     limit and a `str` holding a lone surrogate (SYN-COR-040, SYN-COR-041).
+     - One function, in its own commit in PR #42; Core version 0.4.1.
+     - The app guards in task 1 do not depend on it. If the owner does not want a Core change, that commit
+       is dropped before the merge and the baseline regenerated; only SYN-COR-040 and SYN-COR-041 would
+       then fail again.
 - **Done when:**
   - the 8 bug items pass;
   - the regenerated baseline says why each outcome changed;
   - a test covers each fixed path, including the end-to-end "AI replies with a lone surrogate, the case still
     reaches review".
-- **Owner test (ไทย):** หน้าสรุปของ *Core logic tests* ต้องขึ้น "ปัญหาร้ายแรง (bug) **0**"
+- **Owner test (ไทย):**
+  1. เปิด PR #42 กดแท็บ Checks เลือก *Core logic tests* (3.12) แล้วกด Summary
+  2. หัวข้อ "ด่านความทนทาน (Robustness benchmark ขั้นที่ 1)" ต้องขึ้น "ผ่าน **215/270**", "ปัญหาร้ายแรง (bug) **0**"
+     และ "ด่านตรวจผลรายรายการ (gate): **ผ่าน**"
+  3. หลังสั่งรวม (merge) Render จะขึ้นเวอร์ชันใหม่ เพราะรอบนี้แก้โค้ดที่ระบบใช้จริง (แผนฟรี: เคสที่ค้างในคิวจะหาย)
+     รอสักครู่ แล้วเปิด https://neuron-flow.onrender.com ส่งเคสปกติ 1 เคส ต้องถึงขั้น "รอคนตรวจ" เหมือนเดิม
 
 ### 5.6 Stage 2: open benchmarks
 
@@ -1286,3 +1305,4 @@ workflow types.
   background (first-response rule 4). 0.4 gained the free Typhoon option, because the owner test's metaphor
   needs a real model on the online page. Marked 🟡 until the owner tests it on the live page.
 - 2026-11-07: Phase 5 gained 5.4–5.7, because the owner asked for a 3-stage benchmarking plan with open datasets and hard edge cases. 5.4 is built in PR #41: a robustness benchmark over 270 synthetic items and four open datasets, as a CI gate with a baseline that records failures too. Its first run found 8 bugs (two causes, both fixable outside Core), so 5.5 fixes them next. ADR-024 records which open data counts as synthetic (written for a dataset, openly licensed, no real people's records); ai4privacy was left out for its licence.
+- 2026-11-08: 5.4 marked ✅ (PR #41 merged after the owner checked the run page). 5.5's 8 bugs fixed in PR #42, because the owner asked to start. Intake turns every parse failure and every input Core cannot store into 400, and the gateway cleans a lone surrogate in AI text to U+FFFD instead of refusing the answer as planned, so the case keeps the AI's second opinion. Correction: the stage-1 note said all 8 were fixable outside Core. Seven are; SYN-COR-040 tests Core's own `decode()`, so it needed a Core change, recorded as ADR-025 and kept as its own commit. Re-run: 215/270 pass, 0 bugs, 44 gaps (the gap SYN-COR-041 passes too). 5.5 stays 🟡 for the gap decisions.

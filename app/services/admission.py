@@ -4,7 +4,8 @@ Flow for one ``POST /v1/jobs``:
 1. the body must be exactly ``{workflow_type, idempotency_key, input}``;
 2. the workflow type must be in the catalog, and the input must pass that workflow's own checks,
    so invalid input is refused before any agent could run;
-3. the request fingerprint is the SHA-256 of the workflow type plus the normalized input;
+3. the request fingerprint is the SHA-256 of the workflow type plus the normalized input; input that Core
+   could not store (such as a lone surrogate, half of an emoji) is refused here with 400 too;
 4. a new idempotency key creates one QUEUED job; the same key with the same fingerprint returns
    the existing job (a retry or a double click never makes a second job); the same key with a
    different fingerprint is a conflict.
@@ -61,7 +62,11 @@ def admit(store, body, *, max_queued, catalog=CATALOG, request_id=None, trace_pa
         normalized = workflow.check_input(body["input"])
     except SpecError as exc:
         raise AdmissionError(400, "invalid_input", str(exc)) from None
-    digest = request_fingerprint(workflow.name, normalized)
+    try:
+        digest = request_fingerprint(workflow.name, normalized)
+    except SpecError:  # text that Core cannot store, such as half of an emoji (a lone surrogate)
+        raise AdmissionError(400, "invalid_input",
+                             "The input holds characters that cannot be stored, such as half of an emoji") from None
     try:
         job, created = store.admit(job_id=new_job_id(), idempotency_key=key, request_fingerprint=digest,
                                    workflow_type=workflow.name, input=normalized, max_queued=max_queued,

@@ -290,6 +290,20 @@ class AnswerFormatTests(unittest.TestCase):
                       fake.requests[0]["body"]["messages"][0]["content"])
 
 
+    def test_a_rationale_with_half_an_emoji_still_reaches_review(self):
+        """Robustness benchmark (SYN-E2E-029): this reply used to fail the whole case (Core could not store it)."""
+        reply = completion('{"category": "upload", "confidence": "high", "rationale": "bad \\ud800 text"}')
+        with FakeServer([(200, reply)]) as fake, tempfile.TemporaryDirectory() as work:
+            config = typhoon(fake.base_url)
+            with Runtime(work, agents=shadow_registry(config)) as rt:
+                rt.submit(build_shadow_workflow("half_emoji", {"case_id": "HE-1", "summary": UPLOAD}, config))
+                snapshot = rt.run("half_emoji")
+        self.assertEqual(snapshot["status"], "SUCCEEDED")
+        proposal = snapshot["steps"]["prepare"]["output"]
+        self.assertEqual((proposal["decision"], proposal["second_opinion"]["status"]), ("PENDING_HUMAN_REVIEW", "ok"))
+        self.assertEqual(proposal["second_opinion"]["rationale"], "bad \ufffd text")
+
+
 class EndToEndTests(unittest.TestCase):
     def test_triage_shadow_mode_without_storing_the_token(self):
         replies = [(200, completion(GOOD)), api_error(400, "content_filter")]

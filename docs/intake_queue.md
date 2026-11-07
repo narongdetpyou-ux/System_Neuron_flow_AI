@@ -1,6 +1,6 @@
 # Intake API, job queue, Runner and web page (round 2, Milestone B)
 
-**Status:** built in PR #11 and tested offline (284 tests on 2026-11-07, including killing the Runner
+**Status:** built in PR #11 and tested offline (289 tests on 2026-11-08, including killing the Runner
 mid-step). The container build is checked on every push by *Actions → Service container*. Live on
 Render's free plan since 2026-11-01 (`render.yaml`). Railway was the first choice, but it has paused new
 sign-ups since 22 Oct 2026 after a security incident; `railway.json` stays in the repository for later.
@@ -306,6 +306,9 @@ Error bodies look like `{"error": "<code>", "message": "<English text>"}`. Codes
 `too_many_attempts` (with `retry_after_s` and a `Retry-After` header), `unauthorized`,
 `access_key_not_configured`, `body_too_large`, `unsupported_media_type`, `length_required`,
 `invalid_parameter`, `job_not_found`, `not_cancellable`, `method_not_allowed`, `not_found`, `internal_error`.
+Input the parser cannot read (for example a number past Python's 4,300-digit limit) is `invalid_json`, and
+text that cannot be stored (half of an emoji, a lone surrogate) is `invalid_input`; neither is ever a 500
+(robustness benchmark, roadmap 5.5).
 
 ### Queue and run-time figures (roadmap 5.3)
 

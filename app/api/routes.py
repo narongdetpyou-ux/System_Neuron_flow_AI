@@ -34,7 +34,7 @@ import secrets
 import time
 
 from neuron_flow import __version__
-from neuron_flow.model import SpecError, decode
+from neuron_flow.model import decode
 
 from app.domains.case_triage.contracts import SUMMARY_MAX_CHARS, SUMMARY_MIN_CHARS
 from app.domains.study_guide.contracts import MESSAGE_MAX_CHARS, MESSAGE_MIN_CHARS
@@ -271,7 +271,7 @@ class ApiApp:
                          headers=[("Retry-After", str(retry))], retry_after_s=retry)
         try:
             body = decode(request.body)
-        except SpecError:
+        except ValueError:  # a SpecError, or any other parse failure: the client's input, never a 500
             return error(400, "invalid_json", "The body is not valid JSON, or it repeats a field")
         try:
             job, created = admit(self.store, body, max_queued=self.settings.max_queued, catalog=self.catalog,
@@ -294,7 +294,7 @@ class ApiApp:
                 return error(415, "unsupported_media_type", "Send JSON with Content-Type: application/json")
             try:
                 body = decode(request.body)
-            except SpecError:
+            except ValueError:  # a SpecError, or any other parse failure: the client's input, never a 500
                 return error(400, "invalid_json", "The body is not valid JSON, or it repeats a field")
             if body != {}:
                 return error(400, "invalid_fields", "A cancel request takes no fields; send {} or nothing")

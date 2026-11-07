@@ -40,7 +40,7 @@ flowchart TD
       LLM[app/llm gateway: prompt library, mock + Claude + Typhoon - built]
       SG[study_guide.v1: topic catalog, verified library and workflow - built; on the web page]
     end
-    subgraph L1[Layer 1: Core neuron_flow - one planned fix since extraction]
+    subgraph L1[Layer 1: Core neuron_flow - two planned fixes since extraction]
       CORE[Dendrite -> Synapse -> Axon -> Soma -> AxonTerminal]
     end
     L4 --> L3 --> L2 --> L1
@@ -66,7 +66,7 @@ Each row was re-checked against the current code.
 | `Runtime` holds `WorkspaceLock(workspace/runtime.lock)` | One controller per workspace. Only a single Runner may open it; an API must never hold the lock |
 | `Soma.run(job_id)` runs a whole static DAG in a blocking loop | Durable admission and queueing belong to the application layer |
 | Step states `PENDING, RUNNING, RETRY_WAIT, SUCCEEDED, FAILED, BLOCKED`; jobs may end `DELIVERY_FAILED`; no pause/resume | Human review is modelled as two linked jobs, not a paused one |
-| JSON only, ≤ 1 MiB per message, ≤ 1000 steps, `max_attempts` 1–5 | Large files go to an artifact store and are passed by reference + hash |
+| JSON only, ≤ 1 MiB per message, ≤ 1000 steps, `max_attempts` 1–5; `decode` refuses everything it cannot read with `SpecError` (ADR-025) | Large files go to an artifact store and are passed by reference + hash; an API maps `SpecError` to 400 |
 | `AgentDefinition(name, entrypoint, validator, version)`; the version is frozen per job | Agents come from a trusted registry. The version carries AI provenance (§4) |
 | Same `job_id` with a different spec is rejected | The application must map request idempotency keys to job ids |
 | Interrupted `RUNNING` steps are retried and count against `max_attempts` | External side effects are not exactly-once; they need their own idempotency |
@@ -186,7 +186,7 @@ Requests never carry agent import paths, code, tenant ids or callbacks.
 ## 7. Code organisation
 
 ```text
-neuron_flow/                   Core runtime (one change since extraction: the telemetry fix)
+neuron_flow/                   Core runtime (two changes since extraction: the telemetry fix, PR #21; decode()'s error contract, ADR-025)
 app/domains/case_triage/       v1 rules (agents.py, workflow.py), contracts.py, v2 shadow_agents.py, shadow_workflow.py
 app/domains/study_guide/       library.py (topic catalog + resource library: checks, SHA-256), link_check.py, catalog/*_v1.json;
                                workflow.py, agents.py, planning.py, ai_prompts.py, mock_answers.py (study_guide.v1)
@@ -202,7 +202,7 @@ app/boot.py                    process 1 of the image: takes the data folder, dr
 app/settings.py, app/serve.py  environment settings; the launcher (API + supervised Runner in one container)
 Dockerfile, render.yaml        the container and the Render Blueprint (railway.json kept for Railway)
 examples/                      case_triage_demo, case_triage_shadow_demo, study_guide_demo, sentry_smoke_test, service_smoke_test
-tests/                         284 tests: core, triage v1/v2, AI gateway, Typhoon provider, masking, scorecards, eval gates, Sentry, tracing, API, queue, Runner, HTTP, metrics, study library, link check, study guide, web page, robustness benchmark
+tests/                         289 tests: core, triage v1/v2, AI gateway, Typhoon provider, masking, scorecards, eval gates, Sentry, tracing, API, queue, Runner, HTTP, metrics, study library, link check, study guide, web page, robustness benchmark
 tests/robustness/              the robustness benchmark, stage 1 (docs/benchmarking.md): synthetic_v1.json (270 edge cases), open_extract_v1.json
                                (BLNS, JSONTestSuite, CLINC150, BANKING77, pinned; NOTICE.md), bench.py, build_open_extract.py, triage_edge_golden_v1.json
 tests/baselines/               shadow_eval_mock.json, study_guide_eval_mock.json: every case's answer with the mock AI (the eval gates' baselines);
@@ -242,6 +242,7 @@ planned: review ledger and artifact store
 | 022 | An OpenAI-format client may also state the answer format in words. When a provider is listed in `ANSWER_FORMATS` (`app/llm/config.py`; today only `typhoon`, format `json-instruction-v1`), the client appends to the system prompt an instruction built from the prompt's own answer schema (the keys in order, each choice field's allowed values, one JSON object and nothing else), and reads the reply from its first `{` to its last `}` after removing a Markdown code fence. The same validators then check the object; plain `key: value` lines, extra keys, a wrong choice or two objects are still refused, never parsed. The format version is part of the agent version (`;format=json-instruction-v1`), so a job frozen before the change fails as `configuration_changed` (ADR-015). Claude's requests and versions are unchanged | In force (PR #38). Found on the first live run (2026-11-06): Typhoon answered HTTP 200 but ignored `response_format`, so all 5 answers were plain lines and were refused ([evidence](evidence/2026-11-06-first-live-typhoon.md)). Trade-off: the model sees text that is not in the prompt file, so the prompt's hash alone no longer names everything sent; the format version in the agent version closes that gap, and the instruction is a pure function of the answer schema |
 | 023 | On the web page, an informational request (today a study question, roadmap 3.4) is sent as soon as the person presses Enter, without the confirm card that a case shows first. Its answer asks back "เข้าใจถูกไหม" with what the system understood, and a "แก้คำถาม" button puts the question back in the box. A case still shows its steps and waits for "ยืนยันและส่ง". Until the plain-language router (roadmap 4.2) chooses by itself, a switch above the box ("เคสลูกค้า" / "อยากเรียน") says which kind the next message is | In force (PR #39). Trade-off: a mistyped question reaches the AI without a second look (personal data masked first, 7.1). It decides nothing and sends nothing outside (ADR-018), costs one or two AI calls, and its answer shows what was understood, so a wrong reading is visible and easy to correct. Anything that decides about a person or acts outside keeps the confirm step and human review (rule 4) |
 | 024 | Open datasets in tests and benchmarks count as synthetic data (rule 9) only when they are: written for the dataset (hand-made test strings, crowd-written or expert-written requests), openly licensed for redistribution, free of real people's records, and pinned to an upstream commit with every file's SHA-256, attribution and the changes made (`tests/robustness/NOTICE.md`). Labels mapped into this project's categories are marked as the developer's mapping. Real-world text (social-media posts, call-centre transcripts, real tickets) still needs D4 | In force (roadmap 5.4, PR #41). Used: BLNS and JSONTestSuite (MIT), CLINC150 (CC BY 3.0), BANKING77 (CC BY 4.0); planned: MASSIVE (CC BY 4.0), deepset/prompt-injections (Apache-2.0). Left out: ai4privacy (non-commercial, no redistribution or derivatives without a written licence), truevoice-intent and social-media corpora (real people's words). Trade-off: crowd-written text is cleaner and more uniform than real cases, so these sets find robustness bugs and rule gaps, not real-world accuracy |
+| 025 | `neuron_flow.model.decode` raises `SpecError` for every input it cannot read: besides invalid JSON and invalid UTF-8, also text holding a lone surrogate and a number past Python's 4,300-digit conversion limit, which escaped as `UnicodeEncodeError` and `ValueError`. Refusals that carry their own message (a repeated field, a non-finite constant, `MessageSizeError`) are unchanged, and every input it read before reads the same. The second Core change since extraction (rule 1); Core version 0.4.1 | In force (roadmap 5.5, PR #42). Found by the robustness benchmark (SYN-COR-040, SYN-COR-041): the API caught only `SpecError`, so a 5,000-digit number got a 500. The app guards on their own (the API treats any parse failure as 400, admission refuses input Core cannot store) already fix that symptom; this makes Core keep its own contract for every caller. Trade-off: a Core change, kept to the one function with tests (`tests/test_core.py`, `JsonContractTests`) |
 
 ## 9. Acceptance gates
 
@@ -294,7 +295,9 @@ planned: review ledger and artifact store
   referrer (PR #39, ROADMAP 3.4, `tests/test_web_page.py`); the robustness gate, stage 1 (ROADMAP 5.4): 270
   synthetic edge cases and four pinned open datasets through intake, rules, masking, AI replies, Core contracts
   and whole jobs, on every push. It fails when any item's outcome changes from `tests/baselines/robustness_v1.json`,
-  whose first run records 8 bugs to fix in 5.5 (PR #41, [evidence](evidence/2026-11-07-robustness-stage1.md)).
+  whose first run recorded 8 bugs (PR #41, [evidence](evidence/2026-11-07-robustness-stage1.md)), all fixed in
+  5.5 (PR #42): a number too long to read or half of an emoji gets 400, never 500, and an AI answer holding
+  half of an emoji is cleaned so the case still reaches review.
 - Open: retention and backup/restore drills (1.4, needs a disk), API authentication hardening (2.1, 7.2).
 
 **P2 (do not build early):** multi-tenancy, distributed workers, Postgres, object storage, SLAs, a hosted
@@ -309,7 +312,7 @@ dashboard.
 | P1-fix | Neutral telemetry phase names | Done (PR #21, roadmap 1.1) |
 | B | Admission queue, single Runner, reconciliation, thin API, web page | Done (PR #11); live on Render's free plan since 2026-11-01; page redesigned as a chat layout with Flow, Trace and read-only settings (PR #18, roadmap 1.6) |
 | C | Two-phase review, decision ledger, n8n notifications | Open |
-| D | OpenTelemetry tracing, eval gates in CI | Done: the per-case eval gates (5.2 for triage; 3.3 for the study guide), queue/run-time figures (5.3), Sentry, request ids, and tracing (5.1, PR #30), with the first trace seen in Honeycomb on 2026-11-03. Added on 2026-11-07: the robustness benchmark, stage 1 of the plan in [benchmarking.md](benchmarking.md) (5.4, PR #41; its 8 bugs are 5.5); stages 2–3 (5.6, 5.7) planned |
+| D | OpenTelemetry tracing, eval gates in CI | Done: the per-case eval gates (5.2 for triage; 3.3 for the study guide), queue/run-time figures (5.3), Sentry, request ids, and tracing (5.1, PR #30), with the first trace seen in Honeycomb on 2026-11-03. Added on 2026-11-07: the robustness benchmark, stage 1 of the plan in [benchmarking.md](benchmarking.md) (5.4, PR #41; its 8 bugs fixed in 5.5, PR #42); stages 2–3 (5.6, 5.7) planned |
 | E | Planner pattern (B), MCP server, second domain with zero Core changes | Open |
 | — | `study_guide.v1`: first-response study guide ([design_philosophy.md](design_philosophy.md), [study_guide.md](study_guide.md)) | Workflow and scorecard built: the topic catalog, the verified resource library, the weekly link check (3.1, PR #32), the five-step workflow in the catalog (3.2, PR #33) and the 67-request scorecard with its eval gate (3.3, PR #34), with the mock AI in CI; first live run with Typhoon on 2026-11-06: topic correct 46/48, 0 of 142 links outside the library ([evidence](evidence/2026-11-06-first-live-typhoon.md)); on the web page with a layered answer (3.4, PR #39; questions sent without a confirm card, ADR-023), waiting for the owner's test on the live page; Claude after D2 |
 

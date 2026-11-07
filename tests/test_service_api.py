@@ -146,6 +146,38 @@ class AdmissionTests(ApiTestCase):
         self.assertEqual(post(self.app, None, raw=huge).status, 413)
         self.assertEqual(self.jobs_in_store(), [])
 
+    def test_input_the_parser_or_core_cannot_read_is_refused_not_a_500(self):
+        """Robustness benchmark (SYN-INT-036 to 039): a 5,000-digit number, or half of an emoji (a lone
+        surrogate), used to get 500 internal_error and a Sentry report."""
+        reported = []
+
+        class Reporter:
+            def capture_exception(self, exc, **_details):
+                reported.append(exc)
+
+        app = ApiApp(self.settings, self.store, reporter=Reporter())
+        huge = "1" + "0" * 5000
+        refused = {
+            "invalid_json": [
+                '{"workflow_type":"case_triage.v2","idempotency_key":"key-huge-01","input":'
+                '{"case_id":"C1","summary":"I cannot upload a file"},"x":' + huge + "}",
+                '{"workflow_type":"case_triage.v2","idempotency_key":"key-huge-02","input":'
+                '{"case_id":"C1","summary":' + huge + "}}"],
+            "invalid_input": [
+                json.dumps(case_body("key-surr-01", summary="login broken \ud800 please help")),
+                json.dumps({"workflow_type": "study_guide.v1", "idempotency_key": "key-surr-02",
+                            "input": {"message": "learn prompt \ud800 writing"}})],
+        }
+        for code, bodies in refused.items():
+            for raw in bodies:
+                with self.subTest(code=code, body=raw[:60]):
+                    response = post(app, None, raw=raw.encode("utf-8"))
+                    self.assertEqual((response.status, body_of(response)["error"]), (400, code))
+        job_id = body_of(post(app, case_body("key-cancel-huge")))["job_id"]
+        self.assertEqual(cancel(app, job_id, body=('{"x":' + huge + "}").encode()).status, 400)
+        self.assertEqual(reported, [])
+        self.assertEqual([job["job_id"] for job in self.jobs_in_store()], [job_id])
+
     def test_submissions_are_rate_limited_per_client(self):
         app = ApiApp(settings(self.data_dir, submit_per_minute=3), self.store)
         statuses = [post(app, case_body(f"key-rate-{n:04d}"), client="busy").status for n in range(4)]

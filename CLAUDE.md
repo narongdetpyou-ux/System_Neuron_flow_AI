@@ -25,7 +25,7 @@ trusted agents in bounded child processes, retries, recovers after a crash and w
 - a robustness benchmark (`tests/robustness/`, roadmap 5.4; plan in
   [docs/benchmarking.md](docs/benchmarking.md)): 270 hard synthetic edge cases and four pinned open datasets
   (BLNS, JSONTestSuite, CLINC150, BANKING77; ADR-024) through every layer. It is a CI gate on every outcome,
-  failures included; its first run found 8 bugs that 5.5 fixes.
+  failures included; its first run found 8 bugs, all fixed in 5.5 (PR #42).
 
 All data is synthetic. Milestones A, A2 and B are done.
 
@@ -82,8 +82,9 @@ Read in this order when you need depth:
 ## 3. Rules you must not break
 
 1. **Core stays unchanged.**
-   - `neuron_flow/` has changed once since commit `09100f7`: the planned telemetry fix (ROADMAP 1.1,
-     PR #21), with tests. No other Core change is planned; any new one needs an ADR first.
+   - `neuron_flow/` has changed twice since commit `09100f7`, each with tests: the planned telemetry fix
+     (ROADMAP 1.1, PR #21) and `decode()`'s error contract (ADR-025, ROADMAP 5.5, PR #42). No other Core change
+     is planned; any new one needs an ADR first.
    - Core never imports `app.*`. Dependencies point one way: interface → services → domain → Core.
 2. **Only the Runner opens `Runtime`** (ADR-001). The API and every other process stay away from Core and
    its SQLite files.
@@ -127,7 +128,7 @@ If a task seems to need breaking a rule:
 ## 4. Checking your work
 
 ```bash
-python -m unittest discover -s tests -v        # all tests (284 on 2026-11-07); Python 3.10–3.13
+python -m unittest discover -s tests -v        # all tests (289 on 2026-11-08); Python 3.10–3.13
 python -m examples.case_triage_demo            # v1 rules, one synthetic case
 python -m examples.case_triage_shadow_demo     # v2 shadow mode with the offline mock AI
 python -m examples.study_guide_demo            # the study guide's answers to four synthetic requests
@@ -321,7 +322,12 @@ Notes for cloud sessions (claude.ai/code):
     2026-11-07): 270 synthetic items and BLNS, JSONTestSuite, CLINC150 and BANKING77 (ADR-024), a CI gate on
     every outcome. First run: 206/270 own items pass, 8 bugs (a 500 for huge integers or a lone surrogate, and
     a whole case failing when the AI's text holds a lone surrogate), 45 gaps, 0 of 4,680 sweep checks broken
-    (`docs/evidence/2026-11-07-robustness-stage1.md`). Waiting for the owner's look at the run page.
+    (`docs/evidence/2026-11-07-robustness-stage1.md`). The owner checked the run page and asked to merge.
+  - The 8 bugs stage 1 found, fixed (roadmap 5.5, PR #42):
+    - a number too long to read, or half of an emoji (a lone surrogate), gets 400 instead of 500;
+    - AI text holding half of an emoji is cleaned (U+FFFD), so the case still reaches review;
+    - Core's `decode()` refuses everything it cannot read with `SpecError` (ADR-025, the second Core change).
+    The gate now shows 0 bugs and 215/270 own items passing. Waiting for the owner's test and merge.
   - The web page's chat layout from the owner's "Nocturne" mockup (PR #18, roadmap 1.6; live and
     owner-tested on 2026-11-03). Parts of the mockup that would break the rules in §3 (key and provider
     fields, editing steps, a "never ask" policy) are shown read-only or left out on purpose; see
@@ -343,8 +349,7 @@ Notes for cloud sessions (claude.ai/code):
   - Waiting on the owner: 0.2 and 1.4 (D1, paid Render plan), 0.3 path B and 0.4 with Claude (D2, Claude
     API key); 0.4 with Typhoon is free but sends what is typed on the page to Typhoon, so it is the owner's
     choice too.
-  - Buildable now without an owner decision: 5.5 (fix the 8 bugs stage 1 found; recommended first, small and
-    zero Core changes), then 5.6 and 5.7, Phase 2 (2.1 first) and Phase 4 (4.1 first; Phase 3, which it
-    needs, is built). The rest of 7.1 (who can read the AI key) needs an ADR first.
+  - Buildable now without an owner decision: the rest of 5.5 (decide and fix the stage-1 gaps), 5.6 and 5.7,
+    Phase 2 (2.1 first) and Phase 4 (4.1 first; Phase 3, which it needs, is built). The rest of 7.1 (who can read the AI key) needs an ADR first.
   - The owner decides which phase comes next; ask before starting a new phase.
 - Keep this section and the ROADMAP status table true in every PR.

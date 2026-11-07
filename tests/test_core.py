@@ -6,6 +6,7 @@ from neuron_flow import AgentDefinition, Runtime, SpecError
 from neuron_flow.case_memory import CaseMemory
 from neuron_flow.evaluation import candidate_gate, route_variant
 from neuron_flow.integrity import write_manifest, verify_manifest
+from neuron_flow.model import MAX_MESSAGE_BYTES, MessageSizeError, decode
 from neuron_flow.telemetry import Telemetry
 from tests import core_agents
 
@@ -84,6 +85,30 @@ class CoreLogicTests(unittest.TestCase):
             write_manifest(temp)
             result=verify_manifest(temp)
             self.assertIsNotNone(result)
+
+
+class JsonContractTests(unittest.TestCase):
+    """decode() refuses every input it cannot read with SpecError (ADR-025), so a caller that catches SpecError
+    never meets another error type (robustness benchmark: SYN-COR-040, SYN-COR-041)."""
+
+    def test_numbers_too_long_to_read_and_broken_text_raise_spec_error(self):
+        unreadable = (b'{"a":1' + b"0" * 5000 + b"}",   # past Python's 4,300-digit limit: was ValueError
+                      '"\ud800"',                      # text holding a lone surrogate: was UnicodeEncodeError
+                      b"\xff\xfe", b"{not json", b"[" * 100000)
+        for data in unreadable:
+            with self.subTest(data=repr(data)[:40]):
+                with self.assertRaises(SpecError):
+                    decode(data)
+
+    def test_specific_refusals_keep_their_messages_and_good_json_still_reads(self):
+        with self.assertRaisesRegex(SpecError, "Duplicate JSON field: a"):
+            decode(b'{"a":1,"a":2}')
+        with self.assertRaisesRegex(SpecError, "Non-finite JSON number"):
+            decode(b"[NaN]")
+        with self.assertRaises(MessageSizeError):
+            decode(b'"' + b"x" * MAX_MESSAGE_BYTES + b'"')
+        self.assertEqual(decode(b'{"a":[1,2.5,"x\\u0e01"],"n":' + b"9" * 4000 + b"}"),
+                         {"a": [1, 2.5, "x\u0e01"], "n": int("9" * 4000)})
 
 if __name__=="__main__":
     unittest.main()
