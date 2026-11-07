@@ -11,7 +11,8 @@
   Claude (D2).
 - Roadmap 3.4 (PR #39) is built: the box on the web page and the layered answer, with a switch between a
   case and a study question; a question is sent without a confirm card (ADR-023). See
-  [The page](#the-page-roadmap-34). It was merged on 2026-11-07 (`cf06f4d`); the owner's test on the live page is still to come.
+  [The page](#the-page-roadmap-34). It was merged on 2026-11-07 (`cf06f4d`); the owner tried it on the live
+  page on 2026-11-08 and it passed (mock AI).
 - CI runs it with the offline mock AI, a keyword simulation. The first live run, with Typhoon on 2026-11-06,
   found the labelled topic for 46 of 48 in-scope requests, with 0 of 142 links outside the library
   ([evidence](evidence/2026-11-06-first-live-typhoon.md)). The requests and labels are the developer's and it ran once, so this is
@@ -524,8 +525,8 @@ detection must be tested on phrases it was not shown.
 
 ## Still open
 
-- **The owner's test of 3.4 on the live page** (ROADMAP 3.4). On the free plan the live page uses the mock
-  until the owner adds a real model in Render's Environment tab (ROADMAP 0.4).
+- **A real model on the live page** (ROADMAP 0.4). The live page uses the mock until the owner adds Typhoon
+  or Claude in Render's Environment tab, so the owner's test on 2026-11-08 ran with the mock.
 - A `chat` span for the `explain` call, and the first live Claude run of the scorecard (D2). Its result goes
   into a dated evidence note, failures included, like Typhoon's first run.
 
