@@ -330,8 +330,8 @@ The order of the remaining work, with tasks, acceptance checks and owner decisio
 - Every process in the container (API, Runner, Core workers) runs as one user with one environment, so each
   of them could read the AI key once it is set. Options and a recommendation are in ROADMAP 7.1.
 - The Sentry DSN that the smoke workflow carried until 2026-11-03 is still in the git history. It can only
-  submit events; it must be revoked in Sentry before the repository is made public (ROADMAP 7.4). The 7
-  run logs that could print it were deleted on 2026-11-08.
+  submit events. Before the repository went public on 2026-11-08, the owner replaced it with a new key and
+  reported the old one disabled, and the 7 run logs that could print it were deleted (ROADMAP 7.4).
 - The only live-model results are Typhoon's first runs on the synthetic sets (2026-11-06, one or two runs
   per scorecard, [evidence](evidence/2026-11-06-first-live-typhoon.md)). The cases and labels are the developer's,
   so they are a first measurement, not accuracy, and they describe that model only. Claude has not been run

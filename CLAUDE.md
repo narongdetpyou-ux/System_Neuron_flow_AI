@@ -66,8 +66,8 @@ Read in this order when you need depth:
 - **Merging.** Open a PR for every change, and merge only when the owner asks. A merge to `main` that
   changes code redeploys Render, and on the free plan every deploy wipes the queued cases. A merge that
   changes only docs, tests or CI files does not redeploy (the `buildFilter` in `render.yaml`).
-- **Public repository (D5).** On 2026-11-08 the owner chose to publish this repository with its full
-  history. Once it is switched, commits, PRs, comments and Actions logs are public: keep personal details,
+- **Public repository (D5).** This repository has been public since 2026-11-08, with its full history.
+  Commits, PRs, comments and Actions logs are public: keep personal details,
   account matters and internal notes out of them, and never let a key reach a log.
 - **Honesty about evidence.**
   - Mock-AI scores are not accuracy, and hashes prove bytes, not authorship.
@@ -297,7 +297,9 @@ Notes for cloud sessions (claude.ai/code):
     full history. The history was audited (one known secret, the old DSN; personal e-mail addresses in 51
     commits stay visible by that choice), the 7 run logs that could print the old DSN were deleted, every
     workflow's token is read-only (`tests/test_workflow_permissions.py`), and the README has a section
-    for visitors and `SECURITY.md` (PR #44).
+    for visitors and `SECURITY.md` (PR #44). The same day the owner replaced the Sentry DSN, deleted the
+    merged branches and switched the repository to public, with secret scanning, push protection and
+    private vulnerability reporting on.
   - Tracing to Honeycomb: one trace per case, checked against the OpenTelemetry Collector in CI (PR #30,
     roadmap 5.1). On since `HONEYCOMB_API_KEY` went into Render; the first trace was seen in Honeycomb on
     2026-11-03 (`docs/evidence/2026-11-03-first-trace-honeycomb.md`). The Honeycomb connector reads it:
@@ -355,8 +357,7 @@ Notes for cloud sessions (claude.ai/code):
     (roadmap 0.4).
   - The rest of the roadmap is open.
 - **Next:** [docs/ROADMAP.md](docs/ROADMAP.md), the first item that is not ✅ and whose needs are met.
-  - Waiting on the owner: 7.4's clicks (replace the old Sentry DSN, delete the merged branches) and then
-    the switch to public (D5); 0.2 and 1.4 (D1, paid Render plan), 0.3 path B and 0.4 with Claude (D2, Claude
+  - Waiting on the owner: 0.2 and 1.4 (D1, paid Render plan), 0.3 path B and 0.4 with Claude (D2, Claude
     API key); 0.4 with Typhoon is free but sends what is typed on the page to Typhoon, so it is the owner's
     choice too.
   - Buildable now without an owner decision: the rest of 5.5 (decide and fix the stage-1 gaps), 5.6 and 5.7,

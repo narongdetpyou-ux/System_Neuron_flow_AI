@@ -65,10 +65,11 @@ use a stub SDK and need no network.
 
 **The old DSN is still in the git history.** Until 2026-11-03 the workflow carried the
 "CI and development" key inline. A DSN can only submit events, not read them, and that key
-is rate-limited to 200 events/hour, but it stays readable in the history: revoke it in
-Sentry → neuron-flow-runtime → Settings → Client Keys before the repository is made public,
-and put the new key in the `SENTRY_DSN` secret. *Actions → Secret scan* lists it as the one
-reviewed finding (`.github/.gitleaksignore`).
+is rate-limited to 200 events/hour, but it stays readable in the history, which is public
+since 2026-11-08. Before the switch the owner created a new key, put it in the `SENTRY_DSN`
+secret and in Render, and reported the old key disabled (Sentry → neuron-flow-runtime →
+Settings → Client Keys). *Actions → Secret scan* lists it as the one reviewed finding
+(`.github/.gitleaksignore`).
 
 ## Usage in application code
 
