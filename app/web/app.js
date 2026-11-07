@@ -1921,6 +1921,16 @@
     applyComposerMode();
   }
 
+  /* Where the person is (tab, mode, case or question on screen, case draft). Taken before a request and
+   * compared after it, so a late reply never pulls them away from what they did meanwhile. */
+  function whereNow() {
+    return [state.view, state.mode, state.selectedId, state.draft];
+  }
+  function stillAt(where) {
+    const now = whereNow();
+    return where.every((value, i) => value === now[i]);
+  }
+
   function submitComposer(event) {
     event.preventDefault();
     if (state.mode === "study" && studyAvailable()) submitStudy();
@@ -1945,22 +1955,33 @@
     state.studyPending = pending;
     state.studySending = true;
     updateSendButton();
+    const where = whereNow();
     const outcome = await send({ workflow_type: STUDY, idempotency_key: pending.key, input: { message } }, false);
     state.studySending = false;
     updateSendButton();
     if (outcome.handled) return;
+    // A reply can take a minute (a sleeping free-plan service wakes up first). If the person moved on meanwhile,
+    // leave the page and the box as they are now: a case typed meanwhile must keep its confirm step.
+    const stayed = stillAt(where);
     if (!outcome.ok) {
-      formError(outcome.message);
+      if (stayed) formError(outcome.message);
+      else toast("ส่งคำถามไม่สำเร็จ: " + outcome.message);
       return;
     }
     if (state.studyPending === pending) state.studyPending = null;
+    refreshStatus();
+    if (!stayed) {
+      await refreshQueue();
+      toast("ส่งคำถามแล้ว คำตอบจะอยู่ในรายการด้านซ้าย (\"คำถามอยากเรียน\")");
+      return;
+    }
     if ($("case-summary").value.trim() === message) {
       $("case-summary").value = "";
       updateCounter();
       autoGrow();
     }
-    refreshStatus();
     await refreshQueue();
+    if (!stillAt(where)) return;  // moved on while the list was loading
     await selectJob(outcome.job.job_id);
     $("thread").focus({ preventScroll: true });
   }
@@ -2073,6 +2094,7 @@
     if (!last) return;
     const button = $("thread").querySelector("[data-action=resend]");
     if (button) button.disabled = true;
+    const where = whereNow();
     const outcome = await send(last.body, true);
     if (button) button.disabled = false;
     if (outcome.handled) return;
@@ -2081,7 +2103,8 @@
       return;
     }
     await refreshQueue();
-    if (outcome.job.job_id !== state.selectedId) await selectJob(outcome.job.job_id);
+    // A new job comes back only when the old one is gone (a free-plan restart); open it, unless the person moved on.
+    if (stillAt(where) && outcome.job.job_id !== state.selectedId) await selectJob(outcome.job.job_id);
   }
 
   function editDraft() {

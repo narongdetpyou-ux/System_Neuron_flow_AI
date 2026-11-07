@@ -327,8 +327,11 @@ will choose by itself.
 **Sending (ADR-023).** A question is sent when the person presses Enter, without the confirm card that a
 case shows first: it is information only (ADR-018), and the answer itself asks back. The idempotency key is
 kept until the question is admitted, so sending the same text again after a network error returns the same
-job instead of making a second one. The left list marks questions as "คำถามอยากเรียน" with the message as
-the preview, and a queued question can be cancelled like a case.
+job instead of making a second one. A reply can take a minute while a sleeping free-plan service wakes up:
+if the person moves on before it arrives (another tab, mode, case or question, or a case draft), the page
+stays where they are and a toast says the answer will be in the list; a failure then shows as a toast, not
+under another box. The left list marks questions as "คำถามอยากเรียน" with the message as the preview, and a
+queued question can be cancelled like a case.
 
 **The answer** (`result.output`, read only when the job is `COMPLETED`):
 
@@ -355,7 +358,9 @@ the preview, and a queued question can be cancelled like a case.
 a local service with the mock AI: desktop (1440 and 1280 px), tablet (1024 px) and phone (390 px). It
 covered a Thai guide, an English guide, out of scope, the owner's metaphor, a refused short question,
 "แก้คำถาม", open layers surviving the 4-second refresh, switching modes and back, opening cases and questions
-from the list and from a link, and, served with answers the workflow produced under fault scenarios, AI
+from the list and from a link, a slow question while the person made a case draft or opened the settings
+(the late reply leaves both alone; found by the Codex review of PR #39 and reproduced first on the
+unfixed page), and, served with answers the workflow produced under fault scenarios, AI
 unavailable for detection, the library's own text, masked personal data, and a failed, queued and running
 question. No console errors, no Content-Security-Policy violations, no horizontal overflow.
 

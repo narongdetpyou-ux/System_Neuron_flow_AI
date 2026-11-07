@@ -190,8 +190,10 @@ container: app.boot (root) ─becomes─► tini ─► python -m app.serve
   "ถาม") and what Enter does. Pressing a mode button starts something new of that kind and keeps any typed
   text; opening a case or a question (from the list or a link) switches the box to its kind. A question is
   sent at once, without the confirm card (ADR-023); its idempotency key is kept until it is admitted, so
-  resending the same text after an error returns the same job. The left list shows a question as
-  "คำถามอยากเรียน" with the message as its preview.
+  resending the same text after an error returns the same job. A late reply never moves the person: if the
+  tab, the mode, the case or question on screen, or a case draft changed while it was in flight, the page
+  stays and a toast points to the list (the case's resend button follows the same rule). The left list shows
+  a question as "คำถามอยากเรียน" with the message as its preview.
 - **A study answer:** shown in three layers (layer 1 always, "ดูขั้นตอนการเรียน" and "ดูรายละเอียด" as
   `<details>` whose open state survives the 4-second refresh); full description in
   [study_guide.md](study_guide.md#the-page-roadmap-34). Links come only from the answer's library URLs,
