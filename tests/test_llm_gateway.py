@@ -9,7 +9,7 @@ from pathlib import Path
 from unittest import mock as patch
 
 from neuron_flow import PermanentAgentError, SpecError, TransientAgentError
-from neuron_flow.model import fingerprint
+from neuron_flow.model import encode, fingerprint
 from app.domains.case_triage.contracts import CATEGORIES, CONFIDENCE_LEVELS
 from app.llm import (InvalidModelOutput, LLMConfig, LLMConfigError, LLMRequestError, LLMTransientError,
                      ModelDeclined, load_prompt, mask, structured_answer)
@@ -145,6 +145,16 @@ class AnswerCheckTests(unittest.TestCase):
         answer = parse_answer(json.dumps({**GOOD, "rationale": "line1\n\x07line2 " + "z" * 500}), PROMPT.output_schema)
         self.assertTrue(answer["rationale"].startswith("line1 line2 z"))
         self.assertEqual(len(answer["rationale"]), TEXT_LIMIT)
+
+    def test_half_of_an_emoji_is_cleaned_so_core_can_store_the_answer(self):
+        """Robustness benchmark (SYN-AIR-040): a model that writes an escaped lone surrogate passed every check,
+        then Core could not store the step's output and the whole case failed instead of reaching review."""
+        text = '{"category": "upload", "confidence": "high", "rationale": "bad \\ud800 text \\ud83d\\ude00"}'
+        answer = parse_answer(text, PROMPT.output_schema)
+        self.assertEqual(answer["rationale"], "bad \ufffd text \U0001F600")  # a valid pair stays one emoji
+        encode(answer)  # Core can store it now (this raised SpecError before)
+        with self.assertRaises(InvalidModelOutput):  # a choice field with one is simply not a known choice
+            parse_answer('{"category": "upload\\ud800", "confidence": "high", "rationale": "r"}', PROMPT.output_schema)
 
 
 class ClaudeHttpTests(unittest.TestCase):
