@@ -202,7 +202,7 @@ app/boot.py                    process 1 of the image: takes the data folder, dr
 app/settings.py, app/serve.py  environment settings; the launcher (API + supervised Runner in one container)
 Dockerfile, render.yaml        the container and the Render Blueprint (railway.json kept for Railway)
 examples/                      case_triage_demo, case_triage_shadow_demo, study_guide_demo, sentry_smoke_test, service_smoke_test
-tests/                         289 tests: core, triage v1/v2, AI gateway, Typhoon provider, masking, scorecards, eval gates, Sentry, tracing, API, queue, Runner, HTTP, metrics, study library, link check, study guide, web page, robustness benchmark
+tests/                         291 tests: core, triage v1/v2, AI gateway, Typhoon provider, masking, scorecards, eval gates, Sentry, tracing, API, queue, Runner, HTTP, metrics, study library, link check, study guide, web page, robustness benchmark, workflow permissions
 tests/robustness/              the robustness benchmark, stage 1 (docs/benchmarking.md): synthetic_v1.json (270 edge cases), open_extract_v1.json
                                (BLNS, JSONTestSuite, CLINC150, BANKING77, pinned; NOTICE.md), bench.py, build_open_extract.py, triage_edge_golden_v1.json
 tests/baselines/               shadow_eval_mock.json, study_guide_eval_mock.json: every case's answer with the mock AI (the eval gates' baselines);
@@ -284,7 +284,7 @@ planned: review ledger and artifact store
   correlation (request) ids in logs (PR #22); explicit cancellation of queued jobs (PR #23); queue and
   run-time figures on the status page (PR #26, ROADMAP 5.3); the eval gate in CI, which fails when any
   per-case answer of the mock scorecard changes (PR #27, ROADMAP 5.2); a secret scan of every commit of
-  every branch in CI, with the Sentry DSN read only from a repository secret (PR #29, ROADMAP 7.4);
+  every branch in CI, with the Sentry DSN read only from a repository secret (PR #29, ROADMAP 7.4), and read-only workflow tokens (PR #44);
   tracing to Honeycomb, one trace per job with its steps and AI call, with the encoding checked against the
   OpenTelemetry Collector in CI (PR #30, ROADMAP 5.1) and seen in Honeycomb on Render on 2026-11-03
   (`docs/evidence/2026-11-03-first-trace-honeycomb.md`); the study guide's scorecard and eval gate in CI, which
@@ -330,7 +330,8 @@ The order of the remaining work, with tasks, acceptance checks and owner decisio
 - Every process in the container (API, Runner, Core workers) runs as one user with one environment, so each
   of them could read the AI key once it is set. Options and a recommendation are in ROADMAP 7.1.
 - The Sentry DSN that the smoke workflow carried until 2026-11-03 is still in the git history. It can only
-  submit events; it must be revoked in Sentry before the repository is made public (ROADMAP 7.4).
+  submit events; it must be revoked in Sentry before the repository is made public (ROADMAP 7.4). The 7
+  run logs that could print it were deleted on 2026-11-08.
 - The only live-model results are Typhoon's first runs on the synthetic sets (2026-11-06, one or two runs
   per scorecard, [evidence](evidence/2026-11-06-first-live-typhoon.md)). The cases and labels are the developer's,
   so they are a first measurement, not accuracy, and they describe that model only. Claude has not been run

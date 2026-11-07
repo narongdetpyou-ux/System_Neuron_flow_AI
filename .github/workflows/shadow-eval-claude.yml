@@ -20,6 +20,9 @@ on:
           - synthetic_v1
           - robustness_edge_v1
         default: synthetic_v1
+permissions:
+  contents: read
+
 jobs:
   eval:
     runs-on: ubuntu-latest

@@ -66,6 +66,9 @@ Read in this order when you need depth:
 - **Merging.** Open a PR for every change, and merge only when the owner asks. A merge to `main` that
   changes code redeploys Render, and on the free plan every deploy wipes the queued cases. A merge that
   changes only docs, tests or CI files does not redeploy (the `buildFilter` in `render.yaml`).
+- **Public repository (D5).** On 2026-11-08 the owner chose to publish this repository with its full
+  history. Once it is switched, commits, PRs, comments and Actions logs are public: keep personal details,
+  account matters and internal notes out of them, and never let a key reach a log.
 - **Honesty about evidence.**
   - Mock-AI scores are not accuracy, and hashes prove bytes, not authorship.
   - The only live-model measurement is Typhoon's on the synthetic sets (first runs 2026-11-06,
@@ -128,7 +131,7 @@ If a task seems to need breaking a rule:
 ## 4. Checking your work
 
 ```bash
-python -m unittest discover -s tests -v        # all tests (289 on 2026-11-08); Python 3.10–3.13
+python -m unittest discover -s tests -v        # all tests (291 on 2026-11-08); Python 3.10–3.13
 python -m examples.case_triage_demo            # v1 rules, one synthetic case
 python -m examples.case_triage_shadow_demo     # v2 shadow mode with the offline mock AI
 python -m examples.study_guide_demo            # the study guide's answers to four synthetic requests
@@ -290,7 +293,11 @@ Notes for cloud sessions (claude.ai/code):
   - Personal data masked before every AI call; the AI step records what it masked (PR #28, roadmap 7.1;
     narrowing who can read the AI key is a design note in 7.1, not built).
   - Secret scan of the whole history in CI, and the Sentry DSN only from a repository secret (PR #29,
-    roadmap 7.4, the preparation part; the rest of 7.4 waits for the owner's decision D5).
+    roadmap 7.4, the preparation part). On 2026-11-08 the owner chose D5: publish this repository with its
+    full history. The history was audited (one known secret, the old DSN; personal e-mail addresses in 51
+    commits stay visible by that choice), the 7 run logs that could print the old DSN were deleted, every
+    workflow's token is read-only (`tests/test_workflow_permissions.py`), and the README has a section
+    for visitors and `SECURITY.md` (PR #44).
   - Tracing to Honeycomb: one trace per case, checked against the OpenTelemetry Collector in CI (PR #30,
     roadmap 5.1). On since `HONEYCOMB_API_KEY` went into Render; the first trace was seen in Honeycomb on
     2026-11-03 (`docs/evidence/2026-11-03-first-trace-honeycomb.md`). The Honeycomb connector reads it:
@@ -348,7 +355,8 @@ Notes for cloud sessions (claude.ai/code):
     (roadmap 0.4).
   - The rest of the roadmap is open.
 - **Next:** [docs/ROADMAP.md](docs/ROADMAP.md), the first item that is not ✅ and whose needs are met.
-  - Waiting on the owner: 0.2 and 1.4 (D1, paid Render plan), 0.3 path B and 0.4 with Claude (D2, Claude
+  - Waiting on the owner: 7.4's clicks (replace the old Sentry DSN, delete the merged branches) and then
+    the switch to public (D5); 0.2 and 1.4 (D1, paid Render plan), 0.3 path B and 0.4 with Claude (D2, Claude
     API key); 0.4 with Typhoon is free but sends what is typed on the page to Typhoon, so it is the owner's
     choice too.
   - Buildable now without an owner decision: the rest of 5.5 (decide and fix the stage-1 gaps), 5.6 and 5.7,

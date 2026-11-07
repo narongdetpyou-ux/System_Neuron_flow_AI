@@ -10,6 +10,9 @@ on:
       - "app/observability/**"
       - "examples/sentry_smoke_test.py"
       - ".github/workflows/sentry-smoke.yml"
+permissions:
+  contents: read
+
 jobs:
   smoke:
     runs-on: ubuntu-latest
