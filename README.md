@@ -177,7 +177,7 @@ most 1 MiB. The agent `version` is frozen into each job, so an old job refuses t
 | [Study guide](docs/study_guide.md) | `study_guide.v1`: the workflow and its answer, failure handling, the mock's limits; the scorecard; the box and layered answer on the web page; the topic catalog and verified library, the weekly link check |
 | [Benchmarking plan](docs/benchmarking.md) | Three stages of testing beyond our own cases: the robustness gate (built), open benchmarks and attacks, privacy, load and live drift (planned); the datasets, their licences and the ones left out |
 | [Funding readiness pack](docs/funding/README.md) | Internal evidence register; not a submitted application |
-| [Evidence notes](docs/evidence/2026-11-03-render-operations.md) | Dated measurements; the first one covers Render operations (graceful stops, deploy filter, cold start), and [the first live AI runs](docs/evidence/2026-11-06-first-live-typhoon.md) are Typhoon's (2026-11-06); [the first robustness run](docs/evidence/2026-11-07-robustness-stage1.md) is from 2026-11-07, and [the local open model's first smoke run](docs/evidence/2026-11-08-first-local-model-smoke.md) from 2026-11-08 |
+| [Evidence notes](docs/evidence/2026-11-03-render-operations.md) | Dated measurements; the first one covers Render operations (graceful stops, deploy filter, cold start), and [the first live AI runs](docs/evidence/2026-11-06-first-live-typhoon.md) are Typhoon's (2026-11-06); [the first robustness run](docs/evidence/2026-11-07-robustness-stage1.md) is from 2026-11-07, and [the local open model's first smoke run](docs/evidence/2026-11-08-first-local-model-smoke.md) and [first full run](docs/evidence/2026-11-08-first-local-model-full.md) from 2026-11-08 |
 
 ## Scope and limits
 
@@ -187,14 +187,17 @@ most 1 MiB. The agent `version` is frozen into each job, so an old job refuses t
 - Agent child processes isolate failures; they are **not** a security sandbox.
 - All test data is synthetic. The open datasets in the robustness benchmark were written for those datasets and hold no real people's records (ADR-024). Mock AI scores are not evidence of AI accuracy: the triage mock scores high because its keywords were written with its cases, and the study guide mock scores low (topic correct 2/48).
 - Masking personal data before AI calls is pattern-based; it lowers the risk but does not make real data safe.
-- The only live-model runs are Typhoon's first ones on the synthetic sets (2026-11-06, [evidence](docs/evidence/2026-11-06-first-live-typhoon.md)):
-  triage AI correct 60/61 in two runs (the rules 29/61), study guide topic correct 46/48 with no link
-  outside the library. The cases and labels are the developer's and the runs are few, so these numbers are
-  a first measurement of that model, not accuracy, and say nothing about Claude, which has not been run.
-  No cost claims are made. The local open model (Typhoon 2.5 4B on the GitHub runner, ADR-026) has had two
-  smoke runs on the first 5 items of each set (2026-11-08, [evidence](docs/evidence/2026-11-08-first-local-model-smoke.md)):
-  it answered every item in the right format, with the same numbers both times, which shows the path works,
-  not how well it judges.
+- The only real-model runs are on the synthetic sets, with two free models by SCB 10X:
+  - Typhoon's 30B model through its API (2026-11-06, [evidence](docs/evidence/2026-11-06-first-live-typhoon.md)):
+    triage AI correct 60/61 in two runs (the rules 29/61), study guide topic correct 46/48 with no link
+    outside the library;
+  - the local open model, Typhoon 2.5 4B run on the GitHub runner (ADR-026; 2026-11-08, two smoke runs and
+    [one full run](docs/evidence/2026-11-08-first-local-model-full.md)): triage AI correct 58/61 with all 32
+    of the rules' mistakes raised for review, study guide topic correct 44/48 with no link outside the
+    library, at about 7 times Typhoon's latency.
+
+  The cases and labels are the developer's and the runs are few, so these numbers are a first measurement
+  of each model, not accuracy, and say nothing about Claude, which has not been run. No cost claims are made.
 - The study guide's mock AI is a keyword simulation: it cannot read a new metaphor. On the 67-request
   scorecard it finds the right topic for 2 of 48 in-scope requests, so its answers prove the workflow runs,
   not that it understands people.

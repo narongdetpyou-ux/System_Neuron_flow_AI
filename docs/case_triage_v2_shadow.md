@@ -4,7 +4,9 @@
 Claude and Typhoon code paths are tested against a local fake API server. **First live runs, with Typhoon,
 on 2026-11-06** (the free path, ADR-021): the first got 0/5 answers because Typhoon ignores
 `response_format`; after the fix (ADR-022) the AI answered 61/61 and was correct on 60/61 of the synthetic
-cases, in two runs ([evidence](evidence/2026-11-06-first-live-typhoon.md)). Claude has not been run (it needs a paid
+cases, in two runs ([evidence](evidence/2026-11-06-first-live-typhoon.md)). The local open model (ADR-026), run on
+the GitHub runner on 2026-11-08, was correct on 58/61 and raised all 32 of the rules' mistakes for review
+([evidence](evidence/2026-11-08-first-local-model-full.md)). Claude has not been run (it needs a paid
 `ANTHROPIC_API_KEY`, D2). Synthetic data only.
 It is not a production service: since round 2 it runs behind the intake API and the web page as a
 single-owner pilot on Render's free plan, and there is no human-review service yet (Milestone C). No Core (`neuron_flow/`) file was changed. Design principles:
@@ -24,7 +26,7 @@ single-owner pilot on Render's free plan, and there is no human-review service y
 7. **ด่านตรวจผลรายเคส (eval gate, ขั้น 5.2)** ทุกครั้งที่มีการส่งโค้ดขึ้น GitHub ระบบรันเคสทดสอบ 61 เคสด้วย AI จำลอง แล้วเทียบคำตอบของทุกเคสกับไฟล์ต้นแบบ (`tests/baselines/shadow_eval_mock.json`) ถ้ามีเคสไหนตอบต่างจากเดิม แม้แต่ช่องเดียว (หมวดของกฎ หมวดของ AI ความมั่นใจ การเห็นตรงกัน ความสำคัญ หรือเหตุผล) ช่องตรวจ *Core logic tests* จะเป็นสีแดง และหน้าผลรันจะบอกว่าเคสไหนเปลี่ยนอะไร ถ้าตั้งใจเปลี่ยน ต้องอัปเดตไฟล์ต้นแบบใน PR เดียวกันและเขียนเหตุผลไว้ ถ้าเปลี่ยน prompt หรือรุ่น AI ต้องแนบผลรันกับ AI จริงด้วย
 8. **ใช้ AI จริงได้ฟรีผ่าน Typhoon ของ SCB 10X (ADR-021)** ไม่ต้องมีบัตร ปุ่ม *Shadow eval with Typhoon (manual)* ใน Actions ใช้คีย์จาก secret `TYPHOON_API_KEY` ส่งเคสสมมุติทั้ง 61 เคสให้ Typhoon (ค่าเริ่มต้น `typhoon-v2.5-30b-a3b-instruct`) ก่อนเริ่มจะลองส่งประโยคทดสอบ 1 ประโยค และแสดงคำตอบดิบให้เห็นว่าการเชื่อมต่อใช้ได้ไหม ผลที่ได้เป็นของ Typhoon ไม่ใช่ของ Claude Typhoon เก็บข้อมูลการใช้งานไปปรับปรุงโมเดล จึงใช้ได้กับข้อมูลสมมุติเท่านั้น ถ้าตัวกรองของผู้ให้บริการบล็อกข้อความเคสไหน เคสนั้นนับเป็น "AI ไม่ตอบ" และไปถึงผู้รีวิวตามปกติ ไม่ทำให้งานล้ม (GitHub Models ที่ใช้ก่อนหน้านี้ปิดบริการไปแล้วตั้งแต่ 30 ก.ค. 2026)
 9. **รันกับ Typhoon จริงแล้วเมื่อ 6 พ.ย.** รอบแรก AI ตอบไม่ได้เลย 0 จาก 5 เคส เพราะ Typhoon ไม่ทำตามช่องตั้งค่ารูปแบบคำตอบ (response_format) ตอนนี้ระบบบอกรูปแบบคำตอบเป็นคำพูดด้วย (ADR-022) หลังแก้ AI ตอบได้ 61/61 และจัดหมวดถูก 60/61 ทั้ง 2 รอบ (กฎเดิมถูก 29/61 เคสภาษาไทย AI ถูก 26/26) เคสเป็นของสมมุติที่ผู้พัฒนาเขียนเอง จึงยังไม่ใช่ความแม่นยำจริง ([บันทึกหลักฐาน](evidence/2026-11-06-first-live-typhoon.md))
-10. **ลองกับโมเดลเปิดที่รันเองได้ (ADR-026, ขั้น 5.8)** ปุ่ม *Local open model eval* ใน Actions ให้เครื่องทดสอบของ GitHub เปิด Typhoon 2.5 รุ่น 4B (สัญญา Apache 2.0) ด้วย llama.cpp แล้วส่งเคสชุดเดิมให้ ไม่ต้องใช้คีย์ ข้อความไม่ออกไปบริษัท AI ใด แต่คิดด้วย CPU จึงช้ากว่า และผลเป็นของไฟล์โมเดลรุ่นนั้น ไม่ใช่ของ Typhoon ผ่าน API หรือ Claude
+10. **ลองกับโมเดลเปิดที่รันเองได้ (ADR-026, ขั้น 5.8)** ปุ่ม *Local open model eval* ใน Actions ให้เครื่องทดสอบของ GitHub เปิด Typhoon 2.5 รุ่น 4B (สัญญา Apache 2.0) ด้วย llama.cpp แล้วส่งเคสชุดเดิมให้ ไม่ต้องใช้คีย์ ข้อความไม่ออกไปบริษัท AI ใด แต่คิดด้วย CPU จึงช้ากว่า และผลเป็นของไฟล์โมเดลรุ่นนั้น ไม่ใช่ของ Typhoon ผ่าน API หรือ Claude รอบเต็มรอบแรก (8 พ.ย.): AI จัดหมวดถูก 58 จาก 61 เคส (Typhoon ผ่าน API 60) เคสที่กฎผิดถูกดันขึ้นคิวด่วนให้คนดูครบ 32 จาก 32 และช้ากว่า Typhoon ผ่าน API ราว 7 เท่า ([บันทึกหลักฐาน](evidence/2026-11-08-first-local-model-full.md))
 
 ## How one case flows
 
