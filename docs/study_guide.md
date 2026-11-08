@@ -7,8 +7,8 @@
   verified resources in study order come out, as a layered answer. It is in the workflow catalog, so the
   API accepts it.
 - Roadmap 3.3 (PR #34) is built: 67 labelled synthetic requests and a scorecard. CI runs the scorecard
-  with the mock AI on every push, as an eval gate; manual workflows run it with Typhoon (free; ADR-021) or with
-  Claude (D2).
+  with the mock AI on every push, as an eval gate; manual workflows run it with Typhoon (free; ADR-021), with
+  Claude (D2), or with a local open-weight model on the GitHub runner (*Local open model eval*, ADR-026).
 - Roadmap 3.4 (PR #39) is built: the box on the web page and the layered answer, with a switch between a
   case and a study question; a question is sent without a confirm card (ADR-023). See
   [The page](#the-page-roadmap-34). It was merged on 2026-11-07 (`cf06f4d`); the owner tried it on the live
@@ -126,6 +126,8 @@
    ใส่ limit = 5 เพื่อลองก่อน แล้วค่อยรันครบ 67 ข้อ แต่ละข้อเรียก AI 1–2 ครั้ง ใช้คีย์จาก secret `TYPHOON_API_KEY`
    ผลเป็นของ Typhoon ไม่ใช่ของ Claude และ Typhoon เก็บข้อมูลการใช้งานไปปรับปรุงโมเดล จึงใช้ได้กับข้อมูลสมมุติเท่านั้น
    (เมื่อมี Claude API key แล้ว, เรื่องที่ D2: *Study guide eval with Claude (manual)* ทำแบบเดียวกัน)
+   - **ลองกับโมเดลเปิดที่รันเองได้ด้วย (ขั้น 5.8):** Actions → *Local open model eval* → Run workflow รันชุดนี้ (และชุดคัดแยกเคส)
+     กับ Typhoon 2.5 รุ่น 4B บนเครื่องทดสอบของ GitHub ไม่ต้องใช้คีย์ ข้อความไม่ออกไปบริษัท AI ใด แต่ช้ากว่า และผลเป็นของไฟล์โมเดลรุ่นนั้น
    - **ผลรอบแรกครบ 67 ข้อ (6 พ.ย.):** หาหัวข้อถูก **46/48** ตอบถูกทุกแบบ 62/67 เรื่องนอกกรอบจับได้ 16/19
      ที่ตอบว่า "นอกกรอบ" ถูกจริง 16/17 ลิงก์นอกคลัง **0 จาก 142 ลิงก์** คำตอบที่เกิน 5 แหล่ง **0** และ AI เขียนคำอธิบายได้ทุกคำตอบที่มีแผน (50/50)
    - ข้อที่พลาดทั้ง 5 ข้ออยู่ใน[บันทึกหลักฐาน](evidence/2026-11-06-first-live-typhoon.md) เช่น คำขอนอกกรอบที่มีคำว่า "recommend" หรือ "learn"

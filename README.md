@@ -90,7 +90,7 @@ guide** (`study_guide.v1`, the owner's first-response rule):
 | Core runtime: DAG workflows, bounded child processes, retries, restart recovery, verified receipts | `neuron_flow/` | Working; two planned fixes since extraction: telemetry phase names (PR #21) and `decode()`'s error contract (ADR-025, PR #42) |
 | Case triage v1: deterministic keyword rules | `app/domains/case_triage/agents.py`, `workflow.py` | Working |
 | Case triage v2: shadow mode with AI second opinion | `app/domains/case_triage/shadow_*.py` | Working with the offline mock AI; Claude and Typhoon paths tested against a fake API; **first live runs with Typhoon** on 2026-11-06 (synthetic set, [evidence](docs/evidence/2026-11-06-first-live-typhoon.md)); Claude not run yet |
-| AI gateway: versioned prompt, mock, Claude and Typhoon providers | `app/llm/` | Working (see above); Typhoon (SCB 10X, Thai-first) is free within rate limits (ADR-021) and is told the answer format in words, because it ignores `response_format` (ADR-022) |
+| AI gateway: versioned prompt, mock, Claude, Typhoon and local open-model providers | `app/llm/` | Working (see above); Typhoon (SCB 10X, Thai-first) is free within rate limits (ADR-021) and is told the answer format in words, because it ignores `response_format` (ADR-022); `local` sends the same requests to a server we run ourselves, by default llama.cpp on 127.0.0.1 with no key (ADR-026) |
 | Error monitoring and tracing | `app/observability/` | Sentry errors, degraded-AI warnings and Runner recoveries; traces to Honeycomb (OTLP), off until a key is set; on for the Render service, first trace seen 2026-11-03 |
 | Scorecards: 61 synthetic labelled triage cases, and 67 study-guide requests (EN + TH, metaphors, out of scope, injection) | `app/eval/` | Run in CI as eval gates; mock scores test the pipeline, not AI accuracy |
 | Robustness benchmark, stage 1: 270 hard synthetic edge cases (EN + TH) and four pinned open datasets (BLNS, JSONTestSuite, CLINC150, BANKING77) through every layer, offline | `tests/robustness/` | Runs in CI as a gate on every outcome; the first run found 8 bugs, all fixed in roadmap 5.5 (now 0 bugs, 215/270 items pass). Plan for stages 2–3: [benchmarking.md](docs/benchmarking.md) |
@@ -126,6 +126,10 @@ forgets its cases when it sleeps or redeploys; a paid plan with a disk keeps the
   scorecards against Typhoon, free within its rate limits. They need the repository secret
   `TYPHOON_API_KEY`, and first check the connection with one fixed sentence (ADR-021). The shadow eval can
   run the 116 robustness edge cases instead of the 61 cases (`case_set: robustness_edge_v1`).
+- *Actions → Local open model eval* runs both scorecards against an open-weight model that the job runs
+  itself: llama.cpp's server, built from a pinned commit, serving Typhoon 2.5 Qwen3 4B (Apache-2.0) from a
+  file checked against its SHA-256, on 127.0.0.1 of the runner (ADR-026). No secret, nothing sent to an AI
+  company, CPU only. Pull requests that change `app/llm/` get a 5-case smoke run.
 - *Actions → Shadow eval with Claude (manual)* runs the scorecard against real Claude. It needs the
   repository secret `ANTHROPIC_API_KEY`.
 - *Actions → Study guide eval with Claude (manual)* runs the study guide's scorecard against real Claude, with
@@ -143,7 +147,9 @@ NEURON_FLOW_ACCESS_KEY=<16+ characters> python -m app.serve   # API + web page o
 ```
 With `NEURON_FLOW_LLM_PROVIDER=anthropic` and `ANTHROPIC_API_KEY` set, the same commands use Claude; with
 `NEURON_FLOW_LLM_PROVIDER=typhoon` and `TYPHOON_API_KEY`, Typhoon. Add `--min-interval-s 1` to a scorecard
-on Typhoon's free API.
+on Typhoon's free API. With `NEURON_FLOW_LLM_PROVIDER=local`, they call an OpenAI-format server on
+`http://127.0.0.1:8080/v1` (change it with `NEURON_FLOW_LOCAL_BASE_URL`); set `NEURON_FLOW_LLM_TIMEOUT_S`
+higher on a CPU.
 
 ## Embedding the Core
 
@@ -171,7 +177,7 @@ most 1 MiB. The agent `version` is frozen into each job, so an old job refuses t
 | [Study guide](docs/study_guide.md) | `study_guide.v1`: the workflow and its answer, failure handling, the mock's limits; the scorecard; the box and layered answer on the web page; the topic catalog and verified library, the weekly link check |
 | [Benchmarking plan](docs/benchmarking.md) | Three stages of testing beyond our own cases: the robustness gate (built), open benchmarks and attacks, privacy, load and live drift (planned); the datasets, their licences and the ones left out |
 | [Funding readiness pack](docs/funding/README.md) | Internal evidence register; not a submitted application |
-| [Evidence notes](docs/evidence/2026-11-03-render-operations.md) | Dated measurements; the first one covers Render operations (graceful stops, deploy filter, cold start), and [the first live AI runs](docs/evidence/2026-11-06-first-live-typhoon.md) are Typhoon's (2026-11-06); [the first robustness run](docs/evidence/2026-11-07-robustness-stage1.md) is from 2026-11-07 |
+| [Evidence notes](docs/evidence/2026-11-03-render-operations.md) | Dated measurements; the first one covers Render operations (graceful stops, deploy filter, cold start), and [the first live AI runs](docs/evidence/2026-11-06-first-live-typhoon.md) are Typhoon's (2026-11-06); [the first robustness run](docs/evidence/2026-11-07-robustness-stage1.md) is from 2026-11-07, and [the local open model's first smoke run](docs/evidence/2026-11-08-first-local-model-smoke.md) from 2026-11-08 |
 
 ## Scope and limits
 
@@ -185,7 +191,9 @@ most 1 MiB. The agent `version` is frozen into each job, so an old job refuses t
   triage AI correct 60/61 in two runs (the rules 29/61), study guide topic correct 46/48 with no link
   outside the library. The cases and labels are the developer's and the runs are few, so these numbers are
   a first measurement of that model, not accuracy, and say nothing about Claude, which has not been run.
-  No cost claims are made.
+  No cost claims are made. The local open model (Typhoon 2.5 4B on the GitHub runner, ADR-026) has had one
+  smoke run on the first 5 items of each set (2026-11-08, [evidence](docs/evidence/2026-11-08-first-local-model-smoke.md)):
+  it answered every item in the right format, which shows the path works, not how well it judges.
 - The study guide's mock AI is a keyword simulation: it cannot read a new metaphor. On the 67-request
   scorecard it finds the right topic for 2 of 48 in-scope requests, so its answers prove the workflow runs,
   not that it understands people.

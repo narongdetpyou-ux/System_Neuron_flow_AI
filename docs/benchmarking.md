@@ -255,6 +255,8 @@ judged on. Measure it the same way every time and per language, with every rate 
 3. It draws a fixed, seeded sample stratified by intent: 300 requests per dataset and language, about
    5 minutes each at the 1 request per second pacing used for Typhoon's free tier.
 4. It runs both scorecards (`--golden`) with Typhoon by default. The mock runs only as a pipeline check.
+   The local open model (roadmap 5.8, ADR-026) can take the same sample as a second model: no rate limit and
+   nothing sent out, but CPU-slow, so a smaller sample may be needed.
 5. The run page shows:
    - accuracy and macro-F1 per category;
    - out-of-scope recall and the false in-scope rate;
@@ -295,7 +297,9 @@ sources' hashes, and the first Typhoon run is in an evidence note.
    Traces give per-step latency under load.
 4. **Live drift.** A weekly scheduled run of the stage-1 edge set and the 61-case set against Typhoon, compared
    with the week before, so a silent model change shows up. Turning on the schedule is the owner's choice:
-   it uses the existing `TYPHOON_API_KEY` secret, and the data is synthetic.
+   it uses the existing `TYPHOON_API_KEY` secret, and the data is synthetic. Running the pinned local model
+   (5.8) on the same sets the same week tells the two causes apart: if Typhoon's numbers move and the local
+   model's do not, the change is on Typhoon's side, not in our code.
 
 **Done when:** each part runs in CI or by hand with its promises as gates, and the first run of each is in an
 evidence note.

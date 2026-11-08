@@ -37,7 +37,7 @@ flowchart TD
     end
     subgraph L2[Layer 2: Domains, agents, AI gateway]
       TRI[case_triage v1 rules + v2 shadow mode - built]
-      LLM[app/llm gateway: prompt library, mock + Claude + Typhoon - built]
+      LLM[app/llm gateway: prompt library, mock + Claude + Typhoon + local open model - built]
       SG[study_guide.v1: topic catalog, verified library and workflow - built; on the web page]
     end
     subgraph L1[Layer 1: Core neuron_flow - two planned fixes since extraction]
@@ -52,7 +52,7 @@ flowchart TD
 | 1 Core `neuron_flow/` | Spec validation, static DAG scheduling, bounded child processes, retries, recovery, events, verified receipts, integrity, case memory, candidate gate. No HTTP, business rules, credentials or user authorisation. | All of it; changed once since commit `09100f7`: the telemetry fix (roadmap 1.1, PR #21) | No further Core change planned |
 | 2 Domains & agents `app/domains/`, `app/llm/` | Input contracts, trusted agent registry, fixed DAG templates, validators, AI calls | case_triage v1 and v2, AI gateway; `study_guide.v1`, a second unrelated domain: versioned topic catalog, verified resource library with a weekly link check, and the five-step workflow (roadmap 3.1, 3.2) | The study guide's scorecard (3.3) |
 | 3 Application services | Admission, idempotency, the only Runtime owner, crash reconciliation, review decisions, results, measurement, monitoring | Scorecard (`app/eval/`), Sentry reporting (`app/observability/`), admission queue (`app/persistence/`), admission, Runner with reconciliation, results (`app/services/`) | Review ledger, artifact store (Milestone C) |
-| 4 Interfaces | Authentication, request validation, status pages, human decisions | GitHub Actions workflows (tests, scorecard, Sentry check, container check, manual live runs with Claude or Typhoon); HTTP API and web page (`app/api/`, `app/web/`) behind one shared access key, started by `app/serve.py` in one container for Render (`render.yaml`; Railway also configured) | n8n intake and notifications, per-reviewer identity, review decisions |
+| 4 Interfaces | Authentication, request validation, status pages, human decisions | GitHub Actions workflows (tests, scorecard, Sentry check, container check, manual live runs with Claude, Typhoon or the local open model); HTTP API and web page (`app/api/`, `app/web/`) behind one shared access key, started by `app/serve.py` in one container for Render (`render.yaml`; Railway also configured) | n8n intake and notifications, per-reviewer identity, review decisions |
 
 **Dependency rule:** Interface → Services → Domain → Core. Core never imports `app.*`. A domain builds specs
 and registers agents. It never re-implements retries or scheduling, and it never writes to Core SQLite.
@@ -80,14 +80,18 @@ Each row was re-checked against the current code.
 - **The AI is a trusted Layer 2 agent, never the orchestrator.** Core still schedules, retries and records.
 - **One gateway, `app/llm/`:**
   - The prompt and its answer schema live in one versioned file, and one SHA-256 covers both.
-  - Three providers: `mock` (offline keyword simulation), `anthropic` (Claude, paid key) and `typhoon`
-    (Typhoon by SCB 10X, free within rate limits, ADR-021). Claude has its own module; Typhoon goes through
-    `providers/openai_compat.py`, which serves any OpenAI chat-completions service from one table in
-    `config.py`. Each reads its own key variable (`ANTHROPIC_API_KEY`, `TYPHOON_API_KEY`).
+  - Four providers: `mock` (offline keyword simulation), `anthropic` (Claude, paid key), `typhoon`
+    (Typhoon by SCB 10X, free within rate limits, ADR-021) and `local` (an open-weight model on a server we
+    run ourselves, by default llama.cpp on `127.0.0.1:8080`, ADR-026). Claude has its own module; Typhoon and
+    `local` go through `providers/openai_compat.py`, which serves any OpenAI chat-completions service from one
+    table in `config.py`. Each reads its own key variable (`ANTHROPIC_API_KEY`, `TYPHOON_API_KEY`, and for
+    `local` the optional `NEURON_FLOW_LOCAL_API_KEY`: a server on this machine needs none, and then no
+    Authorization header is sent).
   - Answers use structured JSON output (`output_config.format` for Claude, `response_format` `json_schema`
     strict for OpenAI-format services), built from the prompt's own answer schema. Typhoon ignores
     `response_format`, so for it the client also states the answer format in words, built from the same
-    schema, and the format version is part of the agent version (ADR-022). Neither client sends sampling
+    schema, and the format version is part of the agent version (ADR-022). A llama.cpp server enforces
+    `response_format` as a grammar; `local` gets the same words too, because small models follow them better. Neither client sends sampling
     parameters, tools or forced `tool_choice` (current Claude 5.5 models reject them).
   - The clients refuse HTTP redirects (`providers/_http.py`), so the key cannot travel to another host.
   - The API key is read from the environment at call time. It never appears in a job, an output or a log.
@@ -202,14 +206,14 @@ app/boot.py                    process 1 of the image: takes the data folder, dr
 app/settings.py, app/serve.py  environment settings; the launcher (API + supervised Runner in one container)
 Dockerfile, render.yaml        the container and the Render Blueprint (railway.json kept for Railway)
 examples/                      case_triage_demo, case_triage_shadow_demo, study_guide_demo, sentry_smoke_test, service_smoke_test
-tests/                         318 tests: core, triage v1/v2, AI gateway, Typhoon provider, masking, scorecards, eval gates, Sentry, tracing, API, queue, Runner, HTTP, metrics, study library, link check, study guide, web page, robustness benchmark, workflow permissions
+tests/                         318 tests: core, triage v1/v2, AI gateway, Typhoon provider, local model provider and its model fetcher, masking, scorecards, eval gates, Sentry, tracing, API, queue, Runner, HTTP, metrics, study library, link check, study guide, web page, robustness benchmark, workflow permissions
 tests/robustness/              the robustness benchmark, stage 1 (docs/benchmarking.md): synthetic_v1.json (270 edge cases), open_extract_v1.json
                                (BLNS, JSONTestSuite, CLINC150, BANKING77, pinned; NOTICE.md), bench.py, build_open_extract.py, triage_edge_golden_v1.json
 tests/baselines/               shadow_eval_mock.json, study_guide_eval_mock.json: every case's answer with the mock AI (the eval gates' baselines);
                                robustness_v1.json: every robustness item's outcome, failures included
-.github/workflows/             core-tests (with the robustness gate), service-container, tracing-check, secret-scan, sentry-smoke, study-links (weekly); manual: shadow-eval and study-guide-eval with Typhoon or Claude
+.github/workflows/             core-tests (with the robustness gate), service-container, tracing-check, secret-scan, sentry-smoke, study-links (weekly); manual: shadow-eval and study-guide-eval with Typhoon or Claude, local-model-eval (both scorecards on llama.cpp + Typhoon 2.5 4B on the runner; a 5-case smoke on PRs that change app/llm)
 .github/gitleaks.toml          secret scan rules (gitleaks defaults + Sentry DSN + Honeycomb keys); .github/.gitleaksignore: reviewed findings
-.github/scripts/               check_render_blueprint.py: render.yaml structure, build filter, Render's schema; check_traces.py
+.github/scripts/               check_render_blueprint.py: render.yaml structure, build filter, Render's schema; check_traces.py; llm_probe.py (one fixed sentence before a live run); fetch_model.py (the local lane's model file, SHA-256 checked)
 .github/otel/                  collector.yaml: the OpenTelemetry Collector that the tracing check sends to
 planned: review ledger and artifact store
 ```
@@ -243,6 +247,7 @@ planned: review ledger and artifact store
 | 023 | On the web page, an informational request (today a study question, roadmap 3.4) is sent as soon as the person presses Enter, without the confirm card that a case shows first. Its answer asks back "เข้าใจถูกไหม" with what the system understood, and a "แก้คำถาม" button puts the question back in the box. A case still shows its steps and waits for "ยืนยันและส่ง". Until the plain-language router (roadmap 4.2) chooses by itself, a switch above the box ("เคสลูกค้า" / "อยากเรียน") says which kind the next message is | In force (PR #39). Trade-off: a mistyped question reaches the AI without a second look (personal data masked first, 7.1). It decides nothing and sends nothing outside (ADR-018), costs one or two AI calls, and its answer shows what was understood, so a wrong reading is visible and easy to correct. Anything that decides about a person or acts outside keeps the confirm step and human review (rule 4) |
 | 024 | Open datasets in tests and benchmarks count as synthetic data (rule 9) only when they are: written for the dataset (hand-made test strings, crowd-written or expert-written requests), openly licensed for redistribution, free of real people's records, and pinned to an upstream commit with every file's SHA-256, attribution and the changes made (`tests/robustness/NOTICE.md`). Labels mapped into this project's categories are marked as the developer's mapping. Real-world text (social-media posts, call-centre transcripts, real tickets) still needs D4 | In force (roadmap 5.4, PR #41). Used: BLNS and JSONTestSuite (MIT), CLINC150 (CC BY 3.0), BANKING77 (CC BY 4.0); planned: MASSIVE (CC BY 4.0), deepset/prompt-injections (Apache-2.0). Left out: ai4privacy (non-commercial, no redistribution or derivatives without a written licence), truevoice-intent and social-media corpora (real people's words). Trade-off: crowd-written text is cleaner and more uniform than real cases, so these sets find robustness bugs and rule gaps, not real-world accuracy |
 | 025 | `neuron_flow.model.decode` raises `SpecError` for every input it cannot read: besides invalid JSON and invalid UTF-8, also text holding a lone surrogate and a number past Python's 4,300-digit conversion limit, which escaped as `UnicodeEncodeError` and `ValueError`. Refusals that carry their own message (a repeated field, a non-finite constant, `MessageSizeError`) are unchanged, and every input it read before reads the same. The second Core change since extraction (rule 1); Core version 0.4.1 | In force (roadmap 5.5, PR #42). Found by the robustness benchmark (SYN-COR-040, SYN-COR-041): the API caught only `SpecError`, so a 5,000-digit number got a 500. The app guards on their own (the API treats any parse failure as 400, admission refuses input Core cannot store) already fix that symptom; this makes Core keep its own contract for every caller. Trade-off: a Core change, kept to the one function with tests (`tests/test_core.py`, `JsonContractTests`) |
+| 026 | A third real provider, `local`: an open-weight model on an OpenAI-format server that we run ourselves, through the same client as Typhoon (`providers/openai_compat.py`), the same gateway, validators, masking and error classes. The default endpoint is `http://127.0.0.1:8080/v1` (plain http only on this machine, https elsewhere). The key is optional: `NEURON_FLOW_LOCAL_API_KEY` is sent when set, and otherwise the request has no Authorization header. The model id names the file, `<name>:<first 12 hex digits of its SHA-256>`, used as the server's alias and as `NEURON_FLOW_LLM_MODEL`, so another file is another agent version. It gets the same answer-format words as Typhoon (`json-instruction-v1`), and llama.cpp also enforces the answer schema as a grammar. The first lane is the workflow *Local open model eval*: llama.cpp's server built from a pinned commit, Typhoon 2.5 Qwen3 4B (SCB 10X, Apache-2.0) from Hugging Face with its SHA-256 checked, served on 127.0.0.1 of a standard GitHub runner with greedy decoding (temperature 0, repeat penalty 1.05, thinking off); pull requests that change `app/llm/` get a 5-case smoke run | In force (PR #46, ROADMAP 5.8). Trade-offs: CPU only on a 4-CPU runner, so an answer takes seconds; the 4B model is much smaller than the 30B model behind Typhoon's API, and the scorecards measure what that costs; the server settings live in the workflow file, recorded by its commit, not in the agent version; GitHub's terms allow hosted runners only for building, testing and publishing the project, so this lane measures and never serves the web page, which would need a paid machine with room for the model (owner decision D7). Its results describe that file with those settings, never Typhoon's API or Claude |
 
 ## 9. Acceptance gates
 
@@ -308,7 +313,7 @@ dashboard.
 | Milestone | Content | Status |
 |---|---|---|
 | A | case_triage v1 rules, synthetic demo, tests | Done |
-| A2 | AI gateway, v2 shadow mode, scorecard, Sentry reporting | Done (PR #8, #9); a free Typhoon provider added (ADR-021, after GitHub Models was found retired). First live runs with Typhoon on 2026-11-06 after the answer-format fix (ADR-022): AI correct 60/61 on the synthetic triage set in two runs ([evidence](evidence/2026-11-06-first-live-typhoon.md)); Claude not run yet (D2) |
+| A2 | AI gateway, v2 shadow mode, scorecard, Sentry reporting | Done (PR #8, #9); a free Typhoon provider added (ADR-021, after GitHub Models was found retired). First live runs with Typhoon on 2026-11-06 after the answer-format fix (ADR-022): AI correct 60/61 on the synthetic triage set in two runs ([evidence](evidence/2026-11-06-first-live-typhoon.md)); Claude not run yet (D2); a local open-model lane on the GitHub runner, Typhoon 2.5 4B through llama.cpp (ADR-026, PR #46, ROADMAP 5.8) |
 | P1-fix | Neutral telemetry phase names | Done (PR #21, roadmap 1.1) |
 | B | Admission queue, single Runner, reconciliation, thin API, web page | Done (PR #11); live on Render's free plan since 2026-11-01; page redesigned as a chat layout with Flow, Trace and read-only settings (PR #18, roadmap 1.6) |
 | C | Two-phase review, decision ledger, n8n notifications | Open |
@@ -335,5 +340,7 @@ The order of the remaining work, with tasks, acceptance checks and owner decisio
 - The only live-model results are Typhoon's first runs on the synthetic sets (2026-11-06, one or two runs
   per scorecard, [evidence](evidence/2026-11-06-first-live-typhoon.md)). The cases and labels are the developer's,
   so they are a first measurement, not accuracy, and they describe that model only. Claude has not been run
-  (D2).
+  (D2). The local open model (ADR-026) has had one smoke run on the first 5 items of each set (2026-11-08,
+  [evidence](evidence/2026-11-08-first-local-model-smoke.md)): every item answered, in the right format; five
+  easy items are not a rate.
 - Security review, benchmarks and user studies do not exist yet. No document should claim them.

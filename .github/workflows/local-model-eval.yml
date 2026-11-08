@@ -43,11 +43,12 @@ env:
   # llama.cpp: built from this tag, which must be this commit (checked after the clone).
   LLAMA_CPP_TAG: b12198
   LLAMA_CPP_COMMIT: f477f795cb071baf5b8af6488378366a72034ac4
-  # The model file. Until MODEL_SHA256 is pinned, the run trusts the publisher's SHA-256 and says so on the page.
+  # The model file, pinned on 2026-11-08 from PR #46's first smoke run, where the publisher's SHA-256 matched the
+  # download. A different file needs a new pin (and is a new agent version: MODEL_NAME:<first 12 hex digits>).
   MODEL_REPO: typhoon-ai/typhoon2.5-qwen3-4b-gguf
-  MODEL_REVISION: main
-  MODEL_FILE: "*q4_k_m.gguf"
-  MODEL_SHA256: ""
+  MODEL_REVISION: 386874d02430a544367cb0878687f8983751bbd2
+  MODEL_FILE: typhoon2.5-qwen3-4b-q4_k_m.gguf
+  MODEL_SHA256: b365302922688f3a3c9ac8e3c00ab97a152cac0cdbf4eb5a734ecb483ae3e511
   MODEL_NAME: typhoon2.5-qwen3-4b-q4_k_m
 jobs:
   eval:

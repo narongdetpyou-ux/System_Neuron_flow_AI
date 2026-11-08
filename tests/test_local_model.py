@@ -267,13 +267,15 @@ class WorkflowFileTests(unittest.TestCase):
         self.assertNotIn("0.0.0.0", self.text)
         self.assertIn("--no-webui", self.text)
 
-    def test_llama_cpp_and_the_model_file_are_pinned_or_checked(self):
+    def test_llama_cpp_and_the_model_file_are_pinned(self):
         self.assertRegex(self.env_value("LLAMA_CPP_COMMIT"), r"^[0-9a-f]{40}$")
         self.assertRegex(self.env_value("LLAMA_CPP_TAG"), r"^b\d+$")
         self.assertIn('if [ "$got" != "$LLAMA_CPP_COMMIT" ]', self.text)  # the tag must be that commit
-        sha = self.env_value("MODEL_SHA256")
-        self.assertRegex(sha, r"^([0-9a-f]{64})?$")
+        self.assertRegex(self.env_value("MODEL_SHA256"), r"^[0-9a-f]{64}$")
+        self.assertRegex(self.env_value("MODEL_REVISION"), r"^[0-9a-f]{40}$")  # a commit, not a branch
+        self.assertEqual(self.env_value("MODEL_FILE"), self.env_value("MODEL_NAME") + ".gguf")  # no glob
         self.assertIn('--sha256 "$MODEL_SHA256"', self.text)
+        self.assertIn("key: local-model-${{ env.MODEL_NAME }}-${{ env.MODEL_SHA256", self.text)
 
     def test_the_model_id_names_the_file_and_is_the_servers_alias(self):
         self.assertIn('model_id="$MODEL_NAME:${MODEL_SHA:0:12}"', self.text)
