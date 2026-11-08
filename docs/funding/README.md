@@ -17,7 +17,10 @@ project.
 - **AI gateway** (`app/llm/`). It has an offline mock, a Claude provider and a Typhoon provider (SCB 10X's
   free research API). The Claude path is tested only against a local fake API; **Claude has not been
   called**. Typhoon was run on the synthetic sets on 2026-11-06 ([evidence note](../evidence/2026-11-06-first-live-typhoon.md)):
-  a first measurement of that model on developer-labelled cases, not accuracy.
+  a first measurement of that model on developer-labelled cases, not accuracy. A `local` provider runs an
+  open-weight model on a server the project runs itself; Typhoon 2.5 4B on a GitHub runner had its first
+  full run on the same sets on 2026-11-08 ([evidence note](../evidence/2026-11-08-first-local-model-full.md)),
+  with no key and nothing sent to an AI company.
 - **Scorecard** (`app/eval/`) with 61 synthetic, developer-labelled cases in English and Thai.
 - **Sentry error monitoring.** CI smoke-test events have been received by the Sentry project.
 - **Intake service (Milestone B)**: HTTP API, durable job queue, a single Runner with crash recovery and a
@@ -47,13 +50,15 @@ project.
   This was tested offline; the off-contract handling was also seen live, when Typhoon's first run answered
   in plain text instead of JSON and all 5 answers were refused rather than guessed at.
 - A first live run of a free model (Typhoon) on the synthetic sets is recorded with run links, rates as
-  fractions and every failure ([evidence note](../evidence/2026-11-06-first-live-typhoon.md)).
+  fractions and every failure ([evidence note](../evidence/2026-11-06-first-live-typhoon.md)), and so is the
+  first full run of an open-weight model the project runs itself
+  ([evidence note](../evidence/2026-11-08-first-local-model-full.md)).
 - The architecture decisions are written down.
 
 These facts do **not** imply any of the following:
 - product-market fit or open-source traction
-- AI accuracy (the only live runs are a free model, Typhoon, on developer-labelled synthetic cases; Claude
-  has not been run)
+- AI accuracy (the only real-model runs are two free models by SCB 10X, Typhoon through its API and Typhoon
+  2.5 4B run on a GitHub runner, on developer-labelled synthetic cases; Claude has not been run)
 - production security or independent benchmarking
 - a usable HTTP service or a real human-review workflow
 - award eligibility

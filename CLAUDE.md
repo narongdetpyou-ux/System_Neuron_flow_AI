@@ -73,10 +73,11 @@ Read in this order when you need depth:
 - **Honesty about evidence.**
   - Mock-AI scores are not accuracy, and hashes prove bytes, not authorship.
   - The live-model measurements are Typhoon's on the synthetic sets (first runs 2026-11-06,
-    `docs/evidence/2026-11-06-first-live-typhoon.md`) and the local 4B model's smoke run on the first 5 items
-    of each set, twice (2026-11-08, `docs/evidence/2026-11-08-first-local-model-smoke.md`). There is none for
-    Claude, and no security review or user study yet. A Typhoon or local result describes that model only;
-    never present it as another model's, least of all Claude's.
+    `docs/evidence/2026-11-06-first-live-typhoon.md`) and the local 4B model's: a smoke run on the first 5
+    items of each set, twice, and one full run of both sets (2026-11-08,
+    `docs/evidence/2026-11-08-first-local-model-smoke.md`, `docs/evidence/2026-11-08-first-local-model-full.md`).
+    There is none for Claude, and no security review or user study yet. A Typhoon or local result describes
+    that model only; never present it as another model's, least of all Claude's.
   - Never write a number you did not measure. Record failures as well as successes.
 - **The philosophy covers how you talk, too.** Plain language outside, careful work inside, and small
   measured steps instead of perfection. When the owner brings up a technology or a logic system in everyday
@@ -181,9 +182,10 @@ GitHub Actions (the owner can open these; the first three run on every push and 
   Typhoon 2.5 Qwen3 4B from a Hugging Face file checked against its SHA-256 (`.github/scripts/fetch_model.py`),
   on 127.0.0.1 with greedy decoding. No secret; nothing goes to an AI company. Pull requests that change
   `app/llm/`, the workflow or its scripts get a smoke run (5 cases, 5 requests); *Run workflow* runs
-  everything. CPU only, so it is slow. This session cannot reach Hugging Face: the model file's commit, size
-  and SHA-256 are on the run page. GitHub's terms allow hosted runners only for building and testing the
-  project, so this lane measures and never serves the web page.
+  everything. CPU only, so it is slow: the first full run took about 66 minutes, 55 of them the study guide.
+  This session cannot reach Hugging Face: the model file's commit, size and SHA-256 are on the run page.
+  GitHub's terms allow hosted runners only for building and testing the project, so this lane measures and
+  never serves the web page.
 - *Shadow eval with Claude (manual)* and *Study guide eval with Claude (manual)* run the two scorecards
   against real Claude and need the repository secret `ANTHROPIC_API_KEY`.
 
@@ -370,10 +372,18 @@ Notes for cloud sessions (claude.ai/code):
     rates and token counts, while the median latency per triage case was 2.7 s on one runner and 6.5 s on
     another (`docs/evidence/2026-11-08-first-local-model-smoke.md`). The page names the provider but the Render
     service has no model server, so the page stays on the mock.
+  - The local model's first full run, started by the owner on `main` after the merge (run 42453956630,
+    2026-11-08, about 66 minutes; `docs/evidence/2026-11-08-first-local-model-full.md`). Every item answered;
+    every triage case and topic step on the first attempt. Triage: rule mistakes raised 32/32 (Typhoon
+    32/32), 3 needless raises (Typhoon 1), AI correct 58/61 (Typhoon 60/61). Study guide: topic correct 44/48
+    (Typhoon 46/48), all correct 61/67 (Typhoon 62/67), 0 of 142 links outside the library; one injection (`TH-ATK-02`) chose the
+    topic it asked for, while the links still came only from the library. All 67 topic answers said `high`
+    confidence. Median latency about 7 times Typhoon's API. The owner got the JSON reports from the run's
+    artifact, because this session cannot download artifacts.
 - **Not done yet:**
   - Claude has never been run (D2). Typhoon has run only on the synthetic sets (two full triage runs, one
-    full study guide run). The local 4B model has had only the PR's two smoke runs; its first full run comes
-    after the merge (roadmap 5.8).
+    full study guide run). The local 4B model has had one full run of each set (2026-11-08) besides the PR's
+    two smoke runs.
   - Review decisions and per-person identity (Milestone C) are not built.
   - The live page uses the mock AI unless the owner adds Typhoon (or Claude) in Render's Environment tab
     (roadmap 0.4).
@@ -382,7 +392,8 @@ Notes for cloud sessions (claude.ai/code):
   - Waiting on the owner: 0.2 and 1.4 (D1, paid Render plan), 0.3 path B and 0.4 with Claude (D2, Claude
     API key); 0.4 with Typhoon is free but sends what is typed on the page to Typhoon, so it is the owner's
     choice too; an open model behind the page needs a paid machine (D7).
-  - After 5.8's first full run: read the results with the owner and follow the branches written in 5.8.
+  - 5.8's first full run is recorded: the owner chooses its branch (not good enough, close or good enough;
+    roadmap 5.8, "After the first full run", step 2), then follow it.
   - Buildable now without an owner decision: the rest of 5.5 (decide and fix the stage-1 gaps), 5.6 and 5.7,
     Phase 2 (2.1 first) and Phase 4 (4.1 first; Phase 3, which it needs, is built). The rest of 7.1 (who can read the AI key) needs an ADR first.
   - The owner decides which phase comes next; ask before starting a new phase.

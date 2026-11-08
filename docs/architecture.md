@@ -313,7 +313,7 @@ dashboard.
 | Milestone | Content | Status |
 |---|---|---|
 | A | case_triage v1 rules, synthetic demo, tests | Done |
-| A2 | AI gateway, v2 shadow mode, scorecard, Sentry reporting | Done (PR #8, #9); a free Typhoon provider added (ADR-021, after GitHub Models was found retired). First live runs with Typhoon on 2026-11-06 after the answer-format fix (ADR-022): AI correct 60/61 on the synthetic triage set in two runs ([evidence](evidence/2026-11-06-first-live-typhoon.md)); Claude not run yet (D2); a local open-model lane on the GitHub runner, Typhoon 2.5 4B through llama.cpp (ADR-026, PR #46, ROADMAP 5.8) |
+| A2 | AI gateway, v2 shadow mode, scorecard, Sentry reporting | Done (PR #8, #9); a free Typhoon provider added (ADR-021, after GitHub Models was found retired). First live runs with Typhoon on 2026-11-06 after the answer-format fix (ADR-022): AI correct 60/61 on the synthetic triage set in two runs ([evidence](evidence/2026-11-06-first-live-typhoon.md)); Claude not run yet (D2); a local open-model lane on the GitHub runner, Typhoon 2.5 4B through llama.cpp (ADR-026, PR #46, ROADMAP 5.8), first full run on 2026-11-08: AI correct 58/61, every rule mistake raised (32/32) ([evidence](evidence/2026-11-08-first-local-model-full.md)) |
 | P1-fix | Neutral telemetry phase names | Done (PR #21, roadmap 1.1) |
 | B | Admission queue, single Runner, reconciliation, thin API, web page | Done (PR #11); live on Render's free plan since 2026-11-01; page redesigned as a chat layout with Flow, Trace and read-only settings (PR #18, roadmap 1.6) |
 | C | Two-phase review, decision ledger, n8n notifications | Open |
@@ -340,7 +340,9 @@ The order of the remaining work, with tasks, acceptance checks and owner decisio
 - The only live-model results are Typhoon's first runs on the synthetic sets (2026-11-06, one or two runs
   per scorecard, [evidence](evidence/2026-11-06-first-live-typhoon.md)). The cases and labels are the developer's,
   so they are a first measurement, not accuracy, and they describe that model only. Claude has not been run
-  (D2). The local open model (ADR-026) has had two smoke runs on the first 5 items of each set (2026-11-08,
-  [evidence](evidence/2026-11-08-first-local-model-smoke.md)): every item answered, in the right format, with
-  the same numbers both times; five easy items are not a rate.
+  (D2). The local open model (ADR-026) has had two smoke runs on the first 5 items of each set and one full
+  run of both sets (2026-11-08, [smoke](evidence/2026-11-08-first-local-model-smoke.md),
+  [full](evidence/2026-11-08-first-local-model-full.md)): every item answered in the right format; triage AI
+  correct 58/61 with all 32 rule mistakes raised, study guide topic correct 44/48 with 0 of 142 links outside
+  the library. One full run on the developer's labels describes that file only, not accuracy.
 - Security review, benchmarks and user studies do not exist yet. No document should claim them.

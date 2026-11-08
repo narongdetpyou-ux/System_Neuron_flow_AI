@@ -55,8 +55,9 @@ yet been benchmarked or validated with prospective users.
 - AI gateway in `app/llm/` (offline mock, Claude provider, and Typhoon, a free
   model by SCB 10X). It handles outages, off-contract answers, prompt injection
   and secrets as documented. **Claude has not been called.** Typhoon was run on
-  the synthetic sets on 2026-11-06: a first measurement on developer-labelled
-  cases, not accuracy.
+  the synthetic sets on 2026-11-06, and an open-weight model the project runs
+  itself (Typhoon 2.5 4B on a GitHub runner) on 2026-11-08: first measurements
+  on developer-labelled cases, not accuracy.
 - Measurement and monitoring:
   - Two scorecards run in CI: 61 synthetic labelled triage cases and 67
     synthetic study-guide requests, in English and Thai. Their mock scores

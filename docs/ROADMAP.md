@@ -32,7 +32,7 @@ differs, this file and architecture.md win.
 - ผู้ช่วยแนะนำแหล่งเรียนทำงานได้แล้วผ่าน API: พิมพ์เรื่องที่อยากรู้ด้วยคำธรรมดา ได้แหล่งเรียนไม่เกิน 5 แหล่งเรียงพื้นฐานก่อน ทุกลิงก์มาจากคลัง ถ้าเรื่องอยู่นอกกรอบก็บอกตรง ๆ ว่าช่วยเรื่องไหนได้ (ขั้น 3.2) และตั้งแต่ขั้น 3.4 ใช้ได้บนหน้าเว็บ (ข้อสุดท้าย)
 - มีชุดข้อสอบของผู้ช่วยแนะนำแหล่งเรียน 67 ข้อ (ไทยและอังกฤษ คำเปรียบ คำพูดอ้อม เรื่องนอกกรอบ และคำสั่งแอบแฝง) GitHub รันทุกครั้งที่ส่งโค้ด ถ้ามีลิงก์นอกคลังหรือเกิน 5 แหล่งแม้ข้อเดียว หรือคำตอบข้อไหนเปลี่ยน ช่องตรวจจะเป็นสีแดง AI จำลองหาหัวข้อถูกแค่ 2 จาก 48 ข้อ ซึ่งไม่ใช่ความแม่นยำ ส่วนผลกับ AI จริงอยู่ในข้อถัดไป (ขั้น 3.3)
 - วัดผล AI จริงครั้งแรกแล้ว ฟรีผ่าน Typhoon ของ SCB 10X (เก่งภาษาไทย) เมื่อ 6 พ.ย.: รอบแรก AI ตอบไม่ได้เลย 0 จาก 5 เคส เพราะ Typhoon ไม่ทำตามช่องตั้งค่าที่ขอให้ตอบเป็น JSON แก้แล้วโดยบอกรูปแบบคำตอบเป็นคำพูดด้วย (ADR-022) หลังแก้ รันครบทั้งชุด: คัดแยกเคส AI ถูก 60 จาก 61 เคส ทั้ง 2 รอบ (กฎเดิมถูก 29) และผู้ช่วยแนะนำแหล่งเรียนหาหัวข้อถูก 46 จาก 48 ข้อ ไม่มีลิงก์นอกคลังเลย เคสเป็นของสมมุติที่ผู้พัฒนาเขียนเอง จึงยังไม่ใช่ความแม่นยำจริง และเป็นผลของ Typhoon ไม่ใช่ของ Claude ([บันทึกหลักฐาน](evidence/2026-11-06-first-live-typhoon.md); ขั้น 0.3, ADR-021, ADR-022)
-- มีโมเดลเปิด (open-weight) ที่ระบบรันเองได้แล้ว (ขั้น 5.8, ADR-026): ปุ่ม *Local open model eval* ใน Actions ให้เครื่องทดสอบของ GitHub สร้างโปรแกรมรันโมเดล (llama.cpp) จากโค้ดรุ่นที่ตรึงไว้ ดาวน์โหลด Typhoon 2.5 รุ่น 4B (สัญญา Apache 2.0) ตรวจลายนิ้วมือไฟล์ แล้วรันชุดข้อสอบเดิมทั้ง 2 ชุด ข้อความไม่ออกไปบริษัท AI ใด ไม่ต้องใช้คีย์ และไม่มีค่าใช้จ่ายเพราะ repo เป็นสาธารณะ แต่เครื่องทดสอบคิดด้วย CPU จึงช้ากว่า Typhoon ออนไลน์มาก ใช้วัดผลได้ แต่ใช้เป็นสมองของหน้าเว็บไม่ได้ (เงื่อนไขของ GitHub) PR ที่แก้ส่วนเชื่อม AI จะได้รอบทดสอบเล็ก 5 เคสอัตโนมัติ รอบเล็กรอบแรก (8 พ.ย.) ตอบได้ทุกข้อและถูกรูปแบบตั้งแต่ครั้งแรก: คัดแยกเคสถูก 5 จาก 5 หาหัวข้อถูก 5 จาก 5 ไม่มีลิงก์นอกคลัง ใช้เวลาราว 2.7–6.5 วินาทีต่อเคสแล้วแต่เครื่อง และรันซ้ำด้วยไฟล์ที่ตรึงแล้วได้ตัวเลขเหมือนเดิมทุกตัว ([บันทึกหลักฐาน](evidence/2026-11-08-first-local-model-smoke.md)) 5 ข้อแรกเป็นข้อง่าย จึงยังไม่ใช่ความแม่นยำ แผนหลังรอบเต็มรอบแรกอยู่ในขั้น 5.8
+- มีโมเดลเปิด (open-weight) ที่ระบบรันเองได้แล้ว (ขั้น 5.8, ADR-026): ปุ่ม *Local open model eval* ใน Actions ให้เครื่องทดสอบของ GitHub สร้างโปรแกรมรันโมเดล (llama.cpp) จากโค้ดรุ่นที่ตรึงไว้ ดาวน์โหลด Typhoon 2.5 รุ่น 4B (สัญญา Apache 2.0) ตรวจลายนิ้วมือไฟล์ แล้วรันชุดข้อสอบเดิมทั้ง 2 ชุด ข้อความไม่ออกไปบริษัท AI ใด ไม่ต้องใช้คีย์ และไม่มีค่าใช้จ่ายเพราะ repo เป็นสาธารณะ แต่เครื่องทดสอบคิดด้วย CPU จึงช้ากว่า Typhoon ออนไลน์มาก ใช้วัดผลได้ แต่ใช้เป็นสมองของหน้าเว็บไม่ได้ (เงื่อนไขของ GitHub) PR ที่แก้ส่วนเชื่อม AI จะได้รอบทดสอบเล็ก 5 เคสอัตโนมัติ รอบเล็กรอบแรก (8 พ.ย.) ตอบได้ทุกข้อและถูกรูปแบบตั้งแต่ครั้งแรก: คัดแยกเคสถูก 5 จาก 5 หาหัวข้อถูก 5 จาก 5 ไม่มีลิงก์นอกคลัง ใช้เวลาราว 2.7–6.5 วินาทีต่อเคสแล้วแต่เครื่อง และรันซ้ำด้วยไฟล์ที่ตรึงแล้วได้ตัวเลขเหมือนเดิมทุกตัว ([บันทึกหลักฐาน](evidence/2026-11-08-first-local-model-smoke.md)) รอบเต็มรอบแรกบน main (8 พ.ย. ราว 66 นาที) ตอบได้ทุกข้อ: เคสที่กฎผิดถูกดันขึ้นคิวด่วนให้คนดูครบ 32 จาก 32 เท่ากับ Typhoon รุ่นใหญ่ผ่าน API คัดแยกเคสถูก 58 จาก 61 (รุ่นใหญ่ 60) หาหัวข้อถูก 44 จาก 48 (รุ่นใหญ่ 46) ไม่มีลิงก์นอกคลัง (0 จาก 142) ช้ากว่ารุ่นใหญ่ราว 7 เท่า และมีคำสั่งแอบแฝง 1 ข้อที่หลอกให้เลือกหัวข้อได้ แต่ลิงก์ยังมาจากคลังเท่านั้น ([บันทึกหลักฐาน](evidence/2026-11-08-first-local-model-full.md)) ยังไม่ใช่ความแม่นยำ ต่อไปเจ้าของโปรเจกต์เลือกทางตามขั้น 5.8: ไม่ผ่าน พอใช้ หรือผ่าน
 - หน้าเว็บมีช่อง "อยากเรียน" แล้ว: กดปุ่ม "อยากเรียน" เหนือช่องพิมพ์ พิมพ์เรื่องที่อยากรู้ แล้วกด Enter คำถามส่งทันที (ไม่มีขั้นยืนยันแบบเคส เพราะเป็นแค่คำแนะนำ) คำตอบขึ้นเป็นชั้น: สรุป 1 บรรทัด สิ่งที่ระบบเข้าใจพร้อมถามว่า "เข้าใจถูกไหม" แหล่งที่ควรเริ่มก่อนกับแหล่งที่สำคัญที่สุด แล้วกด "ดูขั้นตอนการเรียน" หรือ "ดูรายละเอียด" เมื่ออยากรู้เพิ่ม เรื่องนอกกรอบบอกตรง ๆ พร้อมรายการ 11 หัวข้อที่ช่วยได้ ถ้าช่อง AI มุมซ้ายล่างขึ้นว่า "AI จำลอง" คำเปรียบใหม่ ๆ อย่าง "บรรณารักษ์ที่รู้ใจ" จะถูกตอบว่านอกกรอบ และหน้าเว็บบอกเหตุผลไว้ เปิด Typhoon ได้ฟรีตามขั้นตอนในแท็บ "ตั้งค่า" (ขั้น 3.4, ADR-023)
 - มีด่านความทนทาน (robustness benchmark ขั้นที่ 1) แล้ว: ทุกครั้งที่ส่งโค้ด GitHub ป้อนเคสสุดโหดที่เขียนเอง 270 ข้อ และข้อมูลเปิดที่นักพัฒนาทั่วโลกใช้ (ข้อความแปลก 515 แบบ ไฟล์ทดสอบ JSON 318 ไฟล์ และคำขอจาก CLINC150 กับ BANKING77) เข้าทุกชั้นของระบบ รอบแรกเจอปัญหาร้ายแรง 8 จุด ที่สำคัญที่สุดคือถ้า AI ตอบมี "ตัวอักษรพัง" เคสทั้งเคสจะล้มและไม่ถึงคนตรวจ แก้ครบทั้ง 8 จุดแล้วใน PR #42 (รวมแล้วเมื่อ 8 พ.ย. และเคสที่คุณส่งบนหน้าเว็บจริงหลังรวมยังถึงคนตรวจ): ข้อมูลแปลกได้ "ข้อมูลไม่ถูกต้อง (400)" แทน "เซิร์ฟเวอร์พัง (500)" และเคสที่ AI ตอบมีตัวอักษรพังยังถึงคนตรวจพร้อมความเห็นของ AI 7 จุดแก้นอก Core ส่วนจุดที่ 8 ตรวจตัวอ่าน JSON ของ Core เอง จึงแก้ Core 1 ฟังก์ชันพร้อมบันทึกข้อตัดสินใจ (ADR-025) ตอนนี้ผ่าน 215 จาก 270 ข้อ (ขั้น 5.4–5.5, [แผนทดสอบ 3 ขั้น](benchmarking.md), [บันทึกหลักฐาน](evidence/2026-11-07-robustness-stage1.md))
 
@@ -45,13 +45,14 @@ differs, this file and architecture.md win.
 | 2 | ให้คนรีวิวได้จริง: ผู้รีวิวมีรหัสของตัวเอง กดอนุมัติหรือไม่อนุมัติได้ และ n8n แจ้งเตือน | กล่อง "รอรีวิว" บนหน้าเว็บ และข้อความแจ้งเตือน | ยังไม่เริ่ม |
 | 3 | ผู้ช่วยแนะนำแหล่งเรียน (`study_guide.v1`) ตามหลักปรัชญาของคุณ | พิมพ์เรื่องที่อยากรู้ด้วยคำธรรมดา แล้วได้แหล่งเรียนไม่เกิน 5 แหล่งพร้อมลำดับการเรียน | สร้างครบทุกขั้นแล้ว (คุณเลือกขั้นนี้ก่อนขั้น 2 เมื่อ 5 พ.ย.): 3.1 คลังแหล่งเรียน 3.2 ตัวผู้ช่วย และ 3.3 ชุดข้อสอบ ทำแล้ว (ดูตัวอย่างคำตอบและผลข้อสอบใน Actions ได้); 3.4 ช่อง "อยากเรียน" บนหน้าเว็บ สร้างและ merge แล้ว (7 พ.ย.) คุณลองบนหน้าเว็บจริงผ่านแล้ว (8 พ.ย.); รันกับ AI จริง (Typhoon) แล้ว หาหัวข้อถูก 46 จาก 48 ข้อ ไม่มีลิงก์นอกคลัง (Claude รอ D2) |
 | 4 | ช่องคุยภาษาธรรมดา: ระบบเข้าใจว่าคุณขออะไร บอกตรง ๆ เมื่อเรื่องอยู่นอกกรอบ และถามกลับ 1 คำถามเมื่อข้อมูลไม่พอ | คุยกับระบบได้เลย ไม่ต้องเลือกประเภทงานเอง | ยังไม่เริ่ม (ขั้น 3 สร้างครบแล้ว เริ่มได้เมื่อคุณเลือก) |
-| 5 | ติดตามเส้นทางของแต่ละงาน (เวลา token จุดที่ช้า) ด่านตรวจผลรายเคส และแผนทดสอบ 3 ขั้นด้วยข้อมูลเปิด | ตัวเลขคิวและเวลาบนหน้าเว็บ ช่องตรวจบน PR แล้วต่อด้วยเส้นทางงานใน Honeycomb; ผลด่านความทนทานในหน้าสรุปของ *Core logic tests* | เสร็จแล้วทั้ง 5.1, 5.2, 5.3 และ 5.4; เส้นทางงานแรกเข้า Honeycomb เมื่อ 4 พ.ย. 00:23 น.; ด่านความทนทาน (5.4) รวมเข้า main แล้ว 7 พ.ย.; แก้ 8 bug ที่เจอแล้ว (5.5, PR #42 รวมแล้วเมื่อ 8 พ.ย.); ต่อไปคือตัดสินใจเรื่องจุดอ่อน (gap) 44 จุดที่เหลือ แล้วขั้นข้อสอบกลาง (5.6) และขั้นโจมตีกับใช้งานจริง (5.7); 5.8 โมเดลเปิดที่รันเองบนเครื่องทดสอบของ GitHub สร้างแล้วใน PR #46 (รอบเต็มรอบแรกหลัง merge) |
+| 5 | ติดตามเส้นทางของแต่ละงาน (เวลา token จุดที่ช้า) ด่านตรวจผลรายเคส และแผนทดสอบ 3 ขั้นด้วยข้อมูลเปิด | ตัวเลขคิวและเวลาบนหน้าเว็บ ช่องตรวจบน PR แล้วต่อด้วยเส้นทางงานใน Honeycomb; ผลด่านความทนทานในหน้าสรุปของ *Core logic tests* | เสร็จแล้วทั้ง 5.1, 5.2, 5.3 และ 5.4; เส้นทางงานแรกเข้า Honeycomb เมื่อ 4 พ.ย. 00:23 น.; ด่านความทนทาน (5.4) รวมเข้า main แล้ว 7 พ.ย.; แก้ 8 bug ที่เจอแล้ว (5.5, PR #42 รวมแล้วเมื่อ 8 พ.ย.); ต่อไปคือตัดสินใจเรื่องจุดอ่อน (gap) 44 จุดที่เหลือ แล้วขั้นข้อสอบกลาง (5.6) และขั้นโจมตีกับใช้งานจริง (5.7); 5.8 โมเดลเปิดที่รันเองบนเครื่องทดสอบของ GitHub สร้างแล้วใน PR #46 และรันเต็มรอบแรกแล้ว 8 พ.ย. (ดันเคสที่กฎผิดขึ้นคิวด่วนครบ 32/32) รอเจ้าของโปรเจกต์เลือกทาง |
 | 6 | AI วางแผนงานหลายขั้น ระบบตรวจแผนก่อนรัน และเครื่องมืออื่นเรียกใช้ผ่าน MCP ได้ | สั่งงานจากแอป Claude ได้ | ยังไม่เริ่ม (ต้องรอขั้น 2–4) |
 | 7 | เตรียมพร้อมก่อนให้คนอื่นใช้ หรือก่อนเปิด repo สาธารณะ | รายงานตรวจความปลอดภัย และรายการตรวจก่อนเปิดตัว | เริ่มแล้ว: 7.1 ปิดข้อมูลส่วนตัวก่อนส่งให้ AI ทำแล้ว ส่วนการจำกัดว่าใครเห็นคีย์ AI ได้ เขียนแผนไว้ ยังไม่ทำ; 7.4 เสร็จ: repo นี้เป็นสาธารณะพร้อมประวัติทั้งหมดตั้งแต่ 8 พ.ย. (D5) เปลี่ยนคีย์ Sentry แล้ว และเปิดระบบสแกนคีย์ของ GitHub แล้ว |
 
 **เรื่องที่คุณต้องตัดสินใจเอง** อยู่ในตาราง [Owner decisions](#owner-decisions) ข้างล่าง เช่น
 - จะจ่ายค่า Render เพื่อให้เคสไม่หายหรือไม่
 - จะใส่ Claude API key หรือไม่ (ไม่ใส่ก็วัดผลกับ AI จริงได้ผ่าน Typhoon)
+- โมเดลเปิดที่รันเองบนเครื่องทดสอบของ GitHub ผ่าน พอใช้ หรือไม่ผ่าน หลังรอบเต็มรอบแรก (ขั้น 5.8)
 - ใครเป็นผู้รีวิว
 - จะเปิด repo เป็นสาธารณะเมื่อไร
 
@@ -119,7 +120,7 @@ Marks: ✅ done · 🟡 built or partly checked (the status says what is left) �
 | 5.5 | Fix what stage 1 found (the 8 bugs, then the gaps) | 🟡 the 8 bugs fixed in PR #42, merged 2026-11-08 (after the deploy the owner's case on the live page still reached review): 215/270 own items pass, 0 bugs; one small Core change (ADR-025); deciding the 44 gaps is next | 5.4 |
 | 5.6 | Stage 2: open benchmarks (CLINC150, BANKING77, MASSIVE th-TH/en-US) with Typhoon | ⬜ | 5.4 |
 | 5.7 | Stage 3: prompt injection, personal data, load and restarts, weekly live drift | ⬜ | 5.4; drift schedule is the owner's choice |
-| 5.8 | Local open-model lane: llama.cpp and Typhoon 2.5 4B on the GitHub runner (ADR-026) | 🟡 built in PR #46; two smoke runs on the PR (first 5 items of each set) answered every item, triage correct 5/5 and topic correct 5/5 both times, the second with the model file pinned ([evidence note](evidence/2026-11-08-first-local-model-smoke.md)); the first full run comes after the merge | — |
+| 5.8 | Local open-model lane: llama.cpp and Typhoon 2.5 4B on the GitHub runner (ADR-026) | ✅ built in PR #46, with two smoke runs ([evidence note](evidence/2026-11-08-first-local-model-smoke.md)); first full run on `main` on 2026-11-08: rule mistakes raised 32/32 (Typhoon 32/32), triage AI correct 58/61 (Typhoon 60/61), topic correct 44/48 (Typhoon 46/48), 0 of 142 links outside the library, about 7 times Typhoon's latency ([evidence note](evidence/2026-11-08-first-local-model-full.md)); next, the owner chooses a branch (5.8, "After the first full run", step 2) | — |
 | 6.1 | Pattern A: bounded read-only tool loop | ⬜ | 3.2 |
 | 6.2 | Pattern B: planner → checked plan → linked job | ⬜ | 2.2, 4.2 |
 | 6.3 | MCP server (submit, get, list; never review decisions) | ⬜ | 2.1 |
@@ -1087,6 +1088,15 @@ workflow types.
   same rates and token counts; the median latency per triage case was 2.7 s on one runner and 6.5 s on the
   other ([evidence note](evidence/2026-11-08-first-local-model-smoke.md)). Five easy items per set are not a
   rate.
+- **Status (first full run, 2026-11-08):** the owner ran *Run workflow* on `main` (`f7d10f2`), both sets in
+  full, in about 66 minutes (the build again, because the PR's cache belongs to its branch; `main` has its own
+  now). Every item was answered (every triage case and topic step on the first attempt), and every code
+  promise held. Triage: the rules' mistakes raised 32/32 (Typhoon 32/32), 3 needless raises (Typhoon 1), AI
+  correct 58/61 (Typhoon 60/61). Study guide: topic correct 44/48 (Typhoon 46/48), all correct 61/67 (Typhoon 62/67), 0 of 142 links
+  outside the library; one injection (`TH-ATK-02`) chose the topic it asked for, and the links still came
+  only from the library. Median latency about 7 times Typhoon's API on both sets. One run on the developer's
+  labels, so a first measurement of this file, not accuracy
+  ([evidence note](evidence/2026-11-08-first-local-model-full.md)).
 - **Done when:**
   - the smoke run on the PR answers through the whole path, in an evidence note;
   - the model file is pinned in the workflow (commit and SHA-256);
@@ -1103,7 +1113,9 @@ workflow types.
   1. **Read the results together.** An evidence note puts the rules, Typhoon's 30B through the API and the
      local 4B side by side. In shadow mode the AI decides nothing, so what matters most is how many of the
      rules' mistakes it raises for review (Typhoon: 32/32); then needless raises, off-format answers and
-     latency. No target is set before the run (as in 0.3).
+     latency. No target is set before the run (as in 0.3). Done on 2026-11-08:
+     [evidence note](evidence/2026-11-08-first-local-model-full.md), section 5 (32/32 raised, 3 needless
+     raises against Typhoon's 1, no off-format answer in triage or the topic step, about 7 times slower).
   2. **Choose a branch.**
      - Not good enough: Typhoon stays the measured model, nothing else changes, and the lane stays for later.
      - Close: try what still fits the 16 GB runner, such as a less compressed file of the same model or
