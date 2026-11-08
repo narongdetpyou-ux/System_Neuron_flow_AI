@@ -265,7 +265,8 @@ class AnswerFormatTests(unittest.TestCase):
                     ask(fake.base_url)
 
     def test_the_answer_format_is_part_of_the_version_and_claude_is_unchanged(self):
-        self.assertEqual(ANSWER_FORMATS, {"typhoon": openai_compat.FORMAT_VERSION})
+        self.assertEqual(ANSWER_FORMATS, {"typhoon": openai_compat.FORMAT_VERSION,
+                                          "local": openai_compat.FORMAT_VERSION})  # local: ADR-026
         tag = LLMConfig(provider="typhoon", model="typhoon-v2.5-30b-a3b-instruct").version_tag(PROMPT)
         self.assertTrue(tag.endswith(";format=json-instruction-v1"), tag)
         claude = LLMConfig(provider="anthropic", model="claude-haiku-5-5")

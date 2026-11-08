@@ -1,0 +1,167 @@
+name: Local open model eval
+# Runs the two scorecards against an open-weight model that this job runs itself on the GitHub runner (ADR-026):
+# llama.cpp's server, built from a pinned commit, serves Typhoon 2.5 Qwen3 4B (SCB 10X, Apache-2.0) from a file
+# checked against a pinned SHA-256. The server listens on 127.0.0.1 only, so nothing leaves the runner for an AI
+# company, and no key or secret is used. Standard runners are free for this public repository (4 CPUs, 16 GB):
+# CPU only, so answers take seconds, not milliseconds. Synthetic data only (rule 9).
+# - Pull requests that change the AI client or this lane get a smoke run: the first 5 cases and 5 requests.
+# - Actions -> Local open model eval -> Run workflow runs everything (or the part chosen below).
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/local-model-eval.yml"
+      - ".github/scripts/fetch_model.py"
+      - ".github/scripts/llm_probe.py"
+      - "app/llm/**"
+  workflow_dispatch:
+    inputs:
+      scorecards:
+        description: "Which scorecards: both, triage (61 cases) or study_guide (67 requests)"
+        type: choice
+        options:
+          - both
+          - triage
+          - study_guide
+        default: both
+      limit:
+        description: "Only the first N cases / requests (leave empty for all)"
+        default: ""
+        required: false
+      case_set:
+        description: "Triage cases: synthetic_v1 (61 cases) or robustness_edge_v1 (116 edge cases, docs/benchmarking.md)"
+        type: choice
+        options:
+          - synthetic_v1
+          - robustness_edge_v1
+        default: synthetic_v1
+permissions:
+  contents: read
+concurrency:
+  group: local-model-eval-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+env:
+  # llama.cpp: built from this tag, which must be this commit (checked after the clone).
+  LLAMA_CPP_TAG: b12198
+  LLAMA_CPP_COMMIT: f477f795cb071baf5b8af6488378366a72034ac4
+  # The model file. Until MODEL_SHA256 is pinned, the run trusts the publisher's SHA-256 and says so on the page.
+  MODEL_REPO: typhoon-ai/typhoon2.5-qwen3-4b-gguf
+  MODEL_REVISION: main
+  MODEL_FILE: "*q4_k_m.gguf"
+  MODEL_SHA256: ""
+  MODEL_NAME: typhoon2.5-qwen3-4b-q4_k_m
+jobs:
+  eval:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    env:
+      NEURON_FLOW_LLM_PROVIDER: local
+      # CPU answers are slow: the longest wait the client allows (Core's step limit is this + 15 s).
+      NEURON_FLOW_LLM_TIMEOUT_S: "300"
+      SCORECARDS: ${{ github.event_name == 'pull_request' && 'both' || inputs.scorecards }}
+      LIMIT: ${{ github.event_name == 'pull_request' && '5' || inputs.limit }}
+      CASE_SET: ${{ github.event_name == 'pull_request' && 'synthetic_v1' || inputs.case_set }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - name: Restore the llama.cpp server build
+        id: llama-cache
+        uses: actions/cache@v6
+        with:
+          path: ~/llama-bin
+          key: llama-server-${{ env.LLAMA_CPP_COMMIT }}-${{ runner.os }}-${{ runner.arch }}-avx2-v1
+      # Portable CPU flags (AVX2, FMA, F16C), so a cached build runs on any of GitHub's x64 runners. No HTTPS,
+      # no web UI and nothing downloaded at build time: the server only answers on 127.0.0.1.
+      - name: Build llama.cpp's server at the pinned commit
+        if: steps.llama-cache.outputs.cache-hit != 'true'
+        run: |
+          git clone --depth 1 --branch "$LLAMA_CPP_TAG" https://github.com/ggml-org/llama.cpp "$RUNNER_TEMP/llama.cpp"
+          got="$(git -C "$RUNNER_TEMP/llama.cpp" rev-parse HEAD)"
+          if [ "$got" != "$LLAMA_CPP_COMMIT" ]; then
+            echo "::error::llama.cpp tag $LLAMA_CPP_TAG is commit $got, not the pinned $LLAMA_CPP_COMMIT"
+            exit 1
+          fi
+          cmake -S "$RUNNER_TEMP/llama.cpp" -B "$RUNNER_TEMP/llama-build" -DCMAKE_BUILD_TYPE=Release \
+            -DBUILD_SHARED_LIBS=OFF -DGGML_NATIVE=OFF -DGGML_AVX=ON -DGGML_AVX2=ON -DGGML_FMA=ON -DGGML_F16C=ON \
+            -DLLAMA_BUILD_TESTS=OFF -DLLAMA_BUILD_EXAMPLES=OFF -DLLAMA_BUILD_TOOLS=ON -DLLAMA_BUILD_SERVER=ON \
+            -DLLAMA_BUILD_APP=OFF -DLLAMA_BUILD_UI=OFF -DLLAMA_USE_PREBUILT_UI=OFF -DLLAMA_OPENSSL=OFF
+          cmake --build "$RUNNER_TEMP/llama-build" --target llama-server -j "$(nproc)"
+          mkdir -p ~/llama-bin
+          cp "$RUNNER_TEMP/llama-build/bin/llama-server" ~/llama-bin/
+      - name: Restore the model file
+        uses: actions/cache@v6
+        with:
+          path: ~/models
+          key: local-model-${{ env.MODEL_NAME }}-${{ env.MODEL_SHA256 || env.MODEL_REVISION }}-v1
+      - name: Download and check the model file
+        id: model
+        run: >-
+          python .github/scripts/fetch_model.py --repo "$MODEL_REPO" --revision "$MODEL_REVISION"
+          --file "$MODEL_FILE" --sha256 "$MODEL_SHA256" --dest ~/models
+          --summary "$GITHUB_STEP_SUMMARY" --github-output "$GITHUB_OUTPUT"
+      # Greedy decoding (temperature 0) with a light repetition penalty, as the model card suggests low
+      # temperature and 1.05: the same file, settings and case give the same answer, so runs can be compared.
+      # Thinking is off. Two slots, so the study guide's two prompts each keep their cached start.
+      - name: Start the model server
+        env:
+          MODEL_PATH: ${{ steps.model.outputs.path }}
+          MODEL_SHA: ${{ steps.model.outputs.sha256 }}
+        run: |
+          model_id="$MODEL_NAME:${MODEL_SHA:0:12}"
+          echo "NEURON_FLOW_LLM_MODEL=$model_id" >> "$GITHUB_ENV"
+          ~/llama-bin/llama-server -m "$MODEL_PATH" --alias "$model_id" --host 127.0.0.1 --port 8080 \
+            --ctx-size 16384 --parallel 2 --reasoning off --temp 0 --repeat-penalty 1.05 --seed 42 \
+            --no-webui --no-slots > "$RUNNER_TEMP/llama-server.log" 2>&1 &
+          echo "$!" > "$RUNNER_TEMP/llama-server.pid"
+          for _ in $(seq 1 150); do
+            if curl -fsS http://127.0.0.1:8080/health > /dev/null 2>&1; then break; fi
+            if ! kill -0 "$(cat "$RUNNER_TEMP/llama-server.pid")" 2> /dev/null; then break; fi
+            sleep 2
+          done
+          if ! curl -fsS http://127.0.0.1:8080/health > /dev/null 2>&1; then
+            echo "::error::the model server did not start"
+            tail -n 40 "$RUNNER_TEMP/llama-server.log"
+            exit 1
+          fi
+          {
+            echo "### เครื่องรันโมเดล (model server)"
+            echo ""
+            echo "| | |"
+            echo "|---|---|"
+            echo "| โปรแกรม | llama.cpp \`$LLAMA_CPP_TAG\` (\`${LLAMA_CPP_COMMIT:0:12}\`), CPU $(nproc) cores, ฟังเฉพาะ 127.0.0.1 |"
+            echo "| รุ่นที่ระบบเรียก (model id) | \`$model_id\` |"
+            echo "| การตั้งค่า | temperature 0, repeat penalty 1.05, thinking off, context 16384 (2 slots) |"
+            echo ""
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Check the connection with one fixed sentence
+        continue-on-error: true
+        run: PYTHONPATH=. python .github/scripts/llm_probe.py "$GITHUB_STEP_SUMMARY"
+      - name: Score shadow mode with the local model
+        if: ${{ !cancelled() && env.SCORECARDS != 'study_guide' }}
+        run: |
+          ARGS=()
+          if [ -n "$LIMIT" ]; then ARGS+=(--limit "$LIMIT"); fi
+          if [ "$CASE_SET" = "robustness_edge_v1" ]; then ARGS+=(--golden tests/robustness/triage_edge_golden_v1.json); fi
+          python -m app.eval.triage_shadow_eval --summary "$GITHUB_STEP_SUMMARY" --out shadow-eval-local.json "${ARGS[@]}"
+      - name: Score the study guide with the local model
+        if: ${{ !cancelled() && env.SCORECARDS != 'triage' }}
+        run: |
+          ARGS=()
+          if [ -n "$LIMIT" ]; then ARGS+=(--limit "$LIMIT"); fi
+          python -m app.eval.study_guide_eval --summary "$GITHUB_STEP_SUMMARY" --out study-guide-eval-local.json "${ARGS[@]}"
+      - name: Show the end of the model server's log when something failed
+        if: ${{ failure() }}
+        run: tail -n 40 "$RUNNER_TEMP/llama-server.log" || true
+      - name: Stop the model server
+        if: ${{ always() }}
+        run: kill "$(cat "$RUNNER_TEMP/llama-server.pid" 2> /dev/null)" 2> /dev/null || true
+      - name: Keep the scorecards
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: local-model-eval
+          path: |
+            shadow-eval-local.json
+            study-guide-eval-local.json
+          if-no-files-found: ignore

@@ -270,7 +270,7 @@ def answer_changes(reference, candidate):
 
 def gate_markdown(changes, compared_with, cases):
     return common.gate_markdown(changes, compared_with, cases, module="app.eval.study_guide_eval",
-                                live_run="Study guide eval with Claude หรือ with Typhoon")
+                                live_run="Study guide eval with Claude, with Typhoon หรือ Local open model eval")
 
 
 # -- the report ---------------------------------------------------------------------------------------
