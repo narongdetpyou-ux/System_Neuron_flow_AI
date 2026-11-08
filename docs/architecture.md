@@ -340,7 +340,7 @@ The order of the remaining work, with tasks, acceptance checks and owner decisio
 - The only live-model results are Typhoon's first runs on the synthetic sets (2026-11-06, one or two runs
   per scorecard, [evidence](evidence/2026-11-06-first-live-typhoon.md)). The cases and labels are the developer's,
   so they are a first measurement, not accuracy, and they describe that model only. Claude has not been run
-  (D2). The local open model (ADR-026) has had one smoke run on the first 5 items of each set (2026-11-08,
-  [evidence](evidence/2026-11-08-first-local-model-smoke.md)): every item answered, in the right format; five
-  easy items are not a rate.
+  (D2). The local open model (ADR-026) has had two smoke runs on the first 5 items of each set (2026-11-08,
+  [evidence](evidence/2026-11-08-first-local-model-smoke.md)): every item answered, in the right format, with
+  the same numbers both times; five easy items are not a rate.
 - Security review, benchmarks and user studies do not exist yet. No document should claim them.

@@ -74,7 +74,7 @@ Read in this order when you need depth:
   - Mock-AI scores are not accuracy, and hashes prove bytes, not authorship.
   - The live-model measurements are Typhoon's on the synthetic sets (first runs 2026-11-06,
     `docs/evidence/2026-11-06-first-live-typhoon.md`) and the local 4B model's smoke run on the first 5 items
-    of each set (2026-11-08, `docs/evidence/2026-11-08-first-local-model-smoke.md`). There is none for
+    of each set, twice (2026-11-08, `docs/evidence/2026-11-08-first-local-model-smoke.md`). There is none for
     Claude, and no security review or user study yet. A Typhoon or local result describes that model only;
     never present it as another model's, least of all Claude's.
   - Never write a number you did not measure. Record failures as well as successes.
@@ -364,15 +364,16 @@ Notes for cloud sessions (claude.ai/code):
     provider (OpenAI format, `http://127.0.0.1:8080/v1` by default, no key needed on this machine, a model id
     `<name>:<first 12 hex digits of the file's SHA-256>`), the model fetcher, and the *Local open model eval*
     workflow (llama.cpp from a pinned commit, Typhoon 2.5 Qwen3 4B Q4_K_M on the GitHub runner, the file
-    pinned by commit and SHA-256). The PR's smoke run (first 5 items of each set): the AI answered 5/5 and was
+    pinned by commit and SHA-256). The PR's smoke runs (first 5 items of each set): the AI answered 5/5 and was
     correct 5/5 in triage (rules 3/5, both rule mistakes raised), topic correct 5/5 with 0 of 10 links outside
-    the library, and the connection check got valid JSON at once; median latency 2.7 s per triage case on the
-    CPU (`docs/evidence/2026-11-08-first-local-model-smoke.md`). The page names the provider but the Render
+    the library, and the connection check got valid JSON at once; the rerun with the pinned file gave the same
+    rates and token counts, while the median latency per triage case was 2.7 s on one runner and 6.5 s on
+    another (`docs/evidence/2026-11-08-first-local-model-smoke.md`). The page names the provider but the Render
     service has no model server, so the page stays on the mock.
 - **Not done yet:**
   - Claude has never been run (D2). Typhoon has run only on the synthetic sets (two full triage runs, one
-    full study guide run). The local 4B model has had only the PR's smoke run; its first full run comes after
-    the merge (roadmap 5.8).
+    full study guide run). The local 4B model has had only the PR's two smoke runs; its first full run comes
+    after the merge (roadmap 5.8).
   - Review decisions and per-person identity (Milestone C) are not built.
   - The live page uses the mock AI unless the owner adds Typhoon (or Claude) in Render's Environment tab
     (roadmap 0.4).

@@ -191,9 +191,10 @@ most 1 MiB. The agent `version` is frozen into each job, so an old job refuses t
   triage AI correct 60/61 in two runs (the rules 29/61), study guide topic correct 46/48 with no link
   outside the library. The cases and labels are the developer's and the runs are few, so these numbers are
   a first measurement of that model, not accuracy, and say nothing about Claude, which has not been run.
-  No cost claims are made. The local open model (Typhoon 2.5 4B on the GitHub runner, ADR-026) has had one
-  smoke run on the first 5 items of each set (2026-11-08, [evidence](docs/evidence/2026-11-08-first-local-model-smoke.md)):
-  it answered every item in the right format, which shows the path works, not how well it judges.
+  No cost claims are made. The local open model (Typhoon 2.5 4B on the GitHub runner, ADR-026) has had two
+  smoke runs on the first 5 items of each set (2026-11-08, [evidence](docs/evidence/2026-11-08-first-local-model-smoke.md)):
+  it answered every item in the right format, with the same numbers both times, which shows the path works,
+  not how well it judges.
 - The study guide's mock AI is a keyword simulation: it cannot read a new metaphor. On the 67-request
   scorecard it finds the right topic for 2 of 48 in-scope requests, so its answers prove the workflow runs,
   not that it understands people.
