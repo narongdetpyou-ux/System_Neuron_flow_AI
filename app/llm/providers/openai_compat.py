@@ -1,9 +1,16 @@
 """Providers that speak the OpenAI chat-completions format, over the Python standard library (ADR-021).
 
-Today that is Typhoon (``typhoon``), SCB 10X's Thai-first model family. Its hosted API is free (a research
-showcase in beta, rate-limited, no card) at ``https://api.opentyphoon.ai/v1``. The key is read from
-``TYPHOON_API_KEY`` at call time and never returned or logged. Another service in the same format needs one
-entry in ``config.py`` (provider name, default model, key variable, endpoint) and in the gateway's table.
+Today that is:
+* Typhoon (``typhoon``), SCB 10X's Thai-first model family. Its hosted API is free (a research showcase in
+  beta, rate-limited, no card) at ``https://api.opentyphoon.ai/v1``. The key is read from
+  ``TYPHOON_API_KEY`` at call time and never returned or logged.
+* A server we run ourselves (``local``, ADR-026), by default llama.cpp's ``llama-server`` on this machine at
+  ``http://127.0.0.1:8080/v1``, serving an open-weight model file. It needs no key on this machine; when
+  ``NEURON_FLOW_LOCAL_API_KEY`` is set, it is sent like any other key, and when it is not, the request has no
+  Authorization header.
+
+Another service in the same format needs one entry in ``config.py`` (provider name, default model, key
+variable, endpoint) and in the gateway's table.
 
 Request shape (kept as close as possible to the Claude path):
 * ``POST {base_url}/chat/completions`` with the model id;
@@ -20,7 +27,9 @@ with one JSON object, and lists the keys and their allowed values from the answe
 (:func:`format_instruction`). That text is versioned as ``config.ANSWER_FORMATS`` and is part of the agent
 version. When a reply wraps the object in a Markdown code fence or puts a sentence around it, only the
 outermost ``{…}`` is passed on (:func:`answer_text`); the gateway still parses it strictly and checks every
-field against the schema, so nothing looser than before is accepted.
+field against the schema, so nothing looser than before is accepted. A local llama.cpp server does enforce
+``response_format`` (it turns the schema into a grammar for the sampler) and gets the same words as well,
+because small models follow the format better with them (ADR-026).
 
 How failures are classified (Core decides retries from the class), the same as for Claude:
 * 408, 429, 5xx, timeouts, network errors -> LLMTransientError
@@ -43,7 +52,7 @@ import urllib.request
 
 from neuron_flow import __version__
 
-from ..config import ANSWER_FORMATS, DEFAULT_BASE_URLS, KEY_ENVS
+from ..config import ANSWER_FORMATS, DEFAULT_BASE_URLS, KEY_ENVS, OPTIONAL_KEY_PROVIDERS
 from ..errors import InvalidModelOutput, LLMConfigError, LLMRequestError, LLMTransientError
 from ._http import MAX_RESPONSE_BYTES, OPENER
 
@@ -61,8 +70,13 @@ def endpoint(config):
 
 
 def request_headers(config, key):
-    return {"authorization": f"Bearer {key}", "content-type": "application/json",
-            "accept": "application/json", "user-agent": f"neuron-flow/{__version__}"}
+    """The request's headers. Without a key (allowed only for ``config.OPTIONAL_KEY_PROVIDERS``) there is no
+    Authorization header, rather than an empty one."""
+    headers = {"content-type": "application/json", "accept": "application/json",
+               "user-agent": f"neuron-flow/{__version__}"}
+    if key:
+        headers["authorization"] = f"Bearer {key}"
+    return headers
 
 
 def format_instruction(schema):
@@ -104,7 +118,7 @@ def complete(config, prompt, case_text, *, attempt=1, scenario=None):
         raise LLMConfigError("mock_scenario is only valid with the mock provider")
     key_env = KEY_ENVS[config.provider]
     key = os.environ.get(key_env, "").strip()
-    if not key:
+    if not key and config.provider not in OPTIONAL_KEY_PROVIDERS:
         raise LLMConfigError(f"{key_env} is not set")
     body = json.dumps(build_request_body(config, prompt, case_text), ensure_ascii=False).encode("utf-8")
     request = urllib.request.Request(endpoint(config), data=body, method="POST",

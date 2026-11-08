@@ -4,7 +4,8 @@ The configuration travels inside the step ``params`` (so it is recorded with the
 job and covered by the job fingerprint) and inside the agent ``version`` (so Core
 refuses to run an old job with a different model or prompt). API keys are never
 part of it: the agent reads the provider's key from the environment at call time
-(``ANTHROPIC_API_KEY`` for Claude, ``TYPHOON_API_KEY`` for Typhoon).
+(``ANTHROPIC_API_KEY`` for Claude, ``TYPHOON_API_KEY`` for Typhoon, ``NEURON_FLOW_LOCAL_API_KEY`` for a
+local server that asks for one).
 
 Providers:
 * ``mock``: the offline keyword simulation (tests and CI; not an AI model);
@@ -12,6 +13,12 @@ Providers:
 * ``typhoon``: Typhoon by SCB 10X, a Thai-first model family whose hosted API is free (a research
   showcase, rate-limited, no card) and speaks the OpenAI chat-completions format (ADR-021).
   GitHub Models (ADR-020) was removed: GitHub retired it on 2026-07-30.
+* ``local``: an open-weight model that we run ourselves behind an OpenAI-format server, by default
+  llama.cpp's ``llama-server`` on this machine (``http://127.0.0.1:8080/v1``, ADR-026). Nothing is sent to an
+  AI company. A server on this machine needs no key; a server elsewhere must use https, and its key, when
+  it asks for one, comes from ``NEURON_FLOW_LOCAL_API_KEY``. The model id names the file: the workflow that
+  starts the server passes ``<name>:<first 12 hex digits of the file's SHA-256>`` as both the server's alias
+  and ``NEURON_FLOW_LLM_MODEL``, so another file is another agent version.
 """
 
 from dataclasses import dataclass
@@ -24,23 +31,31 @@ from urllib.parse import urlsplit
 from .errors import LLMConfigError
 from .redaction import REDACTION_VERSION
 
-PROVIDERS = ("mock", "anthropic", "typhoon")
+PROVIDERS = ("mock", "anthropic", "typhoon", "local")
 DEFAULT_MODELS = {"mock": "mock-keyword-1", "anthropic": "claude-haiku-5-5",
-                  "typhoon": "typhoon-v2.5-30b-a3b-instruct"}
+                  "typhoon": "typhoon-v2.5-30b-a3b-instruct", "local": "typhoon2.5-qwen3-4b-q4_k_m"}
 DEFAULT_ANTHROPIC_BASE_URL = "https://api.anthropic.com"
 DEFAULT_TYPHOON_BASE_URL = "https://api.opentyphoon.ai/v1"
+DEFAULT_LOCAL_BASE_URL = "http://127.0.0.1:8080/v1"
 EFFORT_LEVELS = ("low", "medium", "high", "xhigh", "max")
 API_KEY_ENV = "ANTHROPIC_API_KEY"
 TYPHOON_KEY_ENV = "TYPHOON_API_KEY"
+LOCAL_KEY_ENV = "NEURON_FLOW_LOCAL_API_KEY"
 # Which environment variable holds each real provider's key, and which one may point it at another endpoint.
-KEY_ENVS = {"anthropic": API_KEY_ENV, "typhoon": TYPHOON_KEY_ENV}
-BASE_URL_ENVS = {"anthropic": "NEURON_FLOW_ANTHROPIC_BASE_URL", "typhoon": "NEURON_FLOW_TYPHOON_BASE_URL"}
-DEFAULT_BASE_URLS = {"anthropic": DEFAULT_ANTHROPIC_BASE_URL, "typhoon": DEFAULT_TYPHOON_BASE_URL}
+KEY_ENVS = {"anthropic": API_KEY_ENV, "typhoon": TYPHOON_KEY_ENV, "local": LOCAL_KEY_ENV}
+# Providers whose key may be absent: a server on this machine needs none (ADR-026). When the key is set, it is
+# sent; when it is not, the request carries no Authorization header at all.
+OPTIONAL_KEY_PROVIDERS = frozenset({"local"})
+BASE_URL_ENVS = {"anthropic": "NEURON_FLOW_ANTHROPIC_BASE_URL", "typhoon": "NEURON_FLOW_TYPHOON_BASE_URL",
+                 "local": "NEURON_FLOW_LOCAL_BASE_URL"}
+DEFAULT_BASE_URLS = {"anthropic": DEFAULT_ANTHROPIC_BASE_URL, "typhoon": DEFAULT_TYPHOON_BASE_URL,
+                     "local": DEFAULT_LOCAL_BASE_URL}
 # What a provider's client tells the model about the answer format besides the prompt file (ADR-022). Typhoon's
 # API ignores ``response_format``, so its client also states the format in words, built from the answer schema
 # (``providers/openai_compat.py``). That text is part of what the model sees, so its version is part of the
-# agent version: change it whenever the text changes.
-ANSWER_FORMATS = {"typhoon": "json-instruction-v1"}
+# agent version: change it whenever the text changes. A local llama.cpp server does enforce ``response_format``
+# (it turns the schema into a grammar), and gets the same words too: small models follow it better (ADR-026).
+ANSWER_FORMATS = {"typhoon": "json-instruction-v1", "local": "json-instruction-v1"}
 _MODEL = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,99}$")
 _LOOPBACK = {"127.0.0.1", "localhost", "::1"}
 _PARAM_KEYS = {"provider", "model", "max_tokens", "request_timeout_s", "effort", "base_url"}
@@ -132,10 +147,10 @@ class LLMConfig:
         return tag
 
     def check_ready(self, environ=None):
-        """Fail before any job is submitted when a real provider has no key."""
+        """Fail before any job is submitted when a real provider that needs a key has none."""
         env = os.environ if environ is None else environ
         name = self.key_env
-        if name and not env.get(name, "").strip():
+        if name and self.provider not in OPTIONAL_KEY_PROVIDERS and not env.get(name, "").strip():
             raise LLMConfigError(f"{name} is not set; the {self.provider} provider cannot run")
 
 

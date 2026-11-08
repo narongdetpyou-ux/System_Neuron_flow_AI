@@ -2,7 +2,7 @@
 
 Flow for one call:
 1. refuse text that did not go through ``redaction.mask`` (personal data is masked before every AI call);
-2. pick the provider named in the frozen job configuration (mock, anthropic or typhoon), and send the
+2. pick the provider named in the frozen job configuration (mock, anthropic, typhoon or local), and send the
    versioned prompt plus the masked case text (as a JSON string);
 3. treat a refusal as ``ModelDeclined`` and a cut-off answer as ``InvalidModelOutput``;
 4. parse the JSON answer and check it against the prompt's answer schema
@@ -26,7 +26,7 @@ TEXT_LIMIT = 200
 _CUT_OFF = {"max_tokens", "model_context_window_exceeded"}
 _CONTROL = re.compile(r"[\x00-\x1f\x7f  ]+")
 _LONE_SURROGATE = re.compile(r"[\ud800-\udfff]")  # json.loads joins valid pairs, so any surrogate left is alone
-_PROVIDERS = {"mock": mock, "anthropic": anthropic, "typhoon": openai_compat}
+_PROVIDERS = {"mock": mock, "anthropic": anthropic, "typhoon": openai_compat, "local": openai_compat}
 
 
 def structured_answer(config, prompt, case_text, *, attempt=1, scenario=None):

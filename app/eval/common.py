@@ -51,6 +51,15 @@ def fmt_ms(value):
 
 def provider_note(llm):
     """A note for runs on a free real model other than Claude (Thai first): whose numbers these are."""
+    if llm["provider"] == "local":
+        return ["> **หมายเหตุ:** รอบนี้ใช้โมเดลเปิด (open-weight) ที่รันเองบนเครื่องทดสอบของ GitHub รุ่น `" + llm["model"] + "` "
+                "(ตัวเลขหลังเครื่องหมาย : คือลายนิ้วมือของไฟล์โมเดล) ข้อความของเคสไม่ได้ส่งไปบริษัท AI ใด "
+                "ผลนี้เป็นของไฟล์โมเดลนี้กับการตั้งค่าในไฟล์ workflow เท่านั้น ไม่ใช่ของ Typhoon รุ่น 30B ที่เรียกผ่าน API และไม่ใช่ของ Claude "
+                "เครื่องทดสอบคิดด้วย CPU อย่างเดียว เวลาตอบจึงช้ากว่าบริการออนไลน์มาก "
+                "ถ้าช่อง \"AI ใช้งานไม่ได้\" สูงผิดปกติ ให้ดูหัวข้อ \"ตรวจการเชื่อมต่อ AI\" ด้านบน  ",
+                "> *Local open-weight model on the GitHub runner (ADR-026): these numbers belong to this model file and "
+                "the server settings in the workflow, not to Typhoon's hosted 30B model and not to Claude. Nothing was "
+                "sent to an AI company. CPU only, so latency is far higher than a hosted service.*", ""]
     if llm["provider"] != "typhoon":
         return []
     return ["> **หมายเหตุ:** รอบนี้ใช้ AI จริง Typhoon ของ SCB 10X (ใช้ฟรี ช่วงทดลอง) รุ่น `" + llm["model"] + "` "

@@ -234,6 +234,7 @@
     if (ai.provider === "mock") return "AI จำลอง";
     if (ai.provider === "anthropic") return `Claude (${ai.model})`;
     if (ai.provider === "typhoon") return `Typhoon (${ai.model})`;
+    if (ai.provider === "local") return `โมเดลเปิดที่รันเอง (${ai.model})`;
     return `${ai.provider}/${ai.model}`;
   }
   function stepName(id) { return STEP[id] || id; }
@@ -1566,7 +1567,9 @@
   function aiPanel(ai) {
     const provider = ai.provider === "mock" ? "AI จำลอง (mock) — จับคำสำคัญ ไม่ใช่ AI จริง"
       : ai.provider === "anthropic" ? "Claude (anthropic)"
-      : ai.provider === "typhoon" ? "Typhoon (typhoon) — AI จริง เก่งภาษาไทย ใช้ฟรี มีเพดานต่อนาที" : (ai.provider || "—");
+      : ai.provider === "typhoon" ? "Typhoon (typhoon) — AI จริง เก่งภาษาไทย ใช้ฟรี มีเพดานต่อนาที"
+      : ai.provider === "local" ? "โมเดลเปิดที่รันเอง (local) — ต้องมีโปรแกรมรันโมเดลอยู่ในเครื่องเดียวกัน ตอนนี้มีแค่บนเครื่องทดสอบของ GitHub ยังไม่มีบน Render"
+      : (ai.provider || "—");
     const parts = [
       el("div", { class: "rows" }, [
         el("span", { text: "ผู้ให้บริการ" }), el("span", { text: provider }),

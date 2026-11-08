@@ -1,5 +1,5 @@
-"""One connection check against an OpenAI-format provider (Typhoon), written to the run summary, before a
-scorecard run.
+"""One connection check against an OpenAI-format provider (Typhoon, or a local model server, ADR-026), written to
+the run summary, before a scorecard run.
 
 It sends one fixed synthetic sentence (never a case from the set) with the same request the provider sends,
 then reports what came back (one request; the verdict is about the reply shown): HTTP status, content type and encoding, rate-limit headers, the body's size
@@ -18,7 +18,7 @@ import urllib.request
 
 from app.llm import InvalidModelOutput, LLMConfig, ModelDeclined, load_prompt
 from app.llm.gateway import _CUT_OFF, parse_answer
-from app.llm.config import KEY_ENVS
+from app.llm.config import KEY_ENVS, OPTIONAL_KEY_PROVIDERS
 from app.llm.providers import openai_compat
 
 SENTENCE = "I cannot upload a file to my ticket."  # fixed and synthetic: safe to send and to show
@@ -76,8 +76,8 @@ def main(summary_path):
         if config.provider not in KEY_ENVS or config.provider == "anthropic":
             raise ValueError(f"the check covers OpenAI-format providers, not {config.provider}")
         token = os.environ.get(KEY_ENVS[config.provider], "").strip()
-        lines.append(f"- provider: `{config.provider}`, model: `{config.model}`, "
-                     f"key present: {'yes' if token else 'no'}")
+        key_state = "yes" if token else "not needed" if config.provider in OPTIONAL_KEY_PROVIDERS else "no"
+        lines.append(f"- provider: `{config.provider}`, model: `{config.model}`, key present: {key_state}")
         status, headers, raw = raw_call(config, token)
         lines += describe(status, headers, raw)
         try:

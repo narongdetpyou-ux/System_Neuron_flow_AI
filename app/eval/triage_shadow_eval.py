@@ -231,7 +231,7 @@ def answer_changes(reference, candidate):
 def gate_markdown(changes, compared_with, cases):
     """The gate's verdict for the run page (Thai first), with how to proceed when it fails."""
     return common.gate_markdown(changes, compared_with, cases, module="app.eval.triage_shadow_eval",
-                                live_run="Shadow eval with Claude หรือ with Typhoon")
+                                live_run="Shadow eval with Claude, with Typhoon หรือ Local open model eval")
 
 
 def summary_markdown(report):

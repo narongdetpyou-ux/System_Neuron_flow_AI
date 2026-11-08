@@ -24,6 +24,7 @@ single-owner pilot on Render's free plan, and there is no human-review service y
 7. **ด่านตรวจผลรายเคส (eval gate, ขั้น 5.2)** ทุกครั้งที่มีการส่งโค้ดขึ้น GitHub ระบบรันเคสทดสอบ 61 เคสด้วย AI จำลอง แล้วเทียบคำตอบของทุกเคสกับไฟล์ต้นแบบ (`tests/baselines/shadow_eval_mock.json`) ถ้ามีเคสไหนตอบต่างจากเดิม แม้แต่ช่องเดียว (หมวดของกฎ หมวดของ AI ความมั่นใจ การเห็นตรงกัน ความสำคัญ หรือเหตุผล) ช่องตรวจ *Core logic tests* จะเป็นสีแดง และหน้าผลรันจะบอกว่าเคสไหนเปลี่ยนอะไร ถ้าตั้งใจเปลี่ยน ต้องอัปเดตไฟล์ต้นแบบใน PR เดียวกันและเขียนเหตุผลไว้ ถ้าเปลี่ยน prompt หรือรุ่น AI ต้องแนบผลรันกับ AI จริงด้วย
 8. **ใช้ AI จริงได้ฟรีผ่าน Typhoon ของ SCB 10X (ADR-021)** ไม่ต้องมีบัตร ปุ่ม *Shadow eval with Typhoon (manual)* ใน Actions ใช้คีย์จาก secret `TYPHOON_API_KEY` ส่งเคสสมมุติทั้ง 61 เคสให้ Typhoon (ค่าเริ่มต้น `typhoon-v2.5-30b-a3b-instruct`) ก่อนเริ่มจะลองส่งประโยคทดสอบ 1 ประโยค และแสดงคำตอบดิบให้เห็นว่าการเชื่อมต่อใช้ได้ไหม ผลที่ได้เป็นของ Typhoon ไม่ใช่ของ Claude Typhoon เก็บข้อมูลการใช้งานไปปรับปรุงโมเดล จึงใช้ได้กับข้อมูลสมมุติเท่านั้น ถ้าตัวกรองของผู้ให้บริการบล็อกข้อความเคสไหน เคสนั้นนับเป็น "AI ไม่ตอบ" และไปถึงผู้รีวิวตามปกติ ไม่ทำให้งานล้ม (GitHub Models ที่ใช้ก่อนหน้านี้ปิดบริการไปแล้วตั้งแต่ 30 ก.ค. 2026)
 9. **รันกับ Typhoon จริงแล้วเมื่อ 6 พ.ย.** รอบแรก AI ตอบไม่ได้เลย 0 จาก 5 เคส เพราะ Typhoon ไม่ทำตามช่องตั้งค่ารูปแบบคำตอบ (response_format) ตอนนี้ระบบบอกรูปแบบคำตอบเป็นคำพูดด้วย (ADR-022) หลังแก้ AI ตอบได้ 61/61 และจัดหมวดถูก 60/61 ทั้ง 2 รอบ (กฎเดิมถูก 29/61 เคสภาษาไทย AI ถูก 26/26) เคสเป็นของสมมุติที่ผู้พัฒนาเขียนเอง จึงยังไม่ใช่ความแม่นยำจริง ([บันทึกหลักฐาน](evidence/2026-11-06-first-live-typhoon.md))
+10. **ลองกับโมเดลเปิดที่รันเองได้ (ADR-026, ขั้น 5.8)** ปุ่ม *Local open model eval* ใน Actions ให้เครื่องทดสอบของ GitHub เปิด Typhoon 2.5 รุ่น 4B (สัญญา Apache 2.0) ด้วย llama.cpp แล้วส่งเคสชุดเดิมให้ ไม่ต้องใช้คีย์ ข้อความไม่ออกไปบริษัท AI ใด แต่คิดด้วย CPU จึงช้ากว่า และผลเป็นของไฟล์โมเดลรุ่นนั้น ไม่ใช่ของ Typhoon ผ่าน API หรือ Claude
 
 ## How one case flows
 
@@ -81,9 +82,10 @@ they were degraded quietly, a broken setup could go unnoticed.
   text that did not go through `mask()`. The output's `masked` field counts each kind, never the values.
   Not detected: names without a title or label, Thai surnames after a given name, addresses, short numbers,
   mixed letter-and-digit identifiers. The keywords the rules and the AI need stay readable.
-- **The API key is never stored.** It is read from `ANTHROPIC_API_KEY` (Claude) or `TYPHOON_API_KEY`
-  (Typhoon) at call time, never placed in the job, and the tests scan every stored file to confirm it
-  is absent. Provider error messages are not copied
+- **The API key is never stored.** It is read from `ANTHROPIC_API_KEY` (Claude), `TYPHOON_API_KEY`
+  (Typhoon) or, when a local server asks for one, `NEURON_FLOW_LOCAL_API_KEY` at call time, never placed in
+  the job, and the tests scan every stored file to confirm it is absent. A server on this machine (`local`,
+  ADR-026) needs no key, and then the request carries no Authorization header. Provider error messages are not copied
   (only the HTTP status and error type).
 - **Every answer is traceable.** Each AI output records the provider, model, prompt id and prompt SHA-256.
   The served model and token usage are recorded too.
@@ -94,7 +96,9 @@ they were degraded quietly, a broken setup could go unnoticed.
   `response_format` (its first live run, 2026-11-06, got plain `key: value` lines), so the client also states
   the answer format in words at the end of the system prompt and reads the reply from its first `{` to its
   last `}`; the validators still refuse anything that is not exactly one valid object (ADR-022). The format
-  version (`json-instruction-v1`) is part of Typhoon's agent version.
+  version (`json-instruction-v1`) is part of Typhoon's agent version. The `local` provider (ADR-026) sends
+  the same request to a llama.cpp server, which enforces `response_format` as a grammar, and gets the same
+  words; its model id names the model file by the first 12 hex digits of its SHA-256.
 - **A content-filter block is one declined case.** On an OpenAI-format service, an HTTP 400
   `content_filter` reply (or `finish_reason: content_filter`, or a `refusal` message) becomes
   `unavailable: model_declined` at once

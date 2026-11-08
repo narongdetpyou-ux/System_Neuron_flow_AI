@@ -11,8 +11,9 @@ trusted agents in bounded child processes, retries, recovers after a crash and w
 `app/` is built on top of it without changing Core. It contains:
 - a case-triage domain: keyword rules make the official suggestion, an AI gives a second opinion
   (shadow mode), and a person always decides;
-- an AI gateway (an offline mock, Claude, or Typhoon: SCB 10X's Thai-first model, free within rate limits;
-  ADR-021);
+- an AI gateway (an offline mock, Claude, Typhoon: SCB 10X's Thai-first model, free within rate limits;
+  ADR-021, or `local`: an open-weight model on a server we run ourselves, today llama.cpp with Typhoon 2.5 4B
+  on the GitHub runner; ADR-026);
 - a scorecard on 61 synthetic cases;
 - Sentry reporting, and tracing to Honeycomb (one trace per case; off until a key is set);
 - since round 2, an HTTP API, a durable job queue, a single Runner with crash recovery and a Thai web page,
@@ -71,9 +72,11 @@ Read in this order when you need depth:
   account matters and internal notes out of them, and never let a key reach a log.
 - **Honesty about evidence.**
   - Mock-AI scores are not accuracy, and hashes prove bytes, not authorship.
-  - The only live-model measurement is Typhoon's on the synthetic sets (first runs 2026-11-06,
-    `docs/evidence/2026-11-06-first-live-typhoon.md`). There is none for Claude, and no security review or
-    user study yet. A Typhoon result describes that model only; never present it as Claude's.
+  - The live-model measurements are Typhoon's on the synthetic sets (first runs 2026-11-06,
+    `docs/evidence/2026-11-06-first-live-typhoon.md`) and the local 4B model's smoke run on the first 5 items
+    of each set, twice (2026-11-08, `docs/evidence/2026-11-08-first-local-model-smoke.md`). There is none for
+    Claude, and no security review or user study yet. A Typhoon or local result describes that model only;
+    never present it as another model's, least of all Claude's.
   - Never write a number you did not measure. Record failures as well as successes.
 - **The philosophy covers how you talk, too.** Plain language outside, careful work inside, and small
   measured steps instead of perfection. When the owner brings up a technology or a logic system in everyday
@@ -131,7 +134,7 @@ If a task seems to need breaking a rule:
 ## 4. Checking your work
 
 ```bash
-python -m unittest discover -s tests -v        # all tests (291 on 2026-11-08); Python 3.10–3.13
+python -m unittest discover -s tests -v        # all tests (318 on 2026-11-08); Python 3.10–3.13
 python -m examples.case_triage_demo            # v1 rules, one synthetic case
 python -m examples.case_triage_shadow_demo     # v2 shadow mode with the offline mock AI
 python -m examples.study_guide_demo            # the study guide's answers to four synthetic requests
@@ -173,6 +176,14 @@ GitHub Actions (the owner can open these; the first three run on every push and 
   reply (`.github/scripts/llm_probe.py`), then paces cases 1 s apart (ADR-021). This session cannot reach
   `api.opentyphoon.ai`; read the run page instead. Nor can it download a run's artifacts (their storage
   host is refused), so the run page is the record; the scorecards list their mistakes there.
+- *Local open model eval* (`local-model-eval.yml`, ADR-026, roadmap 5.8) runs both scorecards against an
+  open-weight model that the job runs itself: llama.cpp's server built from a pinned commit (cached), serving
+  Typhoon 2.5 Qwen3 4B from a Hugging Face file checked against its SHA-256 (`.github/scripts/fetch_model.py`),
+  on 127.0.0.1 with greedy decoding. No secret; nothing goes to an AI company. Pull requests that change
+  `app/llm/`, the workflow or its scripts get a smoke run (5 cases, 5 requests); *Run workflow* runs
+  everything. CPU only, so it is slow. This session cannot reach Hugging Face: the model file's commit, size
+  and SHA-256 are on the run page. GitHub's terms allow hosted runners only for building and testing the
+  project, so this lane measures and never serves the web page.
 - *Shadow eval with Claude (manual)* and *Study guide eval with Claude (manual)* run the two scorecards
   against real Claude and need the repository secret `ANTHROPIC_API_KEY`.
 
@@ -219,7 +230,7 @@ Notes for cloud sessions (claude.ai/code):
 | `neuron_flow/` | Core (rule 1) |
 | `app/domains/case_triage/` | v1 rules, the input contract, the v2 shadow agents and workflow |
 | `app/domains/study_guide/` | the study guide: topic catalog and verified resource library (`catalog/*_v1.json`), their checks and hash (`library.py`), the link check (`link_check.py`), and the `study_guide.v1` workflow (`workflow.py`, `agents.py`, `planning.py`, `ai_prompts.py`, `mock_answers.py`); no `.md` files here, because the Render build filter ignores them |
-| `app/llm/` | AI gateway, prompt library (prompt + answer schema, one hash), personal-data masking, mock, Claude and Typhoon providers (`providers/openai_compat.py` serves OpenAI-format services and states the answer format in words for Typhoon, ADR-022; `providers/_http.py` refuses redirects for both real clients) |
+| `app/llm/` | AI gateway, prompt library (prompt + answer schema, one hash), personal-data masking, mock, Claude, Typhoon and local providers (`providers/openai_compat.py` serves OpenAI-format services, Typhoon and a server we run ourselves, and states the answer format in words for both, ADR-022, ADR-026; `providers/_http.py` refuses redirects for every real client) |
 | `app/eval/` | the two scorecards (triage: 61 labelled cases; study guide: 67 labelled requests) and the eval gate's shared code (`common.py`) |
 | `app/observability/sentry.py` | Sentry reporting: step failures, degraded AI, Runner recoveries |
 | `app/observability/tracing.py`, `job_spans.py` | tracing: the OTLP/JSON exporter with its attribute allow-list, and a finished job's spans (ADR-017) |
@@ -349,9 +360,20 @@ Notes for cloud sessions (claude.ai/code):
     the settings tab explains how to switch the online page to Typhoon or Claude. `tests/test_web_page.py`
     holds the page to its contracts. Zero Core changes, so Phase 3 is built. The owner tried it on the live
     page on 2026-11-08 (with the mock AI) and it passed.
+  - A local open-model lane, asked for by the owner on 2026-11-08 (roadmap 5.8, ADR-026, PR #46): the `local`
+    provider (OpenAI format, `http://127.0.0.1:8080/v1` by default, no key needed on this machine, a model id
+    `<name>:<first 12 hex digits of the file's SHA-256>`), the model fetcher, and the *Local open model eval*
+    workflow (llama.cpp from a pinned commit, Typhoon 2.5 Qwen3 4B Q4_K_M on the GitHub runner, the file
+    pinned by commit and SHA-256). The PR's smoke runs (first 5 items of each set): the AI answered 5/5 and was
+    correct 5/5 in triage (rules 3/5, both rule mistakes raised), topic correct 5/5 with 0 of 10 links outside
+    the library, and the connection check got valid JSON at once; the rerun with the pinned file gave the same
+    rates and token counts, while the median latency per triage case was 2.7 s on one runner and 6.5 s on
+    another (`docs/evidence/2026-11-08-first-local-model-smoke.md`). The page names the provider but the Render
+    service has no model server, so the page stays on the mock.
 - **Not done yet:**
   - Claude has never been run (D2). Typhoon has run only on the synthetic sets (two full triage runs, one
-    full study guide run).
+    full study guide run). The local 4B model has had only the PR's two smoke runs; its first full run comes
+    after the merge (roadmap 5.8).
   - Review decisions and per-person identity (Milestone C) are not built.
   - The live page uses the mock AI unless the owner adds Typhoon (or Claude) in Render's Environment tab
     (roadmap 0.4).
@@ -359,7 +381,8 @@ Notes for cloud sessions (claude.ai/code):
 - **Next:** [docs/ROADMAP.md](docs/ROADMAP.md), the first item that is not ✅ and whose needs are met.
   - Waiting on the owner: 0.2 and 1.4 (D1, paid Render plan), 0.3 path B and 0.4 with Claude (D2, Claude
     API key); 0.4 with Typhoon is free but sends what is typed on the page to Typhoon, so it is the owner's
-    choice too.
+    choice too; an open model behind the page needs a paid machine (D7).
+  - After 5.8's first full run: read the results with the owner and follow the branches written in 5.8.
   - Buildable now without an owner decision: the rest of 5.5 (decide and fix the stage-1 gaps), 5.6 and 5.7,
     Phase 2 (2.1 first) and Phase 4 (4.1 first; Phase 3, which it needs, is built). The rest of 7.1 (who can read the AI key) needs an ADR first.
   - The owner decides which phase comes next; ask before starting a new phase.
