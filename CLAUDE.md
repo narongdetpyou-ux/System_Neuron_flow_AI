@@ -199,10 +199,17 @@ Notes for cloud sessions (claude.ai/code):
   `python3.12` (CI's matrix) and the *Secret scan* command. Each step only warns when it fails, so a session
   still starts: if a tool is missing, tell the owner which one, and propose a fix to the script with the
   environment tools. `.claude/hooks/session-start.sh` still installs `sentry-sdk` if the script did not.
-- That environment's network allows package registries, plus `api.opentyphoon.ai` because Typhoon's key is
-  saved on it as a network secret (2026-11-08). The session's proxy adds the key to each request to that
-  host, so the key never enters the session, a log or a file. The app still wants the variable, so give it a
-  placeholder for that one command:
+  - The script's output is in the session's `env_manager_log` events (`list_events`).
+  - The script runs before the session's proxy and its settings exist (`/etc/profile.d/ccr-agent-proxy-ca.sh`,
+    which tells uv to trust the system certificates), so the script passes uv `--system-certs` itself.
+  - In the first session (2026-11-08) uv got no Python 3.10 and `--quiet` hid why. Later in that session
+    uv's download host `releases.astral.sh` was refused, and GitHub, its fallback, worked once and then
+    answered 504. The script and the network were fixed that day. The fixed script has not yet run in a new
+    session: the next session checks for `python3.10` and updates this line.
+- That environment's network allows package registries, `releases.astral.sh` (uv's Python downloads, added
+  on 2026-11-08), and `api.opentyphoon.ai` because Typhoon's key is saved on it as a network secret
+  (2026-11-08). The session's proxy adds the key to each request to that host, so the key never enters the
+  session, a log or a file. The app still wants the variable, so give it a placeholder for that one command:
 
   ```bash
   TYPHOON_API_KEY=proxy-injected NEURON_FLOW_LLM_PROVIDER=typhoon PYTHONPATH=. python3 .github/scripts/llm_probe.py probe.md
