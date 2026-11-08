@@ -174,9 +174,11 @@ GitHub Actions (the owner can open these; the first three run on every push and 
   against Typhoon (default `typhoon-v2.5-30b-a3b-instruct`) and need the repository secret `TYPHOON_API_KEY` (set by the
   owner on 2026-11-06). The shadow eval's `case_set` can be `robustness_edge_v1`, the 116 robustness edge cases. Typhoon's hosted API is free, rate-limited (about 200 requests a minute, 5 a second)
   and collects usage data, so synthetic data only. Each run first sends one fixed sentence and shows the raw
-  reply (`.github/scripts/llm_probe.py`), then paces cases 1 s apart (ADR-021). This session cannot reach
-  `api.opentyphoon.ai`; read the run page instead. Nor can it download a run's artifacts (their storage
-  host is refused), so the run page is the record; the scorecards list their mistakes there.
+  reply (`.github/scripts/llm_probe.py`), then paces cases 1 s apart (ADR-021). A session on this
+  repository's cloud environment can call Typhoon itself (see the notes for cloud sessions below); other
+  sessions cannot reach `api.opentyphoon.ai`, so read the run page instead. No session can download a run's
+  artifacts: their storage host changes from run to run (`productionresultssa<N>.blob.core.windows.net`) and
+  the network refuses it, so the run page is the record; the scorecards list their mistakes there.
 - *Local open model eval* (`local-model-eval.yml`, ADR-026, roadmap 5.8) runs both scorecards against an
   open-weight model that the job runs itself: llama.cpp's server built from a pinned commit (cached), serving
   Typhoon 2.5 Qwen3 4B from a Hugging Face file checked against its SHA-256 (`.github/scripts/fetch_model.py`),
@@ -190,7 +192,25 @@ GitHub Actions (the owner can open these; the first three run on every push and 
   against real Claude and need the repository secret `ANTHROPIC_API_KEY`.
 
 Notes for cloud sessions (claude.ai/code):
-- `.claude/hooks/session-start.sh` installs `sentry-sdk`; nothing else is needed.
+- The owner's cloud environment for this repository, `System_Neuron_flow_AI` (set up on 2026-11-08), runs a
+  setup script whenever a new session's container is built. It installs `sentry-sdk`, Python 3.10
+  (`python3.10`, from uv) and gitleaks v8.30.1 (`gitleaks`, built with Go as in *Secret scan*); the image
+  already has Python 3.11, 3.12 and 3.13. So before pushing, run the tests with `python3.10` and
+  `python3.12` (CI's matrix) and the *Secret scan* command. Each step only warns when it fails, so a session
+  still starts: if a tool is missing, tell the owner which one, and propose a fix to the script with the
+  environment tools. `.claude/hooks/session-start.sh` still installs `sentry-sdk` if the script did not.
+- That environment's network allows package registries, plus `api.opentyphoon.ai` because Typhoon's key is
+  saved on it as a network secret (2026-11-08). The session's proxy adds the key to each request to that
+  host, so the key never enters the session, a log or a file. The app still wants the variable, so give it a
+  placeholder for that one command:
+
+  ```bash
+  TYPHOON_API_KEY=proxy-injected NEURON_FLOW_LLM_PROVIDER=typhoon PYTHONPATH=. python3 .github/scripts/llm_probe.py probe.md
+  ```
+
+  Then a scorecard the same way, with `--min-interval-s 1` as the manual workflows do. Synthetic data only
+  (Typhoon collects usage data), and a live result names Typhoon. Hugging Face, render.com, the study
+  library's sites and the artifact storage are refused there.
 - There is no Docker daemon. The *Service container* workflow is the container test.
 - `gh pr view` and `gh pr checks` use GraphQL, which can return 403 here. Use REST instead, for example
   `gh api repos/narongdetpyou-ux/System_Neuron_flow_AI/pulls/<n>` and `.../commits/<sha>/check-runs`.
