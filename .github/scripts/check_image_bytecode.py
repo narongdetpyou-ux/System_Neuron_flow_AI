@@ -12,8 +12,9 @@ The *Service container* workflow pipes this file into the image it just built, a
 
 It prints a Markdown report (Thai headings for the owner, the figures in a table) and, with ``--require``,
 exits 1 when
-* a ``.py`` file under ``app/`` or ``neuron_flow/`` has no cache file, or one that does not hold exactly
-  that source (compared by the hash stored in the cache file, never by file times), or
+* a ``.py`` file under ``app/`` or ``neuron_flow/``, or in the installed packages (``sentry-sdk``, which
+  the service imports only when ``SENTRY_DSN`` is set, as it is on Render), has no cache file, or one that
+  does not hold exactly that source (compared by the hash stored in the cache file, never by file times), or
 * a module the Runner imports, standard library and installed packages included, has no usable cache.
 
 It also times fresh processes that import the Runner's modules. That time is reported and never gated:
@@ -28,6 +29,7 @@ from pathlib import Path
 import statistics
 import subprocess
 import sys
+import sysconfig
 import time
 
 TREES = ("app", "neuron_flow")       # relative to the working directory (/srv/neuron-flow in the image)
@@ -80,9 +82,17 @@ def scan_tree(root):
     return states
 
 
+def installed_packages():
+    """The folder pip installs into (``site-packages``), or ``None`` when there is none."""
+    folder = sysconfig.get_path("purelib")
+    return folder if folder and Path(folder).is_dir() else None
+
+
 def loaded_sources(import_name, python=sys.executable):
     """The source files of every module a fresh process holds after ``import <import_name>``."""
-    done = subprocess.run([python, "-c", _LIST_MODULES, import_name], check=True, capture_output=True, text=True)
+    # -B: looking must not write a cache (outside the image nothing else stops Python from doing so).
+    done = subprocess.run([python, "-B", "-c", _LIST_MODULES, import_name], check=True, capture_output=True,
+                          text=True)
     return json.loads(done.stdout)
 
 
@@ -101,7 +111,7 @@ def time_imports(import_name, runs, python=sys.executable):
     times = []
     for _ in range(runs):
         started = time.perf_counter()
-        subprocess.run([python, "-c", code], check=True)
+        subprocess.run([python, "-B", "-c", code], check=True)
         times.append((time.perf_counter() - started) * 1000)
     return times
 
@@ -117,6 +127,7 @@ def problems(trees, modules):
     for tree, states in trees.items():
         if not any(states.values()):
             found.append(f"no .py file found under {tree}/: is the working directory the code folder?")
+            continue
         for state, paths in states.items():
             if state != OK:
                 found.append(f"{len(paths)} file(s) under {tree}/ with a {state} cache, e.g. {paths[0]} "
@@ -130,8 +141,9 @@ def problems(trees, modules):
 def report(trees, modules, timings, label):
     """The Markdown report: Thai for the owner, with the figures in tables."""
     lines = [f"### ไฟล์ที่แปลไว้ล่วงหน้าในภาพของบริการ (bytecode cache) — {label}", ""]
-    total = sum(len(paths) for states in trees.values() for paths in states.values())
-    ready = sum(len(states.get(OK, [])) for states in trees.values())
+    project = [trees[tree] for tree in TREES if tree in trees]
+    total = sum(len(paths) for states in project for paths in states.values())
+    ready = sum(len(states.get(OK, [])) for states in project)
     usable = sum(1 for state in modules.values() if state in USABLE)
     lines += [f"- โค้ดของโปรเจกต์ (`app/` และ `neuron_flow/`): มีไฟล์ที่แปลไว้แล้วและตรงกับต้นฉบับ **{ready} จาก {total} ไฟล์**",
               f"- โมดูลที่ตัวรันงาน (Runner) ต้องโหลดตอนเริ่ม: มีไฟล์ที่แปลไว้แล้ว **{usable} จาก {len(modules)} โมดูล** "
@@ -179,6 +191,9 @@ def main(argv=None):
         print("bytecode-report " + json.dumps({"label": args.label, "timings": timings}, sort_keys=True))
         return 0
     trees = {tree: scan_tree(tree) for tree in TREES}
+    packages = installed_packages()
+    if packages:
+        trees[packages] = scan_tree(packages)
     modules = {source: cache_state(source) for source in loaded_sources(IMPORT)}
     print(report(trees, modules, timings, args.label))
     print("bytecode-report " + json.dumps({

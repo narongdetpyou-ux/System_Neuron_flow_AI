@@ -1,8 +1,9 @@
 # Effectiveness plan: make the measured results reach the person
 
 **Status (2026-11-10):** a plan the owner asked for ("วางแผนปฏิบัติงานเพิ่มเติมเพื่อเพิ่มประสิทธิผลการทำงานของระบบ"), proposed in
-PR #50. Nothing in it is built yet. It adds six work packages, E1 to E6, to [ROADMAP.md](ROADMAP.md), which stays the source of
-truth for status. Every "now" figure below was measured and is in an evidence note, most of them in
+PR #50. E1 is built in PR #60, because the owner then asked to start the work without further questions; its
+measurement on Render waits for the merge. Nothing else is built yet. The plan adds six work packages, E1 to
+E6, to [ROADMAP.md](ROADMAP.md), which stays the source of truth for status. Every "now" figure below was measured and is in an evidence note, most of them in
 [the baseline note of 2026-11-10](evidence/2026-11-10-effectiveness-baseline.md).
 
 ## สรุปสำหรับเจ้าของโปรเจกต์
@@ -26,7 +27,7 @@ truth for status. Every "now" figure below was measured and is in an evidence no
 | เคสที่ถูกยกเป็น "ต้องดูก่อน" (เมื่อใช้ AI จริง) | 33 จาก 61 และ 64 จาก 116 คือเกินครึ่ง ป้ายจึงแทบไม่ช่วยจัดลำดับ | E2 |
 | AI จริง (Typhoon) จัดหมวดถูก | 60 จาก 61 และ 104 จาก 116 ภาษาไทยถูกทุกข้อ (26 จาก 26 และ 13 จาก 13) | รักษาไว้ |
 | จุดที่ AI จริงพลาด | ทั้ง 12 ข้อที่ AI พลาดในชุดเคสยาก เฉลยว่า "อื่น ๆ" แต่ AI จับใส่หมวดใกล้เคียง และ AI บอก "มั่นใจสูง" ทุกข้อ ทั้งข้อถูกและข้อผิด | E5 |
-| เคสแรกหลังระบบตื่น | ราว 10 วินาที (วัดได้ 4 ครั้ง ช้าทั้ง 4 ครั้ง) เคสถัดไป 0.1–0.4 วินาที | E1 |
+| เคสแรกหลังระบบตื่น | ราว 10 วินาที บน Render (วัดได้ 4 ครั้ง ช้าทั้ง 4 ครั้ง) เคสถัดไป 0.1–0.4 วินาที; หลังแก้ใน PR #60 ยังไม่ได้วัดบน Render แต่บนเครื่องของ GitHub ที่จำกัดกำลังให้เท่าเครื่องฟรี วัดได้ 14.4 วินาทีก่อนแก้ และ 3.1 วินาทีหลังแก้ | E1 |
 | ผู้ช่วยแนะนำแหล่งเรียนบนหน้าเว็บจริง หาหัวข้อถูก | 2 จาก 48 ข้อ เพราะหน้าเว็บยังใช้ AI จำลอง (Typhoon ได้ 46 จาก 48) | E3 |
 | คำตอบของคนต่อคำถาม "เข้าใจถูกไหม" | ไม่ได้เก็บ | E4 |
 | แหล่งเรียนภาษาไทยในคลัง | 1 จาก 17 แหล่ง | E6 |
@@ -43,7 +44,8 @@ truth for status. Every "now" figure below was measured and is in an evidence no
 | E5 | ให้ AI แยก "อื่น ๆ" ได้ดีขึ้น และบอกความไม่แน่ใจที่ใช้ได้จริง | วัดกับข้อสอบกลางก่อน (ขั้น 5.6) แล้วปรับคำสั่ง (prompt) รุ่นใหม่ วัดก่อนและหลัง | อ่านคำขอก้ำกึ่งราว 20 ข้อ แล้วบอกว่าคุณจัดหมวดไหน (คุณเป็นคนกลางคนแรกที่ตรวจเฉลย) | ตารางเทียบก่อนและหลังในหน้า Actions |
 | E6 | คลังแหล่งเรียนที่มีภาษาไทยมากขึ้น | เสนอแหล่งเรียนใหม่ทีละหัวข้อ และให้ GitHub ตรวจทุกลิงก์ | เปิดอ่านแหล่งที่ผมเสนอ แล้วบอกว่ารับหรือไม่รับ | ถามเป็นภาษาไทยแล้วได้แหล่งเรียนภาษาไทยมากกว่า 1 แหล่ง |
 
-- **เริ่มได้ทันทีโดยไม่ต้องตัดสินใจอะไร:** E1 แล้ว E2
+- **E1 สร้างแล้วใน PR #60** (10 พ.ย.) รอคุณสั่งรวม แล้วผมจะวัดเวลาจริงบน Render ([บันทึกหลักฐาน](evidence/2026-11-10-e1-bytecode-cache.md))
+- **เริ่มได้ทันทีโดยไม่ต้องตัดสินใจอะไร:** E2 (ต่อจาก E1)
 - **รอคุณตัดสินใจ:** E3 ทำได้ทุกเมื่อ ไม่ต้องรองานอื่น
 - **หลัง E1–E2:** ผมแนะนำขั้น 2 ของแผนงานหลัก (ให้คนกดอนุมัติได้จริง) เพราะตอนนี้ทุกเคสจบที่ "รอคนตรวจ" แล้วไปต่อไม่ได้
   และคำตัดสินของคนคือเฉลยจากคนจริงชุดแรกของโปรเจกต์ คุณเป็นคนเลือกว่าขั้นไหนมาก่อน
@@ -80,7 +82,7 @@ breaks) and model quality on synthetic sets. This plan follows the numbers a per
 | M3 | Rule mistakes that are raised, with a real model | 32/32 and 60/68 (Typhoon); 30/32 and 26/68 with the mock, as on the online page | same | E3, E5 |
 | M4 | Cases wrong for both rules and AI, so nothing raises them | 0/61 and 8/116 (Typhoon) | same | E5 |
 | M5 | The AI at the edge of `other` | 17/29 right on `other`, 87/87 on the three categories (Typhoon, edge set); `high` confidence on 116/116 | baseline | E5 |
-| M6 | First job after a start | 9.0 to 10.5 s in 4 of 4 observations; later jobs 0.1 to 0.4 s | [2026-11-03](evidence/2026-11-03-render-operations.md), baseline (Honeycomb) | E1 |
+| M6 | First job after a start | On Render, before E1: 9.0 to 10.5 s in 4 of 4 observations; later jobs 0.1 to 0.4 s. After E1 (PR #60): not measured on Render yet; in CI with the container held to 0.1 CPU, 14.4 s before and 3.1 s after (one run each) | [2026-11-03](evidence/2026-11-03-render-operations.md), baseline (Honeycomb), [E1 note](evidence/2026-11-10-e1-bytecode-cache.md) | E1 |
 | M7 | Study topic found on the online page | 2/48 (the page runs the mock); 46/48 with Typhoon | mock scorecard in CI; 2026-11-06 | E3 |
 | M8 | Out-of-scope study requests caught, with a real model | 16/19, precision 16/17 (Typhoon) | 2026-11-06 | E5 |
 | M9 | People's answers to "เข้าใจถูกไหม" | not recorded | – | E4 |
@@ -114,6 +116,12 @@ Each package is one pull request unless it says otherwise, and follows the defin
 
 ### E1 First case after a start: seconds, not ten
 
+- **Status (2026-11-10):** tasks 1 to 3 are built in PR #60
+  ([evidence note](evidence/2026-11-10-e1-bytecode-cache.md)). Task 1 found that the image had no cache at
+  all: 0 of the 141 modules the Runner imports, the standard library included. With the cache built into the
+  image, the first case in CI went from 0.989 s to 0.256 s, and from 14.4 s to 3.1 s with the container held
+  to 0.1 CPU (one run each, on GitHub's runners). Task 4, the measurement on Render, needs the merge. Task 5
+  is not started and waits for the owner's word after task 4.
 - **Goal:** the first case after the service wakes is answered in a few seconds.
 - **Why (M6):** 4 of 4 first jobs took 9.0 to 10.5 s. The spans put it in the first two steps, which is where
   Core starts its worker processes. The image has no bytecode cache for `app/` and `neuron_flow/`

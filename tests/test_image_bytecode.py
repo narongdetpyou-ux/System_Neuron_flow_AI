@@ -129,6 +129,12 @@ class RequireTests(unittest.TestCase):
         self.assertTrue(any(source.endswith(os.path.join("json", "decoder.py")) for source in sources))
         self.assertTrue(all(source.endswith(".py") for source in sources))
 
+    def test_the_packages_folder_is_where_pip_installs(self):
+        folder = check.installed_packages()
+        if folder is not None:  # an interpreter without a site-packages folder has nothing to check
+            self.assertTrue(Path(folder).is_dir())
+            self.assertIn(Path(folder).name, ("site-packages", "dist-packages"))
+
     def test_modules_are_grouped_by_where_they_live(self):
         with tempfile.TemporaryDirectory() as temp:
             self.assertEqual(check.group_of(Path(temp) / "app" / "services" / "runner.py", cwd=temp), "app")
@@ -155,6 +161,9 @@ class MainTests(unittest.TestCase):
         original = check.loaded_sources
         check.loaded_sources = lambda name: [str(path) for path in self.sources]
         self.addCleanup(setattr, check, "loaded_sources", original)
+        self.packages = None  # this machine's site-packages is not the test either
+        self.addCleanup(setattr, check, "installed_packages", check.installed_packages)
+        check.installed_packages = lambda: self.packages
 
     def run_main(self, *args):
         output = io.StringIO()
@@ -188,6 +197,26 @@ class MainTests(unittest.TestCase):
         code, output = self.run_main("--require")
         self.assertEqual(code, 1)
         self.assertIn("with a stale cache, e.g. app/services/runner.py", output)
+
+    def test_installed_packages_need_an_exact_cache_too(self):
+        # sentry-sdk is imported only when SENTRY_DSN is set, as on Render, so the Runner's import list
+        # in CI does not hold it; the whole folder is checked instead.
+        subprocess.run([sys.executable, "-m", "compileall", "-q", "-f", "--invalidation-mode", "unchecked-hash",
+                        "neuron_flow", "app"], cwd=self.folder, check=True)
+        self.packages = str(self.folder / "site-packages")
+        added = write_module(self.packages, "sentry_sdk/__init__.py")
+        code, output = self.run_main("--require")
+        self.assertEqual(code, 1)
+        self.assertIn(f"::error::1 file(s) under {self.packages}/ with a missing cache", output)
+        compile_as(added, "timestamp")  # what pip writes: valid by file time, not exact
+        code, output = self.run_main("--require")
+        self.assertEqual(code, 1)
+        self.assertIn("with a timestamp cache", output)
+        compile_as(added, "unchecked")
+        code, output = self.run_main("--require")
+        self.assertEqual(code, 0, output)
+        self.assertIn("**3 จาก 3 ไฟล์**", output)  # the owner's line still counts the project's code only
+        self.assertIn(f"| `{self.packages}/` | 1 | 0 | 0 | 0 | 0 |", output)
 
     def test_timing_only_reports_times_and_never_fails(self):
         check.time_imports, original = (lambda name, runs: [120.4, 100.0, 180.6][:runs]), check.time_imports

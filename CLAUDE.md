@@ -138,7 +138,7 @@ If a task seems to need breaking a rule:
 ## 4. Checking your work
 
 ```bash
-python -m unittest discover -s tests -v        # all tests (344 on 2026-11-10); Python 3.10–3.13
+python -m unittest discover -s tests -v        # all tests (346 on 2026-11-10); Python 3.10–3.13
 python -m examples.case_triage_demo            # v1 rules, one synthetic case
 python -m examples.case_triage_shadow_demo     # v2 shadow mode with the offline mock AI
 python -m examples.study_guide_demo            # the study guide's answers to four synthetic requests
@@ -160,7 +160,13 @@ GitHub Actions (the owner can open these; the first three run on every push and 
   - checks `render.yaml` against Render's schema;
   - builds the same container as Render and submits cases over HTTP;
   - restarts it and checks that nothing was lost;
-  - checks that it runs without root and stops cleanly.
+  - checks that it runs without root and stops cleanly;
+  - fails when a file under `app/` or `neuron_flow/` or in the installed packages, or a module the Runner
+    imports, has no bytecode cache in the image or one that does not match its source
+    (`.github/scripts/check_image_bytecode.py`, run inside the image; effectiveness plan E1);
+  - reports, without gating on a time, how long a process start and the first case after a start take, at
+    the runner's full speed and held to 0.1 CPU (an imitation of Render's free instance, not Render). The
+    figures are on the run page and in the job log (`bytecode-report`, `first-case` and `image-size` lines).
 - *Tracing check* (`tracing-check.yml`) runs the service with tracing sent to the OpenTelemetry Collector
   (`.github/otel/collector.yaml`), submits cases, and checks with `.github/scripts/check_traces.py` that each
   case is one trace with its steps and that no case text or key was sent (roadmap 5.1).
@@ -274,7 +280,7 @@ Notes for cloud sessions (claude.ai/code):
 | `app/settings.py`, `app/serve.py` | settings from the environment; the launcher (API + supervised Runner) |
 | `Dockerfile`, `render.yaml`, `railway.json` | the container, the Render Blueprint, the Railway config kept for later |
 | `tests/robustness/` | the robustness benchmark (docs/benchmarking.md): the synthetic set, the pinned open extract with its licences (`NOTICE.md`), the runner `bench.py`, the extract builder (`build_open_extract.py verify` re-checks the upstream files) and the 116-case file for live runs |
-| `tests/`, `examples/`, `.github/` | tests (`tests/baselines/` holds the eval gate's baseline), demos and smoke tests, CI (`.github/scripts/` holds the `render.yaml` and trace checks, `.github/otel/` the tracing check's collector; `.github/gitleaks.toml` and `.github/.gitleaksignore` the secret scan's rules and reviewed findings) |
+| `tests/`, `examples/`, `.github/` | tests (`tests/baselines/` holds the eval gate's baseline), demos and smoke tests, CI (`.github/scripts/` holds the `render.yaml` and trace checks and the image's bytecode-cache check, `.github/otel/` the tracing check's collector; `.github/gitleaks.toml` and `.github/.gitleaksignore` the secret scan's rules and reviewed findings) |
 | `.claude/` | the session-start hook for Claude Code cloud sessions |
 
 ## 7. Hosting (Render)
@@ -306,6 +312,12 @@ Notes for cloud sessions (claude.ai/code):
   The *Service container* job runs with `--cap-drop KILL` and fails if process 1 is root or a stop is not
   graceful. Keep both when changing the `Dockerfile`. On Render, stops have been graceful since PR #16
   (`docs/evidence/2026-11-03-render-operations.md`).
+- **The image carries its bytecode cache (E1).** The base image has none and the service cannot write one
+  (`PYTHONDONTWRITEBYTECODE=1`, a code folder `neuron` cannot write to), so the `Dockerfile` compiles the
+  standard library and installed packages after `pip install`, and `neuron_flow/` and `app/` after the last
+  `COPY`, with `--invalidation-mode unchecked-hash`. Keep the project's compile step last among the steps
+  that change files: an unchecked cache of older source would run the older code. The *Service container*
+  job compares every cache file with its source. Keep both when changing the `Dockerfile`.
 - **Free plan limits.** The service sleeps after 15 idle minutes and has no disk, so the queue is lost on
   every sleep, restart and deploy. Render also refuses some settings on free web services even though its
   schema allows them, for example a disk and `maxShutdownDelaySeconds`. The *Service container* check
@@ -411,6 +423,14 @@ Notes for cloud sessions (claude.ai/code):
     topic it asked for, while the links still came only from the library. All 67 topic answers said `high`
     confidence. Median latency about 7 times Typhoon's API. The owner got the JSON reports from the run's
     artifact, because this session cannot download artifacts.
+  - E1 of the effectiveness track, built on 2026-11-10 after the owner said to plan the work and carry it
+    out without asking first (PR #60; `docs/evidence/2026-11-10-e1-bytecode-cache.md`). The image had no
+    bytecode cache at all (0 of the 141 modules the Runner imports, the standard library included), so every
+    process compiled everything it imported at each start. The `Dockerfile` now compiles it once and
+    *Service container* requires it. On GitHub's runners, one run each: the first case after a start
+    0.989 s before and 0.256 s after; with the container held to 0.1 CPU, 14.4 s before and 3.1 s after.
+    **Not measured on Render yet**: after the merge, read the `run` span of the first job after the deploy
+    and after one sleep in Honeycomb, and fill in the table at the end of the evidence note (E1, task 4).
 - **Not done yet:**
   - Claude has never been run (D2). Typhoon has run only on the synthetic sets (two full triage runs, one
     full study guide run) and once on the 116 robustness edge cases (2026-11-10: AI correct 104/116, rules
@@ -428,9 +448,10 @@ Notes for cloud sessions (claude.ai/code):
     roadmap 5.8, "After the first full run", step 2), then follow it.
   - Buildable now without an owner decision: the rest of 5.5 (decide and fix the stage-1 gaps), 5.6 and 5.7,
     Phase 2 (2.1 first) and Phase 4 (4.1 first; Phase 3, which it needs, is built). The rest of 7.1 (who can read the AI key) needs an ADR first.
-  - The effectiveness track (2026-11-10, PR #50, [docs/effectiveness_plan.md](docs/effectiveness_plan.md)) is planned,
-    not built: E1 (first case after a start; today 9.0 to 10.5 s) and E2 (rules v2 with Thai; today rules
-    correct 29/61) are buildable now and come before the next phase; E3 (a real model behind the page) is
-    the owner's decision; E4 needs an ADR, E5 needs 5.6, E6 needs the owner to read each candidate.
+  - The effectiveness track (2026-11-10, PR #50, [docs/effectiveness_plan.md](docs/effectiveness_plan.md)): E1
+    is built (PR #60) and waits for its measurement on Render (9.0 to 10.5 s before); E2 (rules v2 with
+    Thai; today rules correct 29/61) is next and buildable now, before the next phase; E3 (a real model
+    behind the page) is the owner's decision; E4 needs an ADR, E5 needs 5.6, E6 needs the owner to read
+    each candidate.
   - The owner decides which phase or package comes next; ask before starting one.
 - Keep this section and the ROADMAP status table true in every PR.
