@@ -27,6 +27,14 @@ and an idempotency key makes a retried click return the same decision instead of
 ``meta`` also holds ``store_id`` and ``store_created_at``: a random id and the time of the first ``migrate()``. A
 new id means the queue started empty again (on Render's free plan, after every sleep, restart and deploy), so the
 page can tell people that the cases they sent earlier are gone instead of letting them vanish silently.
+
+Handoffs (schema version 3, ADR-030): when a job reaches ``COMPLETED`` (``finish``) or ``APPROVED`` (``decide``), the
+caller may pass a ``handoff`` builder, the skill-handoff exchange's ``prepare``. It runs inside the same
+transaction, on the job's new record, and returns a plan or ``None``. A ``STARTED`` plan inserts the target's
+``QUEUED`` job (idempotency key ``handoff:<source>:<route>``) and its ``handoffs`` row; a ``REFUSED`` plan inserts
+the row with its reason code and no job. Either way the source gets a ``handoff.*`` event, and all of it commits
+with the source's new state or not at all. The queue limit does not apply to a handoff: its source was admitted
+under it, a job starts at most one handoff, and chains stop at the route table's depth.
 """
 
 from contextlib import contextmanager
@@ -39,7 +47,7 @@ import time
 
 from neuron_flow.model import encode, fingerprint
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 QUEUED, RUNNING, CANCELLED = "QUEUED", "RUNNING", "CANCELLED"
 REVIEW_REQUIRED, APPROVED, REJECTED = "REVIEW_REQUIRED", "APPROVED", "REJECTED"
 TERMINAL = (REVIEW_REQUIRED, "COMPLETED", "FAILED", "DELIVERY_FAILED")  # the outcomes the Runner records
@@ -121,7 +129,31 @@ CREATE TABLE IF NOT EXISTS review_decisions (
     UNIQUE (review_id, version)
 );
 CREATE INDEX IF NOT EXISTS review_decisions_by_review ON review_decisions(review_id, seq);
+CREATE TABLE IF NOT EXISTS handoffs (
+    seq INTEGER PRIMARY KEY AUTOINCREMENT,
+    handoff_id TEXT UNIQUE NOT NULL,
+    route_id TEXT NOT NULL,
+    routes_tag TEXT NOT NULL,
+    vocabulary_tag TEXT NOT NULL,
+    translator_out TEXT NOT NULL,
+    translator_in TEXT NOT NULL,
+    source_job_id TEXT NOT NULL REFERENCES jobs(job_id),
+    source_state TEXT NOT NULL,
+    target_workflow_type TEXT NOT NULL,
+    target_job_id TEXT UNIQUE REFERENCES jobs(job_id),
+    depth INTEGER NOT NULL,
+    state TEXT NOT NULL CHECK (state IN ('STARTED', 'REFUSED')),
+    reason TEXT,
+    error_type TEXT,
+    envelope TEXT,
+    envelope_sha256 TEXT,
+    created_at REAL NOT NULL,
+    UNIQUE (source_job_id, route_id),
+    CHECK ((state = 'STARTED') = (target_job_id IS NOT NULL))
+);
+CREATE INDEX IF NOT EXISTS handoffs_by_source ON handoffs(source_job_id, seq);
 """
+HANDOFF_STATES = ("STARTED", "REFUSED")
 
 
 class QueueFull(Exception):
@@ -197,7 +229,8 @@ class QueueStore:
             db.execute("COMMIT")
 
     def migrate(self, now=None):
-        """Create the tables, or upgrade a version-1 queue (no reviews yet) to version 2.
+        """Create the tables, or upgrade a version-1 queue (no reviews yet) to version 2 and a version-2 queue (no
+        handoffs yet) to version 3.
 
         The upgrade runs in one ``BEGIN IMMEDIATE`` transaction and re-reads the version inside it, so the API
         and the Runner may both call this at the same start: one upgrades, the other sees version 2. Every job
@@ -218,6 +251,9 @@ class QueueStore:
             if version == "1":
                 self._upgrade_1_to_2(db, now)
                 version = "2"
+            if version == "2":  # the handoffs table was created above; nothing else changes
+                db.execute("UPDATE meta SET value='3' WHERE key='schema_version'")
+                version = "3"
             if version != str(SCHEMA_VERSION):
                 raise RuntimeError(f"Queue database schema {version} is not supported (expected {SCHEMA_VERSION})")
             db.execute("INSERT OR IGNORE INTO meta(key, value) VALUES('store_id', ?)", ("store_" + secrets.token_hex(8),))
@@ -282,18 +318,86 @@ class QueueStore:
             waiting = db.execute("SELECT COUNT(*) FROM jobs WHERE status=?", (QUEUED,)).fetchone()[0]
             if waiting >= max_queued:
                 raise QueueFull(waiting)
-            db.execute(
-                "INSERT INTO jobs(job_id, idempotency_key, request_fingerprint, workflow_type, input, status,"
-                " created_at, updated_at) VALUES(?,?,?,?,?,?,?,?)",
-                (job_id, idempotency_key, request_fingerprint, workflow_type, encode(input).decode(), QUEUED,
-                 now, now))
             queued = {"workflow_type": workflow_type}
             if request_id:
                 queued["request_id"] = request_id
             if trace_parent:
                 queued["trace_parent"] = trace_parent
-            self._event(db, job_id, "job.queued", queued, now)
+            self._insert_job(db, job_id=job_id, idempotency_key=idempotency_key,
+                             request_fingerprint=request_fingerprint, workflow_type=workflow_type, input=input,
+                             queued=queued, now=now)
             return self._select(db, job_id), True
+
+    def _insert_job(self, db, *, job_id, idempotency_key, request_fingerprint, workflow_type, input, queued, now):
+        db.execute(
+            "INSERT INTO jobs(job_id, idempotency_key, request_fingerprint, workflow_type, input, status,"
+            " created_at, updated_at) VALUES(?,?,?,?,?,?,?,?)",
+            (job_id, idempotency_key, request_fingerprint, workflow_type, encode(input).decode(), QUEUED, now, now))
+        self._event(db, job_id, "job.queued", queued, now)
+
+    # -- handoffs (ADR-030) --------------------------------------------------------------------
+
+    def _handoff(self, db, builder, job_id, decision, now):
+        """Run the exchange's builder on the job's new record and write what it plans, in the caller's transaction."""
+        if builder is None:
+            return None
+        job = self._select(db, job_id)
+        row = db.execute("SELECT depth FROM handoffs WHERE target_job_id=?", (job_id,)).fetchone()
+        plan = builder(job, decision=decision, depth=row["depth"] if row is not None else 0)
+        if plan is None:
+            return None
+        if plan["state"] not in HANDOFF_STATES:
+            raise ValueError(f"unknown handoff state {plan['state']}")
+        target = plan.get("target") if plan["state"] == "STARTED" else None
+        if target is not None:
+            self._insert_job(db, job_id=target["job_id"], idempotency_key=target["idempotency_key"],
+                             request_fingerprint=target["request_fingerprint"],
+                             workflow_type=target["workflow_type"], input=target["input"],
+                             queued={"workflow_type": target["workflow_type"], "handoff_id": plan["handoff_id"],
+                                     "route_id": plan["route_id"], "from_job_id": job_id}, now=now)
+        envelope = plan.get("envelope")
+        db.execute(
+            "INSERT INTO handoffs(handoff_id, route_id, routes_tag, vocabulary_tag, translator_out, translator_in,"
+            " source_job_id, source_state, target_workflow_type, target_job_id, depth, state, reason, error_type,"
+            " envelope, envelope_sha256, created_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            (plan["handoff_id"], plan["route_id"], plan["routes_tag"], plan["vocabulary_tag"], plan["translator_out"],
+             plan["translator_in"], job_id, job["status"], plan["target_workflow_type"],
+             target["job_id"] if target else None, plan["depth"], plan["state"], plan.get("reason"),
+             plan.get("error_type"), None if envelope is None else encode(envelope).decode(),
+             None if envelope is None else fingerprint(envelope), now))
+        # Ids and codes only: a fact value may be a person's words, so it never goes into an event.
+        payload = {"handoff_id": plan["handoff_id"], "route_id": plan["route_id"]}
+        if target is not None:
+            self._event(db, job_id, "handoff.started", {**payload, "target_job_id": target["job_id"],
+                                                        "target_workflow_type": target["workflow_type"]}, now)
+        else:
+            self._event(db, job_id, "handoff.refused", {**payload, "reason": plan.get("reason")}, now)
+        return plan
+
+    @staticmethod
+    def _handoff_row(row):
+        item = dict(row)
+        item["envelope"] = json.loads(item["envelope"]) if item["envelope"] is not None else None
+        return item
+
+    def handoffs_from(self, job_id):
+        """Every handoff this job started or that was refused, oldest first."""
+        with self._connect() as db:
+            rows = db.execute("SELECT * FROM handoffs WHERE source_job_id=? ORDER BY seq", (job_id,)).fetchall()
+        return [self._handoff_row(row) for row in rows]
+
+    def handoff_to(self, job_id):
+        """The handoff that started this job, or ``None`` for a job admitted from outside."""
+        with self._connect() as db:
+            row = db.execute("SELECT * FROM handoffs WHERE target_job_id=?", (job_id,)).fetchone()
+        return self._handoff_row(row) if row is not None else None
+
+    def handoff_counts(self):
+        with self._connect() as db:
+            rows = db.execute("SELECT state, COUNT(*) AS n FROM handoffs GROUP BY state").fetchall()
+        counts = {state: 0 for state in HANDOFF_STATES}
+        counts.update({row["state"]: row["n"] for row in rows})
+        return counts
 
     def cancel(self, job_id, *, request_id=None, now=None):
         """Withdraw a job the Runner has not claimed yet.
@@ -364,7 +468,8 @@ class QueueStore:
             elif row["spec_fingerprint"] != digest:
                 raise StateError(f"{job_id} already has a different frozen spec")
 
-    def finish(self, job_id, status, *, result=None, failure=None, step_events=(), now=None):
+    def finish(self, job_id, status, *, result=None, failure=None, step_events=(), handoff=None, now=None):
+        """Record the Runner's outcome. ``handoff`` (the exchange's ``prepare``) runs in the same transaction."""
         if status not in TERMINAL:
             raise ValueError(f"{status} is not a final status")
         now = time.time() if now is None else now
@@ -382,6 +487,7 @@ class QueueStore:
             review = (result or {}).get("review")
             if status == REVIEW_REQUIRED and isinstance(review, dict):
                 _insert_review(db, job_id, review, now)  # in the same transaction: no job waits without a review
+            self._handoff(db, handoff, job_id, None, now)  # a route from COMPLETED starts its job in this commit
 
     def heartbeat(self, *, runner_id, pid, state, current_job=None, detail=None, llm=None, started_at, now=None):
         now = time.time() if now is None else now
@@ -565,11 +671,12 @@ class QueueStore:
         return counts
 
     def decide(self, review_id, *, decision, final_category, reason, expected_version, idempotency_key,
-               request_sha256, reviewer_token_id, reviewer_role, request_id=None, now=None):
+               request_sha256, reviewer_token_id, reviewer_role, request_id=None, handoff=None, now=None):
         """Record a person's decision. Returns ``(decision_row, created)``.
 
         One ``BEGIN IMMEDIATE`` transaction: the decision row, the review's new state and version, the job's new
-        state and its event, all or nothing. The idempotency key is checked first, so a retried click returns the
+        state and its event, and (with ``handoff``, the exchange's ``prepare``) the handoff that the new state
+        starts, all or nothing. The idempotency key is checked first, so a retried click returns the
         same decision (``created`` False) even after the review is decided. Raises ``KeyError`` for an unknown
         review and :class:`DecisionConflict` when the key was used for another request, the review is already
         decided, or ``expected_version`` is not the current version.
@@ -611,4 +718,5 @@ class QueueStore:
                 payload["request_id"] = request_id
             self._event(db, review["job_id"], f"review.{state.lower()}", payload, now)
             row = db.execute("SELECT * FROM review_decisions WHERE decision_id=?", (decision_id,)).fetchone()
+            self._handoff(db, handoff, review["job_id"], dict(row), now)  # an approval's route, in this commit
             return dict(row), True

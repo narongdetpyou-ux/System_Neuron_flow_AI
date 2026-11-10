@@ -20,7 +20,7 @@ from neuron_flow.model import fingerprint
 from app.observability.tracing import parse_traceparent
 from app.persistence import QueueFull
 
-from .workflows import CATALOG
+from .workflows import CATALOG, admissible
 
 IDEMPOTENCY_KEY = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{7,127}$")
 _FIELDS = {"workflow_type", "idempotency_key", "input"}
@@ -52,8 +52,9 @@ def admit(store, body, *, max_queued, catalog=CATALOG, request_id=None, trace_pa
         raise AdmissionError(400, "invalid_fields", "The body must contain exactly: workflow_type, idempotency_key, input")
     workflow_type = body["workflow_type"]
     workflow = catalog.get(workflow_type) if isinstance(workflow_type, str) else None
-    if workflow is None:
-        raise AdmissionError(400, "unknown_workflow_type", "Unknown workflow_type", allowed=sorted(catalog))
+    # A route-only type (ADR-030) is started from a recorded decision, never from a request: outside, it does not exist.
+    if workflow is None or workflow.route_only:
+        raise AdmissionError(400, "unknown_workflow_type", "Unknown workflow_type", allowed=admissible(catalog))
     key = body["idempotency_key"]
     if not isinstance(key, str) or not IDEMPOTENCY_KEY.fullmatch(key):
         raise AdmissionError(400, "invalid_idempotency_key",

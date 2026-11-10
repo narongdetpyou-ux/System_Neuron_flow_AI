@@ -35,6 +35,7 @@ from neuron_flow import Runtime
 from neuron_flow.model import fingerprint
 from neuron_flow.storage import WorkspaceBusy
 
+from app.exchange import Exchange
 from app.llm import LLMConfig, LLMConfigError
 from app.observability import SentryReporter, Tracing, init_sentry, job_spans, run_job
 from app.persistence import TERMINAL, QueueStore
@@ -63,10 +64,14 @@ def _with_core_versions(runtime, job_id, spec):
 
 
 class Runner:
-    def __init__(self, settings, *, store=None, catalog=None, llm_config=None, reporter=None, tracing=None):
+    def __init__(self, settings, *, store=None, catalog=None, llm_config=None, reporter=None, tracing=None,
+                 exchange=None):
         self.settings = settings
         self.store = store or QueueStore(settings.queue_db)
         self.catalog = CATALOG if catalog is None else catalog
+        # The skill-handoff exchange (ADR-030): a route from COMPLETED starts its job in the same commit as the
+        # outcome. A route table that does not fit this catalog fails here, before any job runs.
+        self.exchange = exchange or Exchange(self.catalog)
         self.llm_config = llm_config
         self.reporter = reporter or SentryReporter()
         self.tracing = tracing if tracing is not None else Tracing.off()
@@ -177,7 +182,8 @@ class Runner:
                     self._configuration_changed(job, type(exc).__name__)
                     return
             status, result, failure = summarize(snapshot, spec, workflow)
-            self.store.finish(job_id, status, result=result, failure=failure, step_events=step_events(result))
+            self.store.finish(job_id, status, result=result, failure=failure, step_events=step_events(result),
+                              handoff=self.exchange.prepare)
             log.info("runner: %s %s in %.1fs", job_id, status, time.monotonic() - started)
         except Exception as exc:
             log.exception("runner: unexpected error on %s", job_id)

@@ -24,6 +24,10 @@ jobs:
       # The study guide's answers to four synthetic requests, shown on the run page (roadmap 3.2).
       - name: Run study guide demonstration (offline mock AI)
         run: python -m examples.study_guide_demo --summary "$GITHUB_STEP_SUMMARY"
+      # Skill handoff (ADR-030, docs/skill_handoff.md): one case step by step through the exchange and its
+      # translators, shown on the run page.
+      - name: Run skill handoff demonstration (offline mock AI)
+        run: python -m examples.skill_handoff_demo --summary "$GITHUB_STEP_SUMMARY"
       # Eval gate (roadmap 5.2): fails when any case answers differently from the committed baseline. It runs
       # even when an earlier step failed, so the run page always lists what changed.
       - name: Score shadow mode and compare every case with the baseline (offline mock AI)
@@ -51,6 +55,11 @@ jobs:
         run: >-
           python -m tests.robustness.bench --summary "$GITHUB_STEP_SUMMARY" --out robustness.json
           --compare-with tests/baselines/robustness_v1.json
+      # The exchange with the existing sets (ADR-030): every case of the three triage sets (61 development, 40 held-out,
+      # 116 edge) end to end through admission, the Runner, a decision and the apply job. Fails on any broken check.
+      - name: Skill handoff check over the three triage case sets (offline mock AI)
+        if: ${{ !cancelled() }}
+        run: python -m tests.handoff_check --summary "$GITHUB_STEP_SUMMARY" --json handoff-eval-mock.json
       - name: Keep the scorecards
         if: ${{ !cancelled() && matrix.python-version == '3.12' }}
         uses: actions/upload-artifact@v7
@@ -61,3 +70,4 @@ jobs:
             rules-comparison-mock.json
             study-guide-eval-mock.json
             robustness.json
+            handoff-eval-mock.json

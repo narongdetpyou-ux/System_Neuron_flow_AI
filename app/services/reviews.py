@@ -13,8 +13,10 @@ Flow for one ``POST /v1/reviews/{review_id}/decisions``:
    with another body, a decided review or an old version is refused with 409 and changes nothing.
 
 The AI never decides: no agent and no Runner code calls this, and n8n or MCP clients will not either (rule 4).
-Approving records where the case goes (``final_queue``); it sends nothing outside. The linked follow-up job
-that writes a Core receipt for an approval (roadmap 2.3, ADR-004) is not built yet.
+Approving records where the case goes (``final_queue``); it sends nothing outside. With an ``exchange`` (the API
+always passes its own), the approval's skill-handoff route (ADR-030) starts the linked follow-up job in the same
+transaction: for ``case_triage.v2`` that is ``case_triage.v2.apply``, which writes a Core receipt for the approval
+(roadmap 2.3, ADR-004). A rejection starts nothing.
 """
 
 import re
@@ -91,8 +93,11 @@ def check_decision(body, review):
             "idempotency_key": key}
 
 
-def decide(store, review_id, body, *, reviewer=None, request_id=None):
-    """Returns ``(review, decision_row, created)``; raises :class:`DecisionError` when the decision is refused."""
+def decide(store, review_id, body, *, reviewer=None, request_id=None, exchange=None):
+    """Returns ``(review, decision_row, created)``; raises :class:`DecisionError` when the decision is refused.
+
+    ``exchange`` (an :class:`app.exchange.Exchange`) writes the handoff the new state starts, in the same transaction.
+    """
     reviewer = reviewer or SHARED_KEY_REVIEWER
     review = store.get_review(review_id)
     if review is None:
@@ -109,7 +114,7 @@ def decide(store, review_id, body, *, reviewer=None, request_id=None):
                                     reason=checked["reason"], expected_version=checked["expected_version"],
                                     idempotency_key=checked["idempotency_key"], request_sha256=digest,
                                     reviewer_token_id=reviewer["token_id"], reviewer_role=reviewer["role"],
-                                    request_id=request_id)
+                                    request_id=request_id, handoff=exchange.prepare if exchange else None)
     except KeyError:
         raise DecisionError(404, "review_not_found", "No review with this id") from None
     except DecisionConflict as exc:
