@@ -3,6 +3,8 @@ name: Service container (same build as Render)
 # root and without CAP_KILL (as on Render), submits cases over HTTP, restarts the container (like a
 # redeploy), checks that nothing was lost and that both stops were graceful. Render deploys main only
 # when these checks pass (autoDeployTrigger: checksPass).
+# It also reports the image's size, its bytecode cache and how long the first case after a start takes,
+# at the runner's full speed and with 0.1 CPU (effectiveness plan E1). Times are reported, never gated.
 # The access key below is a throwaway value used only inside this job.
 on:
   push:
@@ -24,7 +26,7 @@ jobs:
         run: python .github/scripts/check_render_blueprint.py
   container:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     env:
       ACCESS_KEY: ci-throwaway-access-key-0123456789
     steps:
@@ -34,6 +36,38 @@ jobs:
           python-version: "3.12"
       - name: Build the image
         run: docker build -t neuron-flow:ci .
+      - name: Report the image's size and its bytecode cache (effectiveness plan E1)
+        # A process that finds no cache file for a module compiles it from source at every start, and
+        # the service cannot write a cache itself. The script runs inside the image as the service user.
+        run: |
+          size="$(docker image inspect neuron-flow:ci --format '{{.Size}}')"
+          echo "image-size $size bytes"
+          {
+            echo "### ภาพของบริการ (container image)"
+            echo ""
+            echo "- ขนาด: $((size / 1000000)) MB ($size bytes)"
+            echo ""
+          } >> "$GITHUB_STEP_SUMMARY"
+          status=0
+          docker run --rm -i --entrypoint python --user neuron neuron-flow:ci - \
+            --label "ความเร็วเต็มของเครื่อง GitHub" < .github/scripts/check_image_bytecode.py > bytecode.md || status=$?
+          # The same start, held to a tenth of a processor: the share Render lists for its free instances.
+          # An imitation on GitHub's machine, not a measurement on Render.
+          docker run --rm -i --cpus 0.1 --entrypoint python --user neuron neuron-flow:ci - --timing-only --runs 5 \
+            --label "จำกัด 0.1 CPU (เลียนแบบเครื่องฟรีของ Render ไม่ใช่ Render จริง)" \
+            < .github/scripts/check_image_bytecode.py >> bytecode.md || status=$?
+          cat bytecode.md
+          { grep -v -e '^bytecode-report ' -e '^::' bytecode.md; echo ""; } >> "$GITHUB_STEP_SUMMARY"
+          exit "$status"
+      - name: Time the first case after a start with 0.1 CPU (a report that does not fail on a time)
+        run: |
+          docker run -d --name nf-slow -p 8001:8000 --cpus 0.1 --cap-drop KILL \
+            -e NEURON_FLOW_ACCESS_KEY="$ACCESS_KEY" neuron-flow:ci
+          python -m examples.service_smoke_test --url http://127.0.0.1:8001 --key "$ACCESS_KEY" \
+            --first-case-only --timeout 120 --summary "$GITHUB_STEP_SUMMARY" \
+            --label "จำกัด 0.1 CPU (เลียนแบบเครื่องฟรีของ Render ไม่ใช่ Render จริง)"
+          docker logs nf-slow 2>&1 | tail -n 30 || true
+          docker rm -f nf-slow
       - name: Start the service with a data disk (configured as in render.yaml's paid variant)
         # --cap-drop KILL: like Render's containers, root here may not signal another user's processes.
         # On Render that stopped tini (process 1, root) from passing SIGTERM on to the service, which runs
@@ -46,7 +80,9 @@ jobs:
             -e NEURON_FLOW_DATA_DIR=/var/data \
             -v nf-data:/var/data neuron-flow:ci
       - name: Submit cases over HTTP and wait for the results
-        run: python -m examples.service_smoke_test --url http://127.0.0.1:8000 --key "$ACCESS_KEY" --state smoke.json
+        run: |
+          python -m examples.service_smoke_test --url http://127.0.0.1:8000 --key "$ACCESS_KEY" --state smoke.json \
+            --summary "$GITHUB_STEP_SUMMARY"
       - name: Check the service runs without root and owns its data
         run: |
           docker exec -i nf python - <<'EOF'
