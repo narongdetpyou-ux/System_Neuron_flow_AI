@@ -1,7 +1,7 @@
 # Effectiveness plan: make the measured results reach the person
 
-**Status (2026-11-10):** a plan the owner asked for ("วางแผนปฏิบัติงานเพิ่มเติมเพื่อเพิ่มประสิทธิผลการทำงานของระบบ"). Nothing in
-it is built yet. It adds six work packages, E1 to E6, to [ROADMAP.md](ROADMAP.md), which stays the source of
+**Status (2026-11-10):** a plan the owner asked for ("วางแผนปฏิบัติงานเพิ่มเติมเพื่อเพิ่มประสิทธิผลการทำงานของระบบ"), proposed in
+PR #50. Nothing in it is built yet. It adds six work packages, E1 to E6, to [ROADMAP.md](ROADMAP.md), which stays the source of
 truth for status. Every "now" figure below was measured and is in an evidence note, most of them in
 [the baseline note of 2026-11-10](evidence/2026-11-10-effectiveness-baseline.md).
 

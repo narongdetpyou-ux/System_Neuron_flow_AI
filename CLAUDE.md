@@ -428,7 +428,7 @@ Notes for cloud sessions (claude.ai/code):
     roadmap 5.8, "After the first full run", step 2), then follow it.
   - Buildable now without an owner decision: the rest of 5.5 (decide and fix the stage-1 gaps), 5.6 and 5.7,
     Phase 2 (2.1 first) and Phase 4 (4.1 first; Phase 3, which it needs, is built). The rest of 7.1 (who can read the AI key) needs an ADR first.
-  - The effectiveness track (2026-11-10, [docs/effectiveness_plan.md](docs/effectiveness_plan.md)) is planned,
+  - The effectiveness track (2026-11-10, PR #50, [docs/effectiveness_plan.md](docs/effectiveness_plan.md)) is planned,
     not built: E1 (first case after a start; today 9.0 to 10.5 s) and E2 (rules v2 with Thai; today rules
     correct 29/61) are buildable now and come before the next phase; E3 (a real model behind the page) is
     the owner's decision; E4 needs an ADR, E5 needs 5.6, E6 needs the owner to read each candidate.
