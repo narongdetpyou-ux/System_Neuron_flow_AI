@@ -2,8 +2,9 @@
 
 **Status (2026-11-11):** a plan the owner asked for ("วางแผนปฏิบัติงานเพิ่มเติมเพื่อเพิ่มประสิทธิผลการทำงานของระบบ"), proposed in
 PR #50. E1 is built and merged (PR #60); its post-change measurement on Render is still open. E2 is
-implemented in PR #64, continuing PR #62's held-out-set commit. Its measurement status is stated in the
-[E2 evidence](evidence/2026-11-11-e2-rules-v2.md). E3–E6 are not built. The plan adds six work packages, E1 to
+implemented and measured in PR #64, continuing PR #62's held-out-set commit: the three-set Typhoon run
+and code checks passed, with results in the [E2 evidence](evidence/2026-11-11-e2-rules-v2.md). The PR awaits
+the owner's merge instruction. E3–E6 are not built. The plan adds six work packages, E1 to
 E6, to [ROADMAP.md](ROADMAP.md), which stays the source of truth for status. Every "now" figure below was measured and is in an evidence note, most of them in
 [the baseline note of 2026-11-10](evidence/2026-11-10-effectiveness-baseline.md).
 
@@ -22,7 +23,7 @@ E6, to [ROADMAP.md](ROADMAP.md), which stays the source of truth for status. Eve
 
 **ก่อน E2 อยู่ตรงไหน (ตัวเลขที่วัดแล้วเมื่อ 10 พ.ย.)**
 
-ผลหลังทำกฎภาษาไทยใน PR #64 อยู่ใน [บันทึก E2](evidence/2026-11-11-e2-rules-v2.md) ซึ่งแยกชุดที่ใช้พัฒนากฎออกจากชุดที่กันไว้ และบอกชัดว่าการวัดกับ Typhoon เสร็จแล้วหรือยัง
+ผลหลังทำกฎภาษาไทยใน PR #64 อยู่ใน [บันทึก E2](evidence/2026-11-11-e2-rules-v2.md) วัดกับ Typhoon ครบทั้ง 3 ชุดแล้ว: ชุดพัฒนากฎถูก 61/61 ชุดเคสยาก 105/116 และชุดที่กันไว้ 22/40 จึงยังมีข้อจำกัดชัดเจน เคสยาก 8 ข้อยังผิดทั้งกฎและ AI โดยไม่ถูกยกเป็น "ต้องดูก่อน" เหมือนเดิม งาน E5 ยังต้องทำต่อ
 
 | สิ่งที่วัด | ตอนนี้ | งานที่จะขยับตัวเลขนี้ |
 |---|---|---|
@@ -48,7 +49,7 @@ E6, to [ROADMAP.md](ROADMAP.md), which stays the source of truth for status. Eve
 | E6 | คลังแหล่งเรียนที่มีภาษาไทยมากขึ้น | เสนอแหล่งเรียนใหม่ทีละหัวข้อ และให้ GitHub ตรวจทุกลิงก์ | เปิดอ่านแหล่งที่ผมเสนอ แล้วบอกว่ารับหรือไม่รับ | ถามเป็นภาษาไทยแล้วได้แหล่งเรียนภาษาไทยมากกว่า 1 แหล่ง |
 
 - **E1 สร้างและรวมแล้วใน PR #60** (10 พ.ย.) ยังรอวัดเวลาจริงบน Render ([บันทึกหลักฐาน](evidence/2026-11-10-e1-bytecode-cache.md))
-- **E2 สร้างต่อใน PR #64** (11 พ.ย.) กฎภาษาไทยและการทดสอบพร้อมแล้ว ดูผลวัดและงานที่ยังรอใน [บันทึก E2](evidence/2026-11-11-e2-rules-v2.md) แล้วคุณเป็นคนสั่งรวม
+- **E2 สร้างและวัดครบใน PR #64** (11 พ.ย.) กฎภาษาไทย การทดสอบ และการวัดกับ Typhoon ทั้ง 3 ชุดผ่านแล้ว ดูผลและข้อจำกัดใน [บันทึก E2](evidence/2026-11-11-e2-rules-v2.md) แล้วคุณเป็นคนสั่งรวม
 - **รอคุณตัดสินใจ:** E3 ทำได้ทุกเมื่อ ไม่ต้องรองานอื่น
 - **หลัง E1–E2:** ขั้น 2.2 และ 2.4 ให้คนกดอนุมัติหรือปฏิเสธได้แล้วใน PR #63 งานถัดไปของขั้น 2 คือแยกตัวตนคนตรวจ (2.1) แล้วเชื่อมงานหลังอนุมัติ (2.3) คุณเป็นคนเลือกว่าจะทำงานไหนต่อ
 
@@ -80,10 +81,10 @@ breaks) and model quality on synthetic sets. This plan follows the numbers a per
 | # | Measure | Now (measured) | Where it is recorded | Moved by |
 |---|---|---|---|---|
 | M1 | The official suggestion (rules) is correct | 61/61, Thai 26/26; edge 105/116; held-out 22/40 (English 12/20, Thai 10/20) (before: 29/61, Thai 7/26; edge 48/116, Thai 3/13) | mock scorecard on every CI run; [E2 evidence](evidence/2026-11-11-e2-rules-v2.md) | E2 |
-| M2 | Share of cases raised for review first, with a real model | New three-set Typhoon run pending (before: 33/61 and 64/116, Typhoon) | [E2 evidence](evidence/2026-11-11-e2-rules-v2.md); v1/v2 use the same AI answers | E2 |
-| M3 | Rule mistakes that are raised, with a real model | New three-set Typhoon run pending (before: 32/32 and 60/68, Typhoon) | [E2 evidence](evidence/2026-11-11-e2-rules-v2.md) | E2, E3, E5 |
-| M4 | Cases wrong for both rules and AI | New three-set Typhoon run pending (before: 0/61 and 8/116, Typhoon) | [E2 evidence](evidence/2026-11-11-e2-rules-v2.md); being wrong for both does not imply agreement | E2, E5 |
-| M5 | The AI at the edge of `other` | 17/29 right on `other`, 87/87 on the three categories (Typhoon, edge set); `high` confidence on 116/116 | baseline | E5 |
+| M2 | Share of cases raised for review first, with a real model | Development 1/61, edge 8/116, held-out 18/40 (v1 on the same answers: 33/61, 65/116, 26/40) | [E2 evidence](evidence/2026-11-11-e2-rules-v2.md); v1/v2 use the same AI answers | E2 |
+| M3 | Rule mistakes that are raised, with a real model | Development: no rule mistakes (0/0, no rate); edge 3/11; held-out 18/18 (v1: 32/32, 60/68, 26/26) | [E2 evidence](evidence/2026-11-11-e2-rules-v2.md) | E2, E3, E5 |
+| M4 | Cases wrong for both rules and AI | Development 0/61, edge 8/116, held-out 0/40: unchanged from v1 on the same answers; all 8 edge cases still agree on a wrong category and are not elevated | [E2 evidence](evidence/2026-11-11-e2-rules-v2.md); fewer flags do not mean this failure is fixed | E2, E5 |
+| M5 | The AI at the edge of `other` | 2026-11-10 baseline: 17/29 right on `other`, 87/87 on the three categories (Typhoon, edge set); `high` confidence on 116/116 | baseline | E5 |
 | M6 | First job after a start | On Render, before E1: 9.0 to 10.5 s in 4 of 4 observations; later jobs 0.1 to 0.4 s. After E1 (PR #60): not measured on Render yet; in CI with the container held to 0.1 CPU, 14.4 s before and 3.1 s after (one run each) | [2026-11-03](evidence/2026-11-03-render-operations.md), baseline (Honeycomb), [E1 note](evidence/2026-11-10-e1-bytecode-cache.md) | E1 |
 | M7 | Study topic found on the online page | 2/48 (the page runs the mock); 46/48 with Typhoon | mock scorecard in CI; 2026-11-06 | E3 |
 | M8 | Out-of-scope study requests caught, with a real model | 16/19, precision 16/17 (Typhoon) | 2026-11-06 | E5 |
@@ -160,8 +161,12 @@ Each package is one pull request unless it says otherwise, and follows the defin
 
 - **Status (2026-11-11):** implemented in PR #64, continuing the original held-out-set commit from PR #62.
   Rules and matching tests, frozen-version checks, mock and robustness gates, integration checks and the
-  same-answer v1/v2 comparison are built. The required new three-set Typhoon run is pending. See the [E2 evidence](evidence/2026-11-11-e2-rules-v2.md)
-  for measurements, regressions and all 27 original rules-gap decisions. This work has not merged or deployed.
+  same-answer v1/v2 comparison are complete. [Typhoon run 42890112701](https://github.com/narongdetpyou-ux/System_Neuron_flow_AI/actions/runs/42890112701)
+  answered and completed all 217 cases on code `efb937253193b3be9618721d0586868732c7f6d9`; comparison
+  replay matched the saved artifact exactly, with no v1-correct case regressing. The code checks also passed.
+  See the [E2 evidence](evidence/2026-11-11-e2-rules-v2.md) for the three-set table and all 27 original
+  rules-gap decisions. This work has not merged or deployed. Fewer flags do not remove the eight edge
+  cases where both rules and Typhoon agree on the wrong category; those remain unflagged, and E5 is open.
 - **Goal:** the suggestion a reviewer sees first is right far more often, in Thai and in English, and
   "elevated" marks the cases that need a first look.
 - **Why (M1, M2):** rules correct 29/61 (Thai 7/26) and 48/116 (Thai 3/13). A longer list with Thai words,

@@ -208,7 +208,8 @@ It does not show AI accuracy.
 3. The run first sends one fixed synthetic sentence and shows the reply as it arrived (status, content type,
    rate-limit headers, first characters) and how the provider classified it (`.github/scripts/llm_probe.py`;
    never the key, never a case). Cases then start at least 1 second apart (`--min-interval-s 1`).
-4. Read the scorecard on the run page, or download `shadow-eval-typhoon.json`. When the AI gave no answer,
+4. Read the scorecard on the run page, or download `shadow-eval-typhoon-<set>.json` and
+   `rules-comparison-typhoon.json` from the artifact. When the AI gave no answer,
    a line under the table counts why (for example `unavailable: invalid_model_output 5`). The page lists the
    cases both got wrong and the cases only the AI got wrong, and says the numbers belong to Typhoon, not to
    Claude.

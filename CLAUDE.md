@@ -78,13 +78,14 @@ Read in this order when you need depth:
   - Commit only as `noreply@anthropic.com` (this session's git identity). The `commit-emails` job of *Secret
     scan* fails a pull request whose commits carry any other address than GitHub's or Anthropic's noreply ones.
   - One of the owner's personal addresses is in 53 public commits, mostly merges made on github.com. Never
-    write it anywhere. Removing it from the history is owner decision D8 (ROADMAP 7.6); never rewrite or
-    force-push `main` without the owner's explicit permission.
+    write it anywhere. Under D8 (ROADMAP 7.6), the owner chose to keep the existing history; never rewrite
+    or force-push `main` without a new explicit instruction.
 - **Honesty about evidence.**
   - Mock-AI scores are not accuracy, and hashes prove bytes, not authorship.
   - The live-model measurements are Typhoon's on the synthetic sets (first runs 2026-11-06,
     `docs/evidence/2026-11-06-first-live-typhoon.md`) and on the 116 robustness edge cases (one run from a
-    cloud session, `docs/evidence/2026-11-10-effectiveness-baseline.md`), and the local 4B model's: a smoke run on the first 5
+    cloud session, `docs/evidence/2026-11-10-effectiveness-baseline.md`), followed by one E2 three-set run
+    (2026-11-11, 217 cases, `docs/evidence/2026-11-11-e2-rules-v2.md`), and the local 4B model's: a smoke run on the first 5
     items of each set, twice, and one full run of both sets (2026-11-08,
     `docs/evidence/2026-11-08-first-local-model-smoke.md`, `docs/evidence/2026-11-08-first-local-model-full.md`).
     There is none for Claude, and no security review or user study yet. A Typhoon or local result describes
@@ -202,9 +203,11 @@ GitHub Actions (the owner can open these; the first three run on every push and 
   and collects usage data, so synthetic data only. Each run first sends one fixed sentence and shows the raw
   reply (`.github/scripts/llm_probe.py`), then paces cases 1 s apart (ADR-021). A session on this
   repository's cloud environment can call Typhoon itself (see the notes for cloud sessions below); other
-  sessions cannot reach `api.opentyphoon.ai`, so read the run page instead. No session can download a run's
-  artifacts: their storage host changes from run to run (`productionresultssa<N>.blob.core.windows.net`) and
-  the network refuses it, so the run page is the record; the scorecards list their mistakes there.
+  sessions may need to use Actions instead. CLI artifact downloads can fail because their storage host
+  changes from run to run (`productionresultssa<N>.blob.core.windows.net`). On 2026-11-11 the GitHub
+  connector downloaded the E2 artifact and supplied a reusable file URL; its ZIP hash was verified and
+  all three reports replayed locally. Prefer that supported route when available; otherwise the run page
+  records the scorecards and their mistakes.
 - *Local open model eval* (`local-model-eval.yml`, ADR-026, roadmap 5.8) runs both scorecards against an
   open-weight model that the job runs itself: llama.cpp's server built from a pinned commit (cached), serving
   Typhoon 2.5 Qwen3 4B from a Hugging Face file checked against its SHA-256 (`.github/scripts/fetch_model.py`),
@@ -459,10 +462,12 @@ Notes for cloud sessions (claude.ai/code):
     - the `commit-emails` check, and roadmap 7.6 with owner decision D8 for the address already public (a
       local dry run of a rewrite is in the evidence note).
 - **Not done yet:**
-  - Claude has never been run (D2). Typhoon has run only on the synthetic sets (two full triage runs, one
-    full study guide run) and once on the 116 robustness edge cases (2026-11-10: AI correct 104/116, rules
-    48/116). The local 4B model has had one full run of each set (2026-11-08) besides the PR's
-    two smoke runs.
+  - Claude has never been run (D2). Typhoon has run on the synthetic sets and the 116 robustness edges,
+    plus all three E2 triage sets (2026-11-11, 217/217 answered/completed): AI correct 60/61 development,
+    103/116 edge and 40/40 held-out. The earlier edge run was 104/116; the E2 rules comparison reuses the
+    same answers for v1 and v2, rather than comparing separate model runs. Eight edge cases remain wrong
+    for both and unflagged; fewer flags do not fix that risk (E5). The local 4B model has had one full run
+    of each set (2026-11-08) besides the PR's two smoke runs.
   - Per-person reviewer identity (2.1), the linked job after an approval (2.3) and the n8n intake (2.5) are not
     built; review decisions are (ADR-027).
   - The live page uses the mock AI unless the owner adds Typhoon (or Claude) in Render's Environment tab
@@ -473,11 +478,13 @@ Notes for cloud sessions (claude.ai/code):
     API key); 0.4 with Typhoon is free but sends what is typed on the page to Typhoon, so it is the owner's
     choice too; an open model behind the page needs a paid machine (D7); the owner test of 2.4 on the live page
     after the merge. D8 is decided (2026-11-10): the e-mail history stays as it is; do not propose a rewrite.
-  - **E2 continues in PR #64 (2026-11-11)** from PR #62's held-out-set commit `a30de92`, preserved in
+  - **E2 is built and measured in PR #64 (2026-11-11), pending merge**, from PR #62's held-out-set commit `a30de92`, preserved in
     history before changing any rule. Thai/English rules, versioned keyword data, frozen-job checks,
     integration tests, both regenerated gates and a same-answer v1/v2 comparison are built. The original
     `case_triage.v1` demonstration stays on `keywords-v1`; this replaces PR #62's unbuilt plan to move it too.
-    Measurement and gap dispositions: [E2 evidence](docs/evidence/2026-11-11-e2-rules-v2.md).
+    Rules correct: 61/61 development, 105/116 edge, 22/40 held-out. Typhoon answered and completed all
+    217 cases; no case v1 got right regressed, and code checks passed. The same-answer replay matched the
+    saved artifact exactly. Measurement and gap dispositions: [E2 evidence](docs/evidence/2026-11-11-e2-rules-v2.md).
     The earlier v1 scorecard printed held-out mistakes to the previous developer; disclose that limitation
     and never add a keyword because of a held-out result. A change to the rules after measurement requires
     another version and new evidence. Main has not been merged or deployed by this work.
@@ -488,7 +495,7 @@ Notes for cloud sessions (claude.ai/code):
     needs, is built). The rest of 7.1 (who can read the AI key) needs an ADR first.
   - The effectiveness track (2026-11-10, PR #50, [docs/effectiveness_plan.md](docs/effectiveness_plan.md)): E1
     is built (PR #60) and waits for its measurement on Render (9.0 to 10.5 s before); E2 (Thai/English
-    rules v2) is implemented in PR #64, with measurement status in its evidence note; E3 (a real model
+    rules v2) is built and measured in PR #64, pending merge, with results and limits in its evidence note; E3 (a real model
     behind the page) is the owner's decision; E4 needs an ADR, E5 needs 5.6, E6 needs the owner to read
     each candidate.
   - The owner decides which phase or package comes next; ask before starting one.

@@ -353,8 +353,12 @@ planned: artifact store
   (`commit-emails` in *Secret scan*: a pull request fails, a push warns).
 - Built in PR #64 (E2, 2026-11-11): versioned Thai/English official rules, the retained v1 demo, matching and
   frozen-job checks, same-answer three-set comparison tooling, and updated mock and robustness gates.
-  Measurements and all 27 rules-gap dispositions are in the [E2 evidence](evidence/2026-11-11-e2-rules-v2.md);
-  the evidence states which live runs have completed. No Core file changed.
+  [Typhoon run 42890112701](https://github.com/narongdetpyou-ux/System_Neuron_flow_AI/actions/runs/42890112701)
+  answered all 217 cases and completed all workflows; local comparison replay exactly matched its artifact.
+  Rules correct: 61/61 development, 105/116 edge, 22/40 held-out, with no regressions from v1-correct cases.
+  Measurements and all 27 rules-gap dispositions are in the [E2 evidence](evidence/2026-11-11-e2-rules-v2.md).
+  Code checks passed. No Core file changed; the PR awaits the owner's merge instruction. The eight edge
+  cases where rules and Typhoon agree on a wrong category remain unflagged, so E5 is still open.
 - Open: retention and backup/restore drills (1.4, needs a disk), API authentication hardening (2.1, 7.2).
 
 **P2 (do not build early):** multi-tenancy, distributed workers, Postgres, object storage, SLAs, a hosted
@@ -371,7 +375,7 @@ dashboard.
 | C | Two-phase review, decision ledger, n8n notifications | Started 2026-11-10: the decision ledger and API (2.2) and the page's decision card and inbox (2.4), with the owner's shared key as the reviewer's credential (ADR-027); per-person tokens (2.1), the linked phase-B job (2.3) and n8n (2.5) open |
 | D | OpenTelemetry tracing, eval gates in CI | Done: the per-case eval gates (5.2 for triage; 3.3 for the study guide), queue/run-time figures (5.3), Sentry, request ids, and tracing (5.1, PR #30), with the first trace seen in Honeycomb on 2026-11-03. Added on 2026-11-07: the robustness benchmark, stage 1 of the plan in [benchmarking.md](benchmarking.md) (5.4, PR #41; its 8 bugs fixed in 5.5, PR #42); stages 2–3 (5.6, 5.7) planned |
 | E | Planner pattern (B), MCP server, second domain with zero Core changes | Open |
-| Effectiveness E2 | Versioned Thai/English rules for the official shadow suggestion | Built in PR #64, pending merge; original v1 demo retained; [measurement and gap dispositions](evidence/2026-11-11-e2-rules-v2.md) |
+| Effectiveness E2 | Versioned Thai/English rules for the official shadow suggestion | Built and measured in PR #64, pending merge; original v1 demo retained; all 217 cases answered in the three-set Typhoon run, no v1-correct case regressed; [measurement and gap dispositions](evidence/2026-11-11-e2-rules-v2.md) |
 | — | `study_guide.v1`: first-response study guide ([design_philosophy.md](design_philosophy.md), [study_guide.md](study_guide.md)) | Workflow and scorecard built: the topic catalog, the verified resource library, the weekly link check (3.1, PR #32), the five-step workflow in the catalog (3.2, PR #33) and the 67-request scorecard with its eval gate (3.3, PR #34), with the mock AI in CI; first live run with Typhoon on 2026-11-06: topic correct 46/48, 0 of 142 links outside the library ([evidence](evidence/2026-11-06-first-live-typhoon.md)); on the web page with a layered answer (3.4, PR #39; questions sent without a confirm card, ADR-023), tried by the owner on the live page on 2026-11-08 with the mock AI; Claude after D2 |
 
 The order of the remaining work, with tasks, acceptance checks and owner decisions for each step, is in
@@ -396,10 +400,12 @@ The order of the remaining work, with tasks, acceptance checks and owner decisio
 - The Sentry DSN that the smoke workflow carried until 2026-11-03 is still in the git history. It can only
   submit events. Before the repository went public on 2026-11-08, the owner replaced it with a new key and
   reported the old one disabled, and the 7 run logs that could print it were deleted (ROADMAP 7.4).
-- The only live-model results are Typhoon's first runs on the synthetic sets (2026-11-06, one or two runs
-  per scorecard, [evidence](evidence/2026-11-06-first-live-typhoon.md)) and one run of the 116 robustness edge
-  cases (2026-11-10: AI correct 104/116, rules 48/116,
-  [evidence](evidence/2026-11-10-effectiveness-baseline.md)). The cases and labels are the developer's,
+- The live-model results include Typhoon's first runs on the synthetic sets (2026-11-06, one or two runs
+  per scorecard, [evidence](evidence/2026-11-06-first-live-typhoon.md)), the first 116-case edge run
+  (2026-11-10: AI correct 104/116, [baseline](evidence/2026-11-10-effectiveness-baseline.md)) and the E2
+  three-set run (2026-11-11: AI correct 60/61 development, 103/116 edge and 40/40 held-out;
+  [E2 evidence](evidence/2026-11-11-e2-rules-v2.md)). The edge AI result varied by one case between runs;
+  the E2 v1/v2 comparison uses the same saved AI answers, not different runs. The cases and labels are the developer's,
   so they are a first measurement, not accuracy, and they describe that model only. Claude has not been run
   (D2). The local open model (ADR-026) has had two smoke runs on the first 5 items of each set and one full
   run of both sets (2026-11-08, [smoke](evidence/2026-11-08-first-local-model-smoke.md),

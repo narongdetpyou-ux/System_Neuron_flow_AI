@@ -40,7 +40,7 @@ differs, this file and architecture.md win.
   - **คนตัดสินเคสได้แล้ว** (ขั้น 2.2 และ 2.4): เคสที่ "รอคนตรวจ" มีการ์ด "ตัดสินเคสนี้" กด "อนุมัติ" (ใช้หมวดที่กฎเสนอหรือเลือกเอง) หรือ "ไม่อนุมัติ" พร้อมเหตุผล เคสจะเปลี่ยนเป็น "อนุมัติแล้ว" หรือ "ไม่อนุมัติ" ตัดสินแล้วแก้ไม่ได้ กดซ้ำก็ไม่บันทึกซ้ำ และด้านซ้ายมีรายการ "รอรีวิว" ที่เอาเคสด่วนขึ้นก่อน ตอนนี้ผู้ตัดสินคือผู้ถือรหัสเข้าใช้ร่วม คือคุณ (รหัสรายคนอยู่ในขั้น 2.1) ส่วนงานต่อเนื่องหลังอนุมัติ (2.3) ยังไม่ทำ
   - **ด่านปิดข้อมูลส่วนตัวบังคับที่ประตูส่งออกแล้ว**: ตัวกลางเรียก AI (gateway) ปิดข้อมูลซ้ำเองก่อนส่งทุกครั้ง ถ้ายังเจอข้อมูลที่ต้องปิด จะไม่ส่งเลย และโค้ดอื่นสร้างข้อความ "ผ่านการปิดแล้ว" ปลอมเองไม่ได้ ระหว่างทำเจอว่ากฎปิดข้อมูลเดิมปิดซ้ำแล้วได้ผลไม่เหมือนเดิมในบางข้อความ (เช่น "นางสาว" + ชื่อ) จึงแก้เป็นกฎรุ่น 2 (`redact-v2`) คำตอบในชุดข้อสอบทุกชุดเหมือนเดิม
   - **บอกตรง ๆ ว่าเก็บได้นานแค่ไหน**: บนแผนฟรี หน้าเว็บไม่พูดว่า "บันทึกถาวร" แล้ว เตือนก่อนส่งและบนเคสที่รอตัดสิน และถ้าระบบเริ่มใหม่ด้วยที่เก็บว่าง หน้าเว็บจะบอกว่าเคสที่คุณส่งจากเครื่องนี้หายไปกี่รายการ (จำแค่รหัสงาน ไม่จำข้อความเคส) ทางแก้ถาวรยังเป็นแผน Render แบบเสียเงิน (D1)
-  - **อีเมลส่วนตัวใน commit**: พบว่ายังเพิ่มขึ้นทุกครั้งที่กด Merge บน github.com (51 commit ตอนเปิดสาธารณะ ตอนนี้ 53) จึงเพิ่มช่องตรวจที่จับอีเมลส่วนตัวใน commit ใหม่ ทางหยุดคือการตั้งค่า 1 อย่างของคุณใน GitHub ส่วนการลบของเก่าออกจากประวัติเป็นการตัดสินใจของคุณ (D8 ข้างล่าง)
+  - **อีเมลส่วนตัวใน commit**: พบว่ายังเพิ่มขึ้นทุกครั้งที่กด Merge บน github.com (51 commit ตอนเปิดสาธารณะ ตอนนี้ 53) จึงเพิ่มช่องตรวจที่จับอีเมลส่วนตัวใน commit ใหม่ ทางหยุดคือการตั้งค่า 1 อย่างของคุณใน GitHub ส่วนของเก่าคุณเลือกเก็บประวัติไว้ตามเดิมแล้ว (D8 ข้างล่าง)
 - เคสแรกหลังระบบตื่นเคยใช้ราว 10 วินาที สาเหตุที่ยืนยันแล้วบนภาพจริงของบริการคือไม่มีไฟล์ที่แปลไว้ล่วงหน้า (bytecode cache) เลย โปรแกรมจึงต้องแปลโค้ดใหม่ทุกครั้งที่เริ่ม แก้แล้วใน PR #60 (งาน E1, 10 พ.ย.): บนเครื่องของ GitHub ที่จำกัดกำลังให้เท่าเครื่องฟรีของ Render เคสแรกเร็วขึ้นจาก 14.4 เป็น 3.1 วินาที ยังไม่ได้วัดบน Render จริง เพราะต้องรวม (merge) ก่อน ([บันทึกหลักฐาน](evidence/2026-11-10-e1-bytecode-cache.md))
 
 **ลำดับต่อจากนี้** แต่ละขั้นจบด้วยสิ่งที่คุณลองเองได้
@@ -54,8 +54,8 @@ differs, this file and architecture.md win.
 | 4 | ช่องคุยภาษาธรรมดา: ระบบเข้าใจว่าคุณขออะไร บอกตรง ๆ เมื่อเรื่องอยู่นอกกรอบ และถามกลับ 1 คำถามเมื่อข้อมูลไม่พอ | คุยกับระบบได้เลย ไม่ต้องเลือกประเภทงานเอง | ยังไม่เริ่ม (ขั้น 3 สร้างครบแล้ว เริ่มได้เมื่อคุณเลือก) |
 | 5 | ติดตามเส้นทางของแต่ละงาน (เวลา token จุดที่ช้า) ด่านตรวจผลรายเคส และแผนทดสอบ 3 ขั้นด้วยข้อมูลเปิด | ตัวเลขคิวและเวลาบนหน้าเว็บ ช่องตรวจบน PR แล้วต่อด้วยเส้นทางงานใน Honeycomb; ผลด่านความทนทานในหน้าสรุปของ *Core logic tests* | เสร็จแล้วทั้ง 5.1, 5.2, 5.3 และ 5.4; เส้นทางงานแรกเข้า Honeycomb เมื่อ 4 พ.ย. 00:23 น.; ด่านความทนทาน (5.4) รวมเข้า main แล้ว 7 พ.ย.; แก้ 8 bug ที่เจอแล้ว (5.5, PR #42 รวมแล้วเมื่อ 8 พ.ย.); E2 ใน PR #64 แก้จุดอ่อนของกฎได้ 24 จุด เหลือจุดอ่อนทั้งหมด 20 จุด แล้วขั้นข้อสอบกลาง (5.6) และขั้นโจมตีกับใช้งานจริง (5.7); 5.8 โมเดลเปิดที่รันเองบนเครื่องทดสอบของ GitHub สร้างแล้วใน PR #46 และรันเต็มรอบแรกแล้ว 8 พ.ย. (ดันเคสที่กฎผิดขึ้นคิวด่วนครบ 32/32) รอเจ้าของโปรเจกต์เลือกทาง |
 | 6 | AI วางแผนงานหลายขั้น ระบบตรวจแผนก่อนรัน และเครื่องมืออื่นเรียกใช้ผ่าน MCP ได้ | สั่งงานจากแอป Claude ได้ | ยังไม่เริ่ม (ต้องรอขั้น 2–4) |
-| 7 | เตรียมพร้อมก่อนให้คนอื่นใช้ หรือก่อนเปิด repo สาธารณะ | รายงานตรวจความปลอดภัย และรายการตรวจก่อนเปิดตัว | เริ่มแล้ว: 7.1 ปิดข้อมูลส่วนตัวก่อนส่งให้ AI ทำแล้ว และตั้งแต่ 10 พ.ย. ตัวกลางเรียก AI บังคับปิดซ้ำเองก่อนส่ง ส่วนการจำกัดว่าใครเห็นคีย์ AI ได้ เขียนแผนไว้ ยังไม่ทำ; 7.4 เสร็จ: repo นี้เป็นสาธารณะพร้อมประวัติทั้งหมดตั้งแต่ 8 พ.ย. (D5) เปลี่ยนคีย์ Sentry แล้ว และเปิดระบบสแกนคีย์ของ GitHub แล้ว; มีผู้ตรวจสอบอิสระอ่านโค้ดครั้งแรกเมื่อ 10 พ.ย. แก้ครบ 4 ข้อ ยกเว้นการลบอีเมลเก่าในประวัติที่รอคุณตัดสินใจ (D8) |
-| E | [แผนเพิ่มประสิทธิผล](effectiveness_plan.md) 6 งาน (E1–E6): เคสแรกหลังระบบตื่นเร็วขึ้น กฎรุ่น 2 ที่อ่านภาษาไทยได้ หน้าเว็บจริงใช้ AI จริง เก็บคำตอบ "เข้าใจถูกไหม" ให้ AI แยก "อื่น ๆ" ได้ดีขึ้น และคลังแหล่งเรียนที่มีภาษาไทยมากขึ้น | เวลาของเคสแรก ข้อเสนอหลักของเคสภาษาไทย และตัวนับ "เข้าใจถูก" บนหน้าเว็บ | เขียนแผนแล้วเมื่อ 10 พ.ย. ตามที่คุณขอ (PR #50); E1 สร้างแล้วใน PR #60 (10 พ.ย.): ภาพของบริการมีไฟล์ที่แปลไว้ล่วงหน้าครบแล้ว บนเครื่องของ GitHub ที่จำกัดกำลังให้เท่าเครื่องฟรี เคสแรกเร็วขึ้นจาก 14.4 เป็น 3.1 วินาที รอคุณสั่งรวมแล้วจะวัดบน Render จริง; E2 สร้างกฎภาษาไทยและการทดสอบต่อใน PR #64 ([ผลวัดและสถานะ](evidence/2026-11-11-e2-rules-v2.md)); E3 รอคุณตัดสินใจ |
+| 7 | เตรียมพร้อมก่อนให้คนอื่นใช้ หรือก่อนเปิด repo สาธารณะ | รายงานตรวจความปลอดภัย และรายการตรวจก่อนเปิดตัว | เริ่มแล้ว: 7.1 ปิดข้อมูลส่วนตัวก่อนส่งให้ AI ทำแล้ว และตั้งแต่ 10 พ.ย. ตัวกลางเรียก AI บังคับปิดซ้ำเองก่อนส่ง ส่วนการจำกัดว่าใครเห็นคีย์ AI ได้ เขียนแผนไว้ ยังไม่ทำ; 7.4 เสร็จ: repo นี้เป็นสาธารณะพร้อมประวัติทั้งหมดตั้งแต่ 8 พ.ย. (D5) เปลี่ยนคีย์ Sentry แล้ว และเปิดระบบสแกนคีย์ของ GitHub แล้ว; มีผู้ตรวจสอบอิสระอ่านโค้ดครั้งแรกเมื่อ 10 พ.ย. ตอบครบ 4 ข้อแล้ว และคุณเลือกเก็บประวัติอีเมลเก่าไว้ตามเดิม (D8) |
+| E | [แผนเพิ่มประสิทธิผล](effectiveness_plan.md) 6 งาน (E1–E6): เคสแรกหลังระบบตื่นเร็วขึ้น กฎรุ่น 2 ที่อ่านภาษาไทยได้ หน้าเว็บจริงใช้ AI จริง เก็บคำตอบ "เข้าใจถูกไหม" ให้ AI แยก "อื่น ๆ" ได้ดีขึ้น และคลังแหล่งเรียนที่มีภาษาไทยมากขึ้น | เวลาของเคสแรก ข้อเสนอหลักของเคสภาษาไทย และตัวนับ "เข้าใจถูก" บนหน้าเว็บ | เขียนแผนแล้วเมื่อ 10 พ.ย. ตามที่คุณขอ (PR #50); E1 สร้างแล้วใน PR #60 (10 พ.ย.): ภาพของบริการมีไฟล์ที่แปลไว้ล่วงหน้าครบแล้ว บนเครื่องของ GitHub ที่จำกัดกำลังให้เท่าเครื่องฟรี เคสแรกเร็วขึ้นจาก 14.4 เป็น 3.1 วินาที รวมแล้วเมื่อ 10 พ.ย. ยังรอวัดบน Render จริง; E2 สร้างและวัดครบใน PR #64: กฎถูก 61/61 ในชุดพัฒนา 105/116 ในชุดเคสยาก และ 22/40 ในชุดที่กันไว้ ([ผลวัดและข้อจำกัด](evidence/2026-11-11-e2-rules-v2.md)); E3 รอคุณตัดสินใจ |
 
 **เรื่องที่คุณต้องตัดสินใจเอง** อยู่ในตาราง [Owner decisions](#owner-decisions) ข้างล่าง เช่น
 - จะจ่ายค่า Render เพื่อให้เคสไม่หายหรือไม่
@@ -63,7 +63,6 @@ differs, this file and architecture.md win.
 - โมเดลเปิดที่รันเองบนเครื่องทดสอบของ GitHub ผ่าน พอใช้ หรือไม่ผ่าน หลังรอบเต็มรอบแรก (ขั้น 5.8)
 - ใครเป็นผู้รีวิว
 - จะเปิด repo เป็นสาธารณะเมื่อไร
-- จะลบอีเมลส่วนตัวของคุณออกจากประวัติ Git หรือไม่ และด้วยวิธีไหน (D8)
 - จะให้หน้าเว็บจริงใช้ AI จริง (Typhoon ฟรี) หรือไม่ และจะเริ่มงานไหนของแผนเพิ่มประสิทธิผลก่อน (E1–E6)
 
 ## How to use this file (for Claude Code)
@@ -141,7 +140,7 @@ Marks: ✅ done · 🟡 built or partly checked (the status says what is left) �
 | 7.5 | Consented pilot with real volunteers | ⬜ owner decision D4 | 7.1–7.3 |
 | 7.6 | The personal e-mail address in the public history | ✅ new commits checked in CI (2026-11-10); D8 decided the same day: the history stays as it is | — |
 | E1 | First case after a start: seconds, not ten ([effectiveness plan](effectiveness_plan.md)) | 🟡 built in PR #60 (2026-11-10): the image had no bytecode cache (0 of the 141 modules the Runner imports) and now carries one, required by *Service container*; in CI the first case went from 0.989 s to 0.256 s, and from 14.4 s to 3.1 s with the container held to 0.1 CPU ([evidence note](evidence/2026-11-10-e1-bytecode-cache.md)); on Render it was 9.0 to 10.5 s before, and the time after is measured once the PR is merged | — |
-| E2 | Rules v2: an official suggestion that reads Thai (also decides the 27 rules gaps of 5.5) | 🟡 implemented in PR #64 (2026-11-11): versioned Thai/English keywords, explicit English word matching, matching-only normalization, retained v1 demo, tests and both updated gates; three-set measurements and gap decisions in the [E2 evidence](evidence/2026-11-11-e2-rules-v2.md); required new three-set Typhoon run pending | — |
+| E2 | Rules v2: an official suggestion that reads Thai (also decides the 27 rules gaps of 5.5) | ✅ built and measured in PR #64 (2026-11-11), pending owner merge: rules 61/61 development (Thai 26/26), 105/116 edge, 22/40 held-out; Typhoon answered all 217 cases, no v1-correct case regressed, code checks passed; 24 original rules gaps fixed, 3 retained. Fewer elevated flags leave 8 jointly wrong edge cases unflagged as before (E5 open). [Evidence and same-answer comparison](evidence/2026-11-11-e2-rules-v2.md) | — |
 | E3 | A real model behind the online page | ⬜ owner decision (0.4, D7); today the page's mock finds the study topic for 2/48 | 0.1 |
 | E4 | Record the answer to "เข้าใจถูกไหม" | ⬜ planned | an ADR |
 | E5 | The edge of `other`, and a confidence that means something | ⬜ planned; today all 12 of Typhoon's edge-set mistakes are `other` cases, with `high` confidence on 116/116 | 5.6; the owner labels about 20 borderline requests |
@@ -1292,7 +1291,7 @@ workflow types.
 - **Status (2026-11-10): a first independent review, not yet 7.3.** The owner brought in an outside reviewer
   who read the code and docs at `f38c926`, with a focus on data and security risks, and did not test the running
   service. Four findings, all answered the same day
-  ([evidence](evidence/2026-11-10-independent-review-response.md)); D8 is left to the owner. 7.3 still needs the
+  ([evidence](evidence/2026-11-10-independent-review-response.md)); D8 was then decided: keep the history. 7.3 still needs the
   threat model and a review that also tests the service.
 
 ### 7.4 Public-release checklist (owner decision D5)
@@ -1471,7 +1470,7 @@ in the table above. The baseline they start from is in
 | Risk | What we do |
 |---|---|
 | The free plan forgets cases | The API and the page say so at every write, and the page counts what was lost after a wipe (ADR-029); D1 decides; Phase 2 needs the disk for real use |
-| Personal data in the public history | The owner's address is in 53 commits; CI checks new commits; the owner's GitHub setting stops new merges adding it; D8 decides about the old ones (7.6) |
+| Personal data in the public history | The owner's address is in 53 commits; CI checks new commits; the owner's GitHub setting stops new merges adding it; D8 keeps the old history as it is (7.6) |
 | One machine, one disk | Accepted (ADR-003, ADR-014); backups in 1.4; no scaling until a P2 item is justified |
 | AI cost or outage | Spend limit (D2), queue cap, rate limits, a graceful "unavailable" (ADR-012) |
 | A model is retired or changed | A new model is a new agent version: run the scorecard compare first and switch between runs. In-flight jobs fail as `configuration_changed`, by design |
