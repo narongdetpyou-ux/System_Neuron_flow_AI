@@ -19,7 +19,7 @@
   reviewer did not test the service on Render. This is not yet roadmap 7.3: there is no threat model, and the
   running service was not tested.
 - **Answered on:** the branch `claude/hopeful-volta-a6wfa4`, in one pull request with one commit per finding
-  (the session could push to one branch only). Tests: 392 on Python 3.13 in this session; CI runs them on 3.10 and 3.12.
+  (the session could push to one branch only). Tests: 394 on Python 3.13 in this session; CI runs them on 3.10 and 3.12.
 
 ## 1. A personal e-mail address in the public history (rated high)
 
@@ -80,10 +80,17 @@ The causes, each now a test in `tests/test_redaction.py`:
 - `Mr Smith0812345678`: the phone number glued to the name was masked only on a second pass, so `redact-v1`
   let it through.
 
-`redact-v2` runs the rules again until nothing changes (at most 8 rounds) and never takes `สาว` after `นาง` for
-a name. The last two are real gaps of `redact-v1` on glued text, now closed. All 61 triage answers, all 67 study
-answers and every robustness outcome are unchanged (the eval gates and the robustness gate pass against their
-baselines). Jobs admitted under `redact-v1` and interrupted by the deploy fail as `configuration_changed`, by
+`redact-v2` runs the rules again until nothing changes and never takes `สาว` after `นาง` for a name. The last two
+are real gaps of `redact-v1` on glued text, now closed. All 61 triage answers, all 67 study answers and every
+robustness outcome are unchanged (the eval gates and the robustness gate pass against their baselines).
+
+The first version of this fix stopped after 8 rounds. The automated review of PR #63 (Codex) showed that
+`คุณAa` + `Mr Bb` repeated 10 times exposes one name per round, so the last 3 names stayed unmasked and the
+gateway refused a case that had gone through `mask()`: the step failed and the case never reached review. Now
+the loop has no fixed limit. It always ends, because every match removes at least one character of the original
+text, so `len(text) + 1` rounds are enough; the 10-name chain needs 11, a chain of 300 names (1,524 characters)
+takes 79 ms, and a 500-character case, the longest allowed, under 10 ms. The same review found that the page
+cleared the decision card of another case when a slow reply arrived; that is fixed too (point 4). Jobs admitted under `redact-v1` and interrupted by the deploy fail as `configuration_changed`, by
 design (rule 5); on the free plan the deploy empties the queue anyway.
 
 ## 3. A 202 does not mean the case will stay (risk of loss)
@@ -115,7 +122,9 @@ the page a decision card on every waiting case and a "รอรีวิว" lis
 `tests/test_service_reviews.py` (28 tests): a decision applies once per version; 16 identical clicks make one
 decision; 16 different decisions at once let one win; a failure injected mid-transaction leaves the decision,
 the review and the job unchanged; no key or a wrong key is denied; the reason never reaches events or logs.
-Checked in a headless browser on desktop and phone widths.
+Checked in a headless browser on desktop and phone widths, and once with the decision reply delayed by 3 s while
+the person opened another case and started its card: that card kept its choice and its text (the first version
+cleared it; found by the automated review of PR #63).
 
 **Left.** Built before per-person tokens (2.1), so the reviewer recorded is the holder of the shared key, the
 owner (D3's default). The linked follow-up job with a Core receipt after an approval (2.3) is not built. On the

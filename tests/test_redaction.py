@@ -118,6 +118,17 @@ class IdempotenceTests(unittest.TestCase):
                 self.assertEqual((once.text, once.counts), (expected_text, expected_counts))
                 self.assertEqual(redaction.leftover(once.text), {})
 
+    def test_a_long_chain_of_glued_names_is_masked_to_the_end(self):
+        # Each placeholder opens a word boundary for the next title, so this exposes one name per round. A fixed
+        # limit of 8 rounds left the last names unmasked, and the gateway then refused a case that went through
+        # mask() (found by the automated review of PR #63).
+        for repeats in (10, 120):
+            with self.subTest(repeats=repeats):
+                masked = mask("คุณAa" + "Mr Bb" * repeats + " cannot upload file")
+                self.assertEqual(masked.counts, {"name": repeats + 1})
+                self.assertEqual(redaction.leftover(masked.text), {})
+                self.assertEqual(structured_answer(LLMConfig(), PROMPT, masked)["answer"]["category"], "upload")
+
     def test_masking_twice_changes_nothing_on_random_text(self):
         pieces = list("0123456789๐๑ -.+()@,;:\n") + [
             "Mr", "Mrs", "Dr.", " Smith", "นาย", "นาง", "นางสาว", "น.ส.", "คุณ", "นามสกุล", "สมหญิง", " ใจดี",

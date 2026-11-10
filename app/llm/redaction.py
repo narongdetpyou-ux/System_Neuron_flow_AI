@@ -38,7 +38,8 @@ part of the AI agent's version: changing these rules is a new version, like a pr
 Masking masked text again changes nothing, and the gateway relies on that. ``redact-v2`` fixed two inputs
 where it did not hold in ``redact-v1``: ``นางสาว`` + a name masked again as ``นาง`` + the "name" ``สาว``, and a
 name glued to an English title (``คุณZsMr Yaa``) or a number glued to a name (``Smith0812345678``) that only
-the second pass saw. The rules now run again until nothing changes, and ``สาว`` after ``นาง`` is never a name.
+the second pass saw. The rules now run again until nothing changes (with no fixed limit, see :func:`mask`), and
+``สาว`` after ``นาง`` is never a name.
 """
 
 import re
@@ -48,7 +49,6 @@ KINDS = ("email", "thai_id", "card", "phone", "number", "name")
 PLACEHOLDER = {"email": "[EMAIL]", "thai_id": "[THAI_ID]", "card": "[CARD]", "phone": "[PHONE]",
                "number": "[NUMBER]", "name": "[NAME]"}
 MIN_DIGITS = 9
-_ROUNDS = 8  # the rules run again until nothing changes (masking one item can expose another)
 
 _EMAIL = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}")
 # Digit groups with one separator between them; not glued to Latin letters or other digits. Thai letters
@@ -208,8 +208,13 @@ def _mask_once(text, count):
 def mask(text):
     """Return a :class:`MaskedText`. Masking masked text again changes nothing.
 
-    The rules run again while they still change the text (at most ``_ROUNDS`` times): masking a name can free a
-    number that was glued to it (``Smith0812345678``), and a placeholder can open a word boundary for a title.
+    The rules run again until they change nothing: masking a name can free a number that was glued to it
+    (``Smith0812345678``), and a placeholder can open a word boundary for the next title (``คุณAaMr BbMr Cc…``
+    exposes one more name per round). This always ends: every match takes at least one character of the original
+    text (a placeholder holds no digit, no ``@``, no Thai letter and no capital followed by a small letter, so no
+    rule matches inside one), so a round that changes the text leaves fewer original characters than the round
+    before. ``len(text) + 1`` rounds are therefore enough for any text; the loop stops as soon as a round changes
+    nothing, which for ordinary text is the second round.
     """
     if not isinstance(text, str):
         raise TypeError("mask() takes text")
@@ -219,7 +224,7 @@ def mask(text):
         counts[kind] = counts.get(kind, 0) + 1
         return PLACEHOLDER[kind]
 
-    for _round in range(_ROUNDS):
+    for _round in range(len(text) + 1):
         masked = _mask_once(text, count)
         if masked == text:
             break

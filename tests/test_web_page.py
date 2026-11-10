@@ -237,6 +237,21 @@ class ReviewAndRetentionTests(unittest.TestCase):
         self.assertIn("JOB_ID.test(job.job_id)", remember)
         self.assertNotRegex(remember, r"summary|message|input|reason")
 
+    def test_a_late_reply_never_clears_another_cases_decision_card(self):
+        # Found by the automated review of PR #63: a reply for case A cleared the card the person had started
+        # filling on case B meanwhile. Only the request's own card may be cleared or redrawn.
+        submit = SCRIPT[SCRIPT.index("async function submitDecision"):]
+        submit = submit[:submit.index("\n  }\n")]
+        marker = "const stillOpen = state.review === form;"
+        self.assertIn(marker, submit)
+        after_reply = submit[submit.index(marker):]  # before it, the card being checked is the one on screen
+        touches = [line.strip() for line in after_reply.splitlines()
+                   if "state.review = null" in line or "renderThread(true)" in line]
+        self.assertTrue(touches)
+        for line in touches:
+            with self.subTest(line=line):
+                self.assertIn("if (stillOpen)", line)
+
     def test_the_page_never_says_who_decides(self):
         submit = SCRIPT[SCRIPT.index("async function submitDecision"):]
         submit = submit[:submit.index("\n  }\n")]

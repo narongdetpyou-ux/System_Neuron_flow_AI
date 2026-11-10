@@ -1,6 +1,6 @@
 # Intake API, job queue, Runner and web page (round 2, Milestone B)
 
-**Status:** built in PR #11 and tested offline (392 tests on 2026-11-10, including killing the Runner
+**Status:** built in PR #11 and tested offline (394 tests on 2026-11-10, including killing the Runner
 mid-step). The container build is checked on every push by *Actions → Service container*. Live on
 Render's free plan since 2026-11-01 (`render.yaml`). Railway was the first choice, but it has paused new
 sign-ups since 22 Oct 2026 after a security incident; `railway.json` stays in the repository for later.
@@ -228,7 +228,8 @@ container: app.boot (root) ─becomes─► tini ─► python -m app.serve
   allowed), a reason box (the limit comes from `status.reviews.reason_max_chars`) and "บันทึก". The card's
   choice and text live in page state, so the 4-second refresh never wipes what is typed. Its idempotency key
   stays the same while the choice and the reason do, so pressing "บันทึก" again after a lost reply cannot
-  record a second decision; a 409 reloads the case to show who decided. The page never sends who decides. A
+  record a second decision; a 409 reloads the case to show who decided. A reply that comes back after the
+  person opened another case clears or redraws only its own card, never the one on screen. The page never sends who decides. A
   "รอรีวิว" box in the left column lists pending reviews from `GET /v1/reviews` (elevated first, marked "ด่วน"),
   loaded only while `status.reviews.PENDING` is above 0. A decided case shows "คนตัดสินแล้ว" with the queue,
   the reason, who and when; the Trace names `review.approved` and `review.rejected`.

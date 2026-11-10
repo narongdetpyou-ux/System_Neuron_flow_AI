@@ -1231,19 +1231,23 @@
     }
     form.sending = false;
     if (result && handleAccessProblem(result)) return;
+    // The person may have opened another case while this request was in flight, and started filling its card:
+    // only this request's own card is cleared or redrawn, never the one on screen now.
+    const stillOpen = state.review === form;
     if (result && (result.status === 201 || result.status === 200)) {
       const decided = result.data.decision || {};
       toast(`บันทึกการตัดสินแล้ว: ${DECISION[decided.decision] || decided.decision}` +
         (decided.final_queue ? ` → ${QUEUE[decided.final_queue] || decided.final_queue}` : ""));
-      state.review = null;
+      if (stillOpen) state.review = null;
     } else if (result && result.status === 409) {
       toast(API_ERROR[result.data.error] || "เคสนี้ตัดสินไม่ได้แล้ว");
-      state.review = null;  // the reload below shows what the case looks like now
+      if (stillOpen) state.review = null;  // the reload below shows what the case looks like now
     } else {
       form.error = !result ? "บันทึกไม่สำเร็จ เพราะติดต่อระบบไม่ได้ กดบันทึกอีกครั้งได้เลย ถ้าครั้งก่อนไปถึงแล้ว ระบบจะไม่บันทึกซ้ำ"
         : (API_ERROR[result.data.error] || result.data.message || `ระบบตอบกลับ ${result.status}`) +
           (result.data.error === "rate_limited" ? ` รอ ${result.data.retry_after_s || 60} วินาทีแล้วลองใหม่` : "");
-      renderThread(true);
+      if (stillOpen) renderThread(true);
+      else toast("บันทึกการตัดสินของเคสก่อนหน้าไม่สำเร็จ: " + form.error);
       return;
     }
     await refreshStatus();
