@@ -162,6 +162,8 @@ b, strong { font-weight: 600; }
   font-size: 13.5px;
 }
 .banner.warn { background: var(--warn-bg); color: var(--warn); box-shadow: 0 1px 0 var(--warn-line); }
+.banner.lost { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: baseline; }
+.banner.lost .link-button { color: var(--warn); }
 
 .brand { display: flex; align-items: center; gap: 9px; }
 .brand-mark {
@@ -239,6 +241,12 @@ b, strong { font-weight: 600; }
 .st-cancelled { color: var(--muted-2); }
 .side-empty { padding: 8px; color: var(--muted); font-size: 12.5px; }
 .more { align-self: center; }
+/* cases that wait for a person's decision (roadmap 2.4) */
+.inbox { display: flex; flex-direction: column; gap: 2px; padding: 8px 4px 6px; border-radius: var(--radius); background: var(--warn-bg); box-shadow: 0 0 0 1px var(--warn-line); }
+.inbox-title { margin: 0 4px 2px; font-size: 12px; font-weight: 500; color: var(--warn); }
+.inbox-title .n { color: var(--text-2); font-variant-numeric: tabular-nums; }
+.inbox-list { display: flex; flex-direction: column; gap: 2px; max-height: 30vh; overflow-y: auto; }
+.inbox-item .tag { flex: none; padding: 0 6px; font-size: 10.5px; }
 
 .system-box {
   display: flex; flex-direction: column; gap: 6px;
@@ -344,12 +352,17 @@ b, strong { font-weight: 600; }
 }
 .run-foot .right { margin-left: auto; color: var(--muted-2); font-size: 11.5px; }
 .run-foot .ok { color: var(--ok); }
+.run-foot .warn { color: var(--warn); }
 .run-foot .form-error { flex-basis: 100%; margin: 0; }
 
 /* result: what the system proposes to the person who decides */
 .verdict { padding: 14px 16px; border-radius: 10px; background: var(--accent-900); box-shadow: 0 0 0 1px var(--accent-800); }
 .verdict .label { font-size: 12px; color: var(--accent-300); }
 .verdict .big { font-size: 19px; font-weight: 500; margin: 2px 0 8px; color: var(--text); }
+.verdict.decided { background: var(--ok-bg); box-shadow: 0 0 0 1px var(--line-2); }
+.verdict.decided .label { color: var(--ok); }
+.verdict.decided.rejected { background: var(--surface-2); }
+.verdict.decided.rejected .label { color: var(--text-2); }
 .verdict.failed { background: var(--err-bg); box-shadow: 0 0 0 1px var(--err-line); }
 .verdict.failed .label { color: var(--err-ink); }
 .verdict.failed .big { color: var(--err); }
@@ -670,3 +683,12 @@ details.layer > .kv { padding: 0; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
+
+/* the decision card of a case that waits for a person (roadmap 2.4) */
+.decide { display: flex; flex-direction: column; gap: 8px; padding: 14px 16px; border-radius: 10px; background: var(--surface-2); box-shadow: 0 0 0 1px var(--warn-line); }
+.decide h3 { margin: 0; font-size: 14px; font-weight: 500; color: var(--warn); }
+.decide label { font-size: 12.5px; color: var(--muted); }
+.decide textarea { resize: vertical; min-height: 4.5em; }
+.decide .seg.decide-choice { margin-left: 0; align-self: flex-start; }
+.decide .seg-opt { padding: 6px 16px; font-size: 13px; }
+.decide .form-error { margin: 0; }

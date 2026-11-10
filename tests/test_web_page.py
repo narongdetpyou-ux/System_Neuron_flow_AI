@@ -10,7 +10,10 @@ what the service and the study guide promise:
    study answer can carry, equal to the study guide's own Thai labels where it has them;
 4. the page never inserts server data as HTML, links only to https addresses that the library could hold,
    opens them without passing on where the person came from, and has no inline script or style;
-5. the script parses (with Node.js, when it is installed: GitHub's runners have it).
+5. the script parses (with Node.js, when it is installed: GitHub's runners have it);
+6. reviews and retention (the independent review of 2026-11-10, points 3 and 4): every job status, decision and
+   review error has Thai words; the page never says "saved permanently" without checking the storage; the browser
+   keeps only the access key and job ids, never case text; and who decides is never sent from the page.
 
 A headless-browser walkthrough of the page itself is described in docs/intake_queue.md.
 """
@@ -30,7 +33,9 @@ from app.domains.study_guide.contracts import (ANSWER_LANGUAGES, ANSWER_STATUSES
                                                MESSAGE_MIN_CHARS, PRIORITY_LABELS)
 from app.domains.study_guide.library import ACCESS, KINDS, LANGUAGES, LEVELS
 from app.llm import LLMConfig
-from app.persistence import QueueStore
+from app.domains.case_triage.contracts import CATEGORIES
+from app.persistence import STATUSES, QueueStore
+from app.services.reviews import DECISIONS
 from app.services.workflows import CATALOG, check_case, preview_spec
 from examples.study_guide_demo import REQUESTS as DEMO_REQUESTS
 from tests.service_fixtures import settings
@@ -202,3 +207,57 @@ class SafetyTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ReviewAndRetentionTests(unittest.TestCase):
+    def test_every_status_decision_and_review_error_has_thai_words(self):
+        self.assertEqual(set(js_table("STATUS")), set(STATUSES))
+        self.assertEqual(set(js_table("DECISION")), set(DECISIONS))
+        self.assertTrue(set(CATEGORIES) <= set(js_table("CATEGORY")))
+        errors = js_table("API_ERROR")
+        for code in ("invalid_decision", "invalid_category", "invalid_reason", "invalid_version", "already_decided",
+                     "version_conflict", "not_reviewable", "review_not_found", "idempotency_conflict", "rate_limited"):
+            with self.subTest(code=code):
+                self.assertIn(code, errors)
+        for status in ("APPROVED", "REJECTED"):
+            self.assertIn(f'"{status}"', SCRIPT[SCRIPT.index("const TERMINAL"):SCRIPT.index("const CASE_ID")])
+
+    def test_permanent_storage_is_only_claimed_after_checking_it(self):
+        # Before 2026-11-10 the page said "บันทึกถาวรแล้ว" (saved permanently) on Render's free plan, which forgets.
+        for line in SCRIPT.splitlines():
+            if "บันทึกถาวร" in line:
+                with self.subTest(line=line.strip()[:80]):
+                    self.assertTrue("persistent()" in line or "persistent ?" in line, line)
+
+    def test_the_browser_keeps_the_key_and_job_ids_only(self):
+        writes = re.findall(r"(localStorage|sessionStorage)\.setItem\(([A-Z_]+)", SCRIPT)
+        self.assertEqual({name for _store, name in writes}, {"KEY_STORAGE", "SENT_STORAGE"})
+        remember = SCRIPT[SCRIPT.index("function rememberSent"):]
+        remember = remember[:remember.index("\n  }\n")]
+        self.assertIn("JOB_ID.test(job.job_id)", remember)
+        self.assertNotRegex(remember, r"summary|message|input|reason")
+
+    def test_a_late_reply_never_clears_another_cases_decision_card(self):
+        # Found by the automated review of PR #63: a reply for case A cleared the card the person had started
+        # filling on case B meanwhile. Only the request's own card may be cleared or redrawn.
+        submit = SCRIPT[SCRIPT.index("async function submitDecision"):]
+        submit = submit[:submit.index("\n  }\n")]
+        marker = "const stillOpen = state.review === form;"
+        self.assertIn(marker, submit)
+        after_reply = submit[submit.index(marker):]  # before it, the card being checked is the one on screen
+        touches = [line.strip() for line in after_reply.splitlines()
+                   if "state.review = null" in line or "renderThread(true)" in line]
+        self.assertTrue(touches)
+        for line in touches:
+            with self.subTest(line=line):
+                self.assertIn("if (stillOpen)", line)
+
+    def test_the_page_never_says_who_decides(self):
+        submit = SCRIPT[SCRIPT.index("async function submitDecision"):]
+        submit = submit[:submit.index("\n  }\n")]
+        body = re.search(r"const body = (\{[^}]*\})", submit).group(1)
+        fields = {part.split(":")[0].strip() for part in body.strip("{} ").split(",")}
+        self.assertEqual(fields, {"decision", "reason", "expected_version"})
+        self.assertNotRegex(submit, r"reviewer|token_id|role")
+        self.assertIn('id="inbox"', PAGE)
+        self.assertIn('id="lost-banner"', PAGE)

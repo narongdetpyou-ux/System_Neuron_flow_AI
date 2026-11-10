@@ -13,6 +13,11 @@
 </head>
 <body>
   <div class="banner" id="banner" role="alert" hidden></div>
+  <!-- Shown when the queue started empty again (a new store id): the cases this browser sent before are gone. -->
+  <div class="banner warn lost" id="lost-banner" role="status" hidden>
+    <span id="lost-text"></span>
+    <button type="button" class="link-button" id="lost-dismiss">รับทราบ</button>
+  </div>
 
   <!-- Access gate: the page holds no secrets until the owner types the access key. -->
   <main class="gate-wrap" id="gate" hidden>
@@ -50,6 +55,11 @@
       <button type="button" class="btn btn-primary new-case" id="new-case">＋ เคสใหม่</button>
       <div class="counts" id="counts" aria-label="จำนวนเคสตามสถานะ"></div>
       <p class="queue-age" id="queue-age" hidden></p>
+      <!-- Cases that wait for a person's decision, elevated first (roadmap 2.4). -->
+      <section class="inbox" id="inbox" aria-labelledby="inbox-title" hidden>
+        <h2 class="inbox-title" id="inbox-title">รอรีวิว <span class="n" id="inbox-count"></span></h2>
+        <nav class="inbox-list" id="inbox-list" aria-label="เคสที่รอคนตัดสิน"></nav>
+      </section>
       <nav class="job-list" id="job-list" aria-label="เคสล่าสุด"></nav>
       <p class="side-empty" id="queue-empty" hidden>ยังไม่มีเคส ลองพิมพ์เคสแรกในช่องแชท</p>
       <button type="button" class="btn btn-ghost more" id="queue-more" hidden>โหลดเพิ่ม</button>

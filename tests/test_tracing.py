@@ -383,7 +383,7 @@ def a_job(*, status="REVIEW_REQUIRED", claims=1, failure=None, ai=None, spec=Tru
 
 def ai_view(**overrides):
     view = {"status": "ok", "provider": "mock", "model": "mock-keyword-1", "served_model": "mock-keyword-1",
-            "prompt_id": "triage_classify_v1", "prompt_sha256": "ab" * 32, "redaction": "redact-v1", "attempt": 1,
+            "prompt_id": "triage_classify_v1", "prompt_sha256": "ab" * 32, "redaction": "redact-v2", "attempt": 1,
             "masked": {"email": 1, "phone": 2}, "usage": {"input_tokens": 314, "output_tokens": 31, "estimated": True},
             "latency_ms": 250.0}
     view.update(overrides)

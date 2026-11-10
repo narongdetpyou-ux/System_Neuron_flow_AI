@@ -31,3 +31,10 @@ class LLMConfigError(PermanentAgentError):
 
 class LLMRequestError(PermanentAgentError):
     """The provider rejected the request itself (for example HTTP 400 or 413)."""
+
+
+class UnmaskedText(PermanentAgentError):
+    """The gateway refused to send text that its masking rules would still change (roadmap 7.1).
+
+    Text from ``redaction.mask`` never causes it. It means code tried to send text around the masking step; the
+    step fails at once, loudly, and nothing is sent. The message names the kinds found, never the values."""

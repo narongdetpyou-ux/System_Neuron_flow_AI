@@ -89,7 +89,7 @@ class PromptAndConfigTests(unittest.TestCase):
         tag = LLMConfig().version_tag(PROMPT)
         self.assertIn("llm=mock/mock-keyword-1", tag)
         self.assertIn(PROMPT.sha256, tag)
-        self.assertTrue(tag.endswith(";redaction=redact-v1"))  # the masking rules are part of the version
+        self.assertTrue(tag.endswith(";redaction=redact-v2"))  # the masking rules are part of the version
         self.assertNotEqual(tag, LLMConfig(model="mock-keyword-2").version_tag(PROMPT))
 
 

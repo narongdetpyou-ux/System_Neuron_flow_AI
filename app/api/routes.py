@@ -9,6 +9,9 @@
   GET  /v1/jobs/{job_id}          status, step plan, reviewer proposal, step timeline, AI provenance
   GET  /v1/jobs/{job_id}/events   bounded pages: ?after=<seq>&limit=1-100
   POST /v1/jobs/{job_id}/cancel   withdraw a job that is still QUEUED: 200, or 409 not_cancellable
+  GET  /v1/reviews                cases waiting for a person: ?state=PENDING|APPROVED|REJECTED&limit=1-100&after=
+  GET  /v1/reviews/{review_id}    the case, the proposal (rules, AI second opinion, why raised), every decision
+  POST /v1/reviews/{review_id}/decisions   approve or reject: 201 new, 200 the same decision again, 400/404/409
 
 Every ``/v1`` route needs ``Authorization: Bearer <NEURON_FLOW_ACCESS_KEY>``. Responses never contain
 file paths, credentials or stack traces. Every response carries ``X-Request-Id``: a well-formed id the
@@ -19,8 +22,13 @@ When tracing is on (``app.observability.tracing``), every ``/v1`` request also b
 that a request admits records that span as its parent, so the Runner's spans of the job join the same
 trace. The page files and ``/healthz`` are not traced.
 
-The API only reads, admits and cancels jobs that are still queued; it never opens the Core ``Runtime``
-(ADR-001).
+The API only reads, admits and cancels jobs that are still queued, and records people's review decisions in the
+queue database (``app.services.reviews``); it never opens the Core ``Runtime`` (ADR-001).
+
+Retention is stated, not implied: ``/v1/status``, every new job's reply and every decision's reply carry
+``retention`` (whether the data folder survives a restart, and the queue database's ``store_id``). On storage
+that is not persistent (Render's free plan) a 202 means "stored until the next sleep, restart or deploy", and the
+page uses ``store_id`` to tell people when the cases they sent are gone (review of 2026-11-10, point 3).
 """
 
 from dataclasses import dataclass, field
@@ -40,11 +48,12 @@ from app.domains.case_triage.contracts import SUMMARY_MAX_CHARS, SUMMARY_MIN_CHA
 from app.domains.study_guide.contracts import MESSAGE_MAX_CHARS, MESSAGE_MIN_CHARS
 from app.llm import LLMConfig, LLMConfigError
 from app.observability.tracing import Tracing, parse_traceparent
-from app.persistence import QUEUED, StateError
+from app.persistence import DECIDED, PENDING, QUEUED, REVIEW_REQUIRED, StateError
 from app.persistence.queue_store import iso
 from app.services.admission import AdmissionError, admit
 from app.services.metrics import queue_metrics
 from app.services.results import plan_view
+from app.services import reviews as review_service
 from app.services.workflows import CATALOG, DEFAULT_WORKFLOW, preview_spec
 from app.settings import MIN_ACCESS_KEY_LENGTH
 
@@ -53,7 +62,9 @@ from .limits import RateLimiter
 MAX_BODY_BYTES = 16 * 1024
 WEB_DIR = Path(__file__).resolve().parent.parent / "web"
 JOB_PATH = re.compile(r"^/v1/jobs/(job_[0-9a-f]{24})(/events|/cancel)?$")
-JOB_ID_TEXT = re.compile(r"job_[0-9a-f]{24}")
+JOB_ID_TEXT = re.compile(r"(?:job|rev)_[0-9a-f]{24}")  # a review id is named after its job, so it counts as one
+REVIEW_PATH = re.compile(r"^/v1/reviews/(rev_[0-9a-f]{24})(/decisions)?$")
+LOST_ON = ("sleep", "restart", "deploy")  # what wipes a data folder that is not persistent (Render's free plan)
 # A client may send its own id: 1-64 characters, letters, digits, '.', '_' or '-'. Nothing else reaches the logs.
 REQUEST_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$")
 _ASSETS = {"/": ("index.html", "text/html; charset=utf-8"),
@@ -121,6 +132,7 @@ class ApiApp:
         key = settings.access_key
         self._key_digest = hashlib.sha256(key.encode("utf-8")).digest() if key else None
         self._submit_limit = RateLimiter(settings.submit_per_minute, 60, total_capacity=settings.submit_per_minute * 4)
+        self._decide_limit = RateLimiter(settings.submit_per_minute, 60, total_capacity=settings.submit_per_minute * 4)
         self._auth_limit = RateLimiter(10, 60)
         self._assets = {path: ((WEB_DIR / name).read_bytes(), content_type)
                         for path, (name, content_type) in _ASSETS.items()}
@@ -131,8 +143,9 @@ class ApiApp:
     def request_id(self, headers):
         """The id for one request: the client's ``X-Request-Id`` if it is safe to log, else a new one.
 
-        Refused (and replaced): anything malformed, anything that contains a job id (access lines never
-        carry job ids), and the access key itself (a client that confuses the two headers).
+        Refused (and replaced): anything malformed, anything that contains a job or review id (access lines
+        never carry job ids, and a review id is named after its job), and the access key itself (a client that
+        confuses the two headers).
         """
         sent = headers.get("x-request-id", "").strip()
         if not REQUEST_ID.fullmatch(sent) or JOB_ID_TEXT.search(sent):
@@ -175,6 +188,13 @@ class ApiApp:
             if method == "POST":
                 return self._submit(request)
             return self._list(request) if reading else _not_allowed("GET, HEAD, POST")
+        if path == "/v1/reviews":
+            return self._reviews(request) if reading else _not_allowed("GET, HEAD")
+        review_match = REVIEW_PATH.fullmatch(path)
+        if review_match is not None:
+            if review_match.group(2):
+                return self._decide(request, review_match.group(1)) if method == "POST" else _not_allowed("POST")
+            return self._review(review_match.group(1)) if reading else _not_allowed("GET, HEAD")
         match = JOB_PATH.fullmatch(path)
         if match is None:
             return error(404, "not_found", "No such API route")
@@ -249,6 +269,8 @@ class ApiApp:
             "ai": {**llm, "simulated": llm.get("provider") == "mock", "problem": problem},
             "tracing": self.tracing.status(),
             "storage": {"kind": self.settings.storage, "persistent": self.settings.persistent},
+            "retention": self._retention(),
+            "reviews": {**self.store.review_counts(), **review_service.policy()},
             # A case's summary (case_triage) and a study request's message (study_guide.v1), checked at admission.
             "limits": {"max_queued": self.settings.max_queued, "submit_per_minute": self.settings.submit_per_minute,
                        "summary_min_chars": SUMMARY_MIN_CHARS, "summary_max_chars": SUMMARY_MAX_CHARS,
@@ -279,7 +301,8 @@ class ApiApp:
         except AdmissionError as exc:
             headers = [("Retry-After", "60")] if exc.status == 503 else []
             return error(exc.status, exc.code, exc.message, headers=headers, **exc.extra)
-        return json_response(202 if created else 200, {**self._job_view(job), "created": created},
+        return json_response(202 if created else 200,
+                             {**self._job_view(job), "created": created, "retention": self._retention()},
                              [("Location", f"/v1/jobs/{job['job_id']}")])
 
     def _cancel(self, request, job_id):
@@ -306,6 +329,58 @@ class ApiApp:
             return error(409, "not_cancellable", "Only a job that is still waiting in the queue can be cancelled",
                          job_status=str(exc))
         return json_response(200, {**self._job_view(job), "changed": changed})
+
+    def _reviews(self, request):
+        raw_state = (request.query.get("state") or [PENDING])[-1]
+        state = review_service.known_state(raw_state)
+        if state is None:
+            raise BadParameter("state must be PENDING, APPROVED or REJECTED")
+        limit = _int_param(request, "limit", 20, 1, 100)
+        raw_after = (request.query.get("after") or [None])[-1]
+        after = review_service.parse_after(raw_after) if raw_after is not None else None
+        if raw_after is not None and after is None:
+            raise BadParameter("after must be the next_after value of the previous page")
+        items, next_after = self.store.list_reviews(state=state, limit=limit, after=after)
+        return json_response(200, {"state": state, "reviews": [review_service.review_summary(item) for item in items],
+                                   "next_after": f"{next_after[0]}-{next_after[1]}" if next_after else None,
+                                   "counts": self.store.review_counts()})
+
+    def _review(self, review_id):
+        review = self.store.get_review(review_id)
+        if review is None:
+            return error(404, "review_not_found", "No review with this id")
+        return json_response(200, review_service.review_detail(review))
+
+    def _decide(self, request, review_id):
+        """A person's decision. The reviewer comes from the credential (today: the shared key, the owner)."""
+        content_type = request.headers.get("content-type", "").split(";", 1)[0].strip().lower()
+        if content_type != "application/json":
+            return error(415, "unsupported_media_type", "Send JSON with Content-Type: application/json")
+        if len(request.body) > MAX_BODY_BYTES:
+            return error(413, "body_too_large", f"The body is larger than {MAX_BODY_BYTES} bytes")
+        allowed, retry = self._decide_limit.allow(request.client)
+        if not allowed:
+            return error(429, "rate_limited", "Too many decisions; wait and try again",
+                         headers=[("Retry-After", str(retry))], retry_after_s=retry)
+        try:
+            body = decode(request.body)
+        except ValueError:  # a SpecError, or any other parse failure: the client's input, never a 500
+            return error(400, "invalid_json", "The body is not valid JSON, or it repeats a field")
+        try:
+            review, row, created = review_service.decide(self.store, review_id, body, request_id=request.request_id)
+        except review_service.DecisionError as exc:
+            return error(exc.status, exc.code, exc.message, **exc.extra)
+        return json_response(201 if created else 200,
+                             {"created": created, "decision": review_service.decision_view(row),
+                              "review": review_service.review_detail(review), "retention": self._retention()},
+                             [("Location", f"/v1/reviews/{review_id}")])
+
+    def _retention(self):
+        """How long what the API just stored will last: persistent storage, or until the next wipe."""
+        persistent = self.settings.persistent
+        store = self.store.store_info()
+        return {"persistent": persistent, "lost_on": [] if persistent else list(LOST_ON),
+                "store_id": store["id"], "store_started_at": store["created_at"]}
 
     def _list(self, request):
         limit = _int_param(request, "limit", 20, 1, 100)
@@ -357,6 +432,9 @@ class ApiApp:
             # The plan frozen when the Runner claimed the job: what it really runs. None while queued.
             view["plan"] = plan_view(job["spec"]) if job["spec"] else None
             view["result"] = job["result"]
+            # A person's review: waiting (REVIEW_REQUIRED) or decided (APPROVED, REJECTED); None for other jobs.
+            view["human_review"] = (review_service.job_review_view(self.store.review_of_job(job["job_id"]))
+                                    if job["status"] == REVIEW_REQUIRED or job["status"] in DECIDED else None)
         else:
             view["summary_preview"] = (case.get("summary") or case.get("message") or "")[:90]
         return view
@@ -380,8 +458,8 @@ def _int_param(request, name, default, low, high):
 
 
 def route_label(path):
-    """Path for log lines, with job ids replaced, so logs stay short and comparable."""
-    return re.sub(r"job_[0-9a-f]{24}", "{job_id}", path)[:100]
+    """Path for log lines, with job and review ids replaced, so logs stay short and comparable."""
+    return re.sub(r"rev_[0-9a-f]{24}", "{review_id}", re.sub(r"job_[0-9a-f]{24}", "{job_id}", path))[:100]
 
 
 def traced(path):
@@ -393,7 +471,10 @@ def route_template(path):
     """The route of an API path as a fixed template (``/v1/jobs/{job_id}``), or ``None`` for an unknown path.
 
     Spans carry this, never the path itself, so a path a client made up cannot carry text into a trace."""
-    if path in ("/v1/status", "/v1/jobs"):
+    if path in ("/v1/status", "/v1/jobs", "/v1/reviews"):
         return path
+    review = REVIEW_PATH.fullmatch(path)
+    if review:
+        return "/v1/reviews/{review_id}" + (review.group(2) or "")
     match = JOB_PATH.fullmatch(path)
     return "/v1/jobs/{job_id}" + (match.group(2) or "") if match else None

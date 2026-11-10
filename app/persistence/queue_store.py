@@ -16,23 +16,38 @@ Application job states::
 
     QUEUED -> RUNNING -> REVIEW_REQUIRED | COMPLETED | FAILED | DELIVERY_FAILED
     QUEUED -> CANCELLED   (only before the Runner claims it; a cancelled job never reaches Core)
+    REVIEW_REQUIRED -> APPROVED | REJECTED   (a person's decision, roadmap 2.2 and ADR-027)
 
-(review decisions on REVIEW_REQUIRED jobs come with Milestone C.)
+Reviews (schema version 2): when the Runner records ``REVIEW_REQUIRED``, the same transaction creates the job's
+review (``PENDING``). A person's decision is one append-only row in ``review_decisions``; the same transaction
+moves the review to ``APPROVED`` or ``REJECTED``, raises its version and moves the job to the same state. Only the
+API writes decisions; the Runner never does, and the AI never does. A decision applies once per review version,
+and an idempotency key makes a retried click return the same decision instead of a second one.
+
+``meta`` also holds ``store_id`` and ``store_created_at``: a random id and the time of the first ``migrate()``. A
+new id means the queue started empty again (on Render's free plan, after every sleep, restart and deploy), so the
+page can tell people that the cases they sent earlier are gone instead of letting them vanish silently.
 """
 
 from contextlib import contextmanager
 from datetime import datetime, timezone
 import json
 from pathlib import Path
+import secrets
 import sqlite3
 import time
 
 from neuron_flow.model import encode, fingerprint
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 QUEUED, RUNNING, CANCELLED = "QUEUED", "RUNNING", "CANCELLED"
-TERMINAL = ("REVIEW_REQUIRED", "COMPLETED", "FAILED", "DELIVERY_FAILED")  # the outcomes the Runner records
-STATUSES = (QUEUED, RUNNING) + TERMINAL + (CANCELLED,)
+REVIEW_REQUIRED, APPROVED, REJECTED = "REVIEW_REQUIRED", "APPROVED", "REJECTED"
+TERMINAL = (REVIEW_REQUIRED, "COMPLETED", "FAILED", "DELIVERY_FAILED")  # the outcomes the Runner records
+DECIDED = (APPROVED, REJECTED)  # a person's decision on a REVIEW_REQUIRED job
+STATUSES = (QUEUED, RUNNING) + TERMINAL + DECIDED + (CANCELLED,)
+PENDING = "PENDING"
+REVIEW_STATES = (PENDING, APPROVED, REJECTED)
+DECISION_STATE = {"APPROVE": APPROVED, "REJECT": REJECTED}
 _JSON_COLUMNS = ("input", "spec", "result", "failure")
 
 _SCHEMA = """
@@ -76,6 +91,36 @@ CREATE TABLE IF NOT EXISTS runner (
     started_at REAL NOT NULL,
     heartbeat_at REAL NOT NULL
 );
+CREATE TABLE IF NOT EXISTS reviews (
+    seq INTEGER PRIMARY KEY AUTOINCREMENT,
+    review_id TEXT UNIQUE NOT NULL,
+    job_id TEXT UNIQUE NOT NULL REFERENCES jobs(job_id),
+    version INTEGER NOT NULL,
+    state TEXT NOT NULL CHECK (state IN ('PENDING', 'APPROVED', 'REJECTED')),
+    priority TEXT NOT NULL CHECK (priority IN ('normal', 'elevated')),
+    suggested_category TEXT,
+    proposal_sha256 TEXT NOT NULL,
+    created_at REAL NOT NULL,
+    decided_at REAL
+);
+CREATE INDEX IF NOT EXISTS reviews_by_state ON reviews(state, seq);
+CREATE TABLE IF NOT EXISTS review_decisions (
+    seq INTEGER PRIMARY KEY AUTOINCREMENT,
+    decision_id TEXT UNIQUE NOT NULL,
+    review_id TEXT NOT NULL REFERENCES reviews(review_id),
+    version INTEGER NOT NULL,
+    reviewer_token_id TEXT NOT NULL,
+    reviewer_role TEXT NOT NULL,
+    decision TEXT NOT NULL CHECK (decision IN ('APPROVE', 'REJECT')),
+    final_category TEXT,
+    reason TEXT NOT NULL,
+    idempotency_key TEXT UNIQUE NOT NULL,
+    request_sha256 TEXT NOT NULL,
+    request_id TEXT,
+    created_at REAL NOT NULL,
+    UNIQUE (review_id, version)
+);
+CREATE INDEX IF NOT EXISTS review_decisions_by_review ON review_decisions(review_id, seq);
 """
 
 
@@ -85,6 +130,32 @@ class QueueFull(Exception):
 
 class StateError(RuntimeError):
     """A queue transition that the current job state does not allow."""
+
+
+class DecisionConflict(Exception):
+    """A decision the review's current state does not allow. ``code`` is the API's error code:
+    ``idempotency_conflict``, ``already_decided`` or ``version_conflict``; ``extra`` goes into the reply."""
+
+    def __init__(self, code, **extra):
+        super().__init__(code)
+        self.code, self.extra = code, extra
+
+
+def review_id_for(job_id):
+    """One review per job, named after it: ``job_<hex>`` → ``rev_<hex>``."""
+    return "rev_" + job_id[len("job_"):]
+
+
+def _priority(review):
+    return "elevated" if review.get("review_priority") == "elevated" else "normal"
+
+
+def _insert_review(db, job_id, review, now):
+    """The job's PENDING review, from the reviewer proposal the Runner recorded (``result.review``)."""
+    db.execute("INSERT OR IGNORE INTO reviews(review_id, job_id, version, state, priority, suggested_category,"
+               " proposal_sha256, created_at) VALUES(?,?,?,?,?,?,?,?)",
+               (review_id_for(job_id), job_id, 1, PENDING, _priority(review), review.get("suggested_category"),
+                fingerprint(review), now))
 
 
 def iso(timestamp):
@@ -125,15 +196,49 @@ class QueueStore:
                 raise
             db.execute("COMMIT")
 
-    def migrate(self):
+    def migrate(self, now=None):
+        """Create the tables, or upgrade a version-1 queue (no reviews yet) to version 2.
+
+        The upgrade runs in one ``BEGIN IMMEDIATE`` transaction and re-reads the version inside it, so the API
+        and the Runner may both call this at the same start: one upgrades, the other sees version 2. Every job
+        that is already ``REVIEW_REQUIRED`` gets its ``PENDING`` review, so nothing waits without one.
+        """
+        now = time.time() if now is None else now
         self.path.parent.mkdir(parents=True, exist_ok=True)
         with self._connect() as db:
             db.execute("PRAGMA journal_mode=WAL")
             db.executescript(_SCHEMA)
-            db.execute("INSERT OR IGNORE INTO meta(key, value) VALUES('schema_version', ?)", (str(SCHEMA_VERSION),))
-            version = db.execute("SELECT value FROM meta WHERE key='schema_version'").fetchone()["value"]
-        if version != str(SCHEMA_VERSION):
-            raise RuntimeError(f"Queue database schema {version} is not supported (expected {SCHEMA_VERSION})")
+        with self._write() as db:
+            row = db.execute("SELECT value FROM meta WHERE key='schema_version'").fetchone()
+            if row is None:
+                version = str(SCHEMA_VERSION)
+                db.execute("INSERT INTO meta(key, value) VALUES('schema_version', ?)", (version,))
+            else:
+                version = row["value"]
+            if version == "1":
+                self._upgrade_1_to_2(db, now)
+                version = "2"
+            if version != str(SCHEMA_VERSION):
+                raise RuntimeError(f"Queue database schema {version} is not supported (expected {SCHEMA_VERSION})")
+            db.execute("INSERT OR IGNORE INTO meta(key, value) VALUES('store_id', ?)", ("store_" + secrets.token_hex(8),))
+            db.execute("INSERT OR IGNORE INTO meta(key, value) VALUES('store_created_at', ?)", (repr(float(now)),))
+
+    def _upgrade_1_to_2(self, db, now):
+        rows = db.execute("SELECT job_id, result, finished_at FROM jobs WHERE status=? ORDER BY seq",
+                          (REVIEW_REQUIRED,)).fetchall()
+        for row in rows:
+            review = (json.loads(row["result"]) if row["result"] else {}).get("review")
+            if isinstance(review, dict):
+                _insert_review(db, row["job_id"], review, row["finished_at"] or now)
+        db.execute("UPDATE meta SET value='2' WHERE key='schema_version'")
+
+    def store_info(self):
+        """``{"id", "created_at"}`` of this queue database: a new id means it started empty again."""
+        with self._connect() as db:
+            rows = {row["key"]: row["value"] for row in
+                    db.execute("SELECT key, value FROM meta WHERE key IN ('store_id', 'store_created_at')")}
+        created = rows.get("store_created_at")
+        return {"id": rows.get("store_id"), "created_at": iso(float(created)) if created else None}
 
     def ping(self):
         with self._connect() as db:
@@ -274,6 +379,9 @@ class QueueStore:
                 self._event(db, job_id, kind, payload, now)
             self._event(db, job_id, f"job.{status.lower()}",
                         {"reason": (failure or {}).get("reason")}, now)
+            review = (result or {}).get("review")
+            if status == REVIEW_REQUIRED and isinstance(review, dict):
+                _insert_review(db, job_id, review, now)  # in the same transaction: no job waits without a review
 
     def heartbeat(self, *, runner_id, pid, state, current_job=None, detail=None, llm=None, started_at, now=None):
         now = time.time() if now is None else now
@@ -352,12 +460,13 @@ class QueueStore:
         table backwards by ``seq`` and stop after ``limit`` rows, instead of sorting every finished job
         on each status request.
         """
-        marks = ",".join("?" * len(TERMINAL))
+        ran = TERMINAL + DECIDED  # a decided job ran to REVIEW_REQUIRED first
+        marks = ",".join("?" * len(ran))
         with self._connect() as db:
             rows = db.execute(
                 "SELECT workflow_type, status, claims, created_at, started_at, finished_at, failure"
                 f" FROM jobs NOT INDEXED WHERE status IN ({marks}) ORDER BY seq DESC LIMIT ?",
-                (*TERMINAL, limit)).fetchall()
+                (*ran, limit)).fetchall()
         outcomes = []
         for row in rows:
             failure = json.loads(row["failure"]) if row["failure"] is not None else None
@@ -375,3 +484,131 @@ class QueueStore:
         info = dict(row)
         info["llm"] = None if info["llm"] is None else json.loads(info["llm"])
         return info
+
+    # -- reviews (API) -------------------------------------------------------------------------
+
+    @staticmethod
+    def _review(row):
+        review = dict(row)
+        for column in ("input", "result"):
+            if column in review and review[column] is not None:
+                review[column] = json.loads(review[column])
+        return review
+
+    _REVIEW_SELECT = ("SELECT r.*, j.workflow_type, j.input, j.status AS job_status,"
+                      " CASE r.priority WHEN 'elevated' THEN 0 ELSE 1 END AS rank"
+                      " FROM reviews r JOIN jobs j ON j.job_id = r.job_id")
+
+    def list_reviews(self, *, state=PENDING, limit=20, after=None):
+        """One page of reviews in one state. Returns ``(reviews, next_after)``; ``next_after`` is ``None`` on the
+        last page and otherwise a ``(rank, seq)`` pair to pass back.
+
+        ``PENDING``: elevated first, then the oldest (the order a reviewer should work in). ``APPROVED`` and
+        ``REJECTED``: the newest first (rank is always 0 there)."""
+        if state not in REVIEW_STATES:
+            raise ValueError(f"unknown review state {state}")
+        query, args = self._REVIEW_SELECT + " WHERE r.state=?", [state]
+        if state == PENDING:
+            if after is not None:
+                query += " AND (rank > ? OR (rank = ? AND r.seq > ?))"
+                args += [after[0], after[0], after[1]]
+            query += " ORDER BY rank, r.seq"
+        else:
+            if after is not None:
+                query += " AND r.seq < ?"
+                args.append(after[1])
+            query += " ORDER BY r.seq DESC"
+        with self._connect() as db:
+            rows = db.execute(query + " LIMIT ?", (*args, limit + 1)).fetchall()
+        reviews = [self._review(row) for row in rows[:limit]]
+        last = reviews[-1] if reviews else None
+        next_after = None
+        if len(rows) > limit and last is not None:
+            next_after = (last["rank"] if state == PENDING else 0, last["seq"])
+        return reviews, next_after
+
+    def get_review(self, review_id):
+        """The review with its job's input and result, and every decision on it (oldest first), or ``None``."""
+        with self._connect() as db:
+            row = db.execute(self._REVIEW_SELECT.replace("j.input,", "j.input, j.result,") + " WHERE r.review_id=?",
+                             (review_id,)).fetchone()
+            if row is None:
+                return None
+            review = self._review(row)
+            review["decisions"] = [dict(item) for item in db.execute(
+                "SELECT * FROM review_decisions WHERE review_id=? ORDER BY seq", (review_id,)).fetchall()]
+        return review
+
+    def review_of_job(self, job_id):
+        """The job's review with its latest decision (``None`` before any), or ``None`` for a job without one."""
+        with self._connect() as db:
+            row = db.execute("SELECT * FROM reviews WHERE job_id=?", (job_id,)).fetchone()
+            if row is None:
+                return None
+            review = dict(row)
+            latest = db.execute("SELECT * FROM review_decisions WHERE review_id=? ORDER BY seq DESC LIMIT 1",
+                                (review["review_id"],)).fetchone()
+        review["decision"] = dict(latest) if latest is not None else None
+        return review
+
+    def review_counts(self):
+        """``{"PENDING": n, "APPROVED": n, "REJECTED": n, "elevated_pending": n}``."""
+        with self._connect() as db:
+            rows = db.execute("SELECT state, COUNT(*) AS n, SUM(priority='elevated') AS elevated FROM reviews"
+                              " GROUP BY state").fetchall()
+        counts = {state: 0 for state in REVIEW_STATES}
+        counts["elevated_pending"] = 0
+        for row in rows:
+            counts[row["state"]] = row["n"]
+            if row["state"] == PENDING:
+                counts["elevated_pending"] = row["elevated"] or 0
+        return counts
+
+    def decide(self, review_id, *, decision, final_category, reason, expected_version, idempotency_key,
+               request_sha256, reviewer_token_id, reviewer_role, request_id=None, now=None):
+        """Record a person's decision. Returns ``(decision_row, created)``.
+
+        One ``BEGIN IMMEDIATE`` transaction: the decision row, the review's new state and version, the job's new
+        state and its event, all or nothing. The idempotency key is checked first, so a retried click returns the
+        same decision (``created`` False) even after the review is decided. Raises ``KeyError`` for an unknown
+        review and :class:`DecisionConflict` when the key was used for another request, the review is already
+        decided, or ``expected_version`` is not the current version.
+        """
+        if decision not in DECISION_STATE:
+            raise ValueError(f"unknown decision {decision}")
+        now = time.time() if now is None else now
+        with self._write() as db:
+            existing = db.execute("SELECT * FROM review_decisions WHERE idempotency_key=?",
+                                  (idempotency_key,)).fetchone()
+            if existing is not None:
+                if existing["review_id"] != review_id or existing["request_sha256"] != request_sha256:
+                    raise DecisionConflict("idempotency_conflict")
+                return dict(existing), False
+            review = db.execute("SELECT * FROM reviews WHERE review_id=?", (review_id,)).fetchone()
+            if review is None:
+                raise KeyError(review_id)
+            if review["state"] != PENDING:
+                raise DecisionConflict("already_decided", review_state=review["state"], version=review["version"])
+            if expected_version != review["version"]:
+                raise DecisionConflict("version_conflict", version=review["version"])
+            decision_id = "dec_" + secrets.token_hex(12)
+            state = DECISION_STATE[decision]
+            db.execute("INSERT INTO review_decisions(decision_id, review_id, version, reviewer_token_id, reviewer_role,"
+                       " decision, final_category, reason, idempotency_key, request_sha256, request_id, created_at)"
+                       " VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",
+                       (decision_id, review_id, review["version"], reviewer_token_id, reviewer_role, decision,
+                        final_category, reason, idempotency_key, request_sha256, request_id, now))
+            moved = db.execute("UPDATE reviews SET state=?, version=version+1, decided_at=? WHERE review_id=?"
+                               " AND state=? AND version=?", (state, now, review_id, PENDING, review["version"]))
+            job = db.execute("UPDATE jobs SET status=?, updated_at=? WHERE job_id=? AND status=?",
+                             (state, now, review["job_id"], REVIEW_REQUIRED))
+            if moved.rowcount != 1 or job.rowcount != 1:
+                raise StateError(f"{review['job_id']} is not waiting for review")  # rolls the whole decision back
+            # The event names the decision, never the reason: a reason is free text and could repeat the case.
+            payload = {"review_id": review_id, "decision_id": decision_id, "version": review["version"],
+                       "decision": decision, "final_category": final_category, "reviewer_role": reviewer_role}
+            if request_id:
+                payload["request_id"] = request_id
+            self._event(db, review["job_id"], f"review.{state.lower()}", payload, now)
+            row = db.execute("SELECT * FROM review_decisions WHERE decision_id=?", (decision_id,)).fetchone()
+            return dict(row), True

@@ -27,7 +27,11 @@ A useful report says what you found, how to reproduce it, and what it could affe
 - The *Secret scan* workflow runs gitleaks over every commit of every branch on every push and pull request.
 - Every workflow's token is read-only, and no workflow uses `pull_request_target`
   (`tests/test_workflow_permissions.py`).
-- Personal data is masked before every AI call. The masking is pattern-based, so it lowers the risk but does
-  not make real data safe (ROADMAP 7.1).
+- The same workflow checks that new commits carry no personal e-mail address: a pull request fails, a push
+  warns (`.github/scripts/check_commit_emails.py`).
+- Personal data is masked before every AI call, and the AI gateway enforces it: it masks the text again and
+  refuses to send anything the rules would still change (ADR-028). The masking is pattern-based, so it lowers
+  the risk but does not make real data safe (ROADMAP 7.1).
+- Review decisions record who decided from the credential, never from the request (ADR-027).
 
 Known limits are listed under [Scope and limits](README.md#scope-and-limits) in the README.

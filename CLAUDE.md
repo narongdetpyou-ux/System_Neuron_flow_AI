@@ -10,7 +10,9 @@
 trusted agents in bounded child processes, retries, recovers after a crash and writes verified receipts.
 `app/` is built on top of it without changing Core. It contains:
 - a case-triage domain: keyword rules make the official suggestion, an AI gives a second opinion
-  (shadow mode), and a person always decides;
+  (shadow mode), and a person always decides: since 2026-11-10 on the page's decision card or through
+  `POST /v1/reviews/{review_id}/decisions` (roadmap 2.2, 2.4; ADR-027: the owner's shared key is the only
+  reviewer credential until per-person tokens, 2.1);
 - an AI gateway (an offline mock, Claude, Typhoon: SCB 10X's Thai-first model, free within rate limits;
   ADR-021, or `local`: an open-weight model on a server we run ourselves, today llama.cpp with Typhoon 2.5 4B
   on the GitHub runner; ADR-026);
@@ -72,6 +74,11 @@ Read in this order when you need depth:
 - **Public repository (D5).** This repository has been public since 2026-11-08, with its full history.
   Commits, PRs, comments and Actions logs are public: keep personal details,
   account matters and internal notes out of them, and never let a key reach a log.
+  - Commit only as `noreply@anthropic.com` (this session's git identity). The `commit-emails` job of *Secret
+    scan* fails a pull request whose commits carry any other address than GitHub's or Anthropic's noreply ones.
+  - One of the owner's personal addresses is in 53 public commits, mostly merges made on github.com. Never
+    write it anywhere. Removing it from the history is owner decision D8 (ROADMAP 7.6); never rewrite or
+    force-push `main` without the owner's explicit permission.
 - **Honesty about evidence.**
   - Mock-AI scores are not accuracy, and hashes prove bytes, not authorship.
   - The live-model measurements are Typhoon's on the synthetic sets (first runs 2026-11-06,
@@ -125,7 +132,9 @@ Read in this order when you need depth:
      `Dockerfile`, `pyproject.toml` and `.claude/hooks/session-start.sh` together.
 9. **Synthetic data only.** Open datasets count as synthetic only under ADR-024 (written for the dataset, openly
    licensed, no real people's records, pinned and attributed). Personal data is masked before every AI call (ROADMAP 7.1, `app/llm/redaction.py`),
-   but the masking is pattern-based and misses names without a title, addresses and more. Real data waits
+   and the gateway enforces it (ADR-028): new AI code goes through `structured_answer()` with text from
+   `mask()`, never to a provider directly (a static test in `tests/test_redaction.py` checks). The masking is
+   pattern-based and misses names without a title, addresses and more. Real data waits
    for the owner's decision D4, after 7.2 and 7.3.
 10. **Do not build P2 items early.** That means multi-tenancy, distributed workers, Postgres, object
     storage, SLAs, a hosted dashboard, and DAGs that change shape inside Core.
@@ -138,7 +147,7 @@ If a task seems to need breaking a rule:
 ## 4. Checking your work
 
 ```bash
-python -m unittest discover -s tests -v        # all tests (346 on 2026-11-10); Python 3.10–3.13
+python -m unittest discover -s tests -v        # all tests (394 on 2026-11-10); Python 3.10–3.13
 python -m examples.case_triage_demo            # v1 rules, one synthetic case
 python -m examples.case_triage_shadow_demo     # v2 shadow mode with the offline mock AI
 python -m examples.study_guide_demo            # the study guide's answers to four synthetic requests
@@ -174,7 +183,10 @@ GitHub Actions (the owner can open these; the first three run on every push and 
   secret `SENTRY_DSN` and skips with a notice when it is missing (roadmap 7.4).
 - *Secret scan* (`secret-scan.yml`) runs gitleaks over every commit of every branch on every push and pull
   request, with the rules in `.github/gitleaks.toml`. Reviewed findings are listed with a reason in
-  `.github/.gitleaksignore`; a second pass fails if an entry there is no longer found.
+  `.github/.gitleaksignore`; a second pass fails if an entry there is no longer found. Its `commit-emails` job
+  (`.github/scripts/check_commit_emails.py`) checks the new commits' author and committer addresses: a pull
+  request fails on a personal address, a push only warns (so Render's deploy-after-checks is never blocked),
+  and the summary counts the commits in the whole history that carry one (53 on 2026-11-10).
 - *Study library link check* (`study-links.yml`) opens every link in the study-guide library every Monday,
   by hand, and on every push or pull request that changes `app/domains/study_guide/`. It fails on a broken
   link, warns on a moved or bot-blocked one, and never edits the library. This session cannot reach most
@@ -273,8 +285,8 @@ Notes for cloud sessions (claude.ai/code):
 | `app/eval/` | the two scorecards (triage: 61 labelled cases; study guide: 67 labelled requests) and the eval gate's shared code (`common.py`) |
 | `app/observability/sentry.py` | Sentry reporting: step failures, degraded AI, Runner recoveries |
 | `app/observability/tracing.py`, `job_spans.py` | tracing: the OTLP/JSON exporter with its attribute allow-list, and a finished job's spans (ADR-017) |
-| `app/persistence/queue_store.py` | the application queue in its own SQLite file (`<data>/app/queue.sqlite3`) |
-| `app/services/` | workflow catalog, admission, Runner with reconciliation, result summaries, queue and run-time figures |
+| `app/persistence/queue_store.py` | the application queue in its own SQLite file (`<data>/app/queue.sqlite3`, schema 2): jobs, events, the Runner heartbeat, reviews and append-only decisions, and the store id that shows when the queue started empty |
+| `app/services/` | workflow catalog, admission, Runner with reconciliation, result summaries, queue and run-time figures, review decisions (`reviews.py`) |
 | `app/api/`, `app/web/` | standard-library HTTP API and the Thai web page (chat layout with a case / study-question switch, the study guide's layered answer, Flow and Trace, read-only settings); `tests/test_web_page.py` holds the page to its contracts |
 | `app/boot.py` | the image's process 1: takes the data folder as root, switches to `neuron`, becomes tini |
 | `app/settings.py`, `app/serve.py` | settings from the environment; the launcher (API + supervised Runner) |
@@ -431,23 +443,37 @@ Notes for cloud sessions (claude.ai/code):
     0.989 s before and 0.256 s after; with the container held to 0.1 CPU, 14.4 s before and 3.1 s after.
     **Not measured on Render yet**: after the merge, read the `run` span of the first job after the deploy
     and after one sleep in Honeycomb, and fill in the table at the end of the evidence note (E1, task 4).
+  - The answer to the first independent review (2026-11-10, of `main` @ `f38c926`; all four findings, one PR;
+    `docs/evidence/2026-11-10-independent-review-response.md`):
+    - review decisions (2.2) and the page's decision card and "รอรีวิว" list (2.4), built before 2.1 with the
+      owner's shared key as the only reviewer (ADR-027; queue schema 2 with a tested upgrade);
+    - the gateway enforces the masking (ADR-028); building it found three inputs where `redact-v1` changed on
+      a second pass, two of them letting a glued name or phone number through; `redact-v2` fixes them with no
+      change to any scorecard or robustness outcome;
+    - retention stated at every write and on the page, which counts the cases lost after a wipe (ADR-029);
+    - the `commit-emails` check, and roadmap 7.6 with owner decision D8 for the address already public (a
+      local dry run of a rewrite is in the evidence note).
 - **Not done yet:**
   - Claude has never been run (D2). Typhoon has run only on the synthetic sets (two full triage runs, one
     full study guide run) and once on the 116 robustness edge cases (2026-11-10: AI correct 104/116, rules
     48/116). The local 4B model has had one full run of each set (2026-11-08) besides the PR's
     two smoke runs.
-  - Review decisions and per-person identity (Milestone C) are not built.
+  - Per-person reviewer identity (2.1), the linked job after an approval (2.3) and the n8n intake (2.5) are not
+    built; review decisions are (ADR-027).
   - The live page uses the mock AI unless the owner adds Typhoon (or Claude) in Render's Environment tab
     (roadmap 0.4).
   - The rest of the roadmap is open.
 - **Next:** [docs/ROADMAP.md](docs/ROADMAP.md), the first item that is not ✅ and whose needs are met.
   - Waiting on the owner: 0.2 and 1.4 (D1, paid Render plan), 0.3 path B and 0.4 with Claude (D2, Claude
     API key); 0.4 with Typhoon is free but sends what is typed on the page to Typhoon, so it is the owner's
-    choice too; an open model behind the page needs a paid machine (D7).
+    choice too; an open model behind the page needs a paid machine (D7); the GitHub e-mail setting that stops
+    new merges adding the personal address, and D8 about the 53 commits already public (ROADMAP 7.6); the
+    owner test of 2.4 on the live page after the merge.
   - 5.8's first full run is recorded: the owner chooses its branch (not good enough, close or good enough;
     roadmap 5.8, "After the first full run", step 2), then follow it.
   - Buildable now without an owner decision: the rest of 5.5 (decide and fix the stage-1 gaps), 5.6 and 5.7,
-    Phase 2 (2.1 first) and Phase 4 (4.1 first; Phase 3, which it needs, is built). The rest of 7.1 (who can read the AI key) needs an ADR first.
+    the rest of Phase 2 (2.1 next, then 2.3; 2.2 and 2.4 are built) and Phase 4 (4.1 first; Phase 3, which it
+    needs, is built). The rest of 7.1 (who can read the AI key) needs an ADR first.
   - The effectiveness track (2026-11-10, PR #50, [docs/effectiveness_plan.md](docs/effectiveness_plan.md)): E1
     is built (PR #60) and waits for its measurement on Render (9.0 to 10.5 s before); E2 (rules v2 with
     Thai; today rules correct 29/61) is next and buildable now, before the next phase; E3 (a real model

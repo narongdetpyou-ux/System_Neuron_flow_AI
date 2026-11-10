@@ -1,8 +1,19 @@
 """Personal data is masked before any AI call (roadmap 7.1, gap G5): Thai and English samples, the things
-that must stay readable, and the proof that neither provider ever receives the masked values."""
+that must stay readable, and the proof that neither provider ever receives the masked values.
 
+Since ``redact-v2`` the gateway enforces the masking itself (the independent review of 2026-11-10, point 2):
+``MaskedText`` cannot be made by hand, and the gateway masks the text again before sending it and refuses
+anything the rules would still change. ``MaskingBoundaryTests`` checks that no code reaches a provider except
+through the gateway.
+"""
+
+import ast
+import copy
 import json
 import os
+import pickle
+import random
+import re
 import tempfile
 import unittest
 from pathlib import Path
@@ -12,7 +23,8 @@ from neuron_flow import Runtime
 
 from app.api.routes import ApiApp, Request
 from app.domains.case_triage import build_shadow_workflow, shadow_registry
-from app.llm import LLMConfig, MaskedText, load_prompt, mask, structured_answer
+from app.llm import LLMConfig, MaskedText, UnmaskedText, load_prompt, mask, structured_answer
+from app.llm import redaction
 from app.llm.redaction import REDACTION_VERSION
 from app.persistence import QueueStore
 from app.services.runner import Runner
@@ -20,6 +32,7 @@ from tests.fake_anthropic import FakeAnthropic, message
 from tests.service_fixtures import KEY, case_body, settings
 
 PROMPT = load_prompt("triage_classify_v1")
+ROOT = Path(__file__).resolve().parent.parent
 
 
 def thai_id(first_twelve):
@@ -89,6 +102,44 @@ class MaskTests(unittest.TestCase):
             mask(None)
 
 
+class IdempotenceTests(unittest.TestCase):
+    """The gateway relies on "masking masked text again changes nothing"; redact-v1 broke it on these inputs."""
+
+    def test_masking_twice_changes_nothing_on_the_inputs_redact_v1_got_wrong(self):
+        cases = {
+            "ติดต่อนางสาว สมหญิง ใจดี ได้เลย": ("ติดต่อนางสาว [NAME] ใจดี ได้เลย", {"name": 1}),  # v1: นาง + "สาว"
+            "เรียนนางสาว": ("เรียนนางสาว", {}),  # a bare title is not a name
+            "คุณZsMr Yaa": ("คุณ[NAME]Mr [NAME]", {"name": 2}),  # v1 found the second name only on a second pass
+            "Mr Smith0812345678": ("Mr [NAME][PHONE]", {"phone": 1, "name": 1}),  # a number glued to a name
+        }
+        for text, (expected_text, expected_counts) in cases.items():
+            with self.subTest(text=text):
+                once = mask(text)
+                self.assertEqual((once.text, once.counts), (expected_text, expected_counts))
+                self.assertEqual(redaction.leftover(once.text), {})
+
+    def test_a_long_chain_of_glued_names_is_masked_to_the_end(self):
+        # Each placeholder opens a word boundary for the next title, so this exposes one name per round. A fixed
+        # limit of 8 rounds left the last names unmasked, and the gateway then refused a case that went through
+        # mask() (found by the automated review of PR #63).
+        for repeats in (10, 120):
+            with self.subTest(repeats=repeats):
+                masked = mask("คุณAa" + "Mr Bb" * repeats + " cannot upload file")
+                self.assertEqual(masked.counts, {"name": repeats + 1})
+                self.assertEqual(redaction.leftover(masked.text), {})
+                self.assertEqual(structured_answer(LLMConfig(), PROMPT, masked)["answer"]["category"], "upload")
+
+    def test_masking_twice_changes_nothing_on_random_text(self):
+        pieces = list("0123456789๐๑ -.+()@,;:\n") + [
+            "Mr", "Mrs", "Dr.", " Smith", "นาย", "นาง", "นางสาว", "น.ส.", "คุณ", "นามสกุล", "สมหญิง", " ใจดี",
+            "Name:", "my name is ", "@example.com", "081", "5678", "+66", "(02)", "[NAME]", "[PHONE]", "4111"]
+        rng = random.Random(20261110)
+        for _ in range(3000):
+            text = "".join(rng.choice(pieces) for _ in range(rng.randint(1, 20)))
+            once = mask(text)
+            self.assertEqual(redaction.leftover(once.text), {}, text)
+
+
 class GatewayTests(unittest.TestCase):
     def test_the_gateway_refuses_text_that_was_not_masked(self):
         with self.assertRaisesRegex(TypeError, "masked before every AI call"):
@@ -97,6 +148,59 @@ class GatewayTests(unittest.TestCase):
         with self.assertRaises(TypeError):  # only a real MaskedText, made by mask(), is accepted
             structured_answer(LLMConfig(), PROMPT, look_alike)
         self.assertIsInstance(mask("x"), MaskedText)
+
+    def test_only_mask_can_make_a_masked_text(self):
+        with self.assertRaisesRegex(TypeError, "made only by"):
+            MaskedText("call 081-234-5678", {}, REDACTION_VERSION)
+        masked = mask("call 081-234-5678")
+        for attempt in (lambda: setattr(masked, "_text", "raw"), lambda: setattr(masked, "text", "raw"),
+                        lambda: delattr(masked, "_text")):
+            with self.assertRaises(AttributeError):
+                attempt()
+        for copier in (copy.copy, copy.deepcopy, pickle.dumps):
+            with self.assertRaises(TypeError):
+                copier(masked)
+        masked.counts["phone"] = 99  # a copy: what was recorded stays as it was
+        self.assertEqual(masked.counts, {"phone": 1})
+
+    def test_a_forged_masked_text_is_masked_again_and_refused_before_anything_is_sent(self):
+        forged = object.__new__(MaskedText)  # code that goes out of its way around mask()
+        for name, value in (("_text", "โทร 081-234-5678 หรือ somchai@example.com"), ("_counts", {}),
+                            ("_version", REDACTION_VERSION)):
+            object.__setattr__(forged, name, value)
+        good = {"category": "upload", "confidence": "high", "rationale": "Upload problem."}
+        with patch.patch.dict(os.environ, {"ANTHROPIC_API_KEY": "sk-ant-test-0123"}):
+            with FakeAnthropic([(200, message(good))]) as fake:
+                config = LLMConfig(provider="anthropic", model="claude-haiku-5-5", base_url=fake.base_url,
+                                   request_timeout_s=5)
+                with self.assertRaises(UnmaskedText) as caught:
+                    structured_answer(config, PROMPT, forged)
+                self.assertEqual(fake.requests, [])  # nothing left the machine
+        self.assertIn("email 1, phone 1", str(caught.exception))  # the kinds, never the values
+        for value in ("081-234-5678", "somchai", "example.com"):
+            self.assertNotIn(value, str(caught.exception))
+
+    def test_other_versions_subclasses_and_non_text_are_refused(self):
+        def forge(cls, text, version):
+            value = object.__new__(cls)
+            for name, item in (("_text", text), ("_counts", {}), ("_version", version)):
+                object.__setattr__(value, name, item)
+            return value
+
+        class Sneaky(MaskedText):
+            __slots__ = ()
+
+            @property
+            def text(self):  # a value that changes between the check and the send
+                return "call 081-234-5678"
+
+        for value in (forge(MaskedText, "upload fails", "redact-v1"), forge(Sneaky, "upload fails", REDACTION_VERSION),
+                      forge(MaskedText, b"upload fails", REDACTION_VERSION)):
+            with self.subTest(value=type(value).__name__):
+                with self.assertRaisesRegex(TypeError, "masked before every AI call"):
+                    structured_answer(LLMConfig(), PROMPT, value)
+        self.assertEqual(structured_answer(LLMConfig(), PROMPT, mask("upload fails 081-234-5678"))["answer"]["category"],
+                         "upload")
 
     def test_claude_receives_placeholders_only(self):
         good = {"category": "upload", "confidence": "high", "rationale": "Upload problem."}
@@ -112,6 +216,48 @@ class GatewayTests(unittest.TestCase):
             self.assertNotIn(value, sent)
         for placeholder in ("[NAME]", "[PHONE]", "[EMAIL]"):
             self.assertIn(placeholder, sent)
+
+
+class MaskingBoundaryTests(unittest.TestCase):
+    """Static checks: the providers are reached only through the gateway, so every AI call passes its checks."""
+
+    def python_files(self):
+        for folder in ("app", "examples"):
+            yield from sorted((ROOT / folder).rglob("*.py"))
+
+    def test_only_the_gateway_imports_the_providers_or_calls_complete(self):
+        # The offline mock may be imported for its helpers (scenarios, simulators): it sends nothing. The providers
+        # that open a connection may not, and nothing outside the gateway may call a provider's complete().
+        allowed = {ROOT / "app/llm/gateway.py"} | set((ROOT / "app/llm/providers").glob("*.py"))
+        networked = {"anthropic", "openai_compat", "_http"}
+        problems = []
+        for path in self.python_files():
+            if path in allowed:
+                continue
+            tree = ast.parse(path.read_text(encoding="utf-8"), str(path))
+            for node in ast.walk(tree):
+                names = []
+                if isinstance(node, ast.ImportFrom):
+                    module = node.module or ""
+                    names = [module] + [f"{module}.{alias.name}" for alias in node.names]
+                elif isinstance(node, ast.Import):
+                    names = [alias.name for alias in node.names]
+                for name in names:
+                    parts = name.split(".")
+                    if "providers" in parts and networked.intersection(parts[parts.index("providers") + 1:]):
+                        problems.append(f"{path.relative_to(ROOT)}:{node.lineno} imports {name}")
+                if (isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)
+                        and node.func.attr in ("complete", "build_request_body")):
+                    problems.append(f"{path.relative_to(ROOT)}:{node.lineno} calls {node.func.attr}() directly")
+        self.assertEqual(problems, [], "AI calls go through app.llm.gateway.structured_answer only")
+
+    def test_the_connection_probe_sends_only_a_sentence_with_nothing_to_mask(self):
+        # The probe (.github/scripts/llm_probe.py) builds the request itself, to show the raw reply. It may only
+        # send its fixed synthetic sentence, and that sentence must hold nothing the masking rules would change.
+        source = (ROOT / ".github/scripts/llm_probe.py").read_text(encoding="utf-8")
+        sentence = re.search(r'^SENTENCE = "([^"]+)"', source, re.MULTILINE).group(1)
+        self.assertEqual(redaction.leftover(sentence), {})
+        self.assertEqual(re.findall(r"build_request_body\(config, prompt, (\w+)\)", source), ["SENTENCE"])
 
 
 class WorkflowTests(unittest.TestCase):
