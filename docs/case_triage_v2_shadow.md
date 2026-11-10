@@ -9,7 +9,9 @@ the GitHub runner on 2026-11-08, was correct on 58/61 and raised all 32 of the r
 ([evidence](evidence/2026-11-08-first-local-model-full.md)). Claude has not been run (it needs a paid
 `ANTHROPIC_API_KEY`, D2). Synthetic data only.
 It is not a production service: since round 2 it runs behind the intake API and the web page as a
-single-owner pilot on Render's free plan, and there is no human-review service yet (Milestone C). No Core (`neuron_flow/`) file was changed. Design principles:
+single-owner pilot on Render's free plan. Since 2026-11-10 a person approves or rejects each waiting case on the
+page or through `POST /v1/reviews/{review_id}/decisions` (roadmap 2.2, ADR-027); per-person reviewer identity is
+still Milestone C (2.1). No Core (`neuron_flow/`) file was changed. Design principles:
 [design_philosophy.md](design_philosophy.md).
 
 ## ภาพรวมการทำงาน (สรุปภาษาไทย)
@@ -81,7 +83,10 @@ they were degraded quietly, a broken setup could go unnoticed.
   Thai ID numbers (check digit verified), card-like numbers (Luhn), other runs of 9+ digits, and names after
   a title or label (Mr/Ms/Dr, "my name is", `Name:`; นาย, นาง, นางสาว, น.ส., ด.ช., ด.ญ., นามสกุล, คุณ + an
   English name) become `[EMAIL]`, `[PHONE]`, `[THAI_ID]`, `[CARD]`, `[NUMBER]`, `[NAME]`. The gateway refuses
-  text that did not go through `mask()`. The output's `masked` field counts each kind, never the values.
+  text that did not go through `mask()`, and since `redact-v2` (2026-11-10, ADR-028) it masks the text again
+  itself and sends nothing the rules would still change; the rules also run again until nothing changes, so a
+  name or number glued to another one is no longer missed. The output's `masked` field counts each kind, never
+  the values.
   Not detected: names without a title or label, Thai surnames after a given name, addresses, short numbers,
   mixed letter-and-digit identifiers. The keywords the rules and the AI need stay readable.
 - **The API key is never stored.** It is read from `ANTHROPIC_API_KEY` (Claude), `TYPHOON_API_KEY`

@@ -33,8 +33,9 @@ same demo on every push.
 ## Trust and execution boundary
 
 - `registry()` supplies two fixed `AgentDefinition` entries with independent output validators.
-- `PENDING_HUMAN_REVIEW` is an **output field**, not a waiting state in Core. No human-review service exists
-  yet (see [architecture](architecture.md), Milestone C).
+- `PENDING_HUMAN_REVIEW` is an **output field**, not a waiting state in Core. The decision is made outside
+  Core: since 2026-11-10 the intake service records a person's approval or rejection in its queue database
+  (roadmap 2.2, ADR-027; [intake_queue.md](intake_queue.md)).
 - Step outputs stay within Core's JSON limit (1 MiB); large attachments are not supported here.
 
 ## Known limits

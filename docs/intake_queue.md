@@ -1,11 +1,12 @@
 # Intake API, job queue, Runner and web page (round 2, Milestone B)
 
-**Status:** built in PR #11 and tested offline (346 tests on 2026-11-10, including killing the Runner
+**Status:** built in PR #11 and tested offline (392 tests on 2026-11-10, including killing the Runner
 mid-step). The container build is checked on every push by *Actions → Service container*. Live on
 Render's free plan since 2026-11-01 (`render.yaml`). Railway was the first choice, but it has paused new
 sign-ups since 22 Oct 2026 after a security incident; `railway.json` stays in the repository for later.
-Synthetic data only. Review decisions (approve/reject) come with Milestone C, so in this round every case
-ends at "waiting for a person". No Core (`neuron_flow/`) file was changed.
+Synthetic data only. Since 2026-11-10 a person can approve or reject a case that waits (roadmap 2.2 and 2.4,
+ADR-027; see "Reviews" below); before that every case ended at "waiting for a person". No Core
+(`neuron_flow/`) file was changed.
 The web page was redesigned on 2026-11-03 (PR #18, roadmap 1.6) after the owner's "Nocturne" mockup: a
 chat-style intake with a confirm step, a Flow panel and an event history (Trace), and read-only settings
 (see "หน้าเว็บ: ใช้อย่างไร" and "Web page" below). It is live on Render, and the owner reported that the
@@ -26,13 +27,14 @@ Design principles: [design_philosophy.md](design_philosophy.md).
 
 1. **ส่งเคส** ผ่านหน้าเว็บ หรือผ่าน API (`POST /v1/jobs`) พร้อม "รหัสส่งงาน" (idempotency key) หนึ่งรหัสต่อการกดส่งหนึ่งครั้ง หน้าเว็บสร้างรหัสนี้ให้เอง
 2. **ตรวจก่อนรับ** ระบบตรวจรหัสเข้าใช้ ขนาดคำขอ และข้อมูลเคส (รหัสเคส + ข้อความ 8–500 ตัวอักษร) ถ้าไม่ผ่าน ระบบตอบกลับทันทีและยังไม่สร้างงานใด ๆ
-3. **บันทึกลงคิวถาวรก่อนตอบ** ระบบตอบว่า "รับแล้ว" (202) หลังบันทึกเสร็จเท่านั้น
+3. **บันทึกลงคิวก่อนตอบ** ระบบตอบว่า "รับแล้ว" (202) หลังบันทึกเสร็จเท่านั้น และคำตอบบอกด้วยว่าที่เก็บเป็นแบบถาวรหรือชั่วคราว (`retention`) บน Render แผนฟรีเป็นแบบชั่วคราว: "รับแล้ว" หมายถึงเก็บไว้จนกว่าระบบจะหลับ รีสตาร์ท หรืออัปเดต
    - ส่งซ้ำด้วยรหัสส่งงานเดิมและข้อความเดิม → ได้งานเดิมกลับมา (200) ไม่เกิดงานซ้ำ
    - รหัสส่งงานเดิมแต่ข้อความต่าง → ปฏิเสธ (409)
 4. **ตัวรันงานมีตัวเดียว** หยิบงานตามลำดับที่เข้ามา บันทึก "สเปกงาน" ฉบับที่จะใช้จริงไว้ก่อน แล้วจึงส่งให้แกนระบบ (Core)
 5. **Core ทำงานทีละขั้นเหมือนรอบ 1** กฎเดิมกับ AI ทำคู่กัน → เทียบสองความเห็น → เตรียมข้อเสนอ และตรวจผลทุกขั้นก่อนบันทึก
-6. **บันทึกผล** สถานะสุดท้ายคือ "รอคนตรวจ" (`REVIEW_REQUIRED`) พร้อมสรุปที่อ่านง่าย ไม่มีที่อยู่ไฟล์ภายในหรือรหัสลับ
+6. **บันทึกผล** สถานะเป็น "รอคนตรวจ" (`REVIEW_REQUIRED`) พร้อมสรุปที่อ่านง่าย ไม่มีที่อยู่ไฟล์ภายในหรือรหัสลับ และในธุรกรรมเดียวกันระบบเปิด "รายการรอตัดสิน" (review) ของเคสนั้น
 7. **ดูผล** หน้าเว็บอัปเดตเอง หรือเรียก `GET /v1/jobs/{job_id}`
+8. **คนตัดสิน** กด "อนุมัติ" (ใช้หมวดที่กฎเสนอหรือเลือกเอง) หรือ "ไม่อนุมัติ" พร้อมเหตุผล เคสเปลี่ยนเป็น "อนุมัติแล้ว" (`APPROVED`) หรือ "ไม่อนุมัติ" (`REJECTED`) ตัดสินแล้วแก้ไม่ได้ กดซ้ำก็ไม่บันทึกซ้ำ ผู้ตัดสินมาจากรหัสเข้าใช้ ไม่ได้มาจากสิ่งที่หน้าเว็บส่ง ตอนนี้มีรหัสเดียว คือของเจ้าของระบบ (รหัสรายคนอยู่ในขั้น 2.1)
 
 ### ถ้ามีอะไรผิดพลาด
 
@@ -48,6 +50,9 @@ Design principles: [design_philosophy.md](design_philosophy.md).
 | ตั้งค่า AI ไม่ครบ (เช่น เลือก Claude แต่ไม่ใส่ key) | ไม่เริ่มงานใด ๆ เคสรอในคิวจนกว่าจะแก้ | แถบเตือนสีเหลืองบอกสาเหตุ |
 | คิวเต็ม หรือส่งถี่เกินไป | ปฏิเสธชั่วคราว (503 / 429) | "คิวเต็ม" หรือ "ส่งถี่เกินไป รอ N วินาที" |
 | ใส่รหัสเข้าใช้ผิด 10 ครั้งในหนึ่งนาที | พักการลองจากเครื่องนั้นชั่วคราว (429) | "ลองรหัสผิดหลายครั้งเกินไป" |
+| กดบันทึกการตัดสินซ้ำ หรือเน็ตหลุดแล้วกดใหม่ | ใช้การตัดสินเดิม (200) ไม่บันทึกซ้ำ | "บันทึกการตัดสินแล้ว" ครั้งเดียว |
+| มีคนตัดสินเคสนี้ไปแล้ว (อีกแท็บหนึ่ง) | ปฏิเสธ (409) ไม่เปลี่ยนอะไร | "เคสนี้มีคนตัดสินไปแล้ว" แล้วหน้าเว็บโหลดผลการตัดสินให้ดู |
+| ระบบเริ่มใหม่ด้วยที่เก็บว่าง (แผนฟรี: หลับ รีสตาร์ท อัปเดต) | เคส ผล และการตัดสินเก่าหายทั้งหมด รหัสชุดข้อมูล (`store_id`) เปลี่ยน | แถบสีเหลืองบอกว่าเคสที่ส่งจากเครื่องนี้หายไปกี่รายการ กด "รับทราบ" เพื่อปิด |
 
 **ตามรอยคำขอ (request id)** ทุกคำตอบจากระบบมี "รหัสคำขอ" ติดมาด้วย (หัวข้อ `X-Request-Id`) รหัสเดียวกันนี้อยู่ในบันทึกการเข้าใช้ (access log) และในเหตุการณ์แรกของงาน ("รับเข้าคิว") เมื่อมีปัญหา ให้เปิดเคสนั้น → "รายละเอียดเชิงเทคนิค" → ดู "รหัสคำขอที่ส่งเคสนี้" แล้วส่งรหัสนี้ให้ Claude ไล่ดูใน log ได้ตรงคำขอนั้นทันที ถ้าระบบขัดข้องฝั่งเซิร์ฟเวอร์ ข้อความเตือนบนหน้าเว็บก็จะบอกรหัสคำขอด้วย รหัสนี้ไม่มีข้อความเคสหรือรหัสลับ
 
@@ -69,8 +74,11 @@ Design principles: [design_philosophy.md](design_philosophy.md).
 3. **ยืนยัน** กด "ยืนยันและส่ง" เคสจึงเข้าคิว ("แก้ข้อความ" เอาข้อความกลับไปแก้, "ยกเลิก" ทิ้งร่างนี้)
 4. **เปลี่ยนใจก่อนเริ่มทำ** ระหว่างที่เคสยัง "รอคิว" จะมีปุ่ม "ยกเลิกเคสนี้" กดแล้วระบบถามยืนยันอีกครั้ง ("ยืนยันยกเลิก" หรือ "ไม่ยกเลิก") เพราะยกเลิกแล้วเอาคืนไม่ได้ เคสที่ยกเลิกจะขึ้น "ยกเลิกแล้ว" ไม่มีขั้นไหนถูกรัน และ AI ไม่ได้เห็นเคสนั้น ถ้าตัวรันงานหยิบเคสไปทำแล้ว ปุ่มจะหายไป (แกนระบบหยุดงานกลางทางไม่ได้) ถ้าต้องการส่งเคสเดิมอีก ให้ส่งเป็นเคสใหม่
 5. **ระหว่างทำงาน** หน้าเว็บบอกว่า "กำลังทำงาน" ทั้งเคส เพราะแกนระบบ (Core) ยังไม่ส่งความคืบหน้าทีละขั้น เมื่อเสร็จ ทุกขั้นจะขึ้น ✓ หรือ ✕ พร้อมจำนวนครั้งที่ลอง
-6. **อ่านผล** ระบบเสนอคิวไหน ความสำคัญ ความเห็นของกฎและของ AI และเหตุผลที่บอกคนตรวจ ผลสุดท้ายคือ "รอคนตรวจ" เสมอ แถว "ปิดข้อมูลส่วนตัวก่อนส่งให้ AI" บอกว่าระบบปิดอะไรไปกี่จุดก่อน AI อ่าน (ขั้น 7.1)
-7. **กลับมาดูทีหลัง** ลิงก์ในแถบที่อยู่มีรหัสงาน (`#job_…`) เปิดลิงก์เดิมจะกลับมาที่เคสนั้น (ถ้าเคสยังไม่ถูกล้าง)
+6. **อ่านผล** ระบบเสนอคิวไหน ความสำคัญ ความเห็นของกฎและของ AI และเหตุผลที่บอกคนตรวจ แล้วเคสจะ "รอคนตรวจ" เสมอ แถว "ปิดข้อมูลส่วนตัวก่อนส่งให้ AI" บอกว่าระบบปิดอะไรไปกี่จุดก่อน AI อ่าน (ขั้น 7.1)
+7. **ตัดสิน** (ขั้น 2.2, 2.4) เคสที่รอคนตรวจขึ้นในกล่อง "รอรีวิว" ด้านซ้าย เคสด่วน (กฎกับ AI เห็นไม่ตรงกัน) อยู่บนสุด ในเคสจะมีการ์ด "ตัดสินเคสนี้": เลือก "อนุมัติ" หรือ "ไม่อนุมัติ" เลือกหมวด (อนุมัติ: ตั้งต้นเป็นหมวดที่กฎเสนอ; ไม่อนุมัติ: ไม่ระบุก็ได้) เขียนเหตุผลด้วยคำของคุณเอง (ไม่เกิน 500 ตัวอักษร) แล้วกด "บันทึก" กรอบผลจะเปลี่ยนเป็น "คนตัดสินแล้ว" พร้อมเหตุผล ผู้ตัดสิน และเวลา ตัดสินแล้วแก้ไม่ได้
+8. **กลับมาดูทีหลัง** ลิงก์ในแถบที่อยู่มีรหัสงาน (`#job_…`) เปิดลิงก์เดิมจะกลับมาที่เคสนั้น (ถ้าเคสยังไม่ถูกล้าง)
+
+**ที่เก็บชั่วคราว (Render แผนฟรี)** หน้าเว็บไม่พูดว่า "บันทึกถาวร" เตือนในการ์ดยืนยันก่อนส่งและบนเคสที่รอตัดสิน และจำ "รหัสงาน" ของสิ่งที่ส่งจากเครื่องนี้ไว้ในเบราว์เซอร์ (ไม่จำข้อความเคส) ถ้าระบบเริ่มใหม่ด้วยที่เก็บว่าง จะขึ้นแถบสีเหลืองว่าหายไปกี่รายการ แทนที่เคสจะหายไปเงียบ ๆ ทางที่ทำให้ไม่หายคือแผนเสียเงินพร้อมดิสก์ (D1)
 
 แท็บ "ตั้งค่า" **ดูอย่างเดียว**: ขั้นตอนและตัวทำงาน (agent) ของแต่ละประเภทงาน, AI ที่ใช้อยู่และวิธีเปลี่ยนใน Render, กติกาการตัดสิน, ที่เก็บข้อมูลและขีดจำกัด, "ตัวเลขการทำงาน" (ดูหัวข้อถัดไป) และ "เส้นทางงานใน Honeycomb" (เปิดหรือปิด ส่งไปที่ไหน การส่งล่าสุดสำเร็จไหม และวิธีเปิดใน Render ดู [observability_tracing.md](observability_tracing.md)) เมื่อเปิดส่งเส้นทางงานแล้ว "รายละเอียดเชิงเทคนิค" ของแต่ละเคสจะมี "รหัสเส้นทางใน Honeycomb (trace id)" ด้วย หน้าเว็บแก้ค่าเหล่านี้ไม่ได้โดยตั้งใจ: คีย์อยู่ใน Render เท่านั้น ตัวทำงานเปลี่ยนได้ผ่าน PR เท่านั้น และคนต้องเป็นผู้ตัดสินเสมอ
 
@@ -215,6 +223,20 @@ container: app.boot (root) ─becomes─► tini ─► python -m app.serve
   checked against `LIBRARY_LINK` (https, no spaces or quotes), and open in a new tab with
   `rel="noopener noreferrer"`. The Flow panel names what each study step produced and ends "ตอบแล้ว ·
   ไม่ต้องรอคนตรวจ".
+- **Decisions (roadmap 2.4, ADR-027):** a waiting case shows a "ตัดสินเคสนี้" card under its proposal: two
+  buttons ("อนุมัติ", "ไม่อนุมัติ"), a category (approve: the rules' suggestion first; reject: "ไม่ระบุหมวด" is
+  allowed), a reason box (the limit comes from `status.reviews.reason_max_chars`) and "บันทึก". The card's
+  choice and text live in page state, so the 4-second refresh never wipes what is typed. Its idempotency key
+  stays the same while the choice and the reason do, so pressing "บันทึก" again after a lost reply cannot
+  record a second decision; a 409 reloads the case to show who decided. The page never sends who decides. A
+  "รอรีวิว" box in the left column lists pending reviews from `GET /v1/reviews` (elevated first, marked "ด่วน"),
+  loaded only while `status.reviews.PENDING` is above 0. A decided case shows "คนตัดสินแล้ว" with the queue,
+  the reason, who and when; the Trace names `review.approved` and `review.rejected`.
+- **Retention (ADR-029):** the words "บันทึกถาวร" appear only when `status.storage.persistent` is true. On
+  temporary storage the confirm card and every waiting case say what a sleep, restart or deploy wipes, and the
+  settings show when the current data started. The page remembers the ids of the jobs it sent with the
+  queue's `store_id` (local storage `neuronflow.sent`, ids only); when `status.retention.store_id` changes, a
+  yellow bar says how many of them are gone, until "รับทราบ".
 - **Settings are read-only by design:** no field accepts a key, a provider, a retry budget or a policy
   (CLAUDE.md rules 4–7). The page explains where each value is changed instead. The tracing panel
   (roadmap 5.1) shows `status.tracing`: on or off with the reason, the destination host, the last export
@@ -230,14 +252,21 @@ container: app.boot (root) ─becomes─► tini ─► python -m app.serve
   horizontal overflow; keyboard sending, focus moves, drawers with Escape, the error paths (short text, bad
   case id, wrong key) and "send again" returning the same job. Repeated for the study box on 2026-11-07
   (roadmap 3.4; the states covered are listed in study_guide.md), with cases still confirmed and reviewed.
+  On 2026-11-10 for decisions and retention, on a local service with temporary storage (1360 px and 390 px):
+  no console errors; an empty reason refused, then the reason kept across a status refresh; approving with
+  another category made the case "อนุมัติแล้ว"; after the data folder was wiped and the service restarted,
+  the bar said that the 2 cases sent from that browser were gone, and stayed closed after "รับทราบ".
 - **Automated (since 2026-11-07):** `tests/test_web_page.py` holds the page to its contracts: the examples
   pass their input contracts, every step and answer code has Thai words, no HTML insertion or inline
   script or style, links only to https addresses with `rel="noopener noreferrer"`, and the script parses.
+  Since 2026-11-10 also: every job status, decision and review error has Thai words, "บันทึกถาวร" is never
+  said without checking the storage, the browser stores only the key and job ids, and a decision's body
+  never names who decides.
 
 ### Job states
 
 ```text
-QUEUED ──► RUNNING ──► REVIEW_REQUIRED      the proposal waits for a person (every case_triage job)
+QUEUED ──► RUNNING ──► REVIEW_REQUIRED ──► APPROVED | REJECTED   a person's decision (every case_triage job waits)
    │              ├──► COMPLETED            a workflow without a review step
    │              ├──► FAILED               see failure.reason
    │              └──► DELIVERY_FAILED      all steps done, but the report conflicted with an existing one
@@ -252,6 +281,12 @@ cannot pause or stop a running job, so `RUNNING` jobs cannot be cancelled.
 
 `failure.reason` is one of `step_failed`, `configuration_changed`, `runner_attempts_exhausted`,
 `runtime_error`, `delivery_failed`, `unknown_workflow_type`.
+
+`APPROVED` and `REJECTED` (roadmap 2.2, ADR-027) are reachable only from `REVIEW_REQUIRED`, through a decision
+(below). The decision row, the review's new state and version, the job's new state and its `review.approved` or
+`review.rejected` event are written in one `BEGIN IMMEDIATE` transaction. The event carries the decision, the
+final category and the reviewer's role, never the reason (free text that could repeat the case). The linked
+follow-up job after an approval (ADR-004) is roadmap 2.3, not built.
 
 ### Recovery rules (the Runner at start-up)
 
@@ -294,6 +329,32 @@ app runs, carries an `X-Request-Id` header:
 | `GET /v1/jobs/{job_id}` | Status, the step plan frozen at claim (`plan`, `null` while queued), reviewer proposal, step timeline, AI provenance, receipt hash, the admitting `request_id`, and `trace_id` (the job's trace in Honeycomb; `null` when tracing was off) | 200 | 401, 404 |
 | `GET /v1/jobs/{job_id}/events?after=<seq>&limit=50` | History in bounded pages (`limit` 1–100) | 200 | 400, 401, 404 |
 | `POST /v1/jobs/{job_id}/cancel` | Withdraw a job that is still `QUEUED`. The body is empty or `{}`. Returns the job view plus `changed` (`false` when it was already cancelled) | 200 | 400, 401, 404, 409 `not_cancellable` (with `job_status`), 415 |
+| `GET /v1/reviews?state=PENDING&limit=20&after=<cursor>` | Reviews in one state (`PENDING`, `APPROVED`, `REJECTED`). Pending: elevated first, then the oldest; decided: newest first. `next_after` is the next cursor; `counts` has every state and `elevated_pending` | 200 | 400, 401 |
+| `GET /v1/reviews/{review_id}` | The case, the proposal (rules, AI second opinion, why it was raised), `proposal_sha256`, `version`, `decidable`, and every decision | 200 | 401, 404 `review_not_found` |
+| `POST /v1/reviews/{review_id}/decisions` | A person's decision, below | 201 new, 200 the same decision again | 400, 401, 404, 409, 413, 415, 429 |
+
+**Reviews (roadmap 2.2, ADR-027).** The Runner's `REVIEW_REQUIRED` opens the job's review (`rev_` + the job id's
+hex) in the same transaction. A job view (`GET /v1/jobs/{job_id}`) has `human_review`: `review_id`, `state`,
+`version`, `priority`, `decidable` and the latest `decision`. A decision is
+`{"decision": "APPROVE"|"REJECT", "final_category"?: "access"|"upload"|"billing"|"other", "reason": "…",
+"expected_version": 1, "idempotency_key": "…"}`:
+- approving without `final_category` keeps the rules' suggestion; rejecting without one records none;
+- `reason` is required: 1–500 characters after trimming, without control characters (new lines are fine);
+- who decides comes from the credential, never the body: today `{"token_id": "shared-access-key", "role":
+  "owner"}`, the only credential until per-person tokens (2.1);
+- the reply has the `decision` (with `final_queue` for an approval), the updated `review` and `retention`;
+- the same key and body again → `200` with the same decision; the same key with another body or another review
+  → `409 idempotency_conflict`; a decided review → `409 already_decided` (with `review_state`); another
+  `expected_version` → `409 version_conflict` (with the current `version`). None of them changes anything;
+- other codes: `invalid_decision`, `invalid_category`, `invalid_reason`, `invalid_version`,
+  `invalid_idempotency_key`, `invalid_fields`, `not_reviewable` (the job left `REVIEW_REQUIRED` behind the
+  review's back; the transaction rolls back), `review_not_found`, `rate_limited`.
+
+**Retention (ADR-029).** `GET /v1/status`, a new job's reply (202 and the duplicate's 200) and a decision's reply
+carry `retention`: `{"persistent": false, "lost_on": ["sleep", "restart", "deploy"], "store_id": "store_<16 hex>",
+"store_started_at": "…"}` on the free plan (`persistent: true` and `lost_on: []` with a disk). The store id is
+written once, when the queue database is created; a new one means the queue started empty again. The page keeps
+the job ids (never the text) it sent with the store id, and tells the person how many are gone after a change.
 
 ```bash
 curl -s https://<your-service>.onrender.com/v1/jobs \
@@ -375,8 +436,13 @@ text that cannot be stored (half of an emoji, a lone surrogate) is `invalid_inpu
 | The container runs without root, keeps data across a restart and stops cleanly | *Actions → Service container* (`examples/service_smoke_test.py`) |
 | The image carries an exact bytecode cache for all its code, so no process compiles at start (effectiveness plan E1) | *Actions → Service container* (`.github/scripts/check_image_bytecode.py --require`), `tests/test_image_bytecode.py` |
 
-The review-related P0 gates (one decision per version, unauthorised reviews denied, exactly one phase-B
-job) belong to Milestone C and are still open.
+| A review decision applies once per version: 16 identical clicks make one decision, 16 different ones let one win; a decided review, an old version or a reused key changes nothing; no key or a wrong key is denied (roadmap 2.2) | `tests/test_service_reviews.py` (`DecisionTests`, 12 tests) |
+| The Runner's outcome and its review, and a decision with the review's and the job's state, are written together or not at all | `test_the_review_is_written_with_the_outcome_or_not_at_all`, `test_store_errors_never_leave_half_a_decision`, `test_a_decision_cannot_move_a_job_that_is_not_waiting` |
+| A version-1 queue upgrades to version 2 with a review for every waiting job, also when two processes start at once | `tests/test_service_reviews.py` (`MigrationTests`) |
+| Every write says how long it lasts, and a new store id shows that the queue started empty (ADR-029) | `tests/test_service_reviews.py` (`RetentionTests`); the page in `tests/test_web_page.py` (`ReviewAndRetentionTests`) |
+
+Still open: a reviewer with a revoked token or the wrong role is denied (roadmap 2.1), and an approval creates
+exactly one linked phase-B job (roadmap 2.3).
 
 ## Configuration
 
@@ -398,7 +464,10 @@ job) belong to Milestone C and are still open.
 
 - One shared access key, compared in constant time, sent as a bearer token. The page keeps it in the
   browser (session storage, or local storage when "remember" is ticked). There are no per-person accounts
-  yet; Milestone C adds reviewer identity.
+  yet; Milestone C adds reviewer identity (2.1). Until then every review decision is recorded as the owner's,
+  so the key must stay the owner's alone (ADR-027).
+- Besides the key, the browser keeps only the ids of the jobs this page sent and the queue's store id
+  (`neuronflow.sent`, at most 100 ids), to tell the person when they are lost; never case text or a reason.
 - Ten wrong keys in a minute from one client pause that client's attempts.
 - The page loads nothing from other sites and allows no inline script or style attribute (strict
   Content-Security-Policy). Server data is always inserted as text. The API sends no CORS headers.
@@ -406,11 +475,15 @@ job) belong to Milestone C and are still open.
   keys never pass through it.
 - Body cap (16 KiB, checked before reading), connection cap, socket timeouts, queue cap and rate limits.
 - Logs, Sentry events and trace spans carry no case text, no query strings, no job ids in access lines and
-  never a key. Spans name routes by template (`/v1/jobs/{job_id}`), never by the path a client sent. Responses carry no file paths. A client's `X-Request-Id` reaches the log only when it matches the
-  safe pattern above and is neither a job id nor the key.
+  never a key. Spans name routes by template (`/v1/jobs/{job_id}`, `/v1/reviews/{review_id}`), never by the path
+  a client sent. A review id is named after its job, so access lines hide it as well. A reviewer's reason is
+  stored with the decision and returned by the API, but never written to an event, a log line or a span.
+  Responses carry no file paths. A client's `X-Request-Id` reaches the log only when it matches the
+  safe pattern above and is neither a job or review id nor the key.
 - Data is synthetic. Personal data is masked before the AI call (roadmap 7.1; what is and is not detected
-  is listed in [case_triage_v2_shadow.md](case_triage_v2_shadow.md)), but the masking is pattern-based, so do
-  not enter real customer information.
+  is listed in [case_triage_v2_shadow.md](case_triage_v2_shadow.md)), and since 2026-11-10 the gateway masks
+  again itself and refuses to send anything the rules would still change (ADR-028). The masking is
+  pattern-based, so do not enter real customer information.
 
 ## Limits
 
@@ -419,7 +492,7 @@ job) belong to Milestone C and are still open.
   WSGI adapter around `ApiApp`, served by waitress or gunicorn).
 - One machine, SQLite, one Runner (ADR-003). With a disk, each redeploy has a short downtime while the
   disk moves to the new instance. On Render's free plan the service sleeps after 15 idle minutes and
-  forgets its cases.
+  forgets its cases, their reviews and the decisions; the API and the page say so (ADR-029).
 - Rate limits live in memory and reset on restart.
 - Live progress inside a running job is not shown step by step: the Flow panel shows the job as running,
   then every step's result when it finishes. Jobs with the mock AI finish in well under a second once the
@@ -427,4 +500,5 @@ job) belong to Milestone C and are still open.
   2026-11-01), later ones 0.1–0.4 s.
 - The chat box takes a case or a study question, chosen with the switch above it. Plain-language
   conversation, where the system chooses (the router), is roadmap Phase 4.
-- Review decisions, the n8n intake and reviewer notifications are Milestone C.
+- Review decisions are built with the owner's shared key as the only reviewer (ADR-027). Per-person tokens
+  (2.1), the linked job after an approval (2.3), the n8n intake and reviewer notifications (2.5) are open.

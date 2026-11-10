@@ -43,10 +43,13 @@ The working example is support-case triage in **shadow mode** (case_triage v2):
    once; if it is still unavailable, the case continues on the rules alone. A setup problem (for example a
    bad key) fails loudly.
 4. When rules and AI disagree, the case is raised to **elevated** review priority, with the reasons.
-5. A human reviewer always decides (`PENDING_HUMAN_REVIEW`). Failures and degraded AI answers are reported
-   to Sentry.
+5. A human reviewer always decides (`PENDING_HUMAN_REVIEW`): on the web page, or through
+   `POST /v1/reviews/{review_id}/decisions`, a person approves (with the rules' category or another) or rejects
+   the case with a reason, and the case ends `APPROVED` or `REJECTED`. Failures and degraded AI answers are
+   reported to Sentry.
 6. Before the AI sees a case, recognisable personal data (e-mail, phone, ID, card and long numbers, names
-   after a title) is replaced with placeholders such as `[PHONE]`.
+   after a title) is replaced with placeholders such as `[PHONE]`. The AI gateway checks this itself and
+   refuses to send text that still holds anything the rules would mask.
 
 Since round 2, cases can also come in from outside, through an HTTP API or a Thai web page:
 
@@ -96,7 +99,8 @@ guide** (`study_guide.v1`, the owner's first-response rule):
 | Robustness benchmark, stage 1: 270 hard synthetic edge cases (EN + TH) and four pinned open datasets (BLNS, JSONTestSuite, CLINC150, BANKING77) through every layer, offline | `tests/robustness/` | Runs in CI as a gate on every outcome; the first run found 8 bugs, all fixed in roadmap 5.5 (now 0 bugs, 215/270 items pass). Plan for stages 2–3: [benchmarking.md](docs/benchmarking.md) |
 | Intake API, durable job queue, single Runner with crash recovery, Thai web page | `app/api/`, `app/persistence/`, `app/services/`, `app/web/`, `app/serve.py` | Working (round 2), tested offline and as a container in CI; live on Render's free plan since 2026-11-01 |
 | Study guide (`study_guide.v1`): versioned topic catalog (11 topics, Thai and English), verified resource library (17 links) with a weekly link check, and the five-step workflow | `app/domains/study_guide/` | Working through the API and on the web page (roadmap 3.1–3.4); mock AI in CI; **first live run with Typhoon** on 2026-11-06 (synthetic set) |
-| Human-review decisions, n8n intake, reviewer notifications | — | **Not built yet** (Milestone C in [architecture](docs/architecture.md)) |
+| Human-review decisions: a ledger, a decisions API and a decision card with a "รอรีวิว" list on the page | `app/services/reviews.py`, `app/persistence/queue_store.py`, `app/web/` | Working since 2026-11-10 (roadmap 2.2, 2.4), with the owner's shared key as the only reviewer (ADR-027) |
+| Per-person reviewer tokens, the linked job after an approval, n8n intake, reviewer notifications | — | **Not built yet** (Milestone C in [architecture](docs/architecture.md)) |
 
 ## Try it
 
@@ -104,7 +108,8 @@ guide** (`study_guide.v1`, the owner's first-response rule):
 Dashboard; the step-by-step guide is in [intake_queue.md](docs/intake_queue.md) (in Thai). Render generates
 the access key (`NEURON_FLOW_ACCESS_KEY`) and deploys `main` only when the GitHub checks pass. A merge that
 changes only docs, tests or CI files does not redeploy (`buildFilter` in `render.yaml`). The free plan
-forgets its cases when it sleeps or redeploys; a paid plan with a disk keeps them.
+forgets its cases, reviews and decisions when it sleeps, restarts or redeploys, and the API and the page say
+so; a paid plan with a disk keeps them.
 
 **On GitHub, no local setup needed:**
 - *Actions → Core logic tests* runs every test on Python 3.10 and 3.12, plus the demos and both scorecards.
@@ -120,7 +125,8 @@ forgets its cases when it sleeps or redeploys; a paid plan with a disk keeps the
 - *Actions → Sentry smoke test* checks that error reporting reaches Sentry. It needs the repository secret
   `SENTRY_DSN`; without it, it skips with a notice.
 - *Actions → Secret scan* checks every commit of every branch for keys and tokens (gitleaks) on every push
-  and pull request.
+  and pull request, and that new commits carry no personal e-mail address (a pull request fails, a push
+  warns; the summary counts the commits in the whole history that carry one).
 - *Actions → Study library link check* opens every link in the study-guide library every Monday and on
   every change to it, and fails when one is broken. It never edits the library.
 - *Actions → Shadow eval with Typhoon (manual)* and *Study guide eval with Typhoon (manual)* run the two
@@ -138,7 +144,7 @@ forgets its cases when it sleeps or redeploys; a paid plan with a disk keeps the
 
 **Locally (Python 3.10+):**
 ```bash
-python -m unittest discover -s tests -v        # 346 tests
+python -m unittest discover -s tests -v        # 392 tests
 python -m examples.case_triage_demo            # v1 rules, one synthetic case
 python -m examples.case_triage_shadow_demo     # v2 shadow mode, three synthetic cases (offline mock AI)
 python -m app.eval.triage_shadow_eval          # scorecard on 61 synthetic cases
@@ -179,13 +185,16 @@ most 1 MiB. The agent `version` is frozen into each job, so an old job refuses t
 | [Effectiveness plan](docs/effectiveness_plan.md) | What "effective" means here, as eleven measures with today's values, and six planned work packages (E1 to E6) that move them: a faster first case, rules that read Thai, a real model behind the page, recorded feedback, the edge of `other`, more Thai study resources |
 | [Benchmarking plan](docs/benchmarking.md) | Three stages of testing beyond our own cases: the robustness gate (built), open benchmarks and attacks, privacy, load and live drift (planned); the datasets, their licences and the ones left out |
 | [Funding readiness pack](docs/funding/README.md) | Internal evidence register; not a submitted application |
-| [Evidence notes](docs/evidence/2026-11-03-render-operations.md) | Dated measurements; the first one covers Render operations (graceful stops, deploy filter, cold start), and [the first live AI runs](docs/evidence/2026-11-06-first-live-typhoon.md) are Typhoon's (2026-11-06); [the first robustness run](docs/evidence/2026-11-07-robustness-stage1.md) is from 2026-11-07, and [the local open model's first smoke run](docs/evidence/2026-11-08-first-local-model-smoke.md) and [first full run](docs/evidence/2026-11-08-first-local-model-full.md) from 2026-11-08; [the effectiveness baseline](docs/evidence/2026-11-10-effectiveness-baseline.md) (the 116 edge cases with Typhoon, and the first job after a start) is from 2026-11-10, and so is [the image's bytecode cache, before and after](docs/evidence/2026-11-10-e1-bytecode-cache.md) (measured in CI, not yet on Render) |
+| [Evidence notes](docs/evidence/2026-11-03-render-operations.md) | Dated measurements; the first one covers Render operations (graceful stops, deploy filter, cold start), and [the first live AI runs](docs/evidence/2026-11-06-first-live-typhoon.md) are Typhoon's (2026-11-06); [the first robustness run](docs/evidence/2026-11-07-robustness-stage1.md) is from 2026-11-07, and [the local open model's first smoke run](docs/evidence/2026-11-08-first-local-model-smoke.md) and [first full run](docs/evidence/2026-11-08-first-local-model-full.md) from 2026-11-08; [the effectiveness baseline](docs/evidence/2026-11-10-effectiveness-baseline.md) (the 116 edge cases with Typhoon, and the first job after a start) is from 2026-11-10, and so is [the image's bytecode cache, before and after](docs/evidence/2026-11-10-e1-bytecode-cache.md) (measured in CI, not yet on Render), and [the answer to the first independent review](docs/evidence/2026-11-10-independent-review-response.md) |
 
 ## Scope and limits
 
 - Runs on one machine. No service-level agreement. The online service is protected by one shared access
-  key, not per-person accounts, and uses Python's standard-library HTTP server (fine for a pilot, not for
-  public traffic).
+  key, not per-person accounts, so every review decision is recorded as the owner's; it uses Python's
+  standard-library HTTP server (fine for a pilot, not for public traffic).
+- An independent review of the code and docs (2026-11-10) found four problems; all four are answered
+  ([evidence](docs/evidence/2026-11-10-independent-review-response.md)). One is left to the owner: one of the
+  owner's personal e-mail addresses is visible in 53 commits of this public history (D8 in the roadmap).
 - Agent child processes isolate failures; they are **not** a security sandbox.
 - All test data is synthetic. The open datasets in the robustness benchmark were written for those datasets and hold no real people's records (ADR-024). Mock AI scores are not evidence of AI accuracy: the triage mock scores high because its keywords were written with its cases, and the study guide mock scores low (topic correct 2/48).
 - Masking personal data before AI calls is pattern-based; it lowers the risk but does not make real data safe.

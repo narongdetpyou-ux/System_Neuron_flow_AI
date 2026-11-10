@@ -95,9 +95,11 @@ Each row was re-checked against the current code.
     parameters, tools or forced `tool_choice` (current Claude 5.5 models reject them).
   - The clients refuse HTTP redirects (`providers/_http.py`), so the key cannot travel to another host.
   - The API key is read from the environment at call time. It never appears in a job, an output or a log.
-  - Personal data is masked before every call (`app/llm/redaction.py`, roadmap 7.1): the gateway accepts
-    only text from `mask()`, the AI sees placeholders such as `[PHONE]`, and the AI step records how many
-    items of each kind it masked. The masking version is part of the agent version.
+  - Personal data is masked before every call (`app/llm/redaction.py`, roadmap 7.1): the AI sees placeholders
+    such as `[PHONE]`, and the AI step records how many items of each kind it masked. The masking version is
+    part of the agent version. The gateway enforces it itself (ADR-028): it accepts only a `MaskedText` that
+    `mask()` made under the current rules (one cannot be built by hand), and masks the text again before
+    sending it; if the rules would still change anything, it raises `UnmaskedText` and nothing is sent.
 - **The error class decides what Core does:**
 
   | Error | Examples | What happens |
@@ -134,7 +136,7 @@ Each row was re-checked against the current code.
   - B: a planner step that produces a plan, validated and run as a new linked job.
   - C: a dynamic DAG inside Core is **not** recommended.
 
-## 5. Job lifecycle (steps 1–3 and 5 built in round 2; step 4 is Milestone C)
+## 5. Job lifecycle (steps 1–3 and 5 built in round 2; step 4's decision built on 2026-11-10, its linked job open)
 
 1. **Built.** `POST /v1/jobs` checks the access key and the input, assigns a `job_id`, and stores
    `idempotency_key` + request fingerprint in the application queue (`<data>/app/queue.sqlite3`). It replies
@@ -144,8 +146,12 @@ Each row was re-checked against the current code.
    path-free summary of the Core outcome back into the job record.
 3. **Built.** A proposal that needs approval marks the job `REVIEW_REQUIRED`. The Core job itself has
    already finished.
-4. *Milestone C.* An authenticated reviewer sends a versioned decision. **Approve** creates one linked
-   phase-B job; **reject** ends at `REJECTED`.
+4. **Decision built (roadmap 2.2, 2.4, ADR-027); linked job open (2.3).** The Runner's `REVIEW_REQUIRED`
+   creates a `PENDING` review in the same transaction. A person sends a versioned decision
+   (`POST /v1/reviews/{review_id}/decisions`): **approve** (the rules' category or another) moves the job to
+   `APPROVED`, **reject** to `REJECTED`, in one transaction with the append-only decision row. Who decides
+   comes from the credential: until per-person tokens (2.1), the owner's shared key. The linked phase-B job
+   that writes a Core receipt for an approval (ADR-004) is not built yet.
 5. **Built.** After a Runner restart, every job still `RUNNING` in the queue is reconciled with Core state,
    always with its frozen spec. A job whose spec would now be built differently (model, prompt or code
    changed) fails as `configuration_changed`; a job claimed `max_claims` times fails as
@@ -154,7 +160,11 @@ Each row was re-checked against the current code.
 Application states: `QUEUED → RUNNING → COMPLETED | REVIEW_REQUIRED | FAILED | DELIVERY_FAILED` (case triage
 always ends `REVIEW_REQUIRED`; the informational `study_guide.v1` ends `COMPLETED`, ADR-018) and
 `QUEUED → CANCELLED` (built; cancel only before the claim, roadmap 1.3), then
-`REVIEW_REQUIRED → APPROVED → (linked phase-B QUEUED)` or `REJECTED` (Milestone C).
+`REVIEW_REQUIRED → APPROVED | REJECTED` (built, a person's decision; the linked phase-B job after `APPROVED` is
+roadmap 2.3).
+
+On storage that is not persistent (Render's free plan) every state above lasts until the next sleep, restart or
+deploy. The API says so instead of implying otherwise (ADR-029): see §6.
 
 ## 6. API contract
 
@@ -175,10 +185,17 @@ Built in round 2 (full reference in [intake_queue.md](intake_queue.md)):
   check.
 - Every response carries `X-Request-Id` (the client's id when it is safe to log, otherwise a new one). The
   same id ends the access log line and is stored in a new job's `job.queued` event (roadmap 1.2).
+- Reviews (built on 2026-11-10, roadmap 2.2, ADR-027): `GET /v1/reviews?state=PENDING|APPROVED|REJECTED&limit=&after=`
+  lists reviews (pending: elevated first, then the oldest); `GET /v1/reviews/{review_id}` returns the case, the
+  proposal and every decision; `POST /v1/reviews/{review_id}/decisions` takes
+  `{decision: APPROVE|REJECT, final_category?, reason, expected_version, idempotency_key}` and replies `201`,
+  or `200` with the same decision for the same key and body; a reused key with another body, a decided review
+  or an old version get `409` and change nothing. The reviewer comes from the credential, never the body.
+- Retention (ADR-029): `/v1/status`, every new job's reply and every decision's reply carry
+  `retention: {persistent, lost_on, store_id, store_started_at}`. A new `store_id` means the queue started
+  empty again.
 
-Planned (Milestone C):
-- `POST /v1/reviews/{review_id}/decisions` takes `APPROVE`/`REJECT`, the reviewer from the authenticated
-  session, a reason and the expected version.
+Planned:
 - `GET /v1/artifacts/{artifact_id}` is authorised access by id, never by a user-supplied path.
 
 Workflow types in the catalog (`app/services/workflows.py`): `case_triage.v2` (the page's default) and
@@ -198,24 +215,24 @@ app/llm/                       config, errors, gateway, prompts, redaction (pers
 app/eval/                      triage_shadow_eval.py, study_guide_eval.py, common.py (the eval gate's shared parts);
                                golden/case_triage_synthetic_v1.json (61 cases), golden/study_guide_synthetic_v1.json (67 requests)
 app/observability/             sentry.py (step failures, degraded AI, Runner recoveries); tracing.py (OTLP/JSON exporter) and job_spans.py (a job's spans)
-app/persistence/               queue_store.py: the application job queue, events and Runner heartbeat (SQLite)
-app/services/                  workflows.py (catalog), admission.py, runner.py (with reconciliation), results.py, metrics.py
+app/persistence/               queue_store.py: the application job queue, events, Runner heartbeat, reviews and decisions (SQLite, schema 2)
+app/services/                  workflows.py (catalog), admission.py, runner.py (with reconciliation), results.py, metrics.py, reviews.py (decisions)
 app/api/                       routes.py (ApiApp), server.py (standard-library HTTP server), limits.py
 app/web/                       index.html, app.css, app.js: the Thai web page (chat layout with a case / study-question switch, the study guide's layered answer, Flow and Trace, read-only settings)
 app/boot.py                    process 1 of the image: takes the data folder, drops root, becomes tini
 app/settings.py, app/serve.py  environment settings; the launcher (API + supervised Runner in one container)
 Dockerfile, render.yaml        the container (it compiles all its code once, so no process compiles at start) and the Render Blueprint (railway.json kept for Railway)
 examples/                      case_triage_demo, case_triage_shadow_demo, study_guide_demo, sentry_smoke_test, service_smoke_test
-tests/                         346 tests: core, triage v1/v2, AI gateway, Typhoon provider, local model provider and its model fetcher, masking, scorecards, eval gates, Sentry, tracing, API, queue, Runner, HTTP, metrics, study library, link check, study guide, web page, robustness benchmark, workflow permissions, the image's bytecode cache
+tests/                         392 tests: core, triage v1/v2, AI gateway, Typhoon provider, local model provider and its model fetcher, masking, scorecards, eval gates, Sentry, tracing, API, queue, Runner, HTTP, metrics, study library, link check, study guide, web page, robustness benchmark, workflow permissions, the image's bytecode cache, review decisions and retention, the commit e-mail check
 tests/robustness/              the robustness benchmark, stage 1 (docs/benchmarking.md): synthetic_v1.json (270 edge cases), open_extract_v1.json
                                (BLNS, JSONTestSuite, CLINC150, BANKING77, pinned; NOTICE.md), bench.py, build_open_extract.py, triage_edge_golden_v1.json
 tests/baselines/               shadow_eval_mock.json, study_guide_eval_mock.json: every case's answer with the mock AI (the eval gates' baselines);
                                robustness_v1.json: every robustness item's outcome, failures included
 .github/workflows/             core-tests (with the robustness gate), service-container, tracing-check, secret-scan, sentry-smoke, study-links (weekly); manual: shadow-eval and study-guide-eval with Typhoon or Claude, local-model-eval (both scorecards on llama.cpp + Typhoon 2.5 4B on the runner; a 5-case smoke on PRs that change app/llm)
 .github/gitleaks.toml          secret scan rules (gitleaks defaults + Sentry DSN + Honeycomb keys); .github/.gitleaksignore: reviewed findings
-.github/scripts/               check_render_blueprint.py: render.yaml structure, build filter, Render's schema; check_traces.py; check_image_bytecode.py (the image's bytecode cache, run inside the image); llm_probe.py (one fixed sentence before a live run); fetch_model.py (the local lane's model file, SHA-256 checked)
+.github/scripts/               check_render_blueprint.py: render.yaml structure, build filter, Render's schema; check_traces.py; check_commit_emails.py (no personal address in new commits); check_image_bytecode.py (the image's bytecode cache, run inside the image); llm_probe.py (one fixed sentence before a live run); fetch_model.py (the local lane's model file, SHA-256 checked)
 .github/otel/                  collector.yaml: the OpenTelemetry Collector that the tracing check sends to
-planned: review ledger and artifact store
+planned: artifact store
 ```
 
 ## 8. Architecture decisions (ADRs)
@@ -225,7 +242,7 @@ planned: review ledger and artifact store
 | 001 | One controller per workspace; only the Runner opens Runtime | In force; the API never opens it, and a second Runner fails with `WorkspaceBusy` |
 | 002 | Durable admission before execution; reply 202 only after commit | In force |
 | 003 | Single machine first; no Redis, Postgres or distributed claims | In force: SQLite queue on one disk |
-| 004 | Two-phase human review as linked jobs | Accepted; Milestone C |
+| 004 | Two-phase human review as linked jobs | Accepted; the decision is built (ADR-027), the linked job is roadmap 2.3 |
 | 005 | Trusted agents only; versions frozen per job | In force |
 | 006 | Large artifacts stay outside Core messages | Accepted; not needed yet |
 | 007 | Side effects are not automatically exactly-once | In force; no side-effect agents exist yet |
@@ -237,7 +254,7 @@ planned: review ledger and artifact store
 | 013 | Secrets come only from the environment at call time | In force; tested by scanning every stored file |
 | 014 | API and Runner run in one container on one disk; the launcher supervises the Runner. A disk attaches to a single instance, so two Runners never share it. Host: Render (Railway paused new sign-ups on 22 Oct 2026) | In force (round 2) |
 | 015 | Interrupted jobs resume only under the spec frozen at their first claim; any drift fails them as `configuration_changed` | In force (round 2) |
-| 016 | Until reviewer identity exists (Milestone C), the API is protected by one shared access key, with per-client limits on wrong keys | In force (round 2); to be replaced |
+| 016 | Until reviewer identity exists (Milestone C), the API is protected by one shared access key, with per-client limits on wrong keys | In force (round 2); to be replaced by 2.1. Review decisions made with it are recorded as the owner's (ADR-027) |
 | 017 | Tracing uses a small standard-library OTLP/HTTP JSON exporter, not the OpenTelemetry SDK. Job, step and AI spans are built after the job from durable records (queue record, Core step events, the AI view); only allow-listed ASCII attributes can be sent | In force (PR #30). Trade-off: no automatic instrumentation, no metrics or logs signals, and two modules (about 700 lines with comments) to maintain. Attribute names follow the semantic conventions, so the SDK can replace it without changing the data |
 | 018 | An informational workflow (today `study_guide.v1`) ends `COMPLETED` without human review. It may only answer with information from versioned data; it records no decision, changes nothing and sends nothing outside, and its validator refuses a `decision` field. Anything that decides about a person or acts outside still goes to review (rule 4) | In force (roadmap 3.2, PR #33). Trade-off: nobody checks an answer before the person reads it, so the answer must stay safe by construction (catalog topics only, at most 5 library links, code-inserted URLs, "out of scope" instead of guessing) and is measured in 3.3 |
 | 019 | A prompt file may be completed from versioned data before a call (`app.llm.prompts.specialize`): extra system lines, fixed choices for a text field, extra text fields. The file keeps its hash, and the agent version carries the data's own version next to it | In force (PR #33, the study guide's catalog). Trade-off: the exact prompt text is no longer one file to read, but it is a pure function of two versioned inputs and is rebuilt the same way for every attempt |
@@ -248,6 +265,9 @@ planned: review ledger and artifact store
 | 024 | Open datasets in tests and benchmarks count as synthetic data (rule 9) only when they are: written for the dataset (hand-made test strings, crowd-written or expert-written requests), openly licensed for redistribution, free of real people's records, and pinned to an upstream commit with every file's SHA-256, attribution and the changes made (`tests/robustness/NOTICE.md`). Labels mapped into this project's categories are marked as the developer's mapping. Real-world text (social-media posts, call-centre transcripts, real tickets) still needs D4 | In force (roadmap 5.4, PR #41). Used: BLNS and JSONTestSuite (MIT), CLINC150 (CC BY 3.0), BANKING77 (CC BY 4.0); planned: MASSIVE (CC BY 4.0), deepset/prompt-injections (Apache-2.0). Left out: ai4privacy (non-commercial, no redistribution or derivatives without a written licence), truevoice-intent and social-media corpora (real people's words). Trade-off: crowd-written text is cleaner and more uniform than real cases, so these sets find robustness bugs and rule gaps, not real-world accuracy |
 | 025 | `neuron_flow.model.decode` raises `SpecError` for every input it cannot read: besides invalid JSON and invalid UTF-8, also text holding a lone surrogate and a number past Python's 4,300-digit conversion limit, which escaped as `UnicodeEncodeError` and `ValueError`. Refusals that carry their own message (a repeated field, a non-finite constant, `MessageSizeError`) are unchanged, and every input it read before reads the same. The second Core change since extraction (rule 1); Core version 0.4.1 | In force (roadmap 5.5, PR #42). Found by the robustness benchmark (SYN-COR-040, SYN-COR-041): the API caught only `SpecError`, so a 5,000-digit number got a 500. The app guards on their own (the API treats any parse failure as 400, admission refuses input Core cannot store) already fix that symptom; this makes Core keep its own contract for every caller. Trade-off: a Core change, kept to the one function with tests (`tests/test_core.py`, `JsonContractTests`) |
 | 026 | A third real provider, `local`: an open-weight model on an OpenAI-format server that we run ourselves, through the same client as Typhoon (`providers/openai_compat.py`), the same gateway, validators, masking and error classes. The default endpoint is `http://127.0.0.1:8080/v1` (plain http only on this machine, https elsewhere). The key is optional: `NEURON_FLOW_LOCAL_API_KEY` is sent when set, and otherwise the request has no Authorization header. The model id names the file, `<name>:<first 12 hex digits of its SHA-256>`, used as the server's alias and as `NEURON_FLOW_LLM_MODEL`, so another file is another agent version. It gets the same answer-format words as Typhoon (`json-instruction-v1`), and llama.cpp also enforces the answer schema as a grammar. The first lane is the workflow *Local open model eval*: llama.cpp's server built from a pinned commit, Typhoon 2.5 Qwen3 4B (SCB 10X, Apache-2.0) from Hugging Face with its SHA-256 checked, served on 127.0.0.1 of a standard GitHub runner with greedy decoding (temperature 0, repeat penalty 1.05, thinking off); pull requests that change `app/llm/` get a 5-case smoke run | In force (PR #46, ROADMAP 5.8). Trade-offs: CPU only on a 4-CPU runner, so an answer takes seconds; the 4B model is much smaller than the 30B model behind Typhoon's API, and the scorecards measure what that costs; the server settings live in the workflow file, recorded by its commit, not in the agent version; GitHub's terms allow hosted runners only for building, testing and publishing the project, so this lane measures and never serves the web page, which would need a paid machine with room for the model (owner decision D7). Its results describe that file with those settings, never Typhoon's API or Claude |
+| 027 | Review decisions (roadmap 2.2) and the page's decision card (2.4) are built before per-person tokens (2.1). Until 2.1, the one credential is the shared access key (ADR-016), which the owner holds, and the owner is the only reviewer (D3's default). A decision is recorded with `reviewer_token_id = shared-access-key` and `reviewer_role = owner`, taken from the credential and never from the request body. Ledger: `reviews` (one per job, state and version) and append-only `review_decisions` in the queue database at schema version 2, with a tested 1 → 2 upgrade that gives every waiting job its review. One transaction writes the decision, the review's state and version and the job's new state (`APPROVED` or `REJECTED`); the idempotency key is checked first, so a retried click returns the same decision. Events and logs carry the decision, never the reviewer's reason | In force (2026-11-10), because the independent review of that day found that a case could not be closed by a person (point 4). Trade-offs: anyone who has the shared key decides as the owner, so the key must stay the owner's alone until 2.1; the linked phase-B job with a Core receipt (ADR-004, roadmap 2.3) is not built, so an approval is recorded in the queue database only; on the free plan decisions vanish with the queue (ADR-029, D1) |
+| 028 | The AI gateway enforces personal-data masking itself instead of trusting the type of its input. `MaskedText` can be made only by `mask()` (a module-private seal; read-only; no copy or pickle); `structured_answer()` accepts only one made under the current rules, reads its text once, masks that text again (`redaction.leftover`) and raises `UnmaskedText` (a permanent agent error, so the step fails loudly and nothing is sent) when the rules would still change anything. A static test keeps the networked providers out of reach except through the gateway. This relies on masking being idempotent; the re-check found three inputs where `redact-v1` was not, so `redact-v2` runs the rules until nothing changes and never treats สาว after นาง as a name | In force (2026-11-10), from the independent review of that day (point 2). Trade-offs: Python cannot stop code that goes out of its way (it could reach the private seal), which is why the gateway re-checks the text; the re-check doubles the masking work per call (microseconds next to a model call); the masking itself is still pattern-based (rule 9) |
+| 029 | Retention is stated, not implied. `/v1/status`, every new job's reply and every decision's reply carry `retention`: whether the data folder survives a restart, what wipes it (`sleep`, `restart`, `deploy` on the free plan) and the queue database's `store_id` and start time (random, written once by the first `migrate()`). The page never says "saved permanently" on temporary storage, warns before a case is sent and on every waiting case, and keeps in the browser the ids (never the text) of what it sent with the store id; when the store id changes, it says how many of those cases are gone | In force (2026-11-10), from the independent review of that day (point 3). ADR-002 still holds: the 202 comes after the commit, which protects against a crashed process, not against a replaced container. Only a disk keeps cases (D1, about $7.25 a month); no free durable store fits ADR-003 and the P2 list |
 
 ## 9. Acceptance gates
 
@@ -263,7 +283,9 @@ planned: review ledger and artifact store
 - The API key is absent from every stored file.
 - Redirects cannot carry the key elsewhere.
 - Personal data that the masking rules recognise never reaches the provider (roadmap 7.1; tested with Thai
-  and English samples against the fake Claude API).
+  and English samples against the fake Claude API). Since 2026-11-10 the gateway enforces it (ADR-028): a
+  hand-made or forged `MaskedText`, an old masking version or text the rules would still change is refused
+  before any request, and only the gateway may reach a networked provider (a static test).
 - Tests pass on Python 3.10–3.13.
 
 **P0 for the first API release, met in round 2 (automated; tests listed in [intake_queue.md](intake_queue.md)):**
@@ -278,9 +300,16 @@ planned: review ledger and artifact store
   (tini) ran as root and could not pass SIGTERM on there, so stops on Render were not clean. On Render,
   stops have been graceful since then ([evidence](evidence/2026-11-03-render-operations.md)).
 
+**P0 for review decisions, met on 2026-11-10 (automated, `tests/test_service_reviews.py`; ADR-027):**
+- A review decision applies once per version: 16 identical clicks at once make one decision, 16 different
+  decisions at once let one win and refuse the other 15, and a decided review or an old version is refused.
+- A request without the key or with a wrong key is denied on every review route (per-role denial waits for 2.1).
+- The decision, the review's state and the job's state change together or not at all (a failure injected
+  mid-transaction leaves all three as they were); the Runner's outcome and the review are written together.
+
 **P0 still open:**
-- A review decision applies once per version, unauthorised reviews are denied, and approval creates exactly
-  one phase-B job (Milestone C).
+- Approval creates exactly one phase-B job (roadmap 2.3), and a reviewer with the wrong role is denied
+  (roadmap 2.1).
 - Side-effect agents need an idempotency contract (none exist yet).
 - Hash checks catch changed artifacts (no artifact store yet).
 
@@ -307,6 +336,9 @@ planned: review ledger and artifact store
   process compiled everything it imported at each start; in CI the first case after a start went from 0.989 s
   to 0.256 s, and from 14.4 s to 3.1 s with the container held to 0.1 CPU
   ([evidence](evidence/2026-11-10-e1-bytecode-cache.md)); the time on Render is measured after the merge.
+- Done on 2026-11-10: retention stated in every write reply and on the page, with a store id that shows when
+  the queue started empty again (ADR-029); a CI check that new commits carry no personal e-mail address
+  (`commit-emails` in *Secret scan*: a pull request fails, a push warns).
 - Open: retention and backup/restore drills (1.4, needs a disk), API authentication hardening (2.1, 7.2).
 
 **P2 (do not build early):** multi-tenancy, distributed workers, Postgres, object storage, SLAs, a hosted
@@ -320,7 +352,7 @@ dashboard.
 | A2 | AI gateway, v2 shadow mode, scorecard, Sentry reporting | Done (PR #8, #9); a free Typhoon provider added (ADR-021, after GitHub Models was found retired). First live runs with Typhoon on 2026-11-06 after the answer-format fix (ADR-022): AI correct 60/61 on the synthetic triage set in two runs ([evidence](evidence/2026-11-06-first-live-typhoon.md)); Claude not run yet (D2); a local open-model lane on the GitHub runner, Typhoon 2.5 4B through llama.cpp (ADR-026, PR #46, ROADMAP 5.8), first full run on 2026-11-08: AI correct 58/61, every rule mistake raised (32/32) ([evidence](evidence/2026-11-08-first-local-model-full.md)) |
 | P1-fix | Neutral telemetry phase names | Done (PR #21, roadmap 1.1) |
 | B | Admission queue, single Runner, reconciliation, thin API, web page | Done (PR #11); live on Render's free plan since 2026-11-01; page redesigned as a chat layout with Flow, Trace and read-only settings (PR #18, roadmap 1.6) |
-| C | Two-phase review, decision ledger, n8n notifications | Open |
+| C | Two-phase review, decision ledger, n8n notifications | Started 2026-11-10: the decision ledger and API (2.2) and the page's decision card and inbox (2.4), with the owner's shared key as the reviewer's credential (ADR-027); per-person tokens (2.1), the linked phase-B job (2.3) and n8n (2.5) open |
 | D | OpenTelemetry tracing, eval gates in CI | Done: the per-case eval gates (5.2 for triage; 3.3 for the study guide), queue/run-time figures (5.3), Sentry, request ids, and tracing (5.1, PR #30), with the first trace seen in Honeycomb on 2026-11-03. Added on 2026-11-07: the robustness benchmark, stage 1 of the plan in [benchmarking.md](benchmarking.md) (5.4, PR #41; its 8 bugs fixed in 5.5, PR #42); stages 2–3 (5.6, 5.7) planned |
 | E | Planner pattern (B), MCP server, second domain with zero Core changes | Open |
 | — | `study_guide.v1`: first-response study guide ([design_philosophy.md](design_philosophy.md), [study_guide.md](study_guide.md)) | Workflow and scorecard built: the topic catalog, the verified resource library, the weekly link check (3.1, PR #32), the five-step workflow in the catalog (3.2, PR #33) and the 67-request scorecard with its eval gate (3.3, PR #34), with the mock AI in CI; first live run with Typhoon on 2026-11-06: topic correct 46/48, 0 of 142 links outside the library ([evidence](evidence/2026-11-06-first-live-typhoon.md)); on the web page with a layered answer (3.4, PR #39; questions sent without a confirm card, ADR-023), tried by the owner on the live page on 2026-11-08 with the mock AI; Claude after D2 |
@@ -333,7 +365,13 @@ The order of the remaining work, with tasks, acceptance checks and owner decisio
 - This is a single-machine runtime. Its child processes isolate failures; they are **not** a sandbox for
   untrusted code.
 - The HTTP server is Python's standard-library server with request, connection and time limits. It suits a
-  single-owner pilot, not public traffic. One shared access key is not per-person authentication.
+  single-owner pilot, not public traffic. One shared access key is not per-person authentication: every review
+  decision is recorded as the owner's (ADR-027), so the key must stay the owner's alone until 2.1.
+- On Render's free plan the queue, the reviews and the decisions last until the next sleep, restart or
+  deploy. The API and the page say so (ADR-029), but only a disk (D1) keeps them.
+- The owner's personal e-mail address is public in the author or committer field of 53 commits (2026-11-10;
+  51 when the repository went public, the rest are merges made on github.com since). New commits are checked
+  in CI; removing the old ones is owner decision D8 (ROADMAP).
 - All data is synthetic, and mock-AI scores test the pipeline, not accuracy. Masking before AI calls is
   pattern-based and misses names without a title, addresses and more, so it does not make real data safe.
 - Every process in the container (API, Runner, Core workers) runs as one user with one environment, so each

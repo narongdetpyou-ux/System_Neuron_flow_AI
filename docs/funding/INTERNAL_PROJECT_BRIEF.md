@@ -63,7 +63,7 @@ yet been benchmarked or validated with prospective users.
     synthetic study-guide requests, in English and Thai. Their mock scores
     test the pipeline, not accuracy.
   - Sentry error monitoring, with live smoke-test events received.
-  - 346 automated tests.
+  - 392 automated tests.
 - Architecture: [architecture](../architecture.md) covers the layers, decisions
   and milestone status. The admission queue, single Runner, API and a Thai web
   page are implemented and online with synthetic data (Render free plan).
