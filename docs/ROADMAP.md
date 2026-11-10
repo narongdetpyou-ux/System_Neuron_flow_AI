@@ -21,7 +21,7 @@ differs, this file and architecture.md win.
   - ถ้าสองฝ่ายเห็นไม่ตรงกัน เคสจะถูกยกให้คนดูก่อน
 - ถ้าเครื่องดับกลางทาง ระบบทำต่อได้ ส่งซ้ำก็ไม่เกิดงานซ้ำ
 - ยกเลิกเคสที่ยังรอคิวได้ และทุกคำขอมีรหัสคำขอ (request id) ไว้ไล่ดูใน log (ขั้น 1.2, 1.3)
-- ผ่านชุดทดสอบอัตโนมัติ 411 ข้อ และเปิดใช้ออนไลน์บน Render แล้ว ระบบปิดตัวอย่างเรียบร้อย และการแก้แค่เอกสารไม่ทำให้ Render ขึ้นเวอร์ชันใหม่ (ขั้น 0.1, 0.5)
+- ผ่านชุดทดสอบอัตโนมัติ 448 ข้อ และเปิดใช้ออนไลน์บน Render แล้ว ระบบปิดตัวอย่างเรียบร้อย และการแก้แค่เอกสารไม่ทำให้ Render ขึ้นเวอร์ชันใหม่ (ขั้น 0.1, 0.5)
 - หน้าเว็บเป็นแบบแชท: พิมพ์เคส ดูขั้นตอนก่อนส่ง กดยืนยัน แล้วติดตามใน Flow และประวัติเหตุการณ์ (ขั้น 1.6)
 - หน้าเว็บบอกว่ามีเคสรอกี่เคส เคสที่รอนานสุดรอมานานเท่าไร ปกติแต่ละเคสใช้เวลาเท่าไร และเคสที่ไม่สำเร็จล้มเพราะอะไร (ขั้น 5.3)
 - ถ้ามีคนแก้กฎหรือ prompt แล้วคำตอบของเคสทดสอบเคสไหนเปลี่ยน ช่องตรวจบน GitHub จะเป็นสีแดงและบอกว่าเคสไหนเปลี่ยนอะไร (ขั้น 5.2)
@@ -43,19 +43,23 @@ differs, this file and architecture.md win.
   - **อีเมลส่วนตัวใน commit**: พบว่ายังเพิ่มขึ้นทุกครั้งที่กด Merge บน github.com (51 commit ตอนเปิดสาธารณะ ตอนนี้ 53) จึงเพิ่มช่องตรวจที่จับอีเมลส่วนตัวใน commit ใหม่ ทางหยุดคือการตั้งค่า 1 อย่างของคุณใน GitHub ส่วนของเก่าคุณเลือกเก็บประวัติไว้ตามเดิมแล้ว (D8 ข้างล่าง)
 - เคสแรกหลังระบบตื่นเคยใช้ราว 10 วินาที สาเหตุที่ยืนยันแล้วบนภาพจริงของบริการคือไม่มีไฟล์ที่แปลไว้ล่วงหน้า (bytecode cache) เลย โปรแกรมจึงต้องแปลโค้ดใหม่ทุกครั้งที่เริ่ม แก้แล้วใน PR #60 (งาน E1, 10 พ.ย.): บนเครื่องของ GitHub ที่จำกัดกำลังให้เท่าเครื่องฟรีของ Render เคสแรกเร็วขึ้นจาก 14.4 เป็น 3.1 วินาที ยังไม่ได้วัดบน Render จริง เพราะต้องรวม (merge) ก่อน ([บันทึกหลักฐาน](evidence/2026-11-10-e1-bytecode-cache.md))
 
+- **ทักษะแยกกัน ส่งงานผ่านตัวกลาง (11 พ.ย. ตามที่คุณขอ, ADR-030):** แต่ละทักษะไม่เรียกโค้ดของกัน ส่งงานให้กันผ่านตัวกลาง (exchange) ตามตารางเส้นทางที่มีเลขรุ่น ระหว่างทางมีล่ามขาออกแปลเป็นภาษากลาง และล่ามขาเข้าแปลเป็นภาษาของทักษะปลายทาง เส้นทางแรกใช้งานแล้ว: กด "อนุมัติ" เคส → ระบบสร้างงาน "บันทึกผลหลังอนุมัติ" ทันทีในครั้งเดียวกับการตัดสิน บันทึกว่าเคสไปคิวไหน ใครอนุมัติ พร้อมใบรับจาก Core (นี่คือขั้น 2.3) ข้อความเคสไม่ถูกส่งต่อ ไม่อนุมัติก็ไม่ส่งต่อ ทดสอบกับชุดเคสเดิมทั้ง 3 ชุด 217 เคส ผ่านทุกข้อ และชุดทดสอบเดิมได้ผลเหมือนเดิมทุกข้อ ([แบบและวิธีทดสอบ](skill_handoff.md), [บันทึกหลักฐาน](evidence/2026-11-11-skill-handoff.md)) ยังไม่ได้ลองบน Render เพราะต้องรวมโค้ดก่อน
+- **ผู้ช่วยแนะนำแหล่งเรียน: หยุดพัฒนาไว้ก่อน (11 พ.ย. ตามที่คุณสั่ง):** ของเดิมยังใช้ได้และช่องตรวจยังรัน
+
 **ลำดับต่อจากนี้** แต่ละขั้นจบด้วยสิ่งที่คุณลองเองได้
 
 | ขั้น | ทำอะไร | คุณจะได้ลองอะไร | สถานะ (10 พ.ย. 2026) |
 |---|---|---|---|
 | 0 | เปิดใช้ออนไลน์บน Render และวัดผล AI จริงครั้งแรก | ใส่เคสบนหน้าเว็บจริง และอ่านผลวัดของ AI จริง | ออนไลน์แล้ว; วัดผล AI จริงครั้งแรกแล้วด้วย Typhoon (0.3, 6 พ.ย.); ที่เหลือรอคุณตัดสินใจ: D1 แผน Render แบบเสียเงิน, D2 API key ของ Claude และ 0.4 กับ Typhoon (ฟรี แต่ข้อความที่พิมพ์บนหน้าเว็บจะถูกส่งไป Typhoon) |
 | 1 | เก็บงานเล็ก ๆ ให้ระบบแน่นขึ้น | ยกเลิกเคสที่ยังรอคิวได้ | เสร็จ ยกเว้น 1.4 (สำรองข้อมูล) ที่ต้องใช้แผน Render แบบเสียเงิน |
-| 2 | ให้คนรีวิวได้จริง: ผู้รีวิวมีรหัสของตัวเอง กดอนุมัติหรือไม่อนุมัติได้ และ n8n แจ้งเตือน | กล่อง "รอรีวิว" บนหน้าเว็บ และข้อความแจ้งเตือน | เริ่มแล้ว (10 พ.ย. ตามข้อ 4 ของผู้ตรวจสอบอิสระ): 2.2 บันทึกการตัดสินและ 2.4 การ์ดตัดสินกับรายการ "รอรีวิว" ทำแล้ว โดยผู้ตัดสินคือผู้ถือรหัสเข้าใช้ร่วม (คุณ); 2.1 รหัสรายคน 2.3 งานต่อเนื่องหลังอนุมัติ และ 2.5 n8n ยังไม่ทำ |
-| 3 | ผู้ช่วยแนะนำแหล่งเรียน (`study_guide.v1`) ตามหลักปรัชญาของคุณ | พิมพ์เรื่องที่อยากรู้ด้วยคำธรรมดา แล้วได้แหล่งเรียนไม่เกิน 5 แหล่งพร้อมลำดับการเรียน | สร้างครบทุกขั้นแล้ว (คุณเลือกขั้นนี้ก่อนขั้น 2 เมื่อ 5 พ.ย.): 3.1 คลังแหล่งเรียน 3.2 ตัวผู้ช่วย และ 3.3 ชุดข้อสอบ ทำแล้ว (ดูตัวอย่างคำตอบและผลข้อสอบใน Actions ได้); 3.4 ช่อง "อยากเรียน" บนหน้าเว็บ สร้างและ merge แล้ว (7 พ.ย.) คุณลองบนหน้าเว็บจริงผ่านแล้ว (8 พ.ย.); รันกับ AI จริง (Typhoon) แล้ว หาหัวข้อถูก 46 จาก 48 ข้อ ไม่มีลิงก์นอกคลัง (Claude รอ D2) |
+| 2 | ให้คนรีวิวได้จริง: ผู้รีวิวมีรหัสของตัวเอง กดอนุมัติหรือไม่อนุมัติได้ และ n8n แจ้งเตือน | กล่อง "รอรีวิว" บนหน้าเว็บ และข้อความแจ้งเตือน | เริ่มแล้ว (10 พ.ย. ตามข้อ 4 ของผู้ตรวจสอบอิสระ): 2.2 บันทึกการตัดสินและ 2.4 การ์ดตัดสินกับรายการ "รอรีวิว" ทำแล้ว โดยผู้ตัดสินคือผู้ถือรหัสเข้าใช้ร่วม (คุณ); 2.3 งานต่อเนื่องหลังอนุมัติทำแล้ว (11 พ.ย.) เป็นเส้นทางแรกของตัวกลาง (ขั้น H); 2.1 รหัสรายคน และ 2.5 n8n ยังไม่ทำ |
+| 3 | ผู้ช่วยแนะนำแหล่งเรียน (`study_guide.v1`) ตามหลักปรัชญาของคุณ | พิมพ์เรื่องที่อยากรู้ด้วยคำธรรมดา แล้วได้แหล่งเรียนไม่เกิน 5 แหล่งพร้อมลำดับการเรียน | สร้างครบทุกขั้นแล้ว (คุณเลือกขั้นนี้ก่อนขั้น 2 เมื่อ 5 พ.ย.): 3.1 คลังแหล่งเรียน 3.2 ตัวผู้ช่วย และ 3.3 ชุดข้อสอบ ทำแล้ว (ดูตัวอย่างคำตอบและผลข้อสอบใน Actions ได้); 3.4 ช่อง "อยากเรียน" บนหน้าเว็บ สร้างและ merge แล้ว (7 พ.ย.) คุณลองบนหน้าเว็บจริงผ่านแล้ว (8 พ.ย.); รันกับ AI จริง (Typhoon) แล้ว หาหัวข้อถูก 46 จาก 48 ข้อ ไม่มีลิงก์นอกคลัง (Claude รอ D2); **หยุดพัฒนาเพิ่มไว้ก่อนตามที่คุณสั่ง (11 พ.ย.)**: ของที่มีอยู่ยังใช้ได้และช่องตรวจยังรันเหมือนเดิม |
 | 4 | ช่องคุยภาษาธรรมดา: ระบบเข้าใจว่าคุณขออะไร บอกตรง ๆ เมื่อเรื่องอยู่นอกกรอบ และถามกลับ 1 คำถามเมื่อข้อมูลไม่พอ | คุยกับระบบได้เลย ไม่ต้องเลือกประเภทงานเอง | ยังไม่เริ่ม (ขั้น 3 สร้างครบแล้ว เริ่มได้เมื่อคุณเลือก) |
 | 5 | ติดตามเส้นทางของแต่ละงาน (เวลา token จุดที่ช้า) ด่านตรวจผลรายเคส และแผนทดสอบ 3 ขั้นด้วยข้อมูลเปิด | ตัวเลขคิวและเวลาบนหน้าเว็บ ช่องตรวจบน PR แล้วต่อด้วยเส้นทางงานใน Honeycomb; ผลด่านความทนทานในหน้าสรุปของ *Core logic tests* | เสร็จแล้วทั้ง 5.1, 5.2, 5.3 และ 5.4; เส้นทางงานแรกเข้า Honeycomb เมื่อ 4 พ.ย. 00:23 น.; ด่านความทนทาน (5.4) รวมเข้า main แล้ว 7 พ.ย.; แก้ 8 bug ที่เจอแล้ว (5.5, PR #42 รวมแล้วเมื่อ 8 พ.ย.); E2 ใน PR #64 แก้จุดอ่อนของกฎได้ 24 จุด เหลือจุดอ่อนทั้งหมด 20 จุด แล้วขั้นข้อสอบกลาง (5.6) และขั้นโจมตีกับใช้งานจริง (5.7); 5.8 โมเดลเปิดที่รันเองบนเครื่องทดสอบของ GitHub สร้างแล้วใน PR #46 และรันเต็มรอบแรกแล้ว 8 พ.ย. (ดันเคสที่กฎผิดขึ้นคิวด่วนครบ 32/32) รอเจ้าของโปรเจกต์เลือกทาง |
 | 6 | AI วางแผนงานหลายขั้น ระบบตรวจแผนก่อนรัน และเครื่องมืออื่นเรียกใช้ผ่าน MCP ได้ | สั่งงานจากแอป Claude ได้ | ยังไม่เริ่ม (ต้องรอขั้น 2–4) |
 | 7 | เตรียมพร้อมก่อนให้คนอื่นใช้ หรือก่อนเปิด repo สาธารณะ | รายงานตรวจความปลอดภัย และรายการตรวจก่อนเปิดตัว | เริ่มแล้ว: 7.1 ปิดข้อมูลส่วนตัวก่อนส่งให้ AI ทำแล้ว และตั้งแต่ 10 พ.ย. ตัวกลางเรียก AI บังคับปิดซ้ำเองก่อนส่ง ส่วนการจำกัดว่าใครเห็นคีย์ AI ได้ เขียนแผนไว้ ยังไม่ทำ; 7.4 เสร็จ: repo นี้เป็นสาธารณะพร้อมประวัติทั้งหมดตั้งแต่ 8 พ.ย. (D5) เปลี่ยนคีย์ Sentry แล้ว และเปิดระบบสแกนคีย์ของ GitHub แล้ว; มีผู้ตรวจสอบอิสระอ่านโค้ดครั้งแรกเมื่อ 10 พ.ย. ตอบครบ 4 ข้อแล้ว และคุณเลือกเก็บประวัติอีเมลเก่าไว้ตามเดิม (D8) |
-| E | [แผนเพิ่มประสิทธิผล](effectiveness_plan.md) 6 งาน (E1–E6): เคสแรกหลังระบบตื่นเร็วขึ้น กฎรุ่น 2 ที่อ่านภาษาไทยได้ หน้าเว็บจริงใช้ AI จริง เก็บคำตอบ "เข้าใจถูกไหม" ให้ AI แยก "อื่น ๆ" ได้ดีขึ้น และคลังแหล่งเรียนที่มีภาษาไทยมากขึ้น | เวลาของเคสแรก ข้อเสนอหลักของเคสภาษาไทย และตัวนับ "เข้าใจถูก" บนหน้าเว็บ | เขียนแผนแล้วเมื่อ 10 พ.ย. ตามที่คุณขอ (PR #50); E1 สร้างแล้วใน PR #60 (10 พ.ย.): ภาพของบริการมีไฟล์ที่แปลไว้ล่วงหน้าครบแล้ว บนเครื่องของ GitHub ที่จำกัดกำลังให้เท่าเครื่องฟรี เคสแรกเร็วขึ้นจาก 14.4 เป็น 3.1 วินาที รวมแล้วเมื่อ 10 พ.ย. ยังรอวัดบน Render จริง; E2 สร้างและวัดครบใน PR #64: กฎถูก 61/61 ในชุดพัฒนา 105/116 ในชุดเคสยาก และ 22/40 ในชุดที่กันไว้ ([ผลวัดและข้อจำกัด](evidence/2026-11-11-e2-rules-v2.md)); E3 รอคุณตัดสินใจ |
+| E | [แผนเพิ่มประสิทธิผล](effectiveness_plan.md) 6 งาน (E1–E6): เคสแรกหลังระบบตื่นเร็วขึ้น กฎรุ่น 2 ที่อ่านภาษาไทยได้ หน้าเว็บจริงใช้ AI จริง เก็บคำตอบ "เข้าใจถูกไหม" ให้ AI แยก "อื่น ๆ" ได้ดีขึ้น และคลังแหล่งเรียนที่มีภาษาไทยมากขึ้น | เวลาของเคสแรก ข้อเสนอหลักของเคสภาษาไทย และตัวนับ "เข้าใจถูก" บนหน้าเว็บ | เขียนแผนแล้วเมื่อ 10 พ.ย. ตามที่คุณขอ (PR #50); E1 สร้างแล้วใน PR #60 (10 พ.ย.): ภาพของบริการมีไฟล์ที่แปลไว้ล่วงหน้าครบแล้ว บนเครื่องของ GitHub ที่จำกัดกำลังให้เท่าเครื่องฟรี เคสแรกเร็วขึ้นจาก 14.4 เป็น 3.1 วินาที รวมแล้วเมื่อ 10 พ.ย. ยังรอวัดบน Render จริง; E2 สร้างและวัดครบใน PR #64: กฎถูก 61/61 ในชุดพัฒนา 105/116 ในชุดเคสยาก และ 22/40 ในชุดที่กันไว้ ([ผลวัดและข้อจำกัด](evidence/2026-11-11-e2-rules-v2.md)); E3 รอคุณตัดสินใจ; E4 และ E6 (ของผู้ช่วยแนะนำแหล่งเรียน) หยุดไว้ก่อนตามที่คุณสั่ง (11 พ.ย.) |
+| H | [ทักษะแยกกัน ส่งงานผ่านตัวกลาง](skill_handoff.md) มีล่ามแปลเป็นภาษาของทักษะปลายทางระหว่างทาง (H1–H5) | ตอนนี้: หน้าสรุปของ *Core logic tests* บน PR; หลังรวม: อนุมัติเคสบนหน้าเว็บแล้วเห็นงานที่ส่งต่อมา 1 งาน และกล่อง "ส่งต่อแล้ว" | สร้างแล้วตามที่คุณขอ (11 พ.ย., H1–H3): เส้นทางแรก "อนุมัติเคส → บันทึกผลหลังอนุมัติ" ทำงานแล้ว หน้าเว็บแสดงการส่งต่อทั้งสองทาง ทดสอบกับเคสเดิม 217 เคสผ่านทุกข้อ; รอรวมโค้ดแล้วลองบนหน้าเว็บจริง; ทักษะใหม่ตัวแรก (H4) รอคุณเลือก |
 
 **เรื่องที่คุณต้องตัดสินใจเอง** อยู่ในตาราง [Owner decisions](#owner-decisions) ข้างล่าง เช่น
 - จะจ่ายค่า Render เพื่อให้เคสไม่หายหรือไม่
@@ -64,6 +68,7 @@ differs, this file and architecture.md win.
 - ใครเป็นผู้รีวิว
 - จะเปิด repo เป็นสาธารณะเมื่อไร
 - จะให้หน้าเว็บจริงใช้ AI จริง (Typhoon ฟรี) หรือไม่ และจะเริ่มงานไหนของแผนเพิ่มประสิทธิผลก่อน (E1–E6)
+- ทักษะใหม่ตัวแรกที่จะต่อกับตัวกลาง (H4) คืออะไร
 
 ## How to use this file (for Claude Code)
 
@@ -90,7 +95,8 @@ differs, this file and architecture.md win.
 Done before this plan: A (v1 rules), A2 (AI gateway, shadow mode, scorecard, Sentry), B (intake API, queue,
 Runner, web page), the docs refresh and the Claude Code session hook.
 
-Marks: ✅ done · 🟡 built or partly checked (the status says what is left) · ⬜ not started.
+Marks: ✅ done · 🟡 built or partly checked (the status says what is left) · ⬜ not started · ⏸ paused by the
+owner.
 
 | ID | Work package | Status | Needs |
 |---|---|---|---|
@@ -108,7 +114,7 @@ Marks: ✅ done · 🟡 built or partly checked (the status says what is left) �
 | 1.6 | New look for the web page from the owner's mockup: chat intake with a confirm step, Flow and Trace, read-only settings | ✅ PR #18, merged and deployed 2026-11-03; the owner reported the owner test passed on the live page | — |
 | 2.1 | Personal access tokens and roles (replaces the shared key) | ⬜ | — |
 | 2.2 | Review ledger and decisions API | 🟡 built on 2026-11-10 before 2.1 (ADR-027): the owner's shared key is the reviewer's credential; per-role denial waits for 2.1 | 2.1 for per-person identity |
-| 2.3 | Linked phase-B job on approval | ⬜ | 2.2 |
+| 2.3 | Linked phase-B job on approval | 🟡 built on 2026-11-11 as the first route of the skill-handoff exchange (H3, ADR-030): one approval starts exactly one `case_triage.v2.apply` job with a Core receipt ([evidence](evidence/2026-11-11-skill-handoff.md)); the owner test on the live page after the merge is left | 2.2 |
 | 2.4 | Reviewer inbox on the web page | 🟡 built on 2026-11-10: a decision card on every waiting case and a "รอรีวิว" list, elevated first; the owner test after the merge is left | 2.2 |
 | 2.5 | n8n intake and reviewer notifications | ⬜ | 2.1, 2.2, D3 |
 | 2.6 | Side-effect contract | ⬜ when needed | before any outward action |
@@ -140,11 +146,16 @@ Marks: ✅ done · 🟡 built or partly checked (the status says what is left) �
 | 7.5 | Consented pilot with real volunteers | ⬜ owner decision D4 | 7.1–7.3 |
 | 7.6 | The personal e-mail address in the public history | ✅ new commits checked in CI (2026-11-10); D8 decided the same day: the history stays as it is | — |
 | E1 | First case after a start: seconds, not ten ([effectiveness plan](effectiveness_plan.md)) | 🟡 built in PR #60 (2026-11-10): the image had no bytecode cache (0 of the 141 modules the Runner imports) and now carries one, required by *Service container*; in CI the first case went from 0.989 s to 0.256 s, and from 14.4 s to 3.1 s with the container held to 0.1 CPU ([evidence note](evidence/2026-11-10-e1-bytecode-cache.md)); on Render it was 9.0 to 10.5 s before, and the time after is measured once the PR is merged | — |
-| E2 | Rules v2: an official suggestion that reads Thai (also decides the 27 rules gaps of 5.5) | ✅ built and measured in PR #64 (2026-11-11), pending owner merge: rules 61/61 development (Thai 26/26), 105/116 edge, 22/40 held-out; Typhoon answered all 217 cases, no v1-correct case regressed, code checks passed; 24 original rules gaps fixed, 3 retained. Fewer elevated flags leave 8 jointly wrong edge cases unflagged as before (E5 open). [Evidence and same-answer comparison](evidence/2026-11-11-e2-rules-v2.md) | — |
+| E2 | Rules v2: an official suggestion that reads Thai (also decides the 27 rules gaps of 5.5) | ✅ built and measured in PR #64, merged on 2026-11-11: rules 61/61 development (Thai 26/26), 105/116 edge, 22/40 held-out; Typhoon answered all 217 cases, no v1-correct case regressed, code checks passed; 24 original rules gaps fixed, 3 retained. Fewer elevated flags leave 8 jointly wrong edge cases unflagged as before (E5 open). [Evidence and same-answer comparison](evidence/2026-11-11-e2-rules-v2.md) | — |
 | E3 | A real model behind the online page | ⬜ owner decision (0.4, D7); today the page's mock finds the study topic for 2/48 | 0.1 |
-| E4 | Record the answer to "เข้าใจถูกไหม" | ⬜ planned | an ADR |
+| E4 | Record the answer to "เข้าใจถูกไหม" | ⏸ paused with the study guide (owner, 2026-11-11); planned | the owner resumes it; an ADR |
 | E5 | The edge of `other`, and a confidence that means something | ⬜ planned; today all 12 of Typhoon's edge-set mistakes are `other` cases, with `high` confidence on 116/116 | 5.6; the owner labels about 20 borderline requests |
-| E6 | A study library that serves Thai readers | ⬜ planned; today 1 of 17 resources is in Thai | the owner reads each candidate |
+| E6 | A study library that serves Thai readers | ⏸ paused with the study guide (owner, 2026-11-11); planned; today 1 of 17 resources is in Thai | the owner resumes it; the owner reads each candidate |
+| H1 | Skill handoff: the design and ADR-030 ([skill_handoff.md](skill_handoff.md)) | ✅ 2026-11-11; the owner asked for it to be built and shown working | — |
+| H2 | The common language and the first translators | ✅ built 2026-11-11: `app/exchange/`, `vocabulary-v1`, `out.case_triage.v2@1`, `in.case_triage.v2.apply@1`, isolation and golden-output tests | H1 |
+| H3 | The exchange and the first route (2.3's linked job after an approval) | 🟡 built 2026-11-11: route table, queue schema 3 with the `handoffs` ledger, the handoff inside the decision's transaction, API fields; new suite and all 217 existing triage cases pass ([evidence](evidence/2026-11-11-skill-handoff.md)); the owner test on the live page after the merge is left | H2, 2.2 |
+| H4 | The first new skill, joined only through translators | ⬜ | H3, the owner's choice |
+| H5 | The chain on the page and in traces | 🟡 the page shows the chain both ways (2026-11-11); the trace link is not built | H3 |
 
 Phase 2 can be built and tested without a disk. Real use needs D1 = paid: on the free plan, tokens and
 decisions would vanish on every sleep. Since 2026-11-10 the API and the page say so at every write (ADR-029).
@@ -552,6 +563,11 @@ person ends at `REVIEW_REQUIRED`, and nothing else can happen to it.
   - approval creates exactly one linked job, also under concurrency;
   - a crash test shows the transaction is all or nothing;
   - rejection creates no job.
+- **Since 2026-11-11:** built as the first route of the skill-handoff exchange
+  ([H3](#skill-handoff-track-h1h5), ADR-030, [skill_handoff.md](skill_handoff.md)). The same one transaction, with
+  the idempotency key `handoff:<source_job_id>:<route_id>` in place of `review:<review_id>:v<version>`; a review
+  is decided once, so both name exactly one job. `case_triage.v2.apply` is started only by that route and refused
+  at `POST /v1/jobs`.
 
 ### 2.4 Reviewer inbox on the web page
 
@@ -641,6 +657,11 @@ person ends at `REVIEW_REQUIRED`, and nothing else can happen to it.
   funding gate M4).
 
 The design follows the proposal in design_philosophy.md.
+
+**Paused by the owner on 2026-11-11.** No new study-guide work (E4, E6, or any other change to
+`app/domains/study_guide/`) until the owner resumes it. What is built stays on the page, and its checks keep
+running (the scorecard's eval gate, the robustness gate and the weekly link check), so a regression is still
+caught. The skill-handoff track does not need it and does not edit it.
 
 ### 3.1 Topic catalog and verified resource library
 
@@ -1424,6 +1445,44 @@ in the table above. The baseline they start from is in
 - **Not in it:** more workers or machines (the online service ran 3 jobs in 7 days, and a warm job takes
   0.1 to 0.4 s), making the AI's answer the official suggestion (ADR-010, D6), and targets set before a first
   measured run.
+- **Paused (2026-11-11):** E4 and E6 belong to the study guide, which the owner paused; they wait until the
+  owner resumes it.
+
+---
+
+## Skill handoff track (H1–H5)
+
+Added on 2026-11-11, because the owner asked for skills that stay separate and pass work to each other through a
+go-between, with a translator on the way that turns the data into the receiving agent's own language. The design,
+its reasons, the alternatives and the done-when of each package are in [skill_handoff.md](skill_handoff.md); the
+decision is ADR-030 (in force). Their status is in the table above. The same day the owner asked for it to be
+built and shown working, and for it to be tested with a new suite and with the existing ones: H1–H3 and the page part
+of H5 were built ([evidence](evidence/2026-11-11-skill-handoff.md)).
+
+- **H1 The design and ADR-030.** This file's section, the design doc and the ADR. Done: the owner asked for it
+  to be built.
+- **H2 The common language and the first translators.** `app/exchange/` with the envelope, the vocabulary
+  (`vocabulary_v1.json` and its complete SHA-256), the `Translator` type, `out.case_triage.v2@1` and
+  `in.case_triage.v2.apply@1`, a static test that no skill imports another skill or the exchange, and tests that pin
+  each translator's output. Built.
+- **H3 The exchange and the first route.** The route table (`routes_v1.json`, its hash and checks), queue schema
+  3 with the `handoffs` table and a tested upgrade, the handoff inside the Runner's and the reviews service's
+  transactions, events, the job view's `handoff` field and the route list in `/v1/status`, and the first route:
+  `case_triage.v2` `APPROVED` → `case_triage.v2.apply`, which is roadmap 2.3. Built; it meets the P0 gate
+  "approval creates exactly one phase-B job". Checked in CI by `tests/test_service_handoff.py`, by
+  `tests/handoff_check.py` over every case of the three triage sets, by the demo on the run page and by the
+  container smoke test. Left: the owner's test on the live page after the merge.
+- **H4 The first new skill**, chosen by the owner, built as its own domain and joined to the others only through
+  translators and one route. An example to choose from: a reply draft for an approved case, which a person reads
+  and nothing sends.
+- **H5 The chain on the page and in traces:** "ส่งต่อจาก" and "ส่งต่อไปที่" in the Flow tab, a refused handoff's
+  reason in Thai, what an approval will start on the decision card (built), and a link between the two jobs'
+  traces (not built).
+- **Order:** next, the owner's test of H3 on the live page after the merge; the trace link of H5 needs no owner
+  decision; H4 when the owner has chosen. As with a phase, a package starts when the owner says so.
+- **Don't:** let a skill import, call or name another skill; route on an `ai` fact; use AI as a translator; let
+  an outside request name a route, a translator or a handoff; build conditions, fan-out or fan-in before a route
+  needs them (each needs its own ADR); add a broker or a second process (ADR-003, P2).
 
 ---
 
@@ -1560,3 +1619,18 @@ in the table above. The baseline they start from is in
   `redact-v2`); retention is stated at every write and lost cases are counted (ADR-029); new commits are checked
   for personal e-mail addresses, and 7.6 with owner decision D8 was added for the ones already public. The
   owner asked for every point to be fixed, which is also the go-ahead to start Phase 2.
+- 2026-11-11: the owner paused new work on the study guide (Phase 3, E4 and E6; what is built stays, and its
+  checks keep running) and asked for skills that stay separate and pass work through a go-between, with a
+  translator on the way into each agent's own language. Added the skill handoff track, H1 to H5
+  ([skill_handoff.md](skill_handoff.md), ADR-030 proposed). The design uses one common language with a translator
+  on each side instead of one translator per pair (10 translators instead of 20 for 5 skills), and makes 2.3's
+  linked job after an approval the first route, so the exchange is tried on planned work before the first new
+  skill.
+- 2026-11-11: the owner asked for the exchange to be built rather than only designed ("I want to see it work"), and
+  then for a test suite and a run against the existing suites. H1–H3 and H5's page part were built in the same pull
+  request: `app/exchange/`, the route-only `case_triage.v2.apply` (2.3), queue schema 3 with a `handoffs` ledger,
+  the handoff in the decision's own transaction, the API fields and the page. Tests: 37 new (448 in all), a
+  case-set check over all 217 existing triage cases, a step-by-step demo on the run page and new checks in the
+  container smoke test; every earlier gate unchanged. The check first lived in `app/eval/`, and the guard that only
+  the API records decisions inside `app/` refused it, so it moved to `tests/handoff_check.py`. Also recorded: PR
+  #64 (E2) was merged on 2026-11-11; the docs still said it was waiting.

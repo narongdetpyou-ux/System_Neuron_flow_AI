@@ -243,6 +243,8 @@ Each package is one pull request unless it says otherwise, and follows the defin
 
 ### E4 Record the answer to "เข้าใจถูกไหม"
 
+- **Status (2026-11-11):** paused. The owner paused new work on the study guide, which this package belongs to;
+  it waits until the owner resumes it ([ROADMAP](ROADMAP.md#phase-3--study_guidev1-the-first-response-study-guide-the-second-domain)).
 - **Goal:** the first number that comes from use, not from a test set.
 - **Why (M9):** every study answer asks "did I understand you?" (67/67 on the scorecard), and the page offers
   only "แก้คำถาม". The answer is the cheapest honest signal there is, and today it is thrown away. At the
@@ -288,6 +290,7 @@ Each package is one pull request unless it says otherwise, and follows the defin
 
 ### E6 A study library that serves Thai readers
 
+- **Status (2026-11-11):** paused with the study guide, like E4; it waits until the owner resumes it.
 - **Goal:** a Thai question gets Thai resources, and every topic has a place for a beginner to start.
 - **Why (M10):** an answer can only be as useful as the library. It has 17 resources, 1 of them in Thai;
   `plain_language` has only a standard whose full text is paid, and `recommender_systems` only an advanced
