@@ -16,7 +16,8 @@ trusted agents in bounded child processes, retries, recovers after a crash and w
 - an AI gateway (an offline mock, Claude, Typhoon: SCB 10X's Thai-first model, free within rate limits;
   ADR-021, or `local`: an open-weight model on a server we run ourselves, today llama.cpp with Typhoon 2.5 4B
   on the GitHub runner; ADR-026);
-- a scorecard on 61 synthetic cases;
+- triage scorecards on 61 development cases, 116 robustness cases and 40 held-out cases; E2 compares the
+  original `keywords-v1` with versioned Thai/English `keywords-v2` using the same saved AI answers;
 - Sentry reporting, and tracing to Honeycomb (one trace per case; off until a key is set);
 - since round 2, an HTTP API, a durable job queue, a single Runner with crash recovery and a Thai web page,
   shipped as one container for Render;
@@ -120,6 +121,9 @@ Read in this order when you need depth:
      job. A changed prompt or model is a new version.
    - A prompt completed from versioned data (the study guide's catalog) also carries that data's version,
      here the library tag (ADR-019).
+   - Shadow triage rules use `triage.classify_rules` with the complete SHA-256 of `keywords_v2.json` in
+     the agent version and frozen step params; a list change is a new rules version (E2). The original
+     `case_triage.v1` demonstration keeps `triage.classify` and `keywords-v1`.
    - Jobs caught mid-way by a change fail as `configuration_changed`.
 6. **Secrets come only from the environment, at call time** (ADR-013).
    - Never put a key in a spec, an output, a log, a fixture, a commit or a Sentry event.
@@ -147,7 +151,7 @@ If a task seems to need breaking a rule:
 ## 4. Checking your work
 
 ```bash
-python -m unittest discover -s tests -v        # all tests (394 on 2026-11-10); Python 3.10–3.13
+python -m unittest discover -s tests -v        # all tests (411 on 2026-11-11); CI: Python 3.10 and 3.12
 python -m examples.case_triage_demo            # v1 rules, one synthetic case
 python -m examples.case_triage_shadow_demo     # v2 shadow mode with the offline mock AI
 python -m examples.study_guide_demo            # the study guide's answers to four synthetic requests
@@ -193,7 +197,8 @@ GitHub Actions (the owner can open these; the first three run on every push and 
   of those sites, so read this check's summary instead of fetching the links yourself.
 - *Shadow eval with Typhoon (manual)* and *Study guide eval with Typhoon (manual)* run the two scorecards
   against Typhoon (default `typhoon-v2.5-30b-a3b-instruct`) and need the repository secret `TYPHOON_API_KEY` (set by the
-  owner on 2026-11-06). The shadow eval's `case_set` can be `robustness_edge_v1`, the 116 robustness edge cases. Typhoon's hosted API is free, rate-limited (about 200 requests a minute, 5 a second)
+  owner on 2026-11-06). The shadow eval's `case_set` can be `robustness_edge_v1` (116 cases),
+  `heldout_v1` (40 cases), or `all_e2` (all three triage sets, with the v1/v2 comparison). Typhoon's hosted API is free, rate-limited (about 200 requests a minute, 5 a second)
   and collects usage data, so synthetic data only. Each run first sends one fixed sentence and shows the raw
   reply (`.github/scripts/llm_probe.py`), then paces cases 1 s apart (ADR-021). A session on this
   repository's cloud environment can call Typhoon itself (see the notes for cloud sessions below); other
@@ -468,18 +473,22 @@ Notes for cloud sessions (claude.ai/code):
     API key); 0.4 with Typhoon is free but sends what is typed on the page to Typhoon, so it is the owner's
     choice too; an open model behind the page needs a paid machine (D7); the owner test of 2.4 on the live page
     after the merge. D8 is decided (2026-11-10): the e-mail history stays as it is; do not propose a rewrite.
-  - E2 (PR #62, draft, branch `claude/brave-archimedes-9pupu7`): on 2026-11-10 the owner asked to finish it in a
-    7-minute time box; it was read and nothing more was built in that time. Its notes in that branch's CLAUDE.md
-    §8 are the plan; continue from them on a branch from `main` (PR #63 changed CLAUDE.md and the roadmap,
-    so merge `main` into that work first).
+  - **E2 continues in PR #64 (2026-11-11)** from PR #62's held-out-set commit `a30de92`, preserved in
+    history before changing any rule. Thai/English rules, versioned keyword data, frozen-job checks,
+    integration tests, both regenerated gates and a same-answer v1/v2 comparison are built. The original
+    `case_triage.v1` demonstration stays on `keywords-v1`; this replaces PR #62's unbuilt plan to move it too.
+    Measurement and gap dispositions: [E2 evidence](docs/evidence/2026-11-11-e2-rules-v2.md).
+    The earlier v1 scorecard printed held-out mistakes to the previous developer; disclose that limitation
+    and never add a keyword because of a held-out result. A change to the rules after measurement requires
+    another version and new evidence. Main has not been merged or deployed by this work.
   - 5.8's first full run is recorded: the owner chooses its branch (not good enough, close or good enough;
     roadmap 5.8, "After the first full run", step 2), then follow it.
   - Buildable now without an owner decision: the rest of 5.5 (decide and fix the stage-1 gaps), 5.6 and 5.7,
     the rest of Phase 2 (2.1 next, then 2.3; 2.2 and 2.4 are built) and Phase 4 (4.1 first; Phase 3, which it
     needs, is built). The rest of 7.1 (who can read the AI key) needs an ADR first.
   - The effectiveness track (2026-11-10, PR #50, [docs/effectiveness_plan.md](docs/effectiveness_plan.md)): E1
-    is built (PR #60) and waits for its measurement on Render (9.0 to 10.5 s before); E2 (rules v2 with
-    Thai; today rules correct 29/61) is next and buildable now, before the next phase; E3 (a real model
+    is built (PR #60) and waits for its measurement on Render (9.0 to 10.5 s before); E2 (Thai/English
+    rules v2) is implemented in PR #64, with measurement status in its evidence note; E3 (a real model
     behind the page) is the owner's decision; E4 needs an ADR, E5 needs 5.6, E6 needs the owner to read
     each candidate.
   - The owner decides which phase or package comes next; ask before starting one.

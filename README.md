@@ -11,7 +11,7 @@ the Python standard library; `sentry-sdk` is an optional extra.
 - **Status:** an early prototype kept by one person. It runs on synthetic data only and is not ready for real
   users; see [Scope and limits](#scope-and-limits). The online demo answers `/v1` requests only with an access
   key that is not published.
-- **How it is built:** the code and docs are written by Claude Code, Anthropic's AI coding agent, under the
+- **How it is built:** the code and docs are written with AI coding agents (Claude Code and Codex) under the
   owner's direction. Changes go through pull requests with automated tests and an automated review, and the
   owner decides what is merged. Numbers in the docs are measured, and the docs say when a result comes from
   the mock AI or from one live model.
@@ -38,7 +38,7 @@ Set by the project owner, and the compass for every feature ([full text](docs/de
 The working example is support-case triage in **shadow mode** (case_triage v2):
 
 1. A case comes in, for example "I cannot upload an attachment" (English or Thai).
-2. The v1 keyword rules suggest a queue. This stays the **official** suggestion.
+2. Versioned Thai/English keyword rules (`keywords-v2`) suggest a queue in shadow mode. This stays the **official** suggestion; `case_triage.v1` retains the original English-only demonstration.
 3. At the same time an AI model gives a **second opinion**. If the AI is briefly unavailable, it is retried
    once; if it is still unavailable, the case continues on the rules alone. A setup problem (for example a
    bad key) fails loudly.
@@ -92,11 +92,11 @@ guide** (`study_guide.v1`, the owner's first-response rule):
 |---|---|---|
 | Core runtime: DAG workflows, bounded child processes, retries, restart recovery, verified receipts | `neuron_flow/` | Working; two planned fixes since extraction: telemetry phase names (PR #21) and `decode()`'s error contract (ADR-025, PR #42) |
 | Case triage v1: deterministic keyword rules | `app/domains/case_triage/agents.py`, `workflow.py` | Working |
-| Case triage v2: shadow mode with AI second opinion | `app/domains/case_triage/shadow_*.py` | Working with the offline mock AI; Claude and Typhoon paths tested against a fake API; **first live runs with Typhoon** on 2026-11-06 (synthetic set, [evidence](docs/evidence/2026-11-06-first-live-typhoon.md)); Claude not run yet |
+| Case triage v2: shadow mode with AI second opinion | `app/domains/case_triage/rules.py`, `keywords_v2.json`, `shadow_*.py` | Thai/English official rules built in PR #64 (E2, [evidence](docs/evidence/2026-11-11-e2-rules-v2.md)); original v1 demo retained. Working with the offline mock AI; Claude and Typhoon paths tested against a fake API; **first live runs with Typhoon** on 2026-11-06 (synthetic set, [evidence](docs/evidence/2026-11-06-first-live-typhoon.md)); Claude not run yet |
 | AI gateway: versioned prompt, mock, Claude, Typhoon and local open-model providers | `app/llm/` | Working (see above); Typhoon (SCB 10X, Thai-first) is free within rate limits (ADR-021) and is told the answer format in words, because it ignores `response_format` (ADR-022); `local` sends the same requests to a server we run ourselves, by default llama.cpp on 127.0.0.1 with no key (ADR-026) |
 | Error monitoring and tracing | `app/observability/` | Sentry errors, degraded-AI warnings and Runner recoveries; traces to Honeycomb (OTLP), off until a key is set; on for the Render service, first trace seen 2026-11-03 |
-| Scorecards: 61 synthetic labelled triage cases, and 67 study-guide requests (EN + TH, metaphors, out of scope, injection) | `app/eval/` | Run in CI as eval gates; mock scores test the pipeline, not AI accuracy |
-| Robustness benchmark, stage 1: 270 hard synthetic edge cases (EN + TH) and four pinned open datasets (BLNS, JSONTestSuite, CLINC150, BANKING77) through every layer, offline | `tests/robustness/` | Runs in CI as a gate on every outcome; the first run found 8 bugs, all fixed in roadmap 5.5 (now 0 bugs, 215/270 items pass). Plan for stages 2–3: [benchmarking.md](docs/benchmarking.md) |
+| Scorecards: 61 development triage cases, 116 robustness triage cases, 40 held-out triage cases, and 67 study-guide requests (EN + TH, metaphors, out of scope, injection) | `app/eval/` | Run in CI as eval gates; mock scores test the pipeline, not AI accuracy |
+| Robustness benchmark, stage 1: 270 hard synthetic edge cases (EN + TH) and four pinned open datasets (BLNS, JSONTestSuite, CLINC150, BANKING77) through every layer, offline | `tests/robustness/` | Runs in CI as a gate on every outcome; the first run found 8 bugs, all fixed in roadmap 5.5 (now 0 bugs, 239/270 own items pass after E2). Plan for stages 2–3: [benchmarking.md](docs/benchmarking.md) |
 | Intake API, durable job queue, single Runner with crash recovery, Thai web page | `app/api/`, `app/persistence/`, `app/services/`, `app/web/`, `app/serve.py` | Working (round 2), tested offline and as a container in CI; live on Render's free plan since 2026-11-01 |
 | Study guide (`study_guide.v1`): versioned topic catalog (11 topics, Thai and English), verified resource library (17 links) with a weekly link check, and the five-step workflow | `app/domains/study_guide/` | Working through the API and on the web page (roadmap 3.1–3.4); mock AI in CI; **first live run with Typhoon** on 2026-11-06 (synthetic set) |
 | Human-review decisions: a ledger, a decisions API and a decision card with a "รอรีวิว" list on the page | `app/services/reviews.py`, `app/persistence/queue_store.py`, `app/web/` | Working since 2026-11-10 (roadmap 2.2, 2.4), with the owner's shared key as the only reviewer (ADR-027) |
@@ -144,7 +144,7 @@ so; a paid plan with a disk keeps them.
 
 **Locally (Python 3.10+):**
 ```bash
-python -m unittest discover -s tests -v        # 394 tests
+python -m unittest discover -s tests -v        # 411 tests
 python -m examples.case_triage_demo            # v1 rules, one synthetic case
 python -m examples.case_triage_shadow_demo     # v2 shadow mode, three synthetic cases (offline mock AI)
 python -m app.eval.triage_shadow_eval          # scorecard on 61 synthetic cases

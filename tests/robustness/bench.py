@@ -17,7 +17,7 @@ Flow:
 5. with ``--compare-with``: exit 3 when any item's outcome differs from the baseline (the gate). A fix or a
    new failure both change the outcome, so the same pull request regenerates the baseline and says why.
 
-Layers: ``intake`` (the HTTP API in memory, no sockets), ``rules`` (v1 keyword rules), ``masking`` (personal
+Layers: ``intake`` (the HTTP API in memory, no sockets), ``rules`` (v2 keyword rules), ``masking`` (personal
 data before AI calls), ``ai_reply`` (what the gateway does with odd model replies), ``core`` (Core's spec and
 JSON contracts) and ``e2e`` (whole jobs through Core's child processes, with the offline mock AI or a local
 fake of the Typhoon HTTP API). Nothing here calls a real AI service or the internet.
@@ -42,7 +42,7 @@ from neuron_flow import Runtime
 from neuron_flow.model import SpecError, decode, encode, fingerprint, normalize_spec
 
 from app.api.routes import ApiApp, Request
-from app.domains.case_triage.agents import classify
+from app.domains.case_triage.rules import classify_case
 from app.domains.case_triage.contracts import CATEGORIES, QUEUE_FOR
 from app.domains.case_triage.workflow import build_workflow
 from app.domains.study_guide.library import load_library
@@ -62,7 +62,7 @@ OPEN_EXTRACT = HERE / "open_extract_v1.json"
 GOLDEN = HERE / "triage_edge_golden_v1.json"
 LAYERS = ("intake", "rules", "masking", "ai_reply", "core", "e2e")
 SEVERITIES = ("bug", "gap", "info")
-LAYER_TH = {"intake": "ด่านรับเคส (API)", "rules": "กฎคำสำคัญ v1", "masking": "การปิดข้อมูลส่วนตัว",
+LAYER_TH = {"intake": "ด่านรับเคส (API)", "rules": "กฎคำสำคัญ v2", "masking": "การปิดข้อมูลส่วนตัว",
             "ai_reply": "การตรวจคำตอบ AI", "core": "สัญญาของ Core", "e2e": "ทั้งระบบผ่าน Core"}
 SEVERITY_TH = {"bug": "ปัญหาร้ายแรง (bug)", "gap": "จุดอ่อน (gap)", "info": "ข้อสังเกต (info)"}
 CONTROL = set(range(0x00, 0x20)) | {0x7F, 0x2028, 0x2029}
@@ -270,8 +270,8 @@ def run_intake(item, intake):
 
 def rules_category(summary):
     spec = build_workflow("robustness", {"case_id": "RB-CASE-1", "summary": summary})
-    first = classify({"input": spec["input"]})
-    second = classify({"input": spec["input"]})
+    first = classify_case(spec["input"])
+    second = classify_case(spec["input"])
     return first, second
 
 
@@ -596,7 +596,7 @@ def run_sweeps(corpora, layers, workdir):
     if "rules" in layers:
         def rules_check(index, text):
             try:
-                first, second = classify({"input": {"summary": text.strip()}}), classify({"input": {"summary": text.strip()}})
+                first, second = classify_case({"summary": text.strip()}), classify_case({"summary": text.strip()})
             except Exception as exc:
                 return f"raised {type(exc).__name__}", None
             if first != second or first["category"] not in CATEGORIES:
@@ -850,7 +850,7 @@ def summary(report, changes=None):
     lines.append("")
     open_correct = m["open_rules_correct"]
     if open_correct["denominator"]:
-        lines += ["### คำขอจากชุดข้อมูลเปิด (CLINC150, BANKING77) ผ่านกฎคำสำคัญ v1", "",
+        lines += ["### คำขอจากชุดข้อมูลเปิด (CLINC150, BANKING77) ผ่านกฎคำสำคัญ v2", "",
                   f"กฎตอบตรงกับป้ายที่ผู้พัฒนาจับคู่ไว้ **{open_correct['numerator']}/{open_correct['denominator']}** "
                   "(ป้ายเป็นการจับคู่ของผู้พัฒนา ไม่ใช่ความแม่นยำจริง) ตัวอย่างที่กฎส่งผิดคิว:", ""]
         missed = [r for r in report["items"] if r["source"] != "synthetic" and not r["passed"]]

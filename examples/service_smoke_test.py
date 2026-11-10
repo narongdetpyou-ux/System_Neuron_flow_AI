@@ -164,7 +164,8 @@ def first_run(client, state_file, timeout_s, summary=None):
     review = (result.get("result") or {}).get("review") or {}
     check(result["status"] == "REVIEW_REQUIRED", "the Runner finished the case, waiting for a person")
     check(review.get("decision") == "PENDING_HUMAN_REVIEW", "the AI never decides (PENDING_HUMAN_REVIEW)")
-    check(review.get("review_priority") == "elevated", "the Thai case missed by the rules is raised for review")
+    check((review.get("suggested_queue"), review.get("agreement"), review.get("review_priority"))
+          == ("upload_review", "agree", "normal"), "Thai upload rules agree with the mock without a needless raise")
     status, events = client.call("GET", f"/v1/jobs/{job['job_id']}/events?limit=100")
     kinds = [event["kind"] for event in events.get("events", [])]
     check(kinds[:2] == ["job.queued", "job.claimed"] and kinds[-1] == "job.review_required", "the job history is complete")
@@ -175,6 +176,19 @@ def first_run(client, state_file, timeout_s, summary=None):
     write_summary(summary, first_case_line("ความเร็วเต็มของเครื่อง GitHub", result["status"], wait_s, run_s))
     if state_file:
         Path(state_file).write_text(json.dumps({"job_id": job["job_id"]}), encoding="utf-8")
+    # Whole-word rules reject the city name; the unchanged substring mock mistakes it for billing.
+    disagreement = {"workflow_type": "case_triage.v2", "idempotency_key": f"smoke-{uuid.uuid4()}",
+                    "input": {"case_id": "SMOKE-DISAGREE-01",
+                              "summary": "Please add dark mode for users in Billings."}}
+    status, mismatch = client.call("POST", "/v1/jobs", disagreement)
+    check(status == 202, "a case with a real rules/mock disagreement is admitted")
+    mismatched = wait_for_result(client, mismatch["job_id"], timeout_s)
+    mismatch_review = (mismatched.get("result") or {}).get("review") or {}
+    check(mismatched["status"] == "REVIEW_REQUIRED"
+          and (mismatch_review.get("suggested_queue"), mismatch_review.get("agreement"),
+               mismatch_review.get("review_priority"), mismatch_review.get("decision"))
+          == ("general_review", "disagree", "elevated", "PENDING_HUMAN_REVIEW"),
+          "a real rules/mock disagreement is still raised and waits for a person")
 
 
 def after_restart(client, state_file, timeout_s):

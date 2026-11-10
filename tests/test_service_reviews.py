@@ -83,7 +83,9 @@ class ReviewCreationTests(ApiTestCase):
         self.assertEqual(len(reviews), 2)
         self.assertEqual({review["job_id"] for review in reviews},
                          {job["job_id"] for job in self.jobs_in_store() if job["status"] == "REVIEW_REQUIRED"})
-        self.assertEqual(reviews[0]["priority"], "elevated")  # rules and AI disagree on the Thai billing case
+        self.assertEqual({review["priority"] for review in reviews}, {"normal"})  # both English and Thai agree
+        billing = next(job for job in self.jobs_in_store() if job["input"].get("summary", "").startswith("เดือนนี้"))
+        self.assertEqual(billing["result"]["review"]["suggested_category"], "billing")
         study = jobs["study_guide.v1:COMPLETED"]
         self.assertIsNone(body_of(get(self.app, f"/v1/jobs/{study['job_id']}"))["human_review"])
 

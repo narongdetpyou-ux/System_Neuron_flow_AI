@@ -1,7 +1,7 @@
 """Shadow mode (case_triage v2): the AI gives a second opinion; it never decides.
 
 Flow of one case:
-1. ``classify_rules`` (the unchanged v1 keyword rules) makes the official suggestion.
+1. ``classify_rules`` (the versioned Thai/English v2 keyword rules) makes the official suggestion.
 2. ``classify_llm`` masks personal data in the case text (``app.llm.redaction``), then asks the AI for its
    own category, in parallel with step 1. The output records how many items of each kind were masked.
    * provider hiccup or off-contract answer -> Core retries once;

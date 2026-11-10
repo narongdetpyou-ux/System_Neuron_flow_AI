@@ -1,6 +1,6 @@
 # System Neuron Flow AI — Architecture
 
-**Current as of 2026-11-07** (`main` @ `cf06f4d`, after the study guide on the web page (PR #39); first
+**Current as of 2026-11-11** (PR #64, including E2 rules v2; based on `main` @ `7cf5680`; first
 written for round 2, PR #11, on top of `59c6889`). This file replaces
 "Architecture Review & Revised Architecture v2" (31 Oct 2026). That review's dated code observations were
 re-checked against the current code and folded into §3. The AI design comes from the v3 roadmap, and its
@@ -33,7 +33,7 @@ flowchart TD
       EV[Scorecards app/eval: triage and study guide - built]
       OBS[Sentry reporting and Honeycomb tracing app/observability - built]
       Q[Admission queue + single Runner + reconciliation app/persistence, app/services - built in round 2]
-      REV[Review ledger + linked phase-B jobs - planned]
+      REV[Review ledger - built; linked phase-B jobs - planned]
     end
     subgraph L2[Layer 2: Domains, agents, AI gateway]
       TRI[case_triage v1 rules + v2 shadow mode - built]
@@ -49,10 +49,10 @@ flowchart TD
 
 | Layer | Responsibility | Built | Planned |
 |---|---|---|---|
-| 1 Core `neuron_flow/` | Spec validation, static DAG scheduling, bounded child processes, retries, recovery, events, verified receipts, integrity, case memory, candidate gate. No HTTP, business rules, credentials or user authorisation. | All of it; changed once since commit `09100f7`: the telemetry fix (roadmap 1.1, PR #21) | No further Core change planned |
-| 2 Domains & agents `app/domains/`, `app/llm/` | Input contracts, trusted agent registry, fixed DAG templates, validators, AI calls | case_triage v1 and v2, AI gateway; `study_guide.v1`, a second unrelated domain: versioned topic catalog, verified resource library with a weekly link check, and the five-step workflow (roadmap 3.1, 3.2) | The study guide's scorecard (3.3) |
-| 3 Application services | Admission, idempotency, the only Runtime owner, crash reconciliation, review decisions, results, measurement, monitoring | Scorecard (`app/eval/`), Sentry reporting (`app/observability/`), admission queue (`app/persistence/`), admission, Runner with reconciliation, results (`app/services/`) | Review ledger, artifact store (Milestone C) |
-| 4 Interfaces | Authentication, request validation, status pages, human decisions | GitHub Actions workflows (tests, scorecard, Sentry check, container check, manual live runs with Claude, Typhoon or the local open model); HTTP API and web page (`app/api/`, `app/web/`) behind one shared access key, started by `app/serve.py` in one container for Render (`render.yaml`; Railway also configured) | n8n intake and notifications, per-reviewer identity, review decisions |
+| 1 Core `neuron_flow/` | Spec validation, static DAG scheduling, bounded child processes, retries, recovery, events, verified receipts, integrity, case memory, candidate gate. No HTTP, business rules, credentials or user authorisation. | All of it; two changes since commit `09100f7`: the telemetry fix (roadmap 1.1, PR #21) and `decode()`'s error contract (ADR-025, PR #42) | No further Core change planned |
+| 2 Domains & agents `app/domains/`, `app/llm/` | Input contracts, trusted agent registry, fixed DAG templates, validators, AI calls | case_triage v1 demo and v2 shadow mode with versioned Thai/English rules (E2, PR #64), AI gateway; `study_guide.v1`, a second unrelated domain: versioned topic catalog, verified resource library with a weekly link check, five-step workflow and scorecard (roadmap 3.1–3.3) | — |
+| 3 Application services | Admission, idempotency, the only Runtime owner, crash reconciliation, review decisions, results, measurement, monitoring | Scorecard (`app/eval/`), Sentry reporting (`app/observability/`), admission queue (`app/persistence/`), admission, Runner with reconciliation, results and review decisions (`app/services/`, ADR-027) | Linked phase-B jobs, artifact store (Milestone C) |
+| 4 Interfaces | Authentication, request validation, status pages, human decisions | GitHub Actions workflows (tests, scorecard, Sentry check, container check, manual live runs with Claude, Typhoon or the local open model); HTTP API and web page (`app/api/`, `app/web/`) behind one shared access key, started by `app/serve.py` in one container for Render (`render.yaml`; Railway also configured) | n8n intake and notifications, per-reviewer identity |
 
 **Dependency rule:** Interface → Services → Domain → Core. Core never imports `app.*`. A domain builds specs
 and registers agents. It never re-implements retries or scheduling, and it never writes to Core SQLite.
@@ -119,6 +119,15 @@ Each row was re-checked against the current code.
   model, the prompt or the masking rules therefore creates a new version, and an old job refuses to run on it.
 - **Shadow mode:** the rules stay official. The AI adds a second opinion, and a disagreement raises review to
   elevated. Every proposal stays `PENDING_HUMAN_REVIEW`.
+- **Versioned official rules (E2, PR #64):** `case_triage.v2` uses `triage.classify_rules` from `rules.py`.
+  The output's `rule_version` and agent version are `keywords-v2:<complete SHA-256 of keywords_v2.json>`;
+  the same value is frozen in step params. A keyword change therefore changes the job spec and interrupted
+  work fails as `configuration_changed` (ADR-005, ADR-015). Matching normalizes a copy (NFKC, lower case,
+  Latin accent marks and selected invisible characters removed, hyphens treated as spaces and as joins),
+  without changing the stored text. Explicit English forms match whole words; Thai forms match substrings.
+  Precedence stays access → upload → billing → other. There is no model call or new dependency.
+  `case_triage.v1` keeps its original `triage.classify` / `keywords-v1` demonstration; the distinct agent ids
+  let both registries coexist. Negation and sentence meaning remain measured limits, not new policy.
 - **Prompts completed from versioned data (ADR-019):** the study guide completes its prompt files before
   each call. Detection gets one line per catalog topic, and its answer is limited to the catalog's ids plus
   `out_of_scope`; the explanation gets one note field per step that code chose. The file keeps its own
@@ -208,12 +217,15 @@ Requests never carry agent import paths, code, tenant ids or callbacks.
 
 ```text
 neuron_flow/                   Core runtime (two changes since extraction: the telemetry fix, PR #21; decode()'s error contract, ADR-025)
-app/domains/case_triage/       v1 rules (agents.py, workflow.py), contracts.py, v2 shadow_agents.py, shadow_workflow.py
+app/domains/case_triage/       original v1 demo (agents.py, workflow.py), contracts.py; rules.py + keywords_v2.json
+                               (official shadow-mode rules), shadow_agents.py, shadow_workflow.py
 app/domains/study_guide/       library.py (topic catalog + resource library: checks, SHA-256), link_check.py, catalog/*_v1.json;
                                workflow.py, agents.py, planning.py, ai_prompts.py, mock_answers.py (study_guide.v1)
 app/llm/                       config, errors, gateway, prompts, redaction (personal-data masking), prompt_library/, providers/{mock, anthropic, openai_compat, _http}
-app/eval/                      triage_shadow_eval.py, study_guide_eval.py, common.py (the eval gate's shared parts);
-                               golden/case_triage_synthetic_v1.json (61 cases), golden/study_guide_synthetic_v1.json (67 requests)
+app/eval/                      triage_shadow_eval.py, rules_comparison.py (same saved AI answers for rules v1/v2),
+                               study_guide_eval.py, common.py (the eval gate's shared parts);
+                               golden/case_triage_synthetic_v1.json (61 development cases), case_triage_heldout_v1.json
+                               (40 held-out cases), golden/study_guide_synthetic_v1.json (67 requests)
 app/observability/             sentry.py (step failures, degraded AI, Runner recoveries); tracing.py (OTLP/JSON exporter) and job_spans.py (a job's spans)
 app/persistence/               queue_store.py: the application job queue, events, Runner heartbeat, reviews and decisions (SQLite, schema 2)
 app/services/                  workflows.py (catalog), admission.py, runner.py (with reconciliation), results.py, metrics.py, reviews.py (decisions)
@@ -223,7 +235,7 @@ app/boot.py                    process 1 of the image: takes the data folder, dr
 app/settings.py, app/serve.py  environment settings; the launcher (API + supervised Runner in one container)
 Dockerfile, render.yaml        the container (it compiles all its code once, so no process compiles at start) and the Render Blueprint (railway.json kept for Railway)
 examples/                      case_triage_demo, case_triage_shadow_demo, study_guide_demo, sentry_smoke_test, service_smoke_test
-tests/                         394 tests: core, triage v1/v2, AI gateway, Typhoon provider, local model provider and its model fetcher, masking, scorecards, eval gates, Sentry, tracing, API, queue, Runner, HTTP, metrics, study library, link check, study guide, web page, robustness benchmark, workflow permissions, the image's bytecode cache, review decisions and retention, the commit e-mail check
+tests/                         411 tests: core, triage v1/v2, AI gateway, Typhoon provider, local model provider and its model fetcher, masking, scorecards, eval gates, Sentry, tracing, API, queue, Runner, HTTP, metrics, study library, link check, study guide, web page, robustness benchmark, workflow permissions, the image's bytecode cache, review decisions and retention, the commit e-mail check
 tests/robustness/              the robustness benchmark, stage 1 (docs/benchmarking.md): synthetic_v1.json (270 edge cases), open_extract_v1.json
                                (BLNS, JSONTestSuite, CLINC150, BANKING77, pinned; NOTICE.md), bench.py, build_open_extract.py, triage_edge_golden_v1.json
 tests/baselines/               shadow_eval_mock.json, study_guide_eval_mock.json: every case's answer with the mock AI (the eval gates' baselines);
@@ -243,7 +255,7 @@ planned: artifact store
 | 002 | Durable admission before execution; reply 202 only after commit | In force |
 | 003 | Single machine first; no Redis, Postgres or distributed claims | In force: SQLite queue on one disk |
 | 004 | Two-phase human review as linked jobs | Accepted; the decision is built (ADR-027), the linked job is roadmap 2.3 |
-| 005 | Trusted agents only; versions frozen per job | In force |
+| 005 | Trusted agents only; versions frozen per job | In force; E2 carries the keyword data hash in the separate shadow-rules agent version and frozen params (PR #64) |
 | 006 | Large artifacts stay outside Core messages | Accepted; not needed yet |
 | 007 | Side effects are not automatically exactly-once | In force; no side-effect agents exist yet |
 | 008 | Honest audit claims; hashes prove bytes, not authorship | In force |
@@ -339,6 +351,10 @@ planned: artifact store
 - Done on 2026-11-10: retention stated in every write reply and on the page, with a store id that shows when
   the queue started empty again (ADR-029); a CI check that new commits carry no personal e-mail address
   (`commit-emails` in *Secret scan*: a pull request fails, a push warns).
+- Built in PR #64 (E2, 2026-11-11): versioned Thai/English official rules, the retained v1 demo, matching and
+  frozen-job checks, same-answer three-set comparison tooling, and updated mock and robustness gates.
+  Measurements and all 27 rules-gap dispositions are in the [E2 evidence](evidence/2026-11-11-e2-rules-v2.md);
+  the evidence states which live runs have completed. No Core file changed.
 - Open: retention and backup/restore drills (1.4, needs a disk), API authentication hardening (2.1, 7.2).
 
 **P2 (do not build early):** multi-tenancy, distributed workers, Postgres, object storage, SLAs, a hosted
@@ -355,6 +371,7 @@ dashboard.
 | C | Two-phase review, decision ledger, n8n notifications | Started 2026-11-10: the decision ledger and API (2.2) and the page's decision card and inbox (2.4), with the owner's shared key as the reviewer's credential (ADR-027); per-person tokens (2.1), the linked phase-B job (2.3) and n8n (2.5) open |
 | D | OpenTelemetry tracing, eval gates in CI | Done: the per-case eval gates (5.2 for triage; 3.3 for the study guide), queue/run-time figures (5.3), Sentry, request ids, and tracing (5.1, PR #30), with the first trace seen in Honeycomb on 2026-11-03. Added on 2026-11-07: the robustness benchmark, stage 1 of the plan in [benchmarking.md](benchmarking.md) (5.4, PR #41; its 8 bugs fixed in 5.5, PR #42); stages 2–3 (5.6, 5.7) planned |
 | E | Planner pattern (B), MCP server, second domain with zero Core changes | Open |
+| Effectiveness E2 | Versioned Thai/English rules for the official shadow suggestion | Built in PR #64, pending merge; original v1 demo retained; [measurement and gap dispositions](evidence/2026-11-11-e2-rules-v2.md) |
 | — | `study_guide.v1`: first-response study guide ([design_philosophy.md](design_philosophy.md), [study_guide.md](study_guide.md)) | Workflow and scorecard built: the topic catalog, the verified resource library, the weekly link check (3.1, PR #32), the five-step workflow in the catalog (3.2, PR #33) and the 67-request scorecard with its eval gate (3.3, PR #34), with the mock AI in CI; first live run with Typhoon on 2026-11-06: topic correct 46/48, 0 of 142 links outside the library ([evidence](evidence/2026-11-06-first-live-typhoon.md)); on the web page with a layered answer (3.4, PR #39; questions sent without a confirm card, ADR-023), tried by the owner on the live page on 2026-11-08 with the mock AI; Claude after D2 |
 
 The order of the remaining work, with tasks, acceptance checks and owner decisions for each step, is in
@@ -371,7 +388,7 @@ The order of the remaining work, with tasks, acceptance checks and owner decisio
   deploy. The API and the page say so (ADR-029), but only a disk (D1) keeps them.
 - The owner's personal e-mail address is public in the author or committer field of 53 commits (2026-11-10;
   51 when the repository went public, the rest are merges made on github.com since). New commits are checked
-  in CI; removing the old ones is owner decision D8 (ROADMAP).
+  in CI; D8 is decided (2026-11-10): the owner keeps the history as it is (ROADMAP 7.6).
 - All data is synthetic, and mock-AI scores test the pipeline, not accuracy. Masking before AI calls is
   pattern-based and misses names without a title, addresses and more, so it does not make real data safe.
 - Every process in the container (API, Runner, Core workers) runs as one user with one environment, so each
@@ -389,4 +406,5 @@ The order of the remaining work, with tasks, acceptance checks and owner decisio
   [full](evidence/2026-11-08-first-local-model-full.md)): every item answered in the right format; triage AI
   correct 58/61 with all 32 rule mistakes raised, study guide topic correct 44/48 with 0 of 142 links outside
   the library. One full run on the developer's labels describes that file only, not accuracy.
-- Security review, benchmarks and user studies do not exist yet. No document should claim them.
+- An independent security review and user studies do not exist yet. The robustness benchmark and
+  developer-labelled scorecards above are measured tests, not a security review or real-world accuracy.

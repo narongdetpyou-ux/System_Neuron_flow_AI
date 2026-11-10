@@ -12,7 +12,7 @@ from neuron_flow import AgentDefinition, SpecError
 from app.llm import REDACTION_VERSION, LLMConfig, load_prompt
 from app.llm.providers import mock
 
-from . import agents, shadow_agents
+from . import rules, shadow_agents
 from .workflow import build_workflow
 
 PROMPT_ID = "triage_classify_v1"
@@ -26,8 +26,8 @@ def shadow_registry(llm_config=None):
     config.check_ready()
     prompt = load_prompt(PROMPT_ID)
     return [
-        AgentDefinition("triage.classify", "app.domains.case_triage.agents:classify",
-                        agents.validate_classification, version="1"),
+        AgentDefinition("triage.classify_rules", "app.domains.case_triage.rules:classify",
+                        rules.validate_classification, version=rules.rule_version()),
         AgentDefinition("triage.classify_llm", "app.domains.case_triage.shadow_agents:classify_llm",
                         shadow_agents.validate_llm_classification, version=config.version_tag(prompt)),
         AgentDefinition("triage.compare", "app.domains.case_triage.shadow_agents:compare",
@@ -52,7 +52,8 @@ def build_shadow_workflow(job_id, case, llm_config=None, *, mock_scenario=None):
         "job_id": base["job_id"],
         "input": base["input"],
         "steps": [
-            {"id": "classify_rules", "agent": "triage.classify", "max_attempts": 1},
+            {"id": "classify_rules", "agent": "triage.classify_rules", "max_attempts": 1,
+             "params": {"rule_version": rules.rule_version()}},
             {"id": "classify_llm", "agent": "triage.classify_llm", "max_attempts": LLM_MAX_ATTEMPTS,
              # The HTTP timeout is shorter than the step timeout, so the agent can still
              # answer "unavailable" itself instead of being killed by Core.

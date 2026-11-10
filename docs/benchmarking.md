@@ -1,10 +1,17 @@
 # Benchmarking plan: robustness, open benchmarks, attacks and live conditions
 
-**Status (2026-11-08):**
+**Status (2026-11-11):**
 - Stage 1, the robustness gate, is built and runs in CI on every push (roadmap 5.4, PR #41). Its first run found 8 bugs,
   45 gaps and 11 notes ([evidence note](evidence/2026-11-07-robustness-stage1.md)).
-- The 8 bugs are fixed in PR #42 (roadmap 5.5): 215/270 own items now pass, with 0 bugs and 44 gaps. Deciding
-  the gaps is the rest of 5.5.
+- The 8 bugs were fixed in PR #42 (roadmap 5.5): 215/270 own items passed, with 0 bugs and 44 gaps.
+  After E2 in PR #64, 239/270 own items pass, with 0 bugs, 20 gaps and 11 notes; none of 4,680 sweep checks
+  violate a promise. E2 fixes 24 of the original 27 rules gaps and retains three measured limits.
+  Deciding the other gaps is the rest of 5.5.
+- E2 (PR #64) replaces the shadow workflow's official rules and this benchmark's `rules` layer with
+  versioned Thai/English rules. The original v1 demo remains available. The [E2 evidence](evidence/2026-11-11-e2-rules-v2.md)
+  records each of the original 27 rules-gap decisions and the new baseline: `SYN-RUL-009` (cross-script
+  lookalikes), `SYN-RUL-032` and `SYN-RUL-033` (negation/precedence) stay as known limits. Its live-measurement
+  status is explicit.
 - Stage 2 (open benchmarks, 5.6) and stage 3 (attacks, privacy, load and live drift, 5.7) are planned below.
 - The 116 rules items had their first run with a real model on 2026-11-10 (Typhoon, from a cloud session):
   AI correct 104/116 where the rules are correct on 48/116, with all 12 mistakes on requests labelled `other`
@@ -161,7 +168,7 @@ synthetic item and on every element of the open corpora (the sweeps).
 | Layer | What runs | Promises checked on every input |
 |---|---|---|
 | `intake` | `ApiApp.handle` in memory: `POST /v1/jobs` with odd bodies, fields, encodings and headers | Bad input never gets a 5xx. Statuses stay in the documented set. An accepted job's input can be serialized by Core. The same idempotency key never makes a second job |
-| `rules` | the v1 keyword rules on the admitted (trimmed) text | A valid category with its queue. The same answer twice. For INV items, the same answer as the item it paraphrases |
+| `rules` | versioned Thai/English `keywords-v2` on the admitted (trimmed) text (E2, PR #64); `case_triage.v1` retains the original demo separately | A valid category with its queue. The same answer twice. For INV items, the same answer as the item it paraphrases |
 | `masking` | `app.llm.redaction.mask` | No exception. Only known kinds. Masking twice changes nothing. Listed values must not reach the AI, and listed non-personal text must stay |
 | `ai_reply` | `answer_text` (the Typhoon path) or the plain path, then `gateway.parse_answer` | Only `InvalidModelOutput` may be raised. An accepted answer has fixed choices, text of at most 200 characters without control characters, and can be stored by Core |
 | `core` | `normalize_spec`, `decode`, `fingerprint` from `neuron_flow.model` | Only `SpecError` (or its `MessageSizeError`) may be raised. Fingerprints are stable |
