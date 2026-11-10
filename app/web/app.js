@@ -12,10 +12,21 @@
  * or local storage when "remember" is ticked).
  *
  * What the page can honestly show: Core runs a job as one blocking loop, so while a case is RUNNING
- * the page knows only that it is running; each step's result appears when the case finishes. */
+ * the page knows only that it is running; each step's result appears when the case finishes.
+ *
+ * A case that waits for a person ends with a decision card (roadmap 2.2 and 2.4, ADR-027): approve (keeping the
+ * rules' category or choosing another) or reject, with a reason in the person's own words. Who decides comes
+ * from the access key on the server, never from the page. The sidebar lists the cases that wait, elevated first.
+ *
+ * Retention is said where it matters (the review of 2026-11-10, point 3): on temporary storage the page never
+ * says "saved permanently", and it remembers the ids (never the text) of what this browser sent, with the
+ * queue's store id. When the store id changes, the queue started empty again, so the page says how many of
+ * those cases are gone instead of letting them vanish. */
 (function () {
   const KEY_STORAGE = "neuronflow.accessKey";
-  const TERMINAL = new Set(["REVIEW_REQUIRED", "COMPLETED", "FAILED", "DELIVERY_FAILED", "CANCELLED"]);
+  const SENT_STORAGE = "neuronflow.sent";  // { store_id, jobs: [job id, ...] }: ids only, never case text
+  const SENT_MAX = 100;
+  const TERMINAL = new Set(["REVIEW_REQUIRED", "COMPLETED", "FAILED", "DELIVERY_FAILED", "CANCELLED", "APPROVED", "REJECTED"]);
   const CASE_ID = /^[A-Za-z0-9][A-Za-z0-9_-]{0,79}$/;
   const JOB_ID = /^job_[0-9a-f]{24}$/;
   const SVG_NS = "http://www.w3.org/2000/svg";
@@ -23,7 +34,10 @@
   const STATUS = {
     QUEUED: "รอคิว", RUNNING: "กำลังทำงาน", REVIEW_REQUIRED: "รอคนตรวจ", COMPLETED: "เสร็จแล้ว",
     FAILED: "ไม่สำเร็จ", DELIVERY_FAILED: "บันทึกรายงานไม่สำเร็จ", CANCELLED: "ยกเลิกแล้ว",
+    APPROVED: "อนุมัติแล้ว", REJECTED: "ไม่อนุมัติ",
   };
+  const DECISION = { APPROVE: "อนุมัติ", REJECT: "ไม่อนุมัติ" };
+  const ROLE_TH = { owner: "เจ้าของระบบ (รหัสเข้าใช้ร่วม)" };
   const CATEGORY = { access: "เข้าระบบ / บัญชี", upload: "อัปโหลดไฟล์", billing: "การเงิน / การชำระเงิน", other: "เรื่องอื่น ๆ" };
   const QUEUE = {
     access_review: "คิวตรวจเรื่องเข้าระบบ", upload_review: "คิวตรวจเรื่องอัปโหลด",
@@ -110,6 +124,7 @@
     DependencyFailed: "ขั้นก่อนหน้าไม่สำเร็จ",
     InputContractError: "ข้อมูลเข้าไม่ตรงสัญญา",
     PermanentAgentError: "ผิดพลาดแบบลองใหม่ก็ไม่หาย",
+    UnmaskedText: "ข้อความยังมีข้อมูลส่วนตัวที่ต้องปิดก่อน ระบบจึงไม่ส่งให้ AI",
   };
   const API_ERROR = {
     invalid_input: "ข้อมูลเคสไม่ถูกต้อง",
@@ -122,6 +137,14 @@
     rate_limited: "ส่งถี่เกินไป",
     body_too_large: "ข้อความยาวเกินไป",
     internal_error: "ระบบขัดข้องฝั่งเซิร์ฟเวอร์",
+    invalid_decision: "เลือก \"อนุมัติ\" หรือ \"ไม่อนุมัติ\" ก่อน",
+    invalid_category: "หมวดนี้ไม่มีในระบบ",
+    invalid_reason: "เหตุผลต้องมี 1–500 ตัวอักษร",
+    invalid_version: "ข้อมูลเคสเปลี่ยนไปแล้ว โหลดใหม่แล้วลองอีกครั้ง",
+    already_decided: "เคสนี้มีคนตัดสินไปแล้ว การตัดสินแก้ไม่ได้",
+    version_conflict: "เคสนี้เปลี่ยนไปหลังจากคุณเปิดดู ระบบโหลดใหม่ให้แล้ว ตรวจอีกครั้งก่อนตัดสิน",
+    not_reviewable: "เคสนี้ไม่ได้รอคนตัดสินแล้ว",
+    review_not_found: "ไม่พบเคสที่รอตัดสินนี้ (แผนฟรีล้างข้อมูลเมื่อระบบหลับหรือรีสตาร์ท)",
   };
   const STEP_STATE = { done: "สำเร็จ", fail: "ไม่สำเร็จ", skip: "ข้าม", none: "ไม่ได้รัน", pending: "ยังไม่เริ่ม", working: "กำลังทำงาน", preview: "ตัวอย่าง" };
   const LEVEL = { ok: "ok", run: "run", err: "err", warn: "warn", info: "info" };
@@ -167,7 +190,10 @@
     trace: { jobId: null, events: [], after: 0, loading: false },
     traceFilter: "all",
     techOpen: false, howOpen: false,
-    keys: { thread: null, side: null, flow: null },
+    review: null,    // the decision card being filled: { jobId, decision, category, reason, key, signature, sending, error }
+    inbox: [],       // cases that wait for a decision, elevated first (GET /v1/reviews)
+    lost: null,      // { count, since } when the queue started empty again since this browser last sent something
+    keys: { thread: null, side: null, flow: null, inbox: null },
     graph: { nodes: new Map(), edges: [] },
     refreshTimer: null, jobTimer: null,
   };
@@ -262,6 +288,53 @@
   function forgetKey() {
     try { sessionStorage.removeItem(KEY_STORAGE); localStorage.removeItem(KEY_STORAGE); } catch (_) { /* ignore */ }
     state.key = null;
+  }
+
+  // ---------- retention: what this browser sent, to notice a queue that started empty again ---------
+
+  function persistent() { return Boolean(((state.status || {}).storage || {}).persistent); }
+  /* "Saved" in words that are true for the storage in use: never "permanent" on temporary storage. */
+  function savedText() { return persistent() ? "บันทึกถาวรแล้ว" : "บันทึกแล้ว (ที่เก็บชั่วคราว)"; }
+  const TEMPORARY_NOTE = "ที่เก็บข้อมูลตอนนี้เป็นแบบชั่วคราว (Render แผนฟรี): ถ้าระบบหลับ (ไม่มีคนใช้ราว 15 นาที) รีสตาร์ท หรืออัปเดต " +
+    "รายการนี้ ผลของมัน และการตัดสินจะหายทั้งหมด";
+
+  function loadSent() {
+    try {
+      const value = JSON.parse(localStorage.getItem(SENT_STORAGE) || "null");
+      if (value && typeof value.store_id === "string" && Array.isArray(value.jobs)) return value;
+    } catch (_) { /* blocked or unreadable: start again */ }
+    return null;
+  }
+  function saveSent(value) {
+    try { localStorage.setItem(SENT_STORAGE, JSON.stringify(value)); } catch (_) { /* storage blocked: no notice later */ }
+  }
+  /* Remember a job id this browser sent (never its text), under the queue's store id from the reply. */
+  function rememberSent(job, retention) {
+    const storeId = (retention || {}).store_id;
+    if (!storeId || !job || !JOB_ID.test(job.job_id)) return;
+    const sent = loadSent();
+    const jobs = sent && sent.store_id === storeId ? sent.jobs.filter((id) => id !== job.job_id) : [];
+    jobs.push(job.job_id);
+    saveSent({ store_id: storeId, jobs: jobs.slice(-SENT_MAX) });
+  }
+  /* With every status: another store id means the queue started empty again, so what was sent before is gone. */
+  function checkStore(retention) {
+    const storeId = (retention || {}).store_id;
+    if (!storeId) return;
+    const sent = loadSent();
+    if (sent && sent.store_id !== storeId) {
+      if (sent.jobs.length) state.lost = { count: sent.jobs.length, since: retention.store_started_at, persistent: Boolean(retention.persistent) };
+      saveSent({ store_id: storeId, jobs: [] });
+    }
+    renderLost();
+  }
+  function renderLost() {
+    const lost = state.lost;
+    $("lost-banner").hidden = !lost;
+    if (!lost) return;
+    $("lost-text").textContent = `ระบบเริ่มใหม่ด้วยที่เก็บข้อมูลว่าง${lost.since ? ` เมื่อ ${fullTime(lost.since)}` : ""} ` +
+      `เคสและคำถาม ${lost.count} รายการที่ส่งจากเครื่องนี้ก่อนหน้านั้นหายไปแล้ว พร้อมผลและการตัดสินของรายการเหล่านั้น ` +
+      (lost.persistent ? "" : "เพราะ Render แผนฟรีไม่มีดิสก์ถาวร ") + "ถ้ายังต้องใช้ ให้ส่งใหม่";
   }
 
   // ---------- API --------------------------------------------------------------------------
@@ -361,6 +434,7 @@
     showApp();
     applyStatus(result.data);
     await refreshQueue();
+    await refreshInbox();
     renderAll();
     startTimers();
     const fromLink = location.hash.slice(1);
@@ -420,7 +494,8 @@
     const storage = status.storage || {};
     if (storage.persistent) setSys("sys-storage", "ถาวร", "ok");
     else setSys("sys-storage", "ชั่วคราว: เคสหายเมื่อรีสตาร์ท", "warn",
-      "ยังไม่มีดิสก์ถาวร (Render แบบฟรีไม่มีดิสก์) ระบบยังทำงานครบทุกขั้น แต่เคสเก่าจะหายเมื่อระบบหลับหรือรีสตาร์ท");
+      "ยังไม่มีดิสก์ถาวร (Render แบบฟรีไม่มีดิสก์) ระบบยังทำงานครบทุกขั้น แต่เคส ผล และการตัดสินจะหายเมื่อระบบหลับ รีสตาร์ท หรืออัปเดต");
+    checkStore(status.retention);
     $("version").textContent = status.version ? "v" + status.version : "";
     if (state.mode === "study" && !studyAvailable()) state.mode = "case";
     applyComposerMode();
@@ -453,6 +528,8 @@
       ["ไม่สำเร็จ", (queue.FAILED || 0) + (queue.DELIVERY_FAILED || 0), (queue.FAILED || queue.DELIVERY_FAILED) ? "err" : ""],
     ];
     if (queue.COMPLETED) items.push(["เสร็จแล้ว", queue.COMPLETED, ""]);
+    if (queue.APPROVED) items.push(["อนุมัติแล้ว", queue.APPROVED, ""]);
+    if (queue.REJECTED) items.push(["ไม่อนุมัติ", queue.REJECTED, ""]);
     if (queue.CANCELLED) items.push(["ยกเลิกแล้ว", queue.CANCELLED, ""]);
     $("counts").replaceChildren(...items.map(([label, n, kind]) =>
       el("span", {}, [label + " ", el("span", { class: "n" + (kind ? " " + kind : ""), text: String(n || 0) })])));
@@ -486,6 +563,8 @@
       return job.review_priority === "elevated" ? ["st-elevated", "รอคนตรวจ · ยกให้ดูก่อน", false] : ["st-review", "รอคนตรวจ", false];
     }
     if (job.status === "COMPLETED") return ["st-done", "เสร็จแล้ว", false];
+    if (job.status === "APPROVED") return ["st-done", "อนุมัติแล้ว", false];
+    if (job.status === "REJECTED") return ["st-cancelled", "ไม่อนุมัติ", false];
     if (job.status === "CANCELLED") return ["st-cancelled", "ยกเลิกแล้ว", false];
     return ["st-failed", STATUS[job.status] || job.status, false];
   }
@@ -517,6 +596,40 @@
     $("job-list").replaceChildren(...nodes);
     $("queue-empty").hidden = state.jobs.length > 0;
     $("queue-more").hidden = !state.nextBefore;
+  }
+
+  /* Cases that wait for a decision, elevated first. Loaded only while some wait (the status says how many). */
+  async function refreshInbox() {
+    const waiting = (((state.status || {}).reviews) || {}).PENDING || 0;
+    if (!waiting) {
+      state.inbox = [];
+      renderInbox();
+      return;
+    }
+    const result = await call("GET", "/v1/reviews?state=PENDING&limit=20");
+    if (handleAccessProblem(result) || result.status !== 200) return;
+    state.inbox = result.data.reviews || [];
+    renderInbox();
+  }
+
+  function renderInbox() {
+    const counts = ((state.status || {}).reviews) || {};
+    const key = JSON.stringify([state.selectedId, counts.PENDING, counts.elevated_pending,
+      state.inbox.map((item) => [item.review_id, item.priority])]);
+    if (key === state.keys.inbox) return;
+    state.keys.inbox = key;
+    $("inbox").hidden = !state.inbox.length;
+    $("inbox-count").textContent = counts.PENDING ? String(counts.PENDING) +
+      (counts.elevated_pending ? ` · ด่วน ${counts.elevated_pending}` : "") : "";
+    $("inbox-list").replaceChildren(...state.inbox.map((item) => el("button", {
+      type: "button", class: "job inbox-item", dataset: { id: item.job_id },
+      "aria-current": item.job_id === state.selectedId ? "true" : null,
+    }, [
+      el("span", { class: "job-title" }, [el("span", { class: "case", text: item.case_id || item.job_id }),
+        item.priority === "elevated" ? el("span", { class: "tag tag-elev", text: "ด่วน" }) : null,
+        el("span", { class: "time", text: shortTime(item.created_at) })]),
+      el("span", { class: "job-preview", text: item.summary_preview }),
+    ])));
   }
 
   // ---------- one case ---------------------------------------------------------------------
@@ -577,7 +690,7 @@
     if (handleAccessProblem(result) || jobId !== state.selectedId) return;
     if (result.status === 404) {
       clearSelection();
-      toast("ไม่พบเคสนี้แล้ว (แผนฟรีล้างเคสเก่าเมื่อระบบหลับหรือรีสตาร์ท)");
+      toast(persistent() ? "ไม่พบเคสนี้" : "ไม่พบเคสนี้แล้ว (ที่เก็บชั่วคราวของแผนฟรีล้างเคสเก่าเมื่อระบบหลับ รีสตาร์ท หรืออัปเดต)");
       renderAll();
       return;
     }
@@ -717,13 +830,15 @@
   function renderAll() {
     renderHeader();
     renderSidebar();
+    renderInbox();
     renderThread();
     renderFlow();
   }
 
   function statusTag(job) {
     const kind = { QUEUED: "tag-neutral", RUNNING: "tag-accent", REVIEW_REQUIRED: "tag-warn", COMPLETED: "tag-ok",
-      FAILED: "tag-err", DELIVERY_FAILED: "tag-err", CANCELLED: "tag-neutral" }[job.status] || "tag-neutral";
+      FAILED: "tag-err", DELIVERY_FAILED: "tag-err", CANCELLED: "tag-neutral", APPROVED: "tag-ok",
+      REJECTED: "tag-neutral" }[job.status] || "tag-neutral";
     return el("span", { class: "tag " + kind }, [job.status === "RUNNING" ? el("span", { class: "dot blink" }) : null,
       STATUS[job.status] || job.status]);
   }
@@ -782,8 +897,10 @@
     if (state.draft) return JSON.stringify([state.draft.sending, state.draft.error]);
     if (state.job) {
       const job = state.job;
+      const form = state.review && state.review.jobId === job.job_id ? state.review : null;
       return JSON.stringify([job.status, job.queue_position, job.claims, job.updated_at,
-        Boolean(state.last && state.last.jobId === job.job_id), state.cancelAsk === job.job_id, state.cancelling]);
+        Boolean(state.last && state.last.jobId === job.job_id), state.cancelAsk === job.job_id, state.cancelling,
+        form ? [form.decision, form.sending, form.error] : null, persistent()]);
     }
     const status = state.status || {};
     return JSON.stringify([status.storage, status.ai, defaultWorkflow(), Boolean(workflowInfo(defaultWorkflow())),
@@ -813,11 +930,12 @@
       el("summary", { text: "ระบบทำงานอย่างไร (อ่านแบบภาษาธรรมดา)" }),
       el("ol", {}, [
         el("li", {}, [el("b", { text: "ตรวจก่อนรับ " }), "ระบบตรวจข้อความเคสก่อน ถ้าสั้นไปหรือข้อมูลไม่ครบ จะบอกทันทีโดยยังไม่เริ่มงานใด ๆ"]),
-        el("li", {}, [el("b", { text: "บันทึกลงคิวถาวรก่อนตอบ " }), "ระบบตอบว่า \"รับแล้ว\" หลังบันทึกเสร็จเท่านั้น ถ้ากดส่งซ้ำด้วยรหัสส่งงานเดิม ระบบรู้ว่าเป็นเคสเดิม ไม่สร้างงานซ้ำ"]),
+        el("li", {}, [el("b", { text: "บันทึกลงคิวก่อนตอบ " }), "ระบบตอบว่า \"รับแล้ว\" หลังบันทึกเสร็จเท่านั้น ถ้ากดส่งซ้ำด้วยรหัสส่งงานเดิม ระบบรู้ว่าเป็นเคสเดิม ไม่สร้างงานซ้ำ" +
+          (persistent() ? "" : " แต่ตอนนี้ที่เก็บเป็นแบบชั่วคราว (Render แผนฟรี): \"รับแล้ว\" หมายถึงเก็บไว้จนกว่าระบบจะหลับ รีสตาร์ท หรืออัปเดต")]),
         el("li", {}, [el("b", { text: "ตัวรันงานมีตัวเดียว " }), "หยิบเคสตามลำดับที่ส่งเข้ามา ส่งให้แกนระบบ (Core) ทำทีละขั้น และตรวจผลทุกขั้นก่อนบันทึก"]),
         el("li", {}, [el("b", { text: "กฎเดิมกับ AI ทำคู่กัน " }), "กฎเดิมเป็นข้อเสนอหลัก AI ให้ความเห็นที่สอง ถ้าไม่ตรงกัน เคสจะถูกยกให้คนดูก่อน"]),
         el("li", {}, [el("b", { text: "เครื่องดับกลางทางก็ไม่หาย " }), "เมื่อระบบเปิดใหม่ ตัวรันงานจะทำเคสที่ค้างต่อจากเดิม และนับจำนวนครั้งที่ลองตามงบเดิม"]),
-        el("li", {}, [el("b", { text: "คนตัดสินเสมอ " }), "ผลสุดท้ายคือ \"รอคนตรวจ\" AI เสนอได้ ระบบตรวจ แต่คนเป็นผู้ตัดสิน (ปุ่มตัดสินจะมาในรอบถัดไป)"]),
+        el("li", {}, [el("b", { text: "คนตัดสินเสมอ " }), "AI เสนอได้ ระบบตรวจ แต่คนเป็นผู้ตัดสิน: เคสที่ \"รอคนตรวจ\" มีปุ่ม \"อนุมัติ\" หรือ \"ไม่อนุมัติ\" พร้อมเหตุผล ตัดสินแล้วแก้ไม่ได้"]),
       ]),
     ]);
     details.addEventListener("toggle", () => { state.howOpen = details.open; });
@@ -905,6 +1023,7 @@
       el("span", { class: "right", text: "ผลสุดท้ายต้องรอคนตรวจเสมอ" }),
       draft.error ? el("p", { class: "form-error", role: "alert", text: draft.error }) : null,
     ];
+    const temporary = persistent() ? null : el("p", { class: "notice", text: TEMPORARY_NOTE });
     return [
       el("div", { class: "msg-user", text: draft.body.input.summary }),
       el("div", { class: "msg-meta" }, [el("span", { class: "file-chip", text: draft.body.input.case_id }),
@@ -914,15 +1033,18 @@
           (plan ? ` ระบบจะทำ ${plan.length} ขั้นตอนตามนี้ แล้วรอคนตรวจ ` : " "),
           el("span", { class: "hl", text: "กดยืนยันก่อนจึงจะเริ่ม" })]),
         runCard({ plan, states: null, workflow, tag: el("span", { class: "tag tag-warn", text: "รอยืนยัน" }), foot }),
+        temporary,
       ], "draft-msg"),
     ];
   }
 
   function introText(job) {
     switch (job.status) {
-      case "QUEUED": return `รับเคสเข้าคิวแล้ว (บันทึกถาวรก่อนตอบ) · รอลำดับที่ ${job.queue_position || "-"}`;
+      case "QUEUED": return `รับเคสเข้าคิวแล้ว (${persistent() ? "บันทึกถาวรก่อนตอบ" : "บันทึกก่อนตอบ แต่เป็นที่เก็บชั่วคราว"}) · รอลำดับที่ ${job.queue_position || "-"}`;
       case "RUNNING": return job.claims > 1 ? "ตัวรันงานกำลังทำเคสนี้ต่อหลังระบบเปิดใหม่…" : "ตัวรันงานกำลังทำเคสนี้…";
-      case "REVIEW_REQUIRED": return "ทำครบทุกขั้นแล้ว ข้อเสนอด้านล่างรอคนตรวจ — AI ไม่มีสิทธิ์ตัดสินเอง";
+      case "REVIEW_REQUIRED": return "ทำครบทุกขั้นแล้ว ข้อเสนอด้านล่างรอคนตัดสิน — AI ไม่มีสิทธิ์ตัดสินเอง";
+      case "APPROVED": return "คนตัดสินแล้ว: อนุมัติ เคสนี้ปิดแล้ว";
+      case "REJECTED": return "คนตัดสินแล้ว: ไม่อนุมัติ เคสนี้ปิดแล้ว";
       case "COMPLETED": return "ทำครบทุกขั้นแล้ว";
       case "DELIVERY_FAILED": return "ทำครบทุกขั้น แต่บันทึกรายงานไม่สำเร็จ";
       case "CANCELLED": return "เคสนี้ถูกยกเลิกก่อนตัวรันงานหยิบไปทำ จึงไม่มีขั้นไหนถูกรัน และ AI ไม่ได้เห็นเคสนี้";
@@ -931,11 +1053,11 @@
   }
 
   function jobFoot(job) {
-    if (job.status === "QUEUED") return [el("span", { class: "ok", text: "✓ บันทึกถาวรแล้ว" }), el("span", { class: "right", text: `รอลำดับที่ ${job.queue_position || "-"}` })];
-    if (job.status === "RUNNING") return [el("span", { class: "ok", text: "✓ บันทึกถาวรแล้ว" }), el("span", { class: "right", text: "กำลังทำงาน…" })];
+    if (job.status === "QUEUED") return [el("span", { class: persistent() ? "ok" : "warn", text: "✓ " + savedText() }), el("span", { class: "right", text: `รอลำดับที่ ${job.queue_position || "-"}` })];
+    if (job.status === "RUNNING") return [el("span", { class: persistent() ? "ok" : "warn", text: "✓ " + savedText() }), el("span", { class: "right", text: "กำลังทำงาน…" })];
     if (job.status === "CANCELLED") return [el("span", { text: `ยกเลิกเมื่อ ${clockTime(job.finished_at)}` }), el("span", { class: "right", text: "ไม่ได้รัน" })];
     const took = job.started_at && job.finished_at ? seconds(job.started_at, job.finished_at) : null;
-    const done = job.status === "REVIEW_REQUIRED" || job.status === "COMPLETED";
+    const done = ["REVIEW_REQUIRED", "COMPLETED", "APPROVED", "REJECTED"].includes(job.status);
     return [
       el("span", { class: done ? "ok" : "", text: `${done ? "✓" : "✕"} ${done ? "เสร็จเมื่อ" : "จบเมื่อ"} ${clockTime(job.finished_at)}` }),
       el("span", { class: "right", text: took === null ? "" : `ใช้เวลา ${took.toFixed(1)} วินาที` }),
@@ -955,6 +1077,15 @@
       ]);
     }
     if (!review) return null;
+    const decided = (job.human_review || {}).decision;
+    if (decided) {
+      const approved = decided.decision === "APPROVE";
+      return el("div", { class: "verdict decided" + (approved ? "" : " rejected") }, [
+        el("div", { class: "label", text: `คนตัดสินแล้ว: ${DECISION[decided.decision] || decided.decision}` }),
+        el("div", { class: "big", text: approved ? (QUEUE[decided.final_queue] || decided.final_queue) : "ไม่ส่งต่อ (ไม่อนุมัติ)" }),
+        el("span", { class: "tag tag-neutral", text: `โดย ${ROLE_TH[(decided.reviewer || {}).role] || (decided.reviewer || {}).role} · ${fullTime(decided.created_at)}` }),
+      ]);
+    }
     const elevated = review.review_priority === "elevated";
     return el("div", { class: "verdict" }, [
       el("div", { class: "label", text: "ระบบเสนอให้ส่งไปที่" }),
@@ -990,9 +1121,137 @@
     rows.push(["สิ่งที่ระบบบอกคนตรวจ", reasons.length
       ? el("span", { class: "reasons" }, reasons.map((code) => el("span", { class: "tag tag-elev", text: REASON[code] || code })))
       : "ไม่มีข้อสังเกต"]);
-    rows.push(["การตัดสิน", review.decision === "PENDING_HUMAN_REVIEW"
-      ? "รอคนตรวจ — AI เสนอได้อย่างเดียว (ปุ่มอนุมัติ/ไม่อนุมัติจะมาในรอบถัดไป)" : review.decision]);
+    rows.push(["การตัดสิน", decisionText(job, review)]);
     return el("dl", { class: "facts" }, rows.flatMap(([term, value]) => [el("dt", { text: term }), el("dd", {}, value)]));
+  }
+
+  function decisionText(job, review) {
+    const human = job.human_review || {};
+    const decided = human.decision;
+    if (!decided) {
+      if (human.decidable) return "รอคนตัดสิน — ใช้การ์ด \"ตัดสินเคสนี้\" ด้านล่าง (AI เสนอได้อย่างเดียว)";
+      return review.decision === "PENDING_HUMAN_REVIEW" ? "รอคนตัดสิน — AI เสนอได้อย่างเดียว" : review.decision;
+    }
+    const category = decided.final_category ? (CATEGORY[decided.final_category] || decided.final_category) : null;
+    const what = decided.decision === "APPROVE"
+      ? `อนุมัติ → ${category} · ${QUEUE[decided.final_queue] || decided.final_queue}` +
+        (decided.final_category !== review.suggested_category ? " (เปลี่ยนจากข้อเสนอของกฎ)" : " (ตามข้อเสนอของกฎ)")
+      : "ไม่อนุมัติ" + (category ? ` · หมวดที่ผู้ตัดสินเห็นว่าถูก: ${category}` : "");
+    return el("span", {}, [what, el("q", { text: decided.reason }),
+      el("span", { class: "muted", text: `โดย ${ROLE_TH[(decided.reviewer || {}).role] || (decided.reviewer || {}).role} · ${fullTime(decided.created_at)} · ตัดสินแล้วแก้ไม่ได้` })]);
+  }
+
+  /* The decision card of a case that waits for a person (roadmap 2.4). The page never says who decides: the
+   * server takes it from the access key. The idempotency key is kept while the choice and the reason stay the
+   * same, so pressing "บันทึก" again after a lost reply can never record a second decision. */
+  function decisionForm(job) {
+    const human = job.human_review;
+    if (!human || !human.decidable || job.status !== "REVIEW_REQUIRED") return null;
+    const review = (job.result || {}).review || {};
+    let form = state.review;
+    if (!form || form.jobId !== job.job_id || form.version !== human.version) {
+      form = state.review = { jobId: job.job_id, reviewId: human.review_id, version: human.version, decision: null,
+        suggested: review.suggested_category || "", category: review.suggested_category || "", reason: "",
+        key: null, signature: null, sending: false, error: null };
+    }
+    const policy = (state.status || {}).reviews || {};
+    const categories = policy.categories || Object.keys(CATEGORY);
+    const queues = policy.queues || {};
+    const max = policy.reason_max_chars || 500;
+    const choice = (value, label) => el("button", { type: "button", class: "seg-opt", disabled: form.sending,
+      dataset: { action: "review-choose", decision: value }, "aria-pressed": String(form.decision === value), text: label });
+    const options = categories.map((code) => el("option", { value: code, selected: code === form.category,
+      text: `${CATEGORY[code] || code} → ${QUEUE[queues[code]] || queues[code] || ""}` + (code === form.suggested ? " (ข้อเสนอของกฎ)" : "") }));
+    if (form.decision === "REJECT") options.unshift(el("option", { value: "", selected: form.category === "", text: "ไม่ระบุหมวด" }));
+    const select = el("select", { class: "input", id: "review-category", disabled: form.sending || !form.decision }, options);
+    const reason = el("textarea", { id: "review-reason", rows: "3", maxlength: String(max), disabled: form.sending,
+      placeholder: "เหตุผลด้วยคำของคุณเอง เช่น ลูกค้าพูดถึงการหักเงินซ้ำ จึงเป็นเรื่องการเงิน" });
+    reason.value = form.reason;
+    const label = form.sending ? "กำลังบันทึก…" : form.decision ? `บันทึก: ${DECISION[form.decision]}` : "เลือกก่อนว่าอนุมัติหรือไม่";
+    return el("section", { class: "decide", "aria-labelledby": "decide-title" }, [
+      el("h3", { id: "decide-title", text: "ตัดสินเคสนี้" }),
+      el("div", { class: "seg decide-choice", role: "group", "aria-label": "ผลการตัดสิน" },
+        [choice("APPROVE", "อนุมัติ"), choice("REJECT", "ไม่อนุมัติ")]),
+      el("label", { for: "review-category", text: form.decision === "REJECT" ? "หมวดที่ถูกต้อง (ไม่ใส่ก็ได้)" : "ส่งไปที่หมวด" }),
+      select,
+      el("label", { for: "review-reason", text: `เหตุผล (จำเป็น ไม่เกิน ${max} ตัวอักษร)` }),
+      reason,
+      form.error ? el("p", { class: "form-error", role: "alert", text: form.error }) : null,
+      el("div", { class: "msg-actions" }, [
+        el("button", { type: "button", class: "btn btn-primary", dataset: { action: "review-submit" },
+          disabled: form.sending || !form.decision, text: label }),
+        el("span", { class: "hint", text: `ตัดสินในนาม ${ROLE_TH[policy.reviewer_role] || "เจ้าของระบบ"} · ตัดสินแล้วแก้ไม่ได้ · รหัสผู้ตรวจรายคนอยู่ในแผนขั้น 2.1` }),
+      ]),
+    ]);
+  }
+
+  function chooseDecision(decision) {
+    const form = state.review;
+    if (!form || form.sending || !DECISION[decision]) return;
+    form.decision = decision;
+    form.error = null;
+    if (decision === "APPROVE" && !form.category) form.category = form.suggested;
+    if (decision === "REJECT") form.category = "";
+    renderThread();
+    const reason = $("review-reason");
+    if (reason) reason.focus({ preventScroll: true });
+  }
+
+  async function submitDecision() {
+    const job = state.job;
+    const form = state.review;
+    if (!job || !form || form.jobId !== job.job_id || form.sending) return;
+    const max = (((state.status || {}).reviews) || {}).reason_max_chars || 500;
+    const reason = form.reason.trim();
+    form.error = null;
+    if (!form.decision) {
+      form.error = "เลือกก่อนว่า \"อนุมัติ\" หรือ \"ไม่อนุมัติ\"";
+    } else if (!reason || reason.length > max) {
+      form.error = `เขียนเหตุผลด้วยคำของคุณเอง 1–${max} ตัวอักษร (ตอนนี้ ${reason.length})`;
+    }
+    if (form.error) {
+      renderThread(true);
+      return;
+    }
+    const body = { decision: form.decision, reason, expected_version: form.version };
+    if (form.category) body.final_category = form.category;
+    const signature = JSON.stringify(body);
+    if (!form.key || form.signature !== signature) {
+      form.key = newIdempotencyKey();
+      form.signature = signature;
+    }
+    body.idempotency_key = form.key;
+    form.sending = true;
+    renderThread();
+    let result;
+    try {
+      result = await call("POST", `/v1/reviews/${encodeURIComponent(form.reviewId)}/decisions`, body);
+    } catch (_) {
+      result = null;
+    }
+    form.sending = false;
+    if (result && handleAccessProblem(result)) return;
+    if (result && (result.status === 201 || result.status === 200)) {
+      const decided = result.data.decision || {};
+      toast(`บันทึกการตัดสินแล้ว: ${DECISION[decided.decision] || decided.decision}` +
+        (decided.final_queue ? ` → ${QUEUE[decided.final_queue] || decided.final_queue}` : ""));
+      state.review = null;
+    } else if (result && result.status === 409) {
+      toast(API_ERROR[result.data.error] || "เคสนี้ตัดสินไม่ได้แล้ว");
+      state.review = null;  // the reload below shows what the case looks like now
+    } else {
+      form.error = !result ? "บันทึกไม่สำเร็จ เพราะติดต่อระบบไม่ได้ กดบันทึกอีกครั้งได้เลย ถ้าครั้งก่อนไปถึงแล้ว ระบบจะไม่บันทึกซ้ำ"
+        : (API_ERROR[result.data.error] || result.data.message || `ระบบตอบกลับ ${result.status}`) +
+          (result.data.error === "rate_limited" ? ` รอ ${result.data.retry_after_s || 60} วินาทีแล้วลองใหม่` : "");
+      renderThread(true);
+      return;
+    }
+    await refreshStatus();
+    await refreshQueue();
+    await refreshInbox();  // the decided case leaves the "รอรีวิว" list now, not at the next refresh
+    if (state.selectedId !== job.job_id) return;
+    clearTimeout(state.jobTimer);
+    await loadJob();
   }
 
   function maskedText(masked) {
@@ -1043,7 +1302,11 @@
       body.push(el("p", { class: "progress-line" }, [el("span", { class: "spinner" }),
         "กฎเดิมกับ AI กำลังวิเคราะห์คู่กัน ผลของแต่ละขั้นจะขึ้นเมื่อเคสเสร็จ หน้านี้อัปเดตเอง"]));
     }
-    body.push(verdict(job), facts(job));
+    body.push(verdict(job), facts(job), decisionForm(job));
+    if (!persistent() && !["FAILED", "CANCELLED"].includes(job.status)) {
+      body.push(el("p", { class: job.status === "REVIEW_REQUIRED" ? "notice" : "muted",
+        text: TEMPORARY_NOTE + (job.status === "REVIEW_REQUIRED" ? " ตัดสินให้เสร็จก่อนระบบหลับ" : "") }));
+    }
     if (job.status === "QUEUED") body.push(cancelActions(job));
     if (state.last && state.last.jobId === job.job_id) {
       body.push(el("div", { class: "msg-actions" }, [
@@ -1063,7 +1326,7 @@
 
   function studyIntro(job) {
     switch (job.status) {
-      case "QUEUED": return `รับคำถามเข้าคิวแล้ว (บันทึกถาวรก่อนตอบ) · รอลำดับที่ ${job.queue_position || "-"}`;
+      case "QUEUED": return `รับคำถามเข้าคิวแล้ว (${persistent() ? "บันทึกถาวรก่อนตอบ" : "บันทึกก่อนตอบ แต่เป็นที่เก็บชั่วคราว"}) · รอลำดับที่ ${job.queue_position || "-"}`;
       case "RUNNING": return job.claims > 1 ? "ตัวรันงานกำลังทำคำถามนี้ต่อหลังระบบเปิดใหม่…" : "ตัวรันงานกำลังหาแหล่งเรียนให้…";
       case "CANCELLED": return "คำถามนี้ถูกยกเลิกก่อนตัวรันงานหยิบไปทำ จึงไม่มีขั้นไหนถูกรัน และ AI ไม่ได้เห็นคำถามนี้";
       case "COMPLETED": return "ทำครบทุกขั้นแล้ว แต่หน้านี้อ่านคำตอบไม่ได้ ดูรายละเอียดเชิงเทคนิคด้านล่าง";
@@ -1309,12 +1572,15 @@
   function terminalTone(job, end, workflow) {
     const study = workflow === STUDY;
     const finish = study ? "คำตอบ · ไม่ต้องรอคนตรวจ (เป็นคำแนะนำ)" : "คนตัดสิน · AI ไม่มีสิทธิ์ตัดสินเอง";
-    if (!job) return ["", end ? finish : (study ? "ส่งคำถาม → บันทึกลงคิวถาวร" : "ส่งเคส → บันทึกลงคิวถาวร")];
+    const where = persistent() ? "บันทึกลงคิวถาวร" : "บันทึกลงคิว (ชั่วคราว)";
+    if (!job) return ["", end ? finish : (study ? `ส่งคำถาม → ${where}` : `ส่งเคส → ${where}`)];
     if (!end) {
-      return job.status === "QUEUED" ? ["wait", `รับเข้าคิวแล้ว · รอลำดับที่ ${job.queue_position || "-"}`] : ["done", "รับเข้าคิว · บันทึกถาวรแล้ว"];
+      return job.status === "QUEUED" ? ["wait", `รับเข้าคิวแล้ว · รอลำดับที่ ${job.queue_position || "-"}`] : ["done", "รับเข้าคิว · " + savedText()];
     }
     switch (job.status) {
-      case "REVIEW_REQUIRED": return ["wait", "รอคนตรวจ · AI ไม่มีสิทธิ์ตัดสินเอง"];
+      case "REVIEW_REQUIRED": return ["wait", "รอคนตัดสิน · AI ไม่มีสิทธิ์ตัดสินเอง"];
+      case "APPROVED": return ["done", "คนตัดสินแล้ว: อนุมัติ"];
+      case "REJECTED": return ["done", "คนตัดสินแล้ว: ไม่อนุมัติ"];
       case "COMPLETED": return ["done", study ? "ตอบแล้ว · ไม่ต้องรอคนตรวจ" : "เสร็จแล้ว"];
       case "FAILED": return ["fail", study ? "ไม่มีคำตอบ (ไม่สำเร็จ)" : "ไม่มีข้อเสนอ (ไม่สำเร็จ)"];
       case "DELIVERY_FAILED": return ["fail", "บันทึกรายงานไม่สำเร็จ"];
@@ -1384,7 +1650,7 @@
     if (!job) {
       note.textContent = workflow ? "ขั้นตอนที่จะรันเมื่อกดยืนยัน"
         : shown === STUDY ? `ขั้นตอนที่จะรันเมื่อส่งคำถาม (${STUDY})` : `ขั้นตอนที่จะรันเมื่อส่งเคส (${defaultWorkflow()})`;
-    } else if (job.status === "QUEUED") note.textContent = "บันทึกถาวรแล้ว รอตัวรันงานหยิบไปทำตามลำดับ";
+    } else if (job.status === "QUEUED") note.textContent = `${savedText()} รอตัวรันงานหยิบไปทำตามลำดับ`;
     else if (job.status === "CANCELLED") note.textContent = "ยกเลิกก่อนเริ่มทำ ไม่มีขั้นไหนถูกรัน";
     else if (job.status === "RUNNING") note.textContent = "กำลังทำงาน — ระบบยังไม่ส่งความคืบหน้าทีละขั้นระหว่างรัน ผลของทุกขั้นจะขึ้นเมื่อเสร็จ";
     else note.textContent = job.claims > 1 ? `ตัวรันงานหยิบงานนี้ ${job.claims} ครั้ง (ทำต่อหลังระบบเปิดใหม่)` : "";
@@ -1499,6 +1765,12 @@
     if (kind === "job.completed") return { ...base, lv: "ok", msg: "เสร็จแล้ว" };
     if (kind === "job.failed") return { ...base, lv: "err", msg: `ไม่สำเร็จ · ${FAILURE_SHORT[p.reason] || p.reason || ""}` };
     if (kind === "job.delivery_failed") return { ...base, lv: "err", msg: "บันทึกรายงานไม่สำเร็จ" };
+    if (kind === "review.approved" || kind === "review.rejected") {
+      const approved = kind === "review.approved";
+      const category = p.final_category ? ` → ${CATEGORY[p.final_category] || p.final_category}` : "";
+      return { ...base, lv: "ok", msg: `คนตัดสิน: ${approved ? "อนุมัติ" : "ไม่อนุมัติ"}${category}`,
+        k: [ROLE_TH[p.reviewer_role] || p.reviewer_role, p.request_id].filter(Boolean).join(" · ") };
+    }
     return { ...base, lv: "info", msg: kind };
   }
 
@@ -1607,7 +1879,10 @@
       studyAvailable() ? policy(true, "คำถามอยากเรียนส่งได้ทันที และไม่ต้องรอคนตรวจ",
         "เป็นแค่คำแนะนำแหล่งเรียน ไม่ได้ตัดสินอะไรแทนใคร และไม่ส่งอะไรออกนอกระบบ (ADR-018, ADR-023) ลิงก์ทุกอันมาจากคลังที่ตรวจแล้ว " +
         "และคำตอบถามกลับว่า \"เข้าใจถูกไหม\" ให้แก้คำถามได้") : null,
-      policy(false, "ปุ่มอนุมัติ / ไม่อนุมัติ สำหรับผู้ตรวจ", "อยู่ในแผนขั้น 2.4 (ต้องมีรหัสผู้ใช้รายคนจากขั้น 2.1 ก่อน)", true),
+      policy(true, "ปุ่มอนุมัติ / ไม่อนุมัติ ในหน้าเคส",
+        "เคสที่รอคนตรวจมีการ์ด \"ตัดสินเคสนี้\": อนุมัติ (เลือกหมวดเองได้) หรือไม่อนุมัติ พร้อมเหตุผลด้วยคำของคุณเอง ตัดสินแล้วแก้ไม่ได้ " +
+        "และกดซ้ำก็ไม่บันทึกซ้ำ (ขั้น 2.2, 2.4)"),
+      policy(false, "รหัสผู้ตรวจรายคน", "ตอนนี้ผู้ตัดสินคือผู้ถือรหัสเข้าใช้ร่วม คือเจ้าของระบบ ระบบบันทึกไว้แบบนั้น รหัสรายคนพร้อมสิทธิ์อยู่ในแผนขั้น 2.1", true),
     ]);
   }
 
@@ -1621,7 +1896,8 @@
     return panel("ระบบและขีดจำกัด", [
       el("div", { class: "rows" }, [
         el("span", { text: "ตัวรันงาน (Runner)" }), el("span", { text: runnerText }),
-        el("span", { text: "ที่เก็บข้อมูล" }), el("span", { text: storage.persistent ? "ถาวร" : "ชั่วคราว — เคสหายเมื่อระบบหลับ รีสตาร์ท หรืออัปเดต (Render แผนฟรี)" }),
+        el("span", { text: "ที่เก็บข้อมูล" }), el("span", { text: storage.persistent ? "ถาวร" : "ชั่วคราว — เคส ผล และการตัดสินหายเมื่อระบบหลับ รีสตาร์ท หรืออัปเดต (Render แผนฟรี)" }),
+        el("span", { text: "ข้อมูลชุดนี้เริ่มเมื่อ" }), el("span", { text: fullTime((status.retention || {}).store_started_at) }),
         el("span", { text: "คิวรับได้สูงสุด" }), el("span", { text: `${limit.max_queued} เคสที่รออยู่` }),
         el("span", { text: "ส่งได้" }), el("span", { text: `${limit.submit_per_minute} ครั้งต่อนาที` }),
         el("span", { text: "ข้อความเคส" }), el("span", { text: `${limit.summary_min_chars}–${limit.summary_max_chars} ตัวอักษร` }),
@@ -2052,6 +2328,7 @@
     const study = body.workflow_type === STUDY;
     if (result.status === 202 || result.status === 200) {
       const job = result.data;
+      rememberSent(job, job.retention);
       if (result.status === 202) {
         toast(study ? "ส่งคำถามแล้ว กำลังหาแหล่งเรียนให้…"
           : `รับเคส ${job.case_id} เข้าคิวแล้ว` + (job.queue_position ? ` · ลำดับที่ ${job.queue_position}` : ""));
@@ -2154,6 +2431,13 @@
       if (handleAccessProblem(result)) return;
       if (result.status === 200) applyStatus(result.data);
       await refreshQueue();
+      await refreshInbox();
+      // A case on screen that changed elsewhere (decided in another tab): load it again, so nobody decides twice.
+      const listed = state.job ? state.jobs.find((job) => job.job_id === state.job.job_id) : null;
+      if (listed && listed.status !== state.job.status && !(state.review && state.review.sending)) {
+        clearTimeout(state.jobTimer);
+        await loadJob();
+      }
       renderHeader();
       renderThread();
       renderFlow();
@@ -2196,8 +2480,10 @@
       state.draft = null;
       state.last = null;
       state.studyPending = null;
+      state.review = null;
       state.jobs = [];
-      state.keys = { thread: null, side: null, flow: null };
+      state.inbox = [];
+      state.keys = { thread: null, side: null, flow: null, inbox: null };
       showGate(null);
     });
 
@@ -2238,7 +2524,21 @@
       else if (action === "cancel-job-keep") { state.cancelAsk = null; renderThread(); }
       else if (action === "cancel-job-confirm") cancelJob();
       else if (action === "edit-question") editQuestion();
+      else if (action === "review-choose") chooseDecision(button.dataset.decision);
+      else if (action === "review-submit") submitDecision();
     });
+    // The decision card's fields live in state, so a redraw (a status refresh) never loses what was typed.
+    $("thread").addEventListener("input", (event) => {
+      if (event.target.id === "review-reason" && state.review) state.review.reason = event.target.value;
+    });
+    $("thread").addEventListener("change", (event) => {
+      if (event.target.id === "review-category" && state.review) state.review.category = event.target.value;
+    });
+    $("inbox-list").addEventListener("click", (event) => {
+      const row = event.target.closest("button.inbox-item");
+      if (row) selectJob(row.dataset.id);
+    });
+    $("lost-dismiss").addEventListener("click", () => { state.lost = null; renderLost(); });
 
     $("job-list").addEventListener("click", (event) => {
       const row = event.target.closest("button.job");
