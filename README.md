@@ -175,9 +175,10 @@ most 1 MiB. The agent `version` is frozen into each job, so an old job refuses t
 | [Sentry error reporting](docs/observability_sentry.md) | What gets reported, privacy rules, alerts |
 | [Tracing to Honeycomb](docs/observability_tracing.md) | One trace per case: what a span carries and never carries, setup in Render, how it is checked |
 | [Study guide](docs/study_guide.md) | `study_guide.v1`: the workflow and its answer, failure handling, the mock's limits; the scorecard; the box and layered answer on the web page; the topic catalog and verified library, the weekly link check |
+| [Effectiveness plan](docs/effectiveness_plan.md) | What "effective" means here, as eleven measures with today's values, and six planned work packages (E1 to E6) that move them: a faster first case, rules that read Thai, a real model behind the page, recorded feedback, the edge of `other`, more Thai study resources |
 | [Benchmarking plan](docs/benchmarking.md) | Three stages of testing beyond our own cases: the robustness gate (built), open benchmarks and attacks, privacy, load and live drift (planned); the datasets, their licences and the ones left out |
 | [Funding readiness pack](docs/funding/README.md) | Internal evidence register; not a submitted application |
-| [Evidence notes](docs/evidence/2026-11-03-render-operations.md) | Dated measurements; the first one covers Render operations (graceful stops, deploy filter, cold start), and [the first live AI runs](docs/evidence/2026-11-06-first-live-typhoon.md) are Typhoon's (2026-11-06); [the first robustness run](docs/evidence/2026-11-07-robustness-stage1.md) is from 2026-11-07, and [the local open model's first smoke run](docs/evidence/2026-11-08-first-local-model-smoke.md) and [first full run](docs/evidence/2026-11-08-first-local-model-full.md) from 2026-11-08 |
+| [Evidence notes](docs/evidence/2026-11-03-render-operations.md) | Dated measurements; the first one covers Render operations (graceful stops, deploy filter, cold start), and [the first live AI runs](docs/evidence/2026-11-06-first-live-typhoon.md) are Typhoon's (2026-11-06); [the first robustness run](docs/evidence/2026-11-07-robustness-stage1.md) is from 2026-11-07, and [the local open model's first smoke run](docs/evidence/2026-11-08-first-local-model-smoke.md) and [first full run](docs/evidence/2026-11-08-first-local-model-full.md) from 2026-11-08; [the effectiveness baseline](docs/evidence/2026-11-10-effectiveness-baseline.md) (the 116 edge cases with Typhoon, and the first job after a start) is from 2026-11-10 |
 
 ## Scope and limits
 
@@ -190,7 +191,8 @@ most 1 MiB. The agent `version` is frozen into each job, so an old job refuses t
 - The only real-model runs are on the synthetic sets, with two free models by SCB 10X:
   - Typhoon's 30B model through its API (2026-11-06, [evidence](docs/evidence/2026-11-06-first-live-typhoon.md)):
     triage AI correct 60/61 in two runs (the rules 29/61), study guide topic correct 46/48 with no link
-    outside the library;
+    outside the library; and on the 116 robustness edge cases (2026-11-10,
+    [evidence](docs/evidence/2026-11-10-effectiveness-baseline.md)) AI correct 104/116 (the rules 48/116);
   - the local open model, Typhoon 2.5 4B run on the GitHub runner (ADR-026; 2026-11-08, two smoke runs and
     [one full run](docs/evidence/2026-11-08-first-local-model-full.md)): triage AI correct 58/61 with all 32
     of the rules' mistakes raised for review, study guide topic correct 44/48 with no link outside the

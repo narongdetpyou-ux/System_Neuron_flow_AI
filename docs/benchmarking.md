@@ -6,6 +6,10 @@
 - The 8 bugs are fixed in PR #42 (roadmap 5.5): 215/270 own items now pass, with 0 bugs and 44 gaps. Deciding
   the gaps is the rest of 5.5.
 - Stage 2 (open benchmarks, 5.6) and stage 3 (attacks, privacy, load and live drift, 5.7) are planned below.
+- The 116 rules items had their first run with a real model on 2026-11-10 (Typhoon, from a cloud session):
+  AI correct 104/116 where the rules are correct on 48/116, with all 12 mistakes on requests labelled `other`
+  ([evidence note](evidence/2026-11-10-effectiveness-baseline.md)). What follows from it is in the
+  [effectiveness plan](effectiveness_plan.md).
 
 The data rule behind all three stages is ADR-024 in [architecture.md](architecture.md): only openly licensed text
 that was written for a dataset, with no real people's records. Real data still waits for the owner's decision D4.

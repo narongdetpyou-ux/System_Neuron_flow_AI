@@ -31,7 +31,9 @@ trusted agents in bounded child processes, retries, recovers after a crash and w
 All data is synthetic. Milestones A, A2 and B are done.
 
 Read in this order when you need depth:
-1. [docs/ROADMAP.md](docs/ROADMAP.md): what to do next, in order, and how to know each step is done.
+1. [docs/ROADMAP.md](docs/ROADMAP.md): what to do next, in order, and how to know each step is done. Its
+   effectiveness track (E1 to E6) is written out in [docs/effectiveness_plan.md](docs/effectiveness_plan.md),
+   with the measures it follows.
 2. [docs/architecture.md](docs/architecture.md): layers, Core constraints, decisions (ADRs), acceptance
    gates and status.
 3. [docs/design_philosophy.md](docs/design_philosophy.md): the owner's compass for every feature (mostly Thai).
@@ -73,7 +75,8 @@ Read in this order when you need depth:
 - **Honesty about evidence.**
   - Mock-AI scores are not accuracy, and hashes prove bytes, not authorship.
   - The live-model measurements are Typhoon's on the synthetic sets (first runs 2026-11-06,
-    `docs/evidence/2026-11-06-first-live-typhoon.md`) and the local 4B model's: a smoke run on the first 5
+    `docs/evidence/2026-11-06-first-live-typhoon.md`) and on the 116 robustness edge cases (one run from a
+    cloud session, `docs/evidence/2026-11-10-effectiveness-baseline.md`), and the local 4B model's: a smoke run on the first 5
     items of each set, twice, and one full run of both sets (2026-11-08,
     `docs/evidence/2026-11-08-first-local-model-smoke.md`, `docs/evidence/2026-11-08-first-local-model-full.md`).
     There is none for Claude, and no security review or user study yet. A Typhoon or local result describes
@@ -204,8 +207,9 @@ Notes for cloud sessions (claude.ai/code):
     which tells uv to trust the system certificates), so the script passes uv `--system-certs` itself.
   - In the first session (2026-11-08) uv got no Python 3.10 and `--quiet` hid why. Later in that session
     uv's download host `releases.astral.sh` was refused, and GitHub, its fallback, worked once and then
-    answered 504. The script and the network were fixed that day. The fixed script has not yet run in a new
-    session: the next session checks for `python3.10` and updates this line.
+    answered 504. The script and the network were fixed that day. In the next new session (2026-11-09)
+    the fixed script had worked: `python3.10` is 3.10.20, `gitleaks` and `sentry-sdk` are there, and the
+    tests pass on 3.10 and 3.12.
 - That environment's network allows package registries, `releases.astral.sh` (uv's Python downloads, added
   on 2026-11-08), and `api.opentyphoon.ai` because Typhoon's key is saved on it as a network secret
   (2026-11-08). The session's proxy adds the key to each request to that host, so the key never enters the
@@ -409,7 +413,8 @@ Notes for cloud sessions (claude.ai/code):
     artifact, because this session cannot download artifacts.
 - **Not done yet:**
   - Claude has never been run (D2). Typhoon has run only on the synthetic sets (two full triage runs, one
-    full study guide run). The local 4B model has had one full run of each set (2026-11-08) besides the PR's
+    full study guide run) and once on the 116 robustness edge cases (2026-11-10: AI correct 104/116, rules
+    48/116). The local 4B model has had one full run of each set (2026-11-08) besides the PR's
     two smoke runs.
   - Review decisions and per-person identity (Milestone C) are not built.
   - The live page uses the mock AI unless the owner adds Typhoon (or Claude) in Render's Environment tab
@@ -423,5 +428,9 @@ Notes for cloud sessions (claude.ai/code):
     roadmap 5.8, "After the first full run", step 2), then follow it.
   - Buildable now without an owner decision: the rest of 5.5 (decide and fix the stage-1 gaps), 5.6 and 5.7,
     Phase 2 (2.1 first) and Phase 4 (4.1 first; Phase 3, which it needs, is built). The rest of 7.1 (who can read the AI key) needs an ADR first.
-  - The owner decides which phase comes next; ask before starting a new phase.
+  - The effectiveness track (2026-11-10, PR #50, [docs/effectiveness_plan.md](docs/effectiveness_plan.md)) is planned,
+    not built: E1 (first case after a start; today 9.0 to 10.5 s) and E2 (rules v2 with Thai; today rules
+    correct 29/61) are buildable now and come before the next phase; E3 (a real model behind the page) is
+    the owner's decision; E4 needs an ADR, E5 needs 5.6, E6 needs the owner to read each candidate.
+  - The owner decides which phase or package comes next; ask before starting one.
 - Keep this section and the ROADMAP status table true in every PR.

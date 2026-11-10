@@ -35,10 +35,11 @@ differs, this file and architecture.md win.
 - มีโมเดลเปิด (open-weight) ที่ระบบรันเองได้แล้ว (ขั้น 5.8, ADR-026): ปุ่ม *Local open model eval* ใน Actions ให้เครื่องทดสอบของ GitHub สร้างโปรแกรมรันโมเดล (llama.cpp) จากโค้ดรุ่นที่ตรึงไว้ ดาวน์โหลด Typhoon 2.5 รุ่น 4B (สัญญา Apache 2.0) ตรวจลายนิ้วมือไฟล์ แล้วรันชุดข้อสอบเดิมทั้ง 2 ชุด ข้อความไม่ออกไปบริษัท AI ใด ไม่ต้องใช้คีย์ และไม่มีค่าใช้จ่ายเพราะ repo เป็นสาธารณะ แต่เครื่องทดสอบคิดด้วย CPU จึงช้ากว่า Typhoon ออนไลน์มาก ใช้วัดผลได้ แต่ใช้เป็นสมองของหน้าเว็บไม่ได้ (เงื่อนไขของ GitHub) PR ที่แก้ส่วนเชื่อม AI จะได้รอบทดสอบเล็ก 5 เคสอัตโนมัติ รอบเล็กรอบแรก (8 พ.ย.) ตอบได้ทุกข้อและถูกรูปแบบตั้งแต่ครั้งแรก: คัดแยกเคสถูก 5 จาก 5 หาหัวข้อถูก 5 จาก 5 ไม่มีลิงก์นอกคลัง ใช้เวลาราว 2.7–6.5 วินาทีต่อเคสแล้วแต่เครื่อง และรันซ้ำด้วยไฟล์ที่ตรึงแล้วได้ตัวเลขเหมือนเดิมทุกตัว ([บันทึกหลักฐาน](evidence/2026-11-08-first-local-model-smoke.md)) รอบเต็มรอบแรกบน main (8 พ.ย. ราว 66 นาที) ตอบได้ทุกข้อ: เคสที่กฎผิดถูกดันขึ้นคิวด่วนให้คนดูครบ 32 จาก 32 เท่ากับ Typhoon รุ่นใหญ่ผ่าน API คัดแยกเคสถูก 58 จาก 61 (รุ่นใหญ่ 60) หาหัวข้อถูก 44 จาก 48 (รุ่นใหญ่ 46) ไม่มีลิงก์นอกคลัง (0 จาก 142) ช้ากว่ารุ่นใหญ่ราว 7 เท่า และมีคำสั่งแอบแฝง 1 ข้อที่หลอกให้เลือกหัวข้อได้ แต่ลิงก์ยังมาจากคลังเท่านั้น ([บันทึกหลักฐาน](evidence/2026-11-08-first-local-model-full.md)) ยังไม่ใช่ความแม่นยำ ต่อไปเจ้าของโปรเจกต์เลือกทางตามขั้น 5.8: ไม่ผ่าน พอใช้ หรือผ่าน
 - หน้าเว็บมีช่อง "อยากเรียน" แล้ว: กดปุ่ม "อยากเรียน" เหนือช่องพิมพ์ พิมพ์เรื่องที่อยากรู้ แล้วกด Enter คำถามส่งทันที (ไม่มีขั้นยืนยันแบบเคส เพราะเป็นแค่คำแนะนำ) คำตอบขึ้นเป็นชั้น: สรุป 1 บรรทัด สิ่งที่ระบบเข้าใจพร้อมถามว่า "เข้าใจถูกไหม" แหล่งที่ควรเริ่มก่อนกับแหล่งที่สำคัญที่สุด แล้วกด "ดูขั้นตอนการเรียน" หรือ "ดูรายละเอียด" เมื่ออยากรู้เพิ่ม เรื่องนอกกรอบบอกตรง ๆ พร้อมรายการ 11 หัวข้อที่ช่วยได้ ถ้าช่อง AI มุมซ้ายล่างขึ้นว่า "AI จำลอง" คำเปรียบใหม่ ๆ อย่าง "บรรณารักษ์ที่รู้ใจ" จะถูกตอบว่านอกกรอบ และหน้าเว็บบอกเหตุผลไว้ เปิด Typhoon ได้ฟรีตามขั้นตอนในแท็บ "ตั้งค่า" (ขั้น 3.4, ADR-023)
 - มีด่านความทนทาน (robustness benchmark ขั้นที่ 1) แล้ว: ทุกครั้งที่ส่งโค้ด GitHub ป้อนเคสสุดโหดที่เขียนเอง 270 ข้อ และข้อมูลเปิดที่นักพัฒนาทั่วโลกใช้ (ข้อความแปลก 515 แบบ ไฟล์ทดสอบ JSON 318 ไฟล์ และคำขอจาก CLINC150 กับ BANKING77) เข้าทุกชั้นของระบบ รอบแรกเจอปัญหาร้ายแรง 8 จุด ที่สำคัญที่สุดคือถ้า AI ตอบมี "ตัวอักษรพัง" เคสทั้งเคสจะล้มและไม่ถึงคนตรวจ แก้ครบทั้ง 8 จุดแล้วใน PR #42 (รวมแล้วเมื่อ 8 พ.ย. และเคสที่คุณส่งบนหน้าเว็บจริงหลังรวมยังถึงคนตรวจ): ข้อมูลแปลกได้ "ข้อมูลไม่ถูกต้อง (400)" แทน "เซิร์ฟเวอร์พัง (500)" และเคสที่ AI ตอบมีตัวอักษรพังยังถึงคนตรวจพร้อมความเห็นของ AI 7 จุดแก้นอก Core ส่วนจุดที่ 8 ตรวจตัวอ่าน JSON ของ Core เอง จึงแก้ Core 1 ฟังก์ชันพร้อมบันทึกข้อตัดสินใจ (ADR-025) ตอนนี้ผ่าน 215 จาก 270 ข้อ (ขั้น 5.4–5.5, [แผนทดสอบ 3 ขั้น](benchmarking.md), [บันทึกหลักฐาน](evidence/2026-11-07-robustness-stage1.md))
+- วัดเคสยาก 116 ข้อของด่านความทนทานกับ AI จริง (Typhoon) เป็นครั้งแรกเมื่อ 10 พ.ย.: AI จัดหมวดถูก 104 จาก 116 กฎคำสำคัญถูก 48 จาก 116 เคสภาษาไทย AI ถูก 13 จาก 13 ข้อที่ AI พลาดทั้ง 12 ข้อเฉลยว่า "อื่น ๆ" แต่ AI จับใส่หมวดใกล้เคียง และ AI บอกว่า "มั่นใจสูง" ทุกข้อ ป้ายของชุดนี้ผู้พัฒนาจับคู่เอง จึงยังไม่ใช่ความแม่นยำ ผลนี้เป็นฐานของ[แผนเพิ่มประสิทธิผล](effectiveness_plan.md) ([บันทึกหลักฐาน](evidence/2026-11-10-effectiveness-baseline.md))
 
 **ลำดับต่อจากนี้** แต่ละขั้นจบด้วยสิ่งที่คุณลองเองได้
 
-| ขั้น | ทำอะไร | คุณจะได้ลองอะไร | สถานะ (8 พ.ย. 2026) |
+| ขั้น | ทำอะไร | คุณจะได้ลองอะไร | สถานะ (10 พ.ย. 2026) |
 |---|---|---|---|
 | 0 | เปิดใช้ออนไลน์บน Render และวัดผล AI จริงครั้งแรก | ใส่เคสบนหน้าเว็บจริง และอ่านผลวัดของ AI จริง | ออนไลน์แล้ว; วัดผล AI จริงครั้งแรกแล้วด้วย Typhoon (0.3, 6 พ.ย.); ที่เหลือรอคุณตัดสินใจ: D1 แผน Render แบบเสียเงิน, D2 API key ของ Claude และ 0.4 กับ Typhoon (ฟรี แต่ข้อความที่พิมพ์บนหน้าเว็บจะถูกส่งไป Typhoon) |
 | 1 | เก็บงานเล็ก ๆ ให้ระบบแน่นขึ้น | ยกเลิกเคสที่ยังรอคิวได้ | เสร็จ ยกเว้น 1.4 (สำรองข้อมูล) ที่ต้องใช้แผน Render แบบเสียเงิน |
@@ -48,6 +49,7 @@ differs, this file and architecture.md win.
 | 5 | ติดตามเส้นทางของแต่ละงาน (เวลา token จุดที่ช้า) ด่านตรวจผลรายเคส และแผนทดสอบ 3 ขั้นด้วยข้อมูลเปิด | ตัวเลขคิวและเวลาบนหน้าเว็บ ช่องตรวจบน PR แล้วต่อด้วยเส้นทางงานใน Honeycomb; ผลด่านความทนทานในหน้าสรุปของ *Core logic tests* | เสร็จแล้วทั้ง 5.1, 5.2, 5.3 และ 5.4; เส้นทางงานแรกเข้า Honeycomb เมื่อ 4 พ.ย. 00:23 น.; ด่านความทนทาน (5.4) รวมเข้า main แล้ว 7 พ.ย.; แก้ 8 bug ที่เจอแล้ว (5.5, PR #42 รวมแล้วเมื่อ 8 พ.ย.); ต่อไปคือตัดสินใจเรื่องจุดอ่อน (gap) 44 จุดที่เหลือ แล้วขั้นข้อสอบกลาง (5.6) และขั้นโจมตีกับใช้งานจริง (5.7); 5.8 โมเดลเปิดที่รันเองบนเครื่องทดสอบของ GitHub สร้างแล้วใน PR #46 และรันเต็มรอบแรกแล้ว 8 พ.ย. (ดันเคสที่กฎผิดขึ้นคิวด่วนครบ 32/32) รอเจ้าของโปรเจกต์เลือกทาง |
 | 6 | AI วางแผนงานหลายขั้น ระบบตรวจแผนก่อนรัน และเครื่องมืออื่นเรียกใช้ผ่าน MCP ได้ | สั่งงานจากแอป Claude ได้ | ยังไม่เริ่ม (ต้องรอขั้น 2–4) |
 | 7 | เตรียมพร้อมก่อนให้คนอื่นใช้ หรือก่อนเปิด repo สาธารณะ | รายงานตรวจความปลอดภัย และรายการตรวจก่อนเปิดตัว | เริ่มแล้ว: 7.1 ปิดข้อมูลส่วนตัวก่อนส่งให้ AI ทำแล้ว ส่วนการจำกัดว่าใครเห็นคีย์ AI ได้ เขียนแผนไว้ ยังไม่ทำ; 7.4 เสร็จ: repo นี้เป็นสาธารณะพร้อมประวัติทั้งหมดตั้งแต่ 8 พ.ย. (D5) เปลี่ยนคีย์ Sentry แล้ว และเปิดระบบสแกนคีย์ของ GitHub แล้ว |
+| E | [แผนเพิ่มประสิทธิผล](effectiveness_plan.md) 6 งาน (E1–E6): เคสแรกหลังระบบตื่นเร็วขึ้น กฎรุ่น 2 ที่อ่านภาษาไทยได้ หน้าเว็บจริงใช้ AI จริง เก็บคำตอบ "เข้าใจถูกไหม" ให้ AI แยก "อื่น ๆ" ได้ดีขึ้น และคลังแหล่งเรียนที่มีภาษาไทยมากขึ้น | เวลาของเคสแรก ข้อเสนอหลักของเคสภาษาไทย และตัวนับ "เข้าใจถูก" บนหน้าเว็บ | เขียนแผนแล้วเมื่อ 10 พ.ย. ตามที่คุณขอ (PR #50) ยังไม่ได้สร้างชิ้นไหน; E1 และ E2 เริ่มได้เมื่อคุณบอก; E3 รอคุณตัดสินใจ |
 
 **เรื่องที่คุณต้องตัดสินใจเอง** อยู่ในตาราง [Owner decisions](#owner-decisions) ข้างล่าง เช่น
 - จะจ่ายค่า Render เพื่อให้เคสไม่หายหรือไม่
@@ -55,6 +57,7 @@ differs, this file and architecture.md win.
 - โมเดลเปิดที่รันเองบนเครื่องทดสอบของ GitHub ผ่าน พอใช้ หรือไม่ผ่าน หลังรอบเต็มรอบแรก (ขั้น 5.8)
 - ใครเป็นผู้รีวิว
 - จะเปิด repo เป็นสาธารณะเมื่อไร
+- จะให้หน้าเว็บจริงใช้ AI จริง (Typhoon ฟรี) หรือไม่ และจะเริ่มงานไหนของแผนเพิ่มประสิทธิผลก่อน (E1–E6)
 
 ## How to use this file (for Claude Code)
 
@@ -129,6 +132,12 @@ Marks: ✅ done · 🟡 built or partly checked (the status says what is left) �
 | 7.3 | Independent security review | ⬜ owner | 7.1, 7.2 |
 | 7.4 | Public-release checklist | ✅ public since 2026-11-08 with its full history (D5): history audited, the 7 run logs that could print the old DSN deleted, read-only workflow tokens, README section for visitors and SECURITY.md (PR #44); the owner replaced the Sentry DSN, deleted the merged branches, switched the visibility and turned on secret scanning, push protection and private vulnerability reporting | — |
 | 7.5 | Consented pilot with real volunteers | ⬜ owner decision D4 | 7.1–7.3 |
+| E1 | First case after a start: seconds, not ten ([effectiveness plan](effectiveness_plan.md)) | ⬜ planned 2026-11-10 (PR #50); today 9.0 to 10.5 s in 4 of 4 observations | — |
+| E2 | Rules v2: an official suggestion that reads Thai (also decides the 27 rules gaps of 5.5) | ⬜ planned; today rules correct 29/61, Thai 7/26, edge set 48/116 | — |
+| E3 | A real model behind the online page | ⬜ owner decision (0.4, D7); today the page's mock finds the study topic for 2/48 | 0.1 |
+| E4 | Record the answer to "เข้าใจถูกไหม" | ⬜ planned | an ADR |
+| E5 | The edge of `other`, and a confidence that means something | ⬜ planned; today all 12 of Typhoon's edge-set mistakes are `other` cases, with `high` confidence on 116/116 | 5.6; the owner labels about 20 borderline requests |
+| E6 | A study library that serves Thai readers | ⬜ planned; today 1 of 17 resources is in Thai | the owner reads each candidate |
 
 Phase 2 can be built and tested without a disk. Real use needs D1 = paid: on the free plan, tokens and
 decisions would vanish on every sleep.
@@ -267,6 +276,9 @@ decisions would vanish on every sleep.
   3. Submit three cases and check that the AI's second opinion and reason appear.
   4. Check Sentry for warnings.
 - **Cost:** each case makes one short Claude request.
+- **Why it matters (2026-11-10):** the page's mock finds the study topic for 2/48 requests where Typhoon
+  found 46/48, and on the hard triage set it raises 26 of the rules' 68 mistakes where Typhoon raised 60.
+  This is package E3 of the [effectiveness plan](effectiveness_plan.md).
 - **Free option (added 2026-11-07, with 3.4):** Typhoon instead of Claude (ADR-021). The owner adds
   `NEURON_FLOW_LLM_PROVIDER=typhoon` and `TYPHOON_API_KEY` as new rows in the Environment tab, then the
   same checks. Case triage and the study guide then both use it; a study question makes one or two calls.
@@ -1010,6 +1022,8 @@ workflow types.
      - A lone surrogate in a fixed-choice field cannot match the choices, so that answer is still refused.
      - The study guide's answers go through the same gateway, so they are cleaned the same way.
   3. Decide each gap and write the decision down. Proposed:
+     - for the 27 rules gaps: rules v2, package E2 of the [effectiveness plan](effectiveness_plan.md)
+       (Thai keywords, whole-word matching, text normalised for matching);
      - strip or refuse bidi controls in case text and AI text;
      - count visible characters for the minimum length;
      - refuse an empty rationale, as the study guide does;
@@ -1305,6 +1319,27 @@ workflow types.
 
 ---
 
+## Effectiveness track (E1–E6)
+
+Added on 2026-11-10 (PR #50), because the owner asked for a plan to make the system more effective. The packages, their
+reasons, tasks, checks and owner tests are in [effectiveness_plan.md](effectiveness_plan.md); their status is
+in the table above. The baseline they start from is in
+[an evidence note](evidence/2026-11-10-effectiveness-baseline.md).
+
+- **What it follows:** eleven measures of what a person meets when using the system (M1 to M11 in the
+  plan), with today's value for each; one, people's answers to "เข้าใจถูกไหม", is not recorded yet. A package
+  that moves a measure writes the new value in an evidence note.
+- **Order:** E3 is the owner's decision and needs no code, so it can happen at any time. E1, then E2, come
+  before the next phase. E4 goes with Phase 2 or Phase 4, E5 after 5.6, and E6 when the owner has time to
+  read the candidates. As with a phase, a package starts when the owner says so.
+- **Phase 2 stays the largest step for effectiveness that is already planned:** until a reviewer can decide,
+  a case cannot finish and there are no labels from a person (2.8, D6).
+- **Not in it:** more workers or machines (the online service ran 3 jobs in 7 days, and a warm job takes
+  0.1 to 0.4 s), making the AI's answer the official suggestion (ADR-010, D6), and targets set before a first
+  measured run.
+
+---
+
 ## Not now (P2): do not build early
 
 - Multi-tenancy, distributed workers or claims, Postgres, object storage, SLAs, a hosted dashboard
@@ -1428,3 +1463,4 @@ workflow types.
 - 2026-11-08: 3.4 marked ✅: the owner tried the study box on the live page with the mock AI (the example "รั้วกั้น AI" got the layered answer: a one-line summary, "เข้าใจถูกไหม", where to start, the most important resource, the study steps and the details). PR #42 merged; after its deploy the owner's case `WEB-261108-7C8Z` still reached review (rules and the mock AI disagreed, so it was escalated). The docs that still called both of them waiting now say they are done.
 - 2026-11-08: 7.4: the owner chose D5 = publish this repository with its full history, from three options (a clean public copy, the full history, a rewrite; a rewrite cannot hide what GitHub's read-only pull-request refs keep). Everything that becomes public was audited; the 7 *Sentry smoke test* runs whose logs could print the old DSN were deleted; every workflow's token is now read-only, with a test; the README has a section for visitors with the AI-assistance disclosure, and `SECURITY.md` was added (PR #44). Left for the owner: replace the old DSN, delete the 8 merged branches, then the switch.
 - 2026-11-08: 7.4 marked ✅ and D5 done: the owner replaced the Sentry DSN (a new key in the secret and in Render, the old key reported disabled), deleted the merged branches, turned on automatic branch deletion, switched the repository to public and turned on secret scanning, push protection and private vulnerability reporting. Checked through the GitHub API, the Render log and Sentry.
+- 2026-11-10: the owner asked for an additional plan to make the system more effective (PR #50). Added the effectiveness track, E1 to E6 ([effectiveness_plan.md](effectiveness_plan.md)), with a baseline measured for it ([evidence note](evidence/2026-11-10-effectiveness-baseline.md)): the 116 edge cases with Typhoon for the first time, run from a cloud session (AI correct 104/116, rules 48/116; all 12 of the AI's mistakes are cases labelled `other`, and it said `high` confidence for all 116); the mock's longer keyword list scores 74/116 on that set, which it had not seen; and the first job after a start took 9.0 to 10.5 s in 4 of 4 observations, with a likely cause (the image has no bytecode cache, so each new worker process compiles what it imports). The plan leaves out more workers or machines, because the online service ran 3 jobs in 7 days. Nothing is built yet.
