@@ -6,8 +6,6 @@ CI runs it against the Docker container; you can point it at the online service 
 
 First run: submit a case, check duplicates and conflicts, wait for the result, save its job id.
 With ``--after-restart``: check that the saved job is still there and that new work still runs.
-With ``--first-case-only``: submit one case to a service that has just started and report how long it
-took (effectiveness plan E1). That mode reports and never fails on a time or on the case's outcome.
 It only uses synthetic text, and it never prints the access key.
 """
 
@@ -96,51 +94,7 @@ def finished_v2_jobs(client):
     return timing.get("jobs", 0) if status == 200 and run.get("max", -1) >= 0 else 0
 
 
-def run_time(client, workflow_type="case_triage.v2"):
-    """The status figures' queue wait and run time for a workflow type: ``(wait_s, run_s)``, the longest
-    of each, which is the first job's while it is the only one. ``None`` where there is no figure."""
-    status, info = client.call("GET", "/v1/status")
-    timing = ((info.get("metrics") or {}).get("workflows") or {}).get(workflow_type) or {}
-    return ((timing.get("wait_s") or {}).get("max"), (timing.get("run_s") or {}).get("max"))
-
-
-def first_case_line(label, outcome, wait_s, run_s):
-    """One line for the job summary (Thai, for the owner) about the first case after a start."""
-    took = "ไม่มีตัวเลข" if run_s is None else f"{run_s:.1f} วินาที"
-    waited = "" if wait_s is None else f" (รอในคิวก่อนเริ่ม {wait_s:.1f} วินาที)"
-    return f"- เคสแรกหลังบริการเริ่มทำงาน — {label}: ใช้เวลา **{took}**{waited} ผลลัพธ์ `{outcome}`"
-
-
-def write_summary(path, line):
-    if path:
-        with open(path, "a", encoding="utf-8") as handle:
-            handle.write(line + "\n")
-
-
-def first_case_only(client, timeout_s, label, summary):
-    """Time the first case after a start. A report: it does not fail on the time or on the outcome."""
-    outcome, wait_s, run_s = "ไม่เสร็จภายในเวลาที่รอ", None, None
-    try:
-        wait_for_runner(client, timeout_s)
-        body = {"workflow_type": "case_triage.v2", "idempotency_key": f"first-case-{uuid.uuid4()}",
-                "input": {"case_id": "SMOKE-FIRST-01", "summary": "I cannot sign in to my account"}}
-        status, job = client.call("POST", "/v1/jobs", body)
-        if status == 202:
-            outcome = wait_for_result(client, job["job_id"], timeout_s)["status"]
-            wait_s, run_s = run_time(client)
-        else:
-            outcome = f"HTTP {status}"
-    except SystemExit as exc:  # a wait ran out; say so and keep the report
-        print(f"::warning::first case ({label}): {exc}")
-    if outcome != "REVIEW_REQUIRED":
-        print(f"::warning::first case ({label}) ended as {outcome}, not REVIEW_REQUIRED")
-    line = first_case_line(label, outcome, wait_s, run_s)
-    print(line)
-    print("first-case " + json.dumps({"label": label, "outcome": outcome, "wait_s": wait_s, "run_s": run_s}))
-    write_summary(summary, line)
-
-
-def first_run(client, state_file, timeout_s, summary=None):
+def first_run(client, state_file, timeout_s):
     status, _ = client.call("GET", "/", key=False)
     check(status == 200, "the web page loads")
     status, _ = client.call("GET", "/v1/status", key=False)
@@ -169,10 +123,6 @@ def first_run(client, state_file, timeout_s, summary=None):
     kinds = [event["kind"] for event in events.get("events", [])]
     check(kinds[:2] == ["job.queued", "job.claimed"] and kinds[-1] == "job.review_required", "the job history is complete")
     check(finished_v2_jobs(client) >= 1, "the status figures count the finished case and its run time (roadmap 5.3)")
-    # The first case after a start is the slow one (effectiveness plan E1). Reported, never gated.
-    wait_s, run_s = run_time(client)
-    print(f"     first case after the start: run {run_s} s, queue wait {wait_s} s")
-    write_summary(summary, first_case_line("ความเร็วเต็มของเครื่อง GitHub", result["status"], wait_s, run_s))
     if state_file:
         Path(state_file).write_text(json.dumps({"job_id": job["job_id"]}), encoding="utf-8")
 
@@ -197,29 +147,16 @@ def main(argv=None):
     parser.add_argument("--key", required=True, help="the service's NEURON_FLOW_ACCESS_KEY")
     parser.add_argument("--state", help="file that remembers the job between the two runs")
     parser.add_argument("--after-restart", action="store_true")
-    parser.add_argument("--first-case-only", action="store_true",
-                        help="only time the first case after a start; a report that does not fail")
-    parser.add_argument("--label", default="this service", help="names the service in the --first-case-only report")
-    parser.add_argument("--summary", help="append the first case's time here (e.g. $GITHUB_STEP_SUMMARY)")
     parser.add_argument("--timeout", type=float, default=90)
     args = parser.parse_args(argv)
     client = Client(args.url, args.key)
-    if args.first_case_only:
-        try:
-            wait_until_healthy(client, args.timeout)
-        except SystemExit as exc:
-            print(f"::warning::first case ({args.label}): {exc}")
-            write_summary(args.summary, first_case_line(args.label, "บริการไม่พร้อมภายในเวลาที่รอ", None, None))
-            return 0
-        first_case_only(client, args.timeout, args.label, args.summary)
-        return 0
     wait_until_healthy(client, args.timeout)
     if args.after_restart:
         if not args.state:
             parser.error("--after-restart needs --state")
         after_restart(client, args.state, args.timeout)
     else:
-        first_run(client, args.state, args.timeout, args.summary)
+        first_run(client, args.state, args.timeout)
     print("all checks passed")
     return 0
 
