@@ -431,6 +431,23 @@ Notes for cloud sessions (claude.ai/code):
     0.989 s before and 0.256 s after; with the container held to 0.1 CPU, 14.4 s before and 3.1 s after.
     **Not measured on Render yet**: after the merge, read the `run` span of the first job after the deploy
     and after one sleep in Honeycomb, and fill in the table at the end of the evidence note (E1, task 4).
+  - PR #60 (E1) was merged on 2026-11-10. Its measurement on Render (E1, task 4) is still open.
+  - **E2 is started and paused (2026-11-10, the owner asked to stop and save).** Done so far, in its own
+    commit before any rule changed: the held-out set `app/eval/golden/case_triage_heldout_v1.json` (40 cases,
+    20 Thai, 10 per category). With today's rules (`keywords-v1`) on it, mock scorecard at `f38c926`: rules
+    correct 14/40 (English 9/20, Thai 5/20). The scorecard printed the old rules' mistakes on this set to the
+    developer, so the evidence note must say so, and no keyword may be added because of a held-out case.
+    Decided but not built: keywords as versioned JSON next to the rules with one SHA-256 in `rule_version`;
+    text normalised for matching only (NFKC, lower case, Latin combining marks, zero-width characters and soft
+    hyphens removed; hyphens tried as a space and as nothing); English whole words with every form listed
+    (no suffix rule, so "Billings" is not "billing"); Thai as substrings; fixed precedence as today;
+    `case_triage.v1` moves to the new rules too, because `triage.classify` is shared by both workflows; the
+    old rules live on only as a reference inside a test that checks nothing they got right goes wrong.
+    Keywords come only from the mock's list, the 61 cases, the robustness items and their listed forms.
+    Still to do: the rules module and its tests, the smoke test and trace check (their Thai upload case will
+    no longer be raised, so they need a case where rules and mock disagree), both baselines, one Typhoon run
+    of each of the three sets with the v1 columns recomputed from the same AI answers, the evidence note,
+    the 27 gaps marked fixed or kept, and the docs.
 - **Not done yet:**
   - Claude has never been run (D2). Typhoon has run only on the synthetic sets (two full triage runs, one
     full study guide run) and once on the 116 robustness edge cases (2026-11-10: AI correct 104/116, rules
