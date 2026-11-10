@@ -38,6 +38,7 @@ from neuron_flow.telemetry import percentile
 from app.domains.case_triage import build_shadow_workflow, shadow_registry
 from app.domains.case_triage.contracts import CATEGORIES
 from app.domains.case_triage.shadow_workflow import PROMPT_ID
+from app.domains.case_triage.rules import rule_version
 from app.llm import LLMConfig, load_prompt
 
 from . import common
@@ -90,6 +91,7 @@ def evaluate(golden, config=None, *, limit=None, max_workers=3, min_interval_s=0
                            "git_sha": os.environ.get("GITHUB_SHA") or _git_sha(),
                            "python": platform.python_version(), "llm": config.to_params(),
                            "prompt": {"id": prompt.id, "sha256": prompt.sha256},
+                           "rules": {"version": rule_version()},
                            "golden": {"name": golden["name"], "sha256": golden["sha256"], "cases": len(cases),
                                       "label_scope": golden["label_scope"]},
                            "duration_s": round(time.monotonic() - started, 2),
@@ -117,6 +119,7 @@ def case_row(case, snapshot):
             "split": case["split"], "cluster_id": case["cluster_id"], "source_sha256": case["source_sha256"],
             "summary": case["summary"], "expected": case["expected_category"], "job_status": snapshot["status"],
             "rules_category": rules["category"] if rules else None,
+            "rule_version": rules["rule_version"] if rules else None,
             "llm_status": status, "llm_reason": reason,
             "llm_category": llm["category"] if ok else None,
             "llm_confidence": llm["confidence"] if ok else None,
@@ -196,8 +199,8 @@ REPORT_SCHEMA = "neuron-flow-shadow-eval-v1"
 # What a case "answered". Timings and token counts are left out: they change from run to run.
 ANSWER_FIELDS = ("source_sha256", "expected", "job_status", "rules_category", "llm_status", "llm_category",
                  "llm_reason", "llm_confidence", "llm_attempts", "agreement", "review_priority", "review_reasons")
-_IDENTITY = (("golden", "case set"), ("llm", "AI"), ("prompt", "prompt"))
-_HEAD = ("schema", "golden", "llm", "prompt")
+_IDENTITY = (("golden", "case set"), ("llm", "AI"), ("prompt", "prompt"), ("rules", "rules"))
+_HEAD = ("schema", "golden", "llm", "prompt", "rules")
 
 
 def baseline_view(report):
@@ -207,6 +210,7 @@ def baseline_view(report):
             "golden": {key: p["golden"][key] for key in ("name", "sha256", "cases")},
             "llm": {"provider": p["llm"]["provider"], "model": p["llm"]["model"]},
             "prompt": {"id": p["prompt"]["id"], "sha256": p["prompt"]["sha256"]},
+            "rules": p["rules"],
             "cases": [{"case_id": r["case_id"], **{field: r[field] for field in ANSWER_FIELDS}}
                       for r in report["cases"]]}
 
@@ -247,6 +251,7 @@ def summary_markdown(report):
     lines += common.provider_note(llm)
     lines += [f"ชุดเคส `{p['golden']['name']}` ({p['golden']['cases']} เคส) · AI `{llm['provider']}/{llm['model']}` · "
               f"prompt `{p['prompt']['id']}` (`{p['prompt']['sha256'][:12]}`) · commit `{(p['git_sha'] or 'unknown')[:12]}`",
+              f"กฎที่ใช้: `{p['rules']['version']}`",
               "", "| สิ่งที่วัด | ผล |", "|---|---|",
               f"| งานที่ทำจบครบทุกขั้น | {_fmt(m['jobs_completed'])} |",
               f"| กฎเดิมจัดหมวดถูก | {_fmt(m['rules_correct'])} |",

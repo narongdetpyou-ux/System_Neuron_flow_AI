@@ -17,7 +17,7 @@ still Milestone C (2.1). No Core (`neuron_flow/`) file was changed. Design princ
 ## ภาพรวมการทำงาน (สรุปภาษาไทย)
 
 1. มีเคสลูกค้าเข้ามา 1 เคส (รหัสเคส + ข้อความ)
-2. **กฎเดิม** (คำสำคัญภาษาอังกฤษ) เสนอคิวที่ควรส่งไป ข้อเสนอนี้คือ "ข้อเสนอหลัก" เหมือนเดิม
+2. **กฎรุ่น 2** (คำสำคัญภาษาไทยและอังกฤษ) เสนอคิวที่ควรส่งไป ข้อเสนอนี้คือ "ข้อเสนอหลัก" เหมือนเดิม
 3. พร้อมกันนั้น **AI** อ่านเคสเดียวกันแล้วเสนอหมวดของตัวเอง (ความเห็นที่สอง) ก่อนส่ง ระบบปิดข้อมูลส่วนตัวที่จับรูปแบบได้ (อีเมล เบอร์โทร เลขบัตร ตัวเลขยาว ชื่อที่มีคำนำหน้า) AI จึงเห็นแค่ป้ายแทน เช่น [PHONE] (ขั้น 7.1)
    - ถ้า AI ติดขัดชั่วคราว ระบบลองใหม่ 1 ครั้ง
    - ถ้ายังไม่ได้ หรือ AI ปฏิเสธที่จะตอบ ระบบเดินต่อโดยใช้ข้อเสนอของกฎ และแจ้งผู้รีวิวว่า "AI ใช้งานไม่ได้"
@@ -33,12 +33,12 @@ still Milestone C (2.1). No Core (`neuron_flow/`) file was changed. Design princ
 ## How one case flows
 
 ```text
-case ──► classify_rules (v1 keywords) ──┐
+case ──► classify_rules (v2 keywords) ──┐
      └─► classify_llm   (AI)          ──┴─► compare ──► prepare ──► reviewer
 ```
 
 1. `build_shadow_workflow` checks the case with the same input rules as v1. It freezes
-   the AI settings (provider, model, prompt id and SHA-256) into the job.
+   the AI settings (provider, model, prompt id and SHA-256) and the rules list version and SHA-256 into the job.
 2. Core runs `classify_rules` and `classify_llm` **in parallel**. They are independent
    branches, so a problem in the AI branch never stops the rules branch.
 3. `classify_llm` masks personal data in the case text (`app/llm/redaction.py`), then sends the
@@ -57,6 +57,28 @@ case ──► classify_rules (v1 keywords) ──┐
    - **Invariants:** the queue matches the category, and the provenance matches the frozen job settings.
    - **Policy:** there is no automatic decision, and review is always required.
 
+## Deterministic rules v2 (E2)
+
+The official shadow-mode suggestion uses `rules.py` with the versioned `keywords_v2.json` list.
+The output's `rule_version` is `keywords-v2:<SHA-256 of the exact data file>`, and the trusted
+`triage.classify_rules` agent carries that version. The workflow freezes it before execution, so a job
+submitted under a different list refuses to run with the new list (`configuration_changed`). The
+original `case_triage.v1` demonstration retains its English-only `keywords-v1` rules and its separate
+`triage.classify` agent; it does not silently adopt v2.
+
+For matching only, v2 normalises Unicode with NFKC, lowercases text and removes zero-width characters
+and soft hyphens. Latin accents are folded for matching while Thai vowels and tone marks are kept;
+hyphenated forms are checked with a space or with the hyphen removed. English keywords match whole words, so `Billings` is not `billing` and `design in`
+is not `sign in`. Thai keywords match inside text because words are often written without spaces.
+Precedence remains fixed: access, upload, billing, then other. The stored case text is unchanged.
+These are keyword rules: negation, quoted words, multiple issues and sentence meaning remain limits.
+No AI call, external dependency or automatic decision is added.
+
+The 61 synthetic development cases, 116 partly development edge cases and 40 held-out cases are measured
+separately. The held-out set was committed before the rules changed and is not used to tune them.
+Comparisons reuse each Typhoon answer for both rules versions, so differences in review flags are
+caused by the rules rather than a second model answer. The offline mock's keyword list is unchanged.
+
 ## When something goes wrong
 
 | Situation | What the system does | What the reviewer gets | Sentry |
@@ -66,7 +88,7 @@ case ──► classify_rules (v1 keywords) ──┐
 | AI answer off-contract (unknown value, broken JSON, cut off at `max_tokens`) | tries once more, then `unavailable: invalid_model_output` | same as above | warning |
 | AI declines (`stop_reason: refusal`) | `unavailable: model_declined` at once (no pointless retry) | same as above | warning |
 | Missing or rejected API key (401/403), unknown model (404), rejected request (400/413) | AI step **fails**; job `FAILED` | no proposal until fixed | error → email |
-| Prompt file or model changed after a job was submitted | the old job refuses to run (`Agent version changed`) | — | exception |
+| Prompt, model or rules list changed after a job was submitted | the old job refuses to run (`Agent version changed`) | — | exception |
 
 Setup problems fail loudly on purpose. They hit every case the same way, and if
 they were degraded quietly, a broken setup could go unnoticed.
@@ -186,7 +208,8 @@ It does not show AI accuracy.
 3. The run first sends one fixed synthetic sentence and shows the reply as it arrived (status, content type,
    rate-limit headers, first characters) and how the provider classified it (`.github/scripts/llm_probe.py`;
    never the key, never a case). Cases then start at least 1 second apart (`--min-interval-s 1`).
-4. Read the scorecard on the run page, or download `shadow-eval-typhoon.json`. When the AI gave no answer,
+4. Read the scorecard on the run page, or download `shadow-eval-typhoon-<set>.json` and
+   `rules-comparison-typhoon.json` from the artifact. When the AI gave no answer,
    a line under the table counts why (for example `unavailable: invalid_model_output 5`). The page lists the
    cases both got wrong and the cases only the AI got wrong, and says the numbers belong to Typhoon, not to
    Claude.
@@ -226,6 +249,7 @@ bare `OK` back, which the connection check above made visible.
 | `app/llm/providers/_http.py` | the shared HTTP opener that refuses every redirect |
 | `.github/workflows/shadow-eval-typhoon.yml` | the free live run; `.github/scripts/llm_probe.py` checks the connection first |
 | `app/llm/providers/mock.py` | offline keyword simulation + failure scenarios for tests |
+| `app/domains/case_triage/rules.py` + `keywords_v2.json` | normalised, deterministic Thai/English rules with a frozen data hash |
 | `app/domains/case_triage/shadow_agents.py` | the AI, compare and prepare agents and their validators |
 | `app/domains/case_triage/shadow_workflow.py` | trusted registry and the four-step DAG |
 | `app/eval/triage_shadow_eval.py` + `app/eval/golden/` | scorecard and 61 labelled synthetic cases (EN + TH) |

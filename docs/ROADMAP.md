@@ -21,7 +21,7 @@ differs, this file and architecture.md win.
   - ถ้าสองฝ่ายเห็นไม่ตรงกัน เคสจะถูกยกให้คนดูก่อน
 - ถ้าเครื่องดับกลางทาง ระบบทำต่อได้ ส่งซ้ำก็ไม่เกิดงานซ้ำ
 - ยกเลิกเคสที่ยังรอคิวได้ และทุกคำขอมีรหัสคำขอ (request id) ไว้ไล่ดูใน log (ขั้น 1.2, 1.3)
-- ผ่านชุดทดสอบอัตโนมัติ 394 ข้อ และเปิดใช้ออนไลน์บน Render แล้ว ระบบปิดตัวอย่างเรียบร้อย และการแก้แค่เอกสารไม่ทำให้ Render ขึ้นเวอร์ชันใหม่ (ขั้น 0.1, 0.5)
+- ผ่านชุดทดสอบอัตโนมัติ 411 ข้อ และเปิดใช้ออนไลน์บน Render แล้ว ระบบปิดตัวอย่างเรียบร้อย และการแก้แค่เอกสารไม่ทำให้ Render ขึ้นเวอร์ชันใหม่ (ขั้น 0.1, 0.5)
 - หน้าเว็บเป็นแบบแชท: พิมพ์เคส ดูขั้นตอนก่อนส่ง กดยืนยัน แล้วติดตามใน Flow และประวัติเหตุการณ์ (ขั้น 1.6)
 - หน้าเว็บบอกว่ามีเคสรอกี่เคส เคสที่รอนานสุดรอมานานเท่าไร ปกติแต่ละเคสใช้เวลาเท่าไร และเคสที่ไม่สำเร็จล้มเพราะอะไร (ขั้น 5.3)
 - ถ้ามีคนแก้กฎหรือ prompt แล้วคำตอบของเคสทดสอบเคสไหนเปลี่ยน ช่องตรวจบน GitHub จะเป็นสีแดงและบอกว่าเคสไหนเปลี่ยนอะไร (ขั้น 5.2)
@@ -34,13 +34,13 @@ differs, this file and architecture.md win.
 - วัดผล AI จริงครั้งแรกแล้ว ฟรีผ่าน Typhoon ของ SCB 10X (เก่งภาษาไทย) เมื่อ 6 พ.ย.: รอบแรก AI ตอบไม่ได้เลย 0 จาก 5 เคส เพราะ Typhoon ไม่ทำตามช่องตั้งค่าที่ขอให้ตอบเป็น JSON แก้แล้วโดยบอกรูปแบบคำตอบเป็นคำพูดด้วย (ADR-022) หลังแก้ รันครบทั้งชุด: คัดแยกเคส AI ถูก 60 จาก 61 เคส ทั้ง 2 รอบ (กฎเดิมถูก 29) และผู้ช่วยแนะนำแหล่งเรียนหาหัวข้อถูก 46 จาก 48 ข้อ ไม่มีลิงก์นอกคลังเลย เคสเป็นของสมมุติที่ผู้พัฒนาเขียนเอง จึงยังไม่ใช่ความแม่นยำจริง และเป็นผลของ Typhoon ไม่ใช่ของ Claude ([บันทึกหลักฐาน](evidence/2026-11-06-first-live-typhoon.md); ขั้น 0.3, ADR-021, ADR-022)
 - มีโมเดลเปิด (open-weight) ที่ระบบรันเองได้แล้ว (ขั้น 5.8, ADR-026): ปุ่ม *Local open model eval* ใน Actions ให้เครื่องทดสอบของ GitHub สร้างโปรแกรมรันโมเดล (llama.cpp) จากโค้ดรุ่นที่ตรึงไว้ ดาวน์โหลด Typhoon 2.5 รุ่น 4B (สัญญา Apache 2.0) ตรวจลายนิ้วมือไฟล์ แล้วรันชุดข้อสอบเดิมทั้ง 2 ชุด ข้อความไม่ออกไปบริษัท AI ใด ไม่ต้องใช้คีย์ และไม่มีค่าใช้จ่ายเพราะ repo เป็นสาธารณะ แต่เครื่องทดสอบคิดด้วย CPU จึงช้ากว่า Typhoon ออนไลน์มาก ใช้วัดผลได้ แต่ใช้เป็นสมองของหน้าเว็บไม่ได้ (เงื่อนไขของ GitHub) PR ที่แก้ส่วนเชื่อม AI จะได้รอบทดสอบเล็ก 5 เคสอัตโนมัติ รอบเล็กรอบแรก (8 พ.ย.) ตอบได้ทุกข้อและถูกรูปแบบตั้งแต่ครั้งแรก: คัดแยกเคสถูก 5 จาก 5 หาหัวข้อถูก 5 จาก 5 ไม่มีลิงก์นอกคลัง ใช้เวลาราว 2.7–6.5 วินาทีต่อเคสแล้วแต่เครื่อง และรันซ้ำด้วยไฟล์ที่ตรึงแล้วได้ตัวเลขเหมือนเดิมทุกตัว ([บันทึกหลักฐาน](evidence/2026-11-08-first-local-model-smoke.md)) รอบเต็มรอบแรกบน main (8 พ.ย. ราว 66 นาที) ตอบได้ทุกข้อ: เคสที่กฎผิดถูกดันขึ้นคิวด่วนให้คนดูครบ 32 จาก 32 เท่ากับ Typhoon รุ่นใหญ่ผ่าน API คัดแยกเคสถูก 58 จาก 61 (รุ่นใหญ่ 60) หาหัวข้อถูก 44 จาก 48 (รุ่นใหญ่ 46) ไม่มีลิงก์นอกคลัง (0 จาก 142) ช้ากว่ารุ่นใหญ่ราว 7 เท่า และมีคำสั่งแอบแฝง 1 ข้อที่หลอกให้เลือกหัวข้อได้ แต่ลิงก์ยังมาจากคลังเท่านั้น ([บันทึกหลักฐาน](evidence/2026-11-08-first-local-model-full.md)) ยังไม่ใช่ความแม่นยำ ต่อไปเจ้าของโปรเจกต์เลือกทางตามขั้น 5.8: ไม่ผ่าน พอใช้ หรือผ่าน
 - หน้าเว็บมีช่อง "อยากเรียน" แล้ว: กดปุ่ม "อยากเรียน" เหนือช่องพิมพ์ พิมพ์เรื่องที่อยากรู้ แล้วกด Enter คำถามส่งทันที (ไม่มีขั้นยืนยันแบบเคส เพราะเป็นแค่คำแนะนำ) คำตอบขึ้นเป็นชั้น: สรุป 1 บรรทัด สิ่งที่ระบบเข้าใจพร้อมถามว่า "เข้าใจถูกไหม" แหล่งที่ควรเริ่มก่อนกับแหล่งที่สำคัญที่สุด แล้วกด "ดูขั้นตอนการเรียน" หรือ "ดูรายละเอียด" เมื่ออยากรู้เพิ่ม เรื่องนอกกรอบบอกตรง ๆ พร้อมรายการ 11 หัวข้อที่ช่วยได้ ถ้าช่อง AI มุมซ้ายล่างขึ้นว่า "AI จำลอง" คำเปรียบใหม่ ๆ อย่าง "บรรณารักษ์ที่รู้ใจ" จะถูกตอบว่านอกกรอบ และหน้าเว็บบอกเหตุผลไว้ เปิด Typhoon ได้ฟรีตามขั้นตอนในแท็บ "ตั้งค่า" (ขั้น 3.4, ADR-023)
-- มีด่านความทนทาน (robustness benchmark ขั้นที่ 1) แล้ว: ทุกครั้งที่ส่งโค้ด GitHub ป้อนเคสสุดโหดที่เขียนเอง 270 ข้อ และข้อมูลเปิดที่นักพัฒนาทั่วโลกใช้ (ข้อความแปลก 515 แบบ ไฟล์ทดสอบ JSON 318 ไฟล์ และคำขอจาก CLINC150 กับ BANKING77) เข้าทุกชั้นของระบบ รอบแรกเจอปัญหาร้ายแรง 8 จุด ที่สำคัญที่สุดคือถ้า AI ตอบมี "ตัวอักษรพัง" เคสทั้งเคสจะล้มและไม่ถึงคนตรวจ แก้ครบทั้ง 8 จุดแล้วใน PR #42 (รวมแล้วเมื่อ 8 พ.ย. และเคสที่คุณส่งบนหน้าเว็บจริงหลังรวมยังถึงคนตรวจ): ข้อมูลแปลกได้ "ข้อมูลไม่ถูกต้อง (400)" แทน "เซิร์ฟเวอร์พัง (500)" และเคสที่ AI ตอบมีตัวอักษรพังยังถึงคนตรวจพร้อมความเห็นของ AI 7 จุดแก้นอก Core ส่วนจุดที่ 8 ตรวจตัวอ่าน JSON ของ Core เอง จึงแก้ Core 1 ฟังก์ชันพร้อมบันทึกข้อตัดสินใจ (ADR-025) ตอนนี้ผ่าน 215 จาก 270 ข้อ (ขั้น 5.4–5.5, [แผนทดสอบ 3 ขั้น](benchmarking.md), [บันทึกหลักฐาน](evidence/2026-11-07-robustness-stage1.md))
+- มีด่านความทนทาน (robustness benchmark ขั้นที่ 1) แล้ว: ทุกครั้งที่ส่งโค้ด GitHub ป้อนเคสสุดโหดที่เขียนเอง 270 ข้อ และข้อมูลเปิดที่นักพัฒนาทั่วโลกใช้ (ข้อความแปลก 515 แบบ ไฟล์ทดสอบ JSON 318 ไฟล์ และคำขอจาก CLINC150 กับ BANKING77) เข้าทุกชั้นของระบบ รอบแรกเจอปัญหาร้ายแรง 8 จุด ที่สำคัญที่สุดคือถ้า AI ตอบมี "ตัวอักษรพัง" เคสทั้งเคสจะล้มและไม่ถึงคนตรวจ แก้ครบทั้ง 8 จุดแล้วใน PR #42 (รวมแล้วเมื่อ 8 พ.ย. และเคสที่คุณส่งบนหน้าเว็บจริงหลังรวมยังถึงคนตรวจ): ข้อมูลแปลกได้ "ข้อมูลไม่ถูกต้อง (400)" แทน "เซิร์ฟเวอร์พัง (500)" และเคสที่ AI ตอบมีตัวอักษรพังยังถึงคนตรวจพร้อมความเห็นของ AI 7 จุดแก้นอก Core ส่วนจุดที่ 8 ตรวจตัวอ่าน JSON ของ Core เอง จึงแก้ Core 1 ฟังก์ชันพร้อมบันทึกข้อตัดสินใจ (ADR-025) หลัง E2 ใน PR #64 ผ่าน 239 จาก 270 ข้อ (ก่อน E2 ผ่าน 215 ข้อ; ขั้น 5.4–5.5, [แผนทดสอบ 3 ขั้น](benchmarking.md), [บันทึกหลักฐาน](evidence/2026-11-07-robustness-stage1.md))
 - วัดเคสยาก 116 ข้อของด่านความทนทานกับ AI จริง (Typhoon) เป็นครั้งแรกเมื่อ 10 พ.ย.: AI จัดหมวดถูก 104 จาก 116 กฎคำสำคัญถูก 48 จาก 116 เคสภาษาไทย AI ถูก 13 จาก 13 ข้อที่ AI พลาดทั้ง 12 ข้อเฉลยว่า "อื่น ๆ" แต่ AI จับใส่หมวดใกล้เคียง และ AI บอกว่า "มั่นใจสูง" ทุกข้อ ป้ายของชุดนี้ผู้พัฒนาจับคู่เอง จึงยังไม่ใช่ความแม่นยำ ผลนี้เป็นฐานของ[แผนเพิ่มประสิทธิผล](effectiveness_plan.md) ([บันทึกหลักฐาน](evidence/2026-11-10-effectiveness-baseline.md))
 - **แก้ตามผู้ตรวจสอบอิสระ (10 พ.ย.) ครบ 4 ข้อ** ([บันทึกหลักฐาน](evidence/2026-11-10-independent-review-response.md)):
   - **คนตัดสินเคสได้แล้ว** (ขั้น 2.2 และ 2.4): เคสที่ "รอคนตรวจ" มีการ์ด "ตัดสินเคสนี้" กด "อนุมัติ" (ใช้หมวดที่กฎเสนอหรือเลือกเอง) หรือ "ไม่อนุมัติ" พร้อมเหตุผล เคสจะเปลี่ยนเป็น "อนุมัติแล้ว" หรือ "ไม่อนุมัติ" ตัดสินแล้วแก้ไม่ได้ กดซ้ำก็ไม่บันทึกซ้ำ และด้านซ้ายมีรายการ "รอรีวิว" ที่เอาเคสด่วนขึ้นก่อน ตอนนี้ผู้ตัดสินคือผู้ถือรหัสเข้าใช้ร่วม คือคุณ (รหัสรายคนอยู่ในขั้น 2.1) ส่วนงานต่อเนื่องหลังอนุมัติ (2.3) ยังไม่ทำ
   - **ด่านปิดข้อมูลส่วนตัวบังคับที่ประตูส่งออกแล้ว**: ตัวกลางเรียก AI (gateway) ปิดข้อมูลซ้ำเองก่อนส่งทุกครั้ง ถ้ายังเจอข้อมูลที่ต้องปิด จะไม่ส่งเลย และโค้ดอื่นสร้างข้อความ "ผ่านการปิดแล้ว" ปลอมเองไม่ได้ ระหว่างทำเจอว่ากฎปิดข้อมูลเดิมปิดซ้ำแล้วได้ผลไม่เหมือนเดิมในบางข้อความ (เช่น "นางสาว" + ชื่อ) จึงแก้เป็นกฎรุ่น 2 (`redact-v2`) คำตอบในชุดข้อสอบทุกชุดเหมือนเดิม
   - **บอกตรง ๆ ว่าเก็บได้นานแค่ไหน**: บนแผนฟรี หน้าเว็บไม่พูดว่า "บันทึกถาวร" แล้ว เตือนก่อนส่งและบนเคสที่รอตัดสิน และถ้าระบบเริ่มใหม่ด้วยที่เก็บว่าง หน้าเว็บจะบอกว่าเคสที่คุณส่งจากเครื่องนี้หายไปกี่รายการ (จำแค่รหัสงาน ไม่จำข้อความเคส) ทางแก้ถาวรยังเป็นแผน Render แบบเสียเงิน (D1)
-  - **อีเมลส่วนตัวใน commit**: พบว่ายังเพิ่มขึ้นทุกครั้งที่กด Merge บน github.com (51 commit ตอนเปิดสาธารณะ ตอนนี้ 53) จึงเพิ่มช่องตรวจที่จับอีเมลส่วนตัวใน commit ใหม่ ทางหยุดคือการตั้งค่า 1 อย่างของคุณใน GitHub ส่วนการลบของเก่าออกจากประวัติเป็นการตัดสินใจของคุณ (D8 ข้างล่าง)
+  - **อีเมลส่วนตัวใน commit**: พบว่ายังเพิ่มขึ้นทุกครั้งที่กด Merge บน github.com (51 commit ตอนเปิดสาธารณะ ตอนนี้ 53) จึงเพิ่มช่องตรวจที่จับอีเมลส่วนตัวใน commit ใหม่ ทางหยุดคือการตั้งค่า 1 อย่างของคุณใน GitHub ส่วนของเก่าคุณเลือกเก็บประวัติไว้ตามเดิมแล้ว (D8 ข้างล่าง)
 - เคสแรกหลังระบบตื่นเคยใช้ราว 10 วินาที สาเหตุที่ยืนยันแล้วบนภาพจริงของบริการคือไม่มีไฟล์ที่แปลไว้ล่วงหน้า (bytecode cache) เลย โปรแกรมจึงต้องแปลโค้ดใหม่ทุกครั้งที่เริ่ม แก้แล้วใน PR #60 (งาน E1, 10 พ.ย.): บนเครื่องของ GitHub ที่จำกัดกำลังให้เท่าเครื่องฟรีของ Render เคสแรกเร็วขึ้นจาก 14.4 เป็น 3.1 วินาที ยังไม่ได้วัดบน Render จริง เพราะต้องรวม (merge) ก่อน ([บันทึกหลักฐาน](evidence/2026-11-10-e1-bytecode-cache.md))
 
 **ลำดับต่อจากนี้** แต่ละขั้นจบด้วยสิ่งที่คุณลองเองได้
@@ -52,10 +52,10 @@ differs, this file and architecture.md win.
 | 2 | ให้คนรีวิวได้จริง: ผู้รีวิวมีรหัสของตัวเอง กดอนุมัติหรือไม่อนุมัติได้ และ n8n แจ้งเตือน | กล่อง "รอรีวิว" บนหน้าเว็บ และข้อความแจ้งเตือน | เริ่มแล้ว (10 พ.ย. ตามข้อ 4 ของผู้ตรวจสอบอิสระ): 2.2 บันทึกการตัดสินและ 2.4 การ์ดตัดสินกับรายการ "รอรีวิว" ทำแล้ว โดยผู้ตัดสินคือผู้ถือรหัสเข้าใช้ร่วม (คุณ); 2.1 รหัสรายคน 2.3 งานต่อเนื่องหลังอนุมัติ และ 2.5 n8n ยังไม่ทำ |
 | 3 | ผู้ช่วยแนะนำแหล่งเรียน (`study_guide.v1`) ตามหลักปรัชญาของคุณ | พิมพ์เรื่องที่อยากรู้ด้วยคำธรรมดา แล้วได้แหล่งเรียนไม่เกิน 5 แหล่งพร้อมลำดับการเรียน | สร้างครบทุกขั้นแล้ว (คุณเลือกขั้นนี้ก่อนขั้น 2 เมื่อ 5 พ.ย.): 3.1 คลังแหล่งเรียน 3.2 ตัวผู้ช่วย และ 3.3 ชุดข้อสอบ ทำแล้ว (ดูตัวอย่างคำตอบและผลข้อสอบใน Actions ได้); 3.4 ช่อง "อยากเรียน" บนหน้าเว็บ สร้างและ merge แล้ว (7 พ.ย.) คุณลองบนหน้าเว็บจริงผ่านแล้ว (8 พ.ย.); รันกับ AI จริง (Typhoon) แล้ว หาหัวข้อถูก 46 จาก 48 ข้อ ไม่มีลิงก์นอกคลัง (Claude รอ D2) |
 | 4 | ช่องคุยภาษาธรรมดา: ระบบเข้าใจว่าคุณขออะไร บอกตรง ๆ เมื่อเรื่องอยู่นอกกรอบ และถามกลับ 1 คำถามเมื่อข้อมูลไม่พอ | คุยกับระบบได้เลย ไม่ต้องเลือกประเภทงานเอง | ยังไม่เริ่ม (ขั้น 3 สร้างครบแล้ว เริ่มได้เมื่อคุณเลือก) |
-| 5 | ติดตามเส้นทางของแต่ละงาน (เวลา token จุดที่ช้า) ด่านตรวจผลรายเคส และแผนทดสอบ 3 ขั้นด้วยข้อมูลเปิด | ตัวเลขคิวและเวลาบนหน้าเว็บ ช่องตรวจบน PR แล้วต่อด้วยเส้นทางงานใน Honeycomb; ผลด่านความทนทานในหน้าสรุปของ *Core logic tests* | เสร็จแล้วทั้ง 5.1, 5.2, 5.3 และ 5.4; เส้นทางงานแรกเข้า Honeycomb เมื่อ 4 พ.ย. 00:23 น.; ด่านความทนทาน (5.4) รวมเข้า main แล้ว 7 พ.ย.; แก้ 8 bug ที่เจอแล้ว (5.5, PR #42 รวมแล้วเมื่อ 8 พ.ย.); ต่อไปคือตัดสินใจเรื่องจุดอ่อน (gap) 44 จุดที่เหลือ แล้วขั้นข้อสอบกลาง (5.6) และขั้นโจมตีกับใช้งานจริง (5.7); 5.8 โมเดลเปิดที่รันเองบนเครื่องทดสอบของ GitHub สร้างแล้วใน PR #46 และรันเต็มรอบแรกแล้ว 8 พ.ย. (ดันเคสที่กฎผิดขึ้นคิวด่วนครบ 32/32) รอเจ้าของโปรเจกต์เลือกทาง |
+| 5 | ติดตามเส้นทางของแต่ละงาน (เวลา token จุดที่ช้า) ด่านตรวจผลรายเคส และแผนทดสอบ 3 ขั้นด้วยข้อมูลเปิด | ตัวเลขคิวและเวลาบนหน้าเว็บ ช่องตรวจบน PR แล้วต่อด้วยเส้นทางงานใน Honeycomb; ผลด่านความทนทานในหน้าสรุปของ *Core logic tests* | เสร็จแล้วทั้ง 5.1, 5.2, 5.3 และ 5.4; เส้นทางงานแรกเข้า Honeycomb เมื่อ 4 พ.ย. 00:23 น.; ด่านความทนทาน (5.4) รวมเข้า main แล้ว 7 พ.ย.; แก้ 8 bug ที่เจอแล้ว (5.5, PR #42 รวมแล้วเมื่อ 8 พ.ย.); E2 ใน PR #64 แก้จุดอ่อนของกฎได้ 24 จุด เหลือจุดอ่อนทั้งหมด 20 จุด แล้วขั้นข้อสอบกลาง (5.6) และขั้นโจมตีกับใช้งานจริง (5.7); 5.8 โมเดลเปิดที่รันเองบนเครื่องทดสอบของ GitHub สร้างแล้วใน PR #46 และรันเต็มรอบแรกแล้ว 8 พ.ย. (ดันเคสที่กฎผิดขึ้นคิวด่วนครบ 32/32) รอเจ้าของโปรเจกต์เลือกทาง |
 | 6 | AI วางแผนงานหลายขั้น ระบบตรวจแผนก่อนรัน และเครื่องมืออื่นเรียกใช้ผ่าน MCP ได้ | สั่งงานจากแอป Claude ได้ | ยังไม่เริ่ม (ต้องรอขั้น 2–4) |
-| 7 | เตรียมพร้อมก่อนให้คนอื่นใช้ หรือก่อนเปิด repo สาธารณะ | รายงานตรวจความปลอดภัย และรายการตรวจก่อนเปิดตัว | เริ่มแล้ว: 7.1 ปิดข้อมูลส่วนตัวก่อนส่งให้ AI ทำแล้ว และตั้งแต่ 10 พ.ย. ตัวกลางเรียก AI บังคับปิดซ้ำเองก่อนส่ง ส่วนการจำกัดว่าใครเห็นคีย์ AI ได้ เขียนแผนไว้ ยังไม่ทำ; 7.4 เสร็จ: repo นี้เป็นสาธารณะพร้อมประวัติทั้งหมดตั้งแต่ 8 พ.ย. (D5) เปลี่ยนคีย์ Sentry แล้ว และเปิดระบบสแกนคีย์ของ GitHub แล้ว; มีผู้ตรวจสอบอิสระอ่านโค้ดครั้งแรกเมื่อ 10 พ.ย. แก้ครบ 4 ข้อ ยกเว้นการลบอีเมลเก่าในประวัติที่รอคุณตัดสินใจ (D8) |
-| E | [แผนเพิ่มประสิทธิผล](effectiveness_plan.md) 6 งาน (E1–E6): เคสแรกหลังระบบตื่นเร็วขึ้น กฎรุ่น 2 ที่อ่านภาษาไทยได้ หน้าเว็บจริงใช้ AI จริง เก็บคำตอบ "เข้าใจถูกไหม" ให้ AI แยก "อื่น ๆ" ได้ดีขึ้น และคลังแหล่งเรียนที่มีภาษาไทยมากขึ้น | เวลาของเคสแรก ข้อเสนอหลักของเคสภาษาไทย และตัวนับ "เข้าใจถูก" บนหน้าเว็บ | เขียนแผนแล้วเมื่อ 10 พ.ย. ตามที่คุณขอ (PR #50); E1 สร้างแล้วใน PR #60 (10 พ.ย.): ภาพของบริการมีไฟล์ที่แปลไว้ล่วงหน้าครบแล้ว บนเครื่องของ GitHub ที่จำกัดกำลังให้เท่าเครื่องฟรี เคสแรกเร็วขึ้นจาก 14.4 เป็น 3.1 วินาที รอคุณสั่งรวมแล้วจะวัดบน Render จริง; E2 เป็นงานถัดไป; E3 รอคุณตัดสินใจ |
+| 7 | เตรียมพร้อมก่อนให้คนอื่นใช้ หรือก่อนเปิด repo สาธารณะ | รายงานตรวจความปลอดภัย และรายการตรวจก่อนเปิดตัว | เริ่มแล้ว: 7.1 ปิดข้อมูลส่วนตัวก่อนส่งให้ AI ทำแล้ว และตั้งแต่ 10 พ.ย. ตัวกลางเรียก AI บังคับปิดซ้ำเองก่อนส่ง ส่วนการจำกัดว่าใครเห็นคีย์ AI ได้ เขียนแผนไว้ ยังไม่ทำ; 7.4 เสร็จ: repo นี้เป็นสาธารณะพร้อมประวัติทั้งหมดตั้งแต่ 8 พ.ย. (D5) เปลี่ยนคีย์ Sentry แล้ว และเปิดระบบสแกนคีย์ของ GitHub แล้ว; มีผู้ตรวจสอบอิสระอ่านโค้ดครั้งแรกเมื่อ 10 พ.ย. ตอบครบ 4 ข้อแล้ว และคุณเลือกเก็บประวัติอีเมลเก่าไว้ตามเดิม (D8) |
+| E | [แผนเพิ่มประสิทธิผล](effectiveness_plan.md) 6 งาน (E1–E6): เคสแรกหลังระบบตื่นเร็วขึ้น กฎรุ่น 2 ที่อ่านภาษาไทยได้ หน้าเว็บจริงใช้ AI จริง เก็บคำตอบ "เข้าใจถูกไหม" ให้ AI แยก "อื่น ๆ" ได้ดีขึ้น และคลังแหล่งเรียนที่มีภาษาไทยมากขึ้น | เวลาของเคสแรก ข้อเสนอหลักของเคสภาษาไทย และตัวนับ "เข้าใจถูก" บนหน้าเว็บ | เขียนแผนแล้วเมื่อ 10 พ.ย. ตามที่คุณขอ (PR #50); E1 สร้างแล้วใน PR #60 (10 พ.ย.): ภาพของบริการมีไฟล์ที่แปลไว้ล่วงหน้าครบแล้ว บนเครื่องของ GitHub ที่จำกัดกำลังให้เท่าเครื่องฟรี เคสแรกเร็วขึ้นจาก 14.4 เป็น 3.1 วินาที รวมแล้วเมื่อ 10 พ.ย. ยังรอวัดบน Render จริง; E2 สร้างและวัดครบใน PR #64: กฎถูก 61/61 ในชุดพัฒนา 105/116 ในชุดเคสยาก และ 22/40 ในชุดที่กันไว้ ([ผลวัดและข้อจำกัด](evidence/2026-11-11-e2-rules-v2.md)); E3 รอคุณตัดสินใจ |
 
 **เรื่องที่คุณต้องตัดสินใจเอง** อยู่ในตาราง [Owner decisions](#owner-decisions) ข้างล่าง เช่น
 - จะจ่ายค่า Render เพื่อให้เคสไม่หายหรือไม่
@@ -63,7 +63,6 @@ differs, this file and architecture.md win.
 - โมเดลเปิดที่รันเองบนเครื่องทดสอบของ GitHub ผ่าน พอใช้ หรือไม่ผ่าน หลังรอบเต็มรอบแรก (ขั้น 5.8)
 - ใครเป็นผู้รีวิว
 - จะเปิด repo เป็นสาธารณะเมื่อไร
-- จะลบอีเมลส่วนตัวของคุณออกจากประวัติ Git หรือไม่ และด้วยวิธีไหน (D8)
 - จะให้หน้าเว็บจริงใช้ AI จริง (Typhoon ฟรี) หรือไม่ และจะเริ่มงานไหนของแผนเพิ่มประสิทธิผลก่อน (E1–E6)
 
 ## How to use this file (for Claude Code)
@@ -127,7 +126,7 @@ Marks: ✅ done · 🟡 built or partly checked (the status says what is left) �
 | 5.2 | Evaluation gate in CI | ✅ PR #27 | — |
 | 5.3 | Queue and run-time metrics on the status page | ✅ PR #26 | — |
 | 5.4 | Robustness benchmark, stage 1: open and synthetic edge cases as a CI gate | ✅ PR #41 (2026-11-07), merged after the owner checked the run page; first run: 206/270 own items pass, 8 bugs, 0 of 4,680 sweep checks broke a promise ([evidence note](evidence/2026-11-07-robustness-stage1.md)) | — |
-| 5.5 | Fix what stage 1 found (the 8 bugs, then the gaps) | 🟡 the 8 bugs fixed in PR #42, merged 2026-11-08 (after the deploy the owner's case on the live page still reached review): 215/270 own items pass, 0 bugs; one small Core change (ADR-025); deciding the 44 gaps is next | 5.4 |
+| 5.5 | Fix what stage 1 found (the 8 bugs, then the gaps) | 🟡 the 8 bugs fixed in PR #42, merged 2026-11-08 (after the deploy the owner's case on the live page still reached review): 239/270 own items pass after E2 (215 after PR #42), 0 bugs, 20 gaps; one small Core change (ADR-025); E2 in PR #64 fixes 24 of the 27 original rules gaps and records the three retained limits ([evidence](evidence/2026-11-11-e2-rules-v2.md)); the other gap decisions remain open | 5.4 |
 | 5.6 | Stage 2: open benchmarks (CLINC150, BANKING77, MASSIVE th-TH/en-US) with Typhoon | ⬜ | 5.4 |
 | 5.7 | Stage 3: prompt injection, personal data, load and restarts, weekly live drift | ⬜ | 5.4; drift schedule is the owner's choice |
 | 5.8 | Local open-model lane: llama.cpp and Typhoon 2.5 4B on the GitHub runner (ADR-026) | ✅ built in PR #46, with two smoke runs ([evidence note](evidence/2026-11-08-first-local-model-smoke.md)); first full run on `main` on 2026-11-08: rule mistakes raised 32/32 (Typhoon 32/32), triage AI correct 58/61 (Typhoon 60/61), topic correct 44/48 (Typhoon 46/48), 0 of 142 links outside the library, about 7 times Typhoon's latency ([evidence note](evidence/2026-11-08-first-local-model-full.md)); next, the owner chooses a branch (5.8, "After the first full run", step 2) | — |
@@ -139,9 +138,9 @@ Marks: ✅ done · 🟡 built or partly checked (the status says what is left) �
 | 7.3 | Independent security review | ⬜ owner; a first independent review of the code and docs on 2026-11-10 found four problems, all answered ([evidence](evidence/2026-11-10-independent-review-response.md)); the threat model and a test of the running service are left | 7.1, 7.2 |
 | 7.4 | Public-release checklist | ✅ public since 2026-11-08 with its full history (D5): history audited, the 7 run logs that could print the old DSN deleted, read-only workflow tokens, README section for visitors and SECURITY.md (PR #44); the owner replaced the Sentry DSN, deleted the merged branches, switched the visibility and turned on secret scanning, push protection and private vulnerability reporting | — |
 | 7.5 | Consented pilot with real volunteers | ⬜ owner decision D4 | 7.1–7.3 |
-| 7.6 | The personal e-mail address in the public history | 🟡 new commits checked in CI (2026-11-10); the owner's GitHub setting and D8 are left | the owner's setting; D8 |
+| 7.6 | The personal e-mail address in the public history | ✅ new commits checked in CI (2026-11-10); D8 decided the same day: the history stays as it is | — |
 | E1 | First case after a start: seconds, not ten ([effectiveness plan](effectiveness_plan.md)) | 🟡 built in PR #60 (2026-11-10): the image had no bytecode cache (0 of the 141 modules the Runner imports) and now carries one, required by *Service container*; in CI the first case went from 0.989 s to 0.256 s, and from 14.4 s to 3.1 s with the container held to 0.1 CPU ([evidence note](evidence/2026-11-10-e1-bytecode-cache.md)); on Render it was 9.0 to 10.5 s before, and the time after is measured once the PR is merged | — |
-| E2 | Rules v2: an official suggestion that reads Thai (also decides the 27 rules gaps of 5.5) | ⬜ planned; today rules correct 29/61, Thai 7/26, edge set 48/116 | — |
+| E2 | Rules v2: an official suggestion that reads Thai (also decides the 27 rules gaps of 5.5) | ✅ built and measured in PR #64 (2026-11-11), pending owner merge: rules 61/61 development (Thai 26/26), 105/116 edge, 22/40 held-out; Typhoon answered all 217 cases, no v1-correct case regressed, code checks passed; 24 original rules gaps fixed, 3 retained. Fewer elevated flags leave 8 jointly wrong edge cases unflagged as before (E5 open). [Evidence and same-answer comparison](evidence/2026-11-11-e2-rules-v2.md) | — |
 | E3 | A real model behind the online page | ⬜ owner decision (0.4, D7); today the page's mock finds the study topic for 2/48 | 0.1 |
 | E4 | Record the answer to "เข้าใจถูกไหม" | ⬜ planned | an ADR |
 | E5 | The edge of `other`, and a confidence that means something | ⬜ planned; today all 12 of Typhoon's edge-set mistakes are `other` cases, with `high` confidence on 116/116 | 5.6; the owner labels about 20 borderline requests |
@@ -1049,9 +1048,12 @@ workflow types.
        answer is valid and still checked.
      - A lone surrogate in a fixed-choice field cannot match the choices, so that answer is still refused.
      - The study guide's answers go through the same gateway, so they are cleaned the same way.
-  3. Decide each gap and write the decision down. Proposed:
-     - for the 27 rules gaps: rules v2, package E2 of the [effectiveness plan](effectiveness_plan.md)
-       (Thai keywords, whole-word matching, text normalised for matching);
+  3. Decide each gap and write the decision down.
+     - The 27 original rules gaps are addressed by E2 in PR #64: versioned Thai keywords, whole-word
+       English matching and matching-only normalization; each is listed as fixed or kept as a measured
+       limit in the [E2 evidence](evidence/2026-11-11-e2-rules-v2.md). `case_triage.v1` retains the original
+       demonstration; the shadow workflow and the benchmark rules layer use v2.
+     - Still proposed for the other gaps:
      - strip or refuse bidi controls in case text and AI text;
      - count visible characters for the minimum length;
      - refuse an empty rationale, as the study guide does;
@@ -1289,7 +1291,7 @@ workflow types.
 - **Status (2026-11-10): a first independent review, not yet 7.3.** The owner brought in an outside reviewer
   who read the code and docs at `f38c926`, with a focus on data and security risks, and did not test the running
   service. Four findings, all answered the same day
-  ([evidence](evidence/2026-11-10-independent-review-response.md)); D8 is left to the owner. 7.3 still needs the
+  ([evidence](evidence/2026-11-10-independent-review-response.md)); D8 was then decided: keep the history. 7.3 still needs the
   threat model and a review that also tests the service.
 
 ### 7.4 Public-release checklist (owner decision D5)
@@ -1391,7 +1393,9 @@ workflow types.
      Support, but loses the issues, pull requests, Actions history and settings; the repository secrets
      (`TYPHOON_API_KEY`, `SENTRY_DSN`) must be added again and Render connected to the new repository.
 
-  Neither 2 nor 3 reaches copies made since 2026-11-08. **Recommendation:** the setting above now, then 1 unless
+  **Decided (2026-11-10): option 1.** The owner said to leave the history as it is. No rewrite is planned.
+
+  Neither 2 nor 3 reaches copies made since 2026-11-08. **Recommendation (before the decision):** the setting above now, then 1 unless
   the owner wants the address out of the public view; then 2, and 3 only if Support declines.
 - **Owner test (ไทย):**
   1. คลิกรูปโปรไฟล์ GitHub มุมขวาบน → Settings → Emails
@@ -1443,7 +1447,7 @@ in the table above. The baseline they start from is in
 | D4 | Real data | 7.5 | Synthetic only · consented pilot | Synthetic only |
 | D5 | Public repository and funding application | 7.4 | Stay private · publish an approved snapshot · publish this repository with its full history (chosen on 2026-11-08) | Public since 2026-11-08 |
 | D6 | The AI's role in triage | after 2.8 has enough reviewed cases | Keep shadow mode · AI suggestion first, still with human review | Shadow mode (ADR-010) |
-| D8 | The personal e-mail address in 53 public commits | — (the setting in 7.6 stops new ones now) | Keep the history · rewrite it and ask GitHub Support to purge the old commits · re-create the repository from the rewritten history (7.6) | Kept; new commits checked in CI |
+| D8 | The personal e-mail address in 53 public commits | — (the setting in 7.6 stops new ones now) | Keep the history (chosen by the owner on 2026-11-10) · rewrite it and ask GitHub Support to purge the old commits · re-create the repository from the rewritten history (7.6) | Decided: kept as it is; new commits checked in CI |
 | D7 | An open model behind the online page | 5.8 step 4 | Mock (today) · Typhoon through 0.4 (free; what is typed goes to SCB 10X) · the local model on a paid machine with room for it (prices checked at the time) | The mock on the page; the local model only in GitHub Actions, for measuring |
 
 ## Evidence track
@@ -1466,7 +1470,7 @@ in the table above. The baseline they start from is in
 | Risk | What we do |
 |---|---|
 | The free plan forgets cases | The API and the page say so at every write, and the page counts what was lost after a wipe (ADR-029); D1 decides; Phase 2 needs the disk for real use |
-| Personal data in the public history | The owner's address is in 53 commits; CI checks new commits; the owner's GitHub setting stops new merges adding it; D8 decides about the old ones (7.6) |
+| Personal data in the public history | The owner's address is in 53 commits; CI checks new commits; the owner's GitHub setting stops new merges adding it; D8 keeps the old history as it is (7.6) |
 | One machine, one disk | Accepted (ADR-003, ADR-014); backups in 1.4; no scaling until a P2 item is justified |
 | AI cost or outage | Spend limit (D2), queue cap, rate limits, a graceful "unavailable" (ADR-012) |
 | A model is retired or changed | A new model is a new agent version: run the scorecard compare first and switch between runs. In-flight jobs fail as `configuration_changed`, by design |

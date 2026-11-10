@@ -1,0 +1,18 @@
+{
+  "schema": "neuron-flow-triage-keywords-v2",
+  "precedence": ["access", "upload", "billing"],
+  "keywords": {
+    "access": {
+      "en": ["password", "passwords", "pasword", "passcode", "passcodes", "sign in", "signin", "log in", "login", "logged in", "locked out", "account is locked", "account locked", "account access", "unlock my bank account", "bank account locked", "2fa", "two factor", "otp", "verification code", "reset link", "pin", "pin number", "verify my identity", "prove my identity"],
+      "th": ["รหัสผ่าน", "เข้าสู่ระบบ", "เข้าระบบ", "ล็อกอิน", "ล็อคอิน", "บัญชีถูกล็อก", "บัญชีถูกล็อค", "สิทธิ์เข้าใช้", "เข้าแอปไม่ได้", "รหัสผิด"]
+    },
+    "upload": {
+      "en": ["upload", "uploads", "uploading", "uploaded", "uplod", "attach", "attaches", "attaching", "attached", "attachment", "attachments", "file transfer", "file size", "too large to send", "drag and drop"],
+      "th": ["อัปโหลด", "อัพโหลด", "แนบไฟล์", "ไฟล์แนบ", "ส่งไฟล์", "อัปไฟล์"]
+    },
+    "billing": {
+      "en": ["payment", "payments", "billing", "bill", "bills", "invoice", "invoices", "receipt", "receipts", "refund", "refunds", "charge", "charges", "charged", "subscription", "subscriptions", "credit card", "declined", "fee", "fees", "direct debit", "amount due", "owe", "transactions"],
+      "th": ["ชำระเงิน", "จ่ายเงิน", "ใบแจ้งหนี้", "ใบเสร็จ", "คืนเงิน", "หักเงิน", "ตัดบัตร", "ค่าบริการ", "สมัครสมาชิก"]
+    }
+  }
+}

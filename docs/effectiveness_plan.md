@@ -1,8 +1,10 @@
 # Effectiveness plan: make the measured results reach the person
 
-**Status (2026-11-10):** a plan the owner asked for ("วางแผนปฏิบัติงานเพิ่มเติมเพื่อเพิ่มประสิทธิผลการทำงานของระบบ"), proposed in
-PR #50. E1 is built in PR #60, because the owner then asked to start the work without further questions; its
-measurement on Render waits for the merge. Nothing else is built yet. The plan adds six work packages, E1 to
+**Status (2026-11-11):** a plan the owner asked for ("วางแผนปฏิบัติงานเพิ่มเติมเพื่อเพิ่มประสิทธิผลการทำงานของระบบ"), proposed in
+PR #50. E1 is built and merged (PR #60); its post-change measurement on Render is still open. E2 is
+implemented and measured in PR #64, continuing PR #62's held-out-set commit: the three-set Typhoon run
+and code checks passed, with results in the [E2 evidence](evidence/2026-11-11-e2-rules-v2.md). The PR awaits
+the owner's merge instruction. E3–E6 are not built. The plan adds six work packages, E1 to
 E6, to [ROADMAP.md](ROADMAP.md), which stays the source of truth for status. Every "now" figure below was measured and is in an evidence note, most of them in
 [the baseline note of 2026-11-10](evidence/2026-11-10-effectiveness-baseline.md).
 
@@ -19,7 +21,9 @@ E6, to [ROADMAP.md](ROADMAP.md), which stays the source of truth for status. Eve
 4. หน้าเว็บจริงให้คำตอบที่ดีเท่ากับที่วัดได้ในห้องทดสอบ
 5. รู้จากการใช้งานจริงว่าคำตอบตรงใจไหม
 
-**ตอนนี้อยู่ตรงไหน (ตัวเลขที่วัดแล้ว)**
+**ก่อน E2 อยู่ตรงไหน (ตัวเลขที่วัดแล้วเมื่อ 10 พ.ย.)**
+
+ผลหลังทำกฎภาษาไทยใน PR #64 อยู่ใน [บันทึก E2](evidence/2026-11-11-e2-rules-v2.md) วัดกับ Typhoon ครบทั้ง 3 ชุดแล้ว: ชุดพัฒนากฎถูก 61/61 ชุดเคสยาก 105/116 และชุดที่กันไว้ 22/40 จึงยังมีข้อจำกัดชัดเจน เคสยาก 8 ข้อยังผิดทั้งกฎและ AI โดยไม่ถูกยกเป็น "ต้องดูก่อน" เหมือนเดิม งาน E5 ยังต้องทำต่อ
 
 | สิ่งที่วัด | ตอนนี้ | งานที่จะขยับตัวเลขนี้ |
 |---|---|---|
@@ -31,7 +35,7 @@ E6, to [ROADMAP.md](ROADMAP.md), which stays the source of truth for status. Eve
 | ผู้ช่วยแนะนำแหล่งเรียนบนหน้าเว็บจริง หาหัวข้อถูก | 2 จาก 48 ข้อ เพราะหน้าเว็บยังใช้ AI จำลอง (Typhoon ได้ 46 จาก 48) | E3 |
 | คำตอบของคนต่อคำถาม "เข้าใจถูกไหม" | ไม่ได้เก็บ | E4 |
 | แหล่งเรียนภาษาไทยในคลัง | 1 จาก 17 แหล่ง | E6 |
-| คำตัดสินของคนตรวจที่บันทึกไว้ | 0 เพราะยังกดอนุมัติไม่ได้ (ขั้น 2 ของแผนงานหลัก) | ขั้น 2 |
+| คำตัดสินของคนตรวจ | ตอนเก็บฐานเดิมยังกดอนุมัติไม่ได้; ตอนนี้สร้างปุ่มและบันทึกคำตัดสินแล้ว (2.2, 2.4) ยังไม่มีจำนวนจากการใช้งานจริงที่วัดไว้ในแผนนี้ | ขั้น 2 |
 
 **งาน 6 ชิ้น เรียงตามลำดับที่แนะนำ**
 
@@ -44,11 +48,10 @@ E6, to [ROADMAP.md](ROADMAP.md), which stays the source of truth for status. Eve
 | E5 | ให้ AI แยก "อื่น ๆ" ได้ดีขึ้น และบอกความไม่แน่ใจที่ใช้ได้จริง | วัดกับข้อสอบกลางก่อน (ขั้น 5.6) แล้วปรับคำสั่ง (prompt) รุ่นใหม่ วัดก่อนและหลัง | อ่านคำขอก้ำกึ่งราว 20 ข้อ แล้วบอกว่าคุณจัดหมวดไหน (คุณเป็นคนกลางคนแรกที่ตรวจเฉลย) | ตารางเทียบก่อนและหลังในหน้า Actions |
 | E6 | คลังแหล่งเรียนที่มีภาษาไทยมากขึ้น | เสนอแหล่งเรียนใหม่ทีละหัวข้อ และให้ GitHub ตรวจทุกลิงก์ | เปิดอ่านแหล่งที่ผมเสนอ แล้วบอกว่ารับหรือไม่รับ | ถามเป็นภาษาไทยแล้วได้แหล่งเรียนภาษาไทยมากกว่า 1 แหล่ง |
 
-- **E1 สร้างแล้วใน PR #60** (10 พ.ย.) รอคุณสั่งรวม แล้วผมจะวัดเวลาจริงบน Render ([บันทึกหลักฐาน](evidence/2026-11-10-e1-bytecode-cache.md))
-- **เริ่มได้ทันทีโดยไม่ต้องตัดสินใจอะไร:** E2 (ต่อจาก E1)
+- **E1 สร้างและรวมแล้วใน PR #60** (10 พ.ย.) ยังรอวัดเวลาจริงบน Render ([บันทึกหลักฐาน](evidence/2026-11-10-e1-bytecode-cache.md))
+- **E2 สร้างและวัดครบใน PR #64** (11 พ.ย.) กฎภาษาไทย การทดสอบ และการวัดกับ Typhoon ทั้ง 3 ชุดผ่านแล้ว ดูผลและข้อจำกัดใน [บันทึก E2](evidence/2026-11-11-e2-rules-v2.md) แล้วคุณเป็นคนสั่งรวม
 - **รอคุณตัดสินใจ:** E3 ทำได้ทุกเมื่อ ไม่ต้องรองานอื่น
-- **หลัง E1–E2:** ผมแนะนำขั้น 2 ของแผนงานหลัก (ให้คนกดอนุมัติได้จริง) เพราะตอนนี้ทุกเคสจบที่ "รอคนตรวจ" แล้วไปต่อไม่ได้
-  และคำตัดสินของคนคือเฉลยจากคนจริงชุดแรกของโปรเจกต์ คุณเป็นคนเลือกว่าขั้นไหนมาก่อน
+- **หลัง E1–E2:** ขั้น 2.2 และ 2.4 ให้คนกดอนุมัติหรือปฏิเสธได้แล้วใน PR #63 งานถัดไปของขั้น 2 คือแยกตัวตนคนตรวจ (2.1) แล้วเชื่อมงานหลังอนุมัติ (2.3) คุณเป็นคนเลือกว่าจะทำงานไหนต่อ
 
 **สิ่งที่ตั้งใจไม่ทำ และเหตุผล**
 
@@ -77,23 +80,23 @@ breaks) and model quality on synthetic sets. This plan follows the numbers a per
 
 | # | Measure | Now (measured) | Where it is recorded | Moved by |
 |---|---|---|---|---|
-| M1 | The official suggestion (rules) is correct | 29/61, Thai 7/26; edge set 48/116, Thai 3/13 | mock scorecard on every CI run; [baseline](evidence/2026-11-10-effectiveness-baseline.md) | E2 |
-| M2 | Share of cases raised for review first, with a real model | 33/61 and 64/116 (Typhoon) | [2026-11-06](evidence/2026-11-06-first-live-typhoon.md), baseline | E2 |
-| M3 | Rule mistakes that are raised, with a real model | 32/32 and 60/68 (Typhoon); 30/32 and 26/68 with the mock, as on the online page | same | E3, E5 |
-| M4 | Cases wrong for both rules and AI, so nothing raises them | 0/61 and 8/116 (Typhoon) | same | E5 |
-| M5 | The AI at the edge of `other` | 17/29 right on `other`, 87/87 on the three categories (Typhoon, edge set); `high` confidence on 116/116 | baseline | E5 |
+| M1 | The official suggestion (rules) is correct | 61/61, Thai 26/26; edge 105/116; held-out 22/40 (English 12/20, Thai 10/20) (before: 29/61, Thai 7/26; edge 48/116, Thai 3/13) | mock scorecard on every CI run; [E2 evidence](evidence/2026-11-11-e2-rules-v2.md) | E2 |
+| M2 | Share of cases raised for review first, with a real model | Development 1/61, edge 8/116, held-out 18/40 (v1 on the same answers: 33/61, 65/116, 26/40) | [E2 evidence](evidence/2026-11-11-e2-rules-v2.md); v1/v2 use the same AI answers | E2 |
+| M3 | Rule mistakes that are raised, with a real model | Development: no rule mistakes (0/0, no rate); edge 3/11; held-out 18/18 (v1: 32/32, 60/68, 26/26) | [E2 evidence](evidence/2026-11-11-e2-rules-v2.md) | E2, E3, E5 |
+| M4 | Cases wrong for both rules and AI | Development 0/61, edge 8/116, held-out 0/40: unchanged from v1 on the same answers; all 8 edge cases still agree on a wrong category and are not elevated | [E2 evidence](evidence/2026-11-11-e2-rules-v2.md); fewer flags do not mean this failure is fixed | E2, E5 |
+| M5 | The AI at the edge of `other` | 2026-11-10 baseline: 17/29 right on `other`, 87/87 on the three categories (Typhoon, edge set); `high` confidence on 116/116 | baseline | E5 |
 | M6 | First job after a start | On Render, before E1: 9.0 to 10.5 s in 4 of 4 observations; later jobs 0.1 to 0.4 s. After E1 (PR #60): not measured on Render yet; in CI with the container held to 0.1 CPU, 14.4 s before and 3.1 s after (one run each) | [2026-11-03](evidence/2026-11-03-render-operations.md), baseline (Honeycomb), [E1 note](evidence/2026-11-10-e1-bytecode-cache.md) | E1 |
 | M7 | Study topic found on the online page | 2/48 (the page runs the mock); 46/48 with Typhoon | mock scorecard in CI; 2026-11-06 | E3 |
 | M8 | Out-of-scope study requests caught, with a real model | 16/19, precision 16/17 (Typhoon) | 2026-11-06 | E5 |
 | M9 | People's answers to "เข้าใจถูกไหม" | not recorded | – | E4 |
 | M10 | Thai resources in the study library | 1 of 17 | `resources_v1.json` | E6 |
-| M11 | Review decisions recorded | 0: a case ends at `REVIEW_REQUIRED` and nothing else can happen | – | Phase 2 |
+| M11 | Review decisions recorded | Decision API and page built (2.2, 2.4); no live-use count measured here | ADR-027; linked job still open (2.3) | Phase 2 |
 
 A package that moves a number updates this table and writes the new figure in an evidence note. All sets are
 synthetic or open-dataset text with the developer's labels, so these are measurements of this system on
 these sets, not accuracy.
 
-## What the baseline says
+## What the 2026-11-10 baseline said (before E2)
 
 1. **The weak part of triage is the official suggestion, not the second opinion.** The rules are right on
    29/61 and 48/116; Typhoon on 60/61 and 104/116. The rules know 10 English keywords and no Thai.
@@ -105,8 +108,8 @@ these sets, not accuracy.
 4. **The first case after a start takes about 10 s**, and on the free plan the service sleeps after 15 idle
    minutes, so a visit after a pause begins with a start: both triage cases of the last 7 days did. The
    time goes into starting worker processes.
-5. **Nothing a person does after reading an answer is recorded:** no review decision (Phase 2) and no answer
-   to "เข้าใจถูกไหม". The project therefore has no number from real use.
+5. **At baseline collection, nothing a person did after reading an answer was recorded.** Review decisions
+   have since been built (2.2, 2.4, ADR-027); an answer to "เข้าใจถูกไหม" is still not recorded (E4).
 6. **Capacity is not a limit.** The online service ran 3 jobs in the last 7 days, a warm job takes 0.1 to
    0.4 s, the queue wait is about 0.4 s, and Sentry lists no unresolved issue.
 
@@ -116,11 +119,11 @@ Each package is one pull request unless it says otherwise, and follows the defin
 
 ### E1 First case after a start: seconds, not ten
 
-- **Status (2026-11-10):** tasks 1 to 3 are built in PR #60
+- **Status (2026-11-11):** tasks 1 to 3 are built and merged in PR #60
   ([evidence note](evidence/2026-11-10-e1-bytecode-cache.md)). Task 1 found that the image had no cache at
   all: 0 of the 141 modules the Runner imports, the standard library included. With the cache built into the
   image, the first case in CI went from 0.989 s to 0.256 s, and from 14.4 s to 3.1 s with the container held
-  to 0.1 CPU (one run each, on GitHub's runners). Task 4, the measurement on Render, needs the merge. Task 5
+  to 0.1 CPU (one run each, on GitHub's runners). Task 4, the post-change measurement on Render, is still open. Task 5
   is not started and waits for the owner's word after task 4.
 - **Goal:** the first case after the service wakes is answered in a few seconds.
 - **Why (M6):** 4 of 4 first jobs took 9.0 to 10.5 s. The spans put it in the first two steps, which is where
@@ -156,6 +159,14 @@ Each package is one pull request unless it says otherwise, and follows the defin
 
 ### E2 Rules v2: an official suggestion that reads Thai
 
+- **Status (2026-11-11):** implemented in PR #64, continuing the original held-out-set commit from PR #62.
+  Rules and matching tests, frozen-version checks, mock and robustness gates, integration checks and the
+  same-answer v1/v2 comparison are complete. [Typhoon run 42890112701](https://github.com/narongdetpyou-ux/System_Neuron_flow_AI/actions/runs/42890112701)
+  answered and completed all 217 cases on code `efb937253193b3be9618721d0586868732c7f6d9`; comparison
+  replay matched the saved artifact exactly, with no v1-correct case regressing. The code checks also passed.
+  See the [E2 evidence](evidence/2026-11-11-e2-rules-v2.md) for the three-set table and all 27 original
+  rules-gap decisions. This work has not merged or deployed. Fewer flags do not remove the eight edge
+  cases where both rules and Typhoon agree on the wrong category; those remain unflagged, and E5 is open.
 - **Goal:** the suggestion a reviewer sees first is right far more often, in Thai and in English, and
   "elevated" marks the cases that need a first look.
 - **Why (M1, M2):** rules correct 29/61 (Thai 7/26) and 48/116 (Thai 3/13). A longer list with Thai words,
@@ -165,18 +176,23 @@ Each package is one pull request unless it says otherwise, and follows the defin
 - **Design:**
   - Keywords become versioned data (a JSON file next to the rules, one SHA-256), as prompts are. The output's
     `rule_version` names the list and its hash, and the rules agent gets a new version, so a job frozen
-    under the old rules fails as `configuration_changed` (ADR-015).
-  - Text is normalised for matching only (Unicode NFKC, lower case, zero-width and soft-hyphen characters
-    removed); the stored case text does not change. English keywords match whole words, so "design in" is
+    under the old rules fails as `configuration_changed` (ADR-015). The shadow agent has its own id,
+    `triage.classify_rules`, and freezes `rule_version` in step params.
+  - Text is normalised for matching only (Unicode NFKC, lower case, Latin accent marks and selected
+    zero-width/soft-hyphen characters removed; hyphens matched both as a space and as a join); the stored case text does not change. English keywords match whole words, so "design in" is
     not "sign in" and the city "Billings" is not "billing". Thai keywords match inside the text, because
     Thai is written without spaces.
   - Still rules: deterministic, fixed precedence, no AI and no new dependency. What a list cannot do stays
     a documented limit and is measured (negation, the meaning of a sentence).
-  - Decide and write down whether the `case_triage.v1` workflow keeps `keywords-v1` as the original
-    demonstration or moves too.
+  - **Chosen:** `case_triage.v1` keeps `keywords-v1` as the original demonstration, with its original
+    `triage.classify` id. The shadow workflow uses the distinct v2 agent, so the two registries coexist.
+    This supersedes the unbuilt PR #62 note that proposed moving v1 too; both options were allowed here.
 - **Measured honestly:**
   1. Before the rules change, add a held-out set in its own commit: about 40 new cases, half of them Thai,
      written from the category definitions and not from any keyword list. It is never used to tune.
+     This is commit `a30de92` from PR #62, preserved before the rule change. The earlier v1 scorecard printed
+     its mistakes to the previous developer, so this limitation is disclosed rather than calling the set
+     independently blinded. This continuation freezes the rules before measuring it.
   2. Develop rules v2 on the 61-case set and the robustness gaps.
   3. Report rules v1 against v2 on three sets, each named for what it is: the 61 cases (development, so
      inflated), the 116 edge cases (partly development), the held-out set (the honest one). For each: rules

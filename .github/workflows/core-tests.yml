@@ -31,6 +31,11 @@ jobs:
         run: >-
           python -m app.eval.triage_shadow_eval --summary "$GITHUB_STEP_SUMMARY" --out shadow-eval-mock.json
           --compare-with tests/baselines/shadow_eval_mock.json
+      - name: Compare rules v1 and v2 on development cases (same mock answers)
+        if: ${{ !cancelled() }}
+        run: >-
+          python -m app.eval.rules_comparison --report shadow-eval-mock.json
+          --out rules-comparison-mock.json --summary "$GITHUB_STEP_SUMMARY"
       # The study guide's scorecard and eval gate (roadmap 3.3): fails when a promise breaks (a link outside the
       # library, more than 5 resources) or when any request answers differently from the baseline.
       - name: Score the study guide and compare every request with the baseline (offline mock AI)
@@ -53,5 +58,6 @@ jobs:
           name: eval-mock
           path: |
             shadow-eval-mock.json
+            rules-comparison-mock.json
             study-guide-eval-mock.json
             robustness.json

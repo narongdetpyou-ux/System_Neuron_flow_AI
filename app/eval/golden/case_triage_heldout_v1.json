@@ -1,0 +1,367 @@
+{
+  "schema": "neuron-flow-golden-v1",
+  "name": "case_triage_heldout_v1",
+  "label_scope": "Held-out synthetic support cases for rules v2 (effectiveness plan E2): written and labelled by the developer from the four category definitions, before the keyword list of rules v2 existed, and never used to choose or change a keyword. Not real customer data and not independent ground truth: the same developer wrote the cases, the labels and later the keyword list.",
+  "cases": [
+    {
+      "case_id": "HO-EN-ACC-01",
+      "language": "en",
+      "expected_category": "access",
+      "tags": [
+        "paraphrase"
+      ],
+      "summary": "I never receive the verification code when I try to get into my account"
+    },
+    {
+      "case_id": "HO-EN-ACC-02",
+      "language": "en",
+      "expected_category": "access",
+      "tags": [
+        "clear"
+      ],
+      "summary": "My password stopped working this morning even though I did not change it"
+    },
+    {
+      "case_id": "HO-EN-ACC-03",
+      "language": "en",
+      "expected_category": "access",
+      "tags": [
+        "paraphrase"
+      ],
+      "summary": "The system says my account has been suspended after three wrong tries"
+    },
+    {
+      "case_id": "HO-EN-ACC-04",
+      "language": "en",
+      "expected_category": "access",
+      "tags": [
+        "paraphrase"
+      ],
+      "summary": "I changed phones and now the authenticator app no longer lets me in"
+    },
+    {
+      "case_id": "HO-EN-ACC-05",
+      "language": "en",
+      "expected_category": "access",
+      "tags": [
+        "clear"
+      ],
+      "summary": "A new teammate needs permission to open the shared workspace but gets access denied"
+    },
+    {
+      "case_id": "HO-EN-UPL-01",
+      "language": "en",
+      "expected_category": "upload",
+      "tags": [
+        "clear"
+      ],
+      "summary": "Attaching a PDF to my ticket fails with a file too large message"
+    },
+    {
+      "case_id": "HO-EN-UPL-02",
+      "language": "en",
+      "expected_category": "upload",
+      "tags": [
+        "paraphrase"
+      ],
+      "summary": "The progress bar freezes halfway when I send a video to the portal"
+    },
+    {
+      "case_id": "HO-EN-UPL-03",
+      "language": "en",
+      "expected_category": "upload",
+      "tags": [
+        "paraphrase"
+      ],
+      "summary": "Your site rejects my spreadsheet and says the format is not supported"
+    },
+    {
+      "case_id": "HO-EN-UPL-04",
+      "language": "en",
+      "expected_category": "upload",
+      "tags": [
+        "clear"
+      ],
+      "summary": "I cannot upload photos from my phone, the button does nothing"
+    },
+    {
+      "case_id": "HO-EN-UPL-05",
+      "language": "en",
+      "expected_category": "upload",
+      "tags": [
+        "clear"
+      ],
+      "summary": "Bulk file transfer of our documents stops after the first ten items"
+    },
+    {
+      "case_id": "HO-EN-BIL-01",
+      "language": "en",
+      "expected_category": "billing",
+      "tags": [
+        "clear"
+      ],
+      "summary": "I was billed twice for the same month"
+    },
+    {
+      "case_id": "HO-EN-BIL-02",
+      "language": "en",
+      "expected_category": "billing",
+      "tags": [
+        "clear"
+      ],
+      "summary": "Please send me a receipt for last week's purchase"
+    },
+    {
+      "case_id": "HO-EN-BIL-03",
+      "language": "en",
+      "expected_category": "billing",
+      "tags": [
+        "paraphrase"
+      ],
+      "summary": "I cancelled my plan but money was still taken from my card"
+    },
+    {
+      "case_id": "HO-EN-BIL-04",
+      "language": "en",
+      "expected_category": "billing",
+      "tags": [
+        "paraphrase"
+      ],
+      "summary": "How do I get my money back for an order that never arrived"
+    },
+    {
+      "case_id": "HO-EN-BIL-05",
+      "language": "en",
+      "expected_category": "billing",
+      "tags": [
+        "clear"
+      ],
+      "summary": "The invoice shows the wrong company name and tax number"
+    },
+    {
+      "case_id": "HO-EN-OTH-01",
+      "language": "en",
+      "expected_category": "other",
+      "tags": [
+        "clear"
+      ],
+      "summary": "The mobile app crashes every time I open the calendar"
+    },
+    {
+      "case_id": "HO-EN-OTH-02",
+      "language": "en",
+      "expected_category": "other",
+      "tags": [
+        "clear"
+      ],
+      "summary": "Can you add a dark mode to the dashboard"
+    },
+    {
+      "case_id": "HO-EN-OTH-03",
+      "language": "en",
+      "expected_category": "other",
+      "tags": [
+        "clear"
+      ],
+      "summary": "I would like to change the language of the interface to Thai"
+    },
+    {
+      "case_id": "HO-EN-OTH-04",
+      "language": "en",
+      "expected_category": "other",
+      "tags": [
+        "clear"
+      ],
+      "summary": "The report page loads very slowly since yesterday"
+    },
+    {
+      "case_id": "HO-EN-OTH-05",
+      "language": "en",
+      "expected_category": "other",
+      "tags": [
+        "clear"
+      ],
+      "summary": "Where can I download the user manual for the new version"
+    },
+    {
+      "case_id": "HO-TH-ACC-01",
+      "language": "th",
+      "expected_category": "access",
+      "tags": [
+        "clear"
+      ],
+      "summary": "ลืมรหัสผ่าน กดขอรีเซ็ตแล้วไม่มีอีเมลส่งมา"
+    },
+    {
+      "case_id": "HO-TH-ACC-02",
+      "language": "th",
+      "expected_category": "access",
+      "tags": [
+        "clear"
+      ],
+      "summary": "ไม่ได้รับรหัส OTP ทาง SMS เลยค่ะ"
+    },
+    {
+      "case_id": "HO-TH-ACC-03",
+      "language": "th",
+      "expected_category": "access",
+      "tags": [
+        "clear"
+      ],
+      "summary": "บัญชีโดนล็อกหลังใส่รหัสผิดหลายครั้ง"
+    },
+    {
+      "case_id": "HO-TH-ACC-04",
+      "language": "th",
+      "expected_category": "access",
+      "tags": [
+        "paraphrase"
+      ],
+      "summary": "เข้าใช้งานไม่ได้ตั้งแต่เปลี่ยนเบอร์โทรศัพท์"
+    },
+    {
+      "case_id": "HO-TH-ACC-05",
+      "language": "th",
+      "expected_category": "access",
+      "tags": [
+        "paraphrase"
+      ],
+      "summary": "พนักงานใหม่ยังไม่มีสิทธิ์เปิดดูโฟลเดอร์ของทีม"
+    },
+    {
+      "case_id": "HO-TH-UPL-01",
+      "language": "th",
+      "expected_category": "upload",
+      "tags": [
+        "clear"
+      ],
+      "summary": "ส่งไฟล์เอกสารเข้าระบบไม่ผ่าน แจ้งว่าไฟล์ใหญ่เกินไป"
+    },
+    {
+      "case_id": "HO-TH-UPL-02",
+      "language": "th",
+      "expected_category": "upload",
+      "tags": [
+        "paraphrase"
+      ],
+      "summary": "แนบรูปบัตรประชาชนแล้วหมุนค้างไม่ไปต่อ"
+    },
+    {
+      "case_id": "HO-TH-UPL-03",
+      "language": "th",
+      "expected_category": "upload",
+      "tags": [
+        "clear"
+      ],
+      "summary": "อัปโหลดวิดีโอได้แค่ครึ่งเดียวแล้วหลุด"
+    },
+    {
+      "case_id": "HO-TH-UPL-04",
+      "language": "th",
+      "expected_category": "upload",
+      "tags": [
+        "paraphrase"
+      ],
+      "summary": "ระบบไม่รับไฟล์นามสกุล .heic ที่ถ่ายจากมือถือ"
+    },
+    {
+      "case_id": "HO-TH-UPL-05",
+      "language": "th",
+      "expected_category": "upload",
+      "tags": [
+        "paraphrase"
+      ],
+      "summary": "ลากไฟล์มาวางแล้วไม่มีอะไรเกิดขึ้น"
+    },
+    {
+      "case_id": "HO-TH-BIL-01",
+      "language": "th",
+      "expected_category": "billing",
+      "tags": [
+        "clear"
+      ],
+      "summary": "ถูกเก็บเงินซ้ำสองรอบในเดือนเดียวกัน"
+    },
+    {
+      "case_id": "HO-TH-BIL-02",
+      "language": "th",
+      "expected_category": "billing",
+      "tags": [
+        "clear"
+      ],
+      "summary": "ขอใบกำกับภาษีของรายการสั่งซื้อเมื่อวานค่ะ"
+    },
+    {
+      "case_id": "HO-TH-BIL-03",
+      "language": "th",
+      "expected_category": "billing",
+      "tags": [
+        "clear"
+      ],
+      "summary": "ยกเลิกแพ็กเกจไปแล้วแต่ยังโดนหักเงินจากบัตร"
+    },
+    {
+      "case_id": "HO-TH-BIL-04",
+      "language": "th",
+      "expected_category": "billing",
+      "tags": [
+        "clear"
+      ],
+      "summary": "อยากขอเงินคืนเพราะสินค้าไม่ตรงกับที่สั่ง"
+    },
+    {
+      "case_id": "HO-TH-BIL-05",
+      "language": "th",
+      "expected_category": "billing",
+      "tags": [
+        "paraphrase"
+      ],
+      "summary": "โอนเงินค่าสมาชิกไปแล้วแต่สถานะยังขึ้นว่าค้างชำระ"
+    },
+    {
+      "case_id": "HO-TH-OTH-01",
+      "language": "th",
+      "expected_category": "other",
+      "tags": [
+        "clear"
+      ],
+      "summary": "แอปเด้งออกเองทุกครั้งที่เปิดหน้าปฏิทิน"
+    },
+    {
+      "case_id": "HO-TH-OTH-02",
+      "language": "th",
+      "expected_category": "other",
+      "tags": [
+        "clear"
+      ],
+      "summary": "อยากให้เพิ่มโหมดมืดในหน้าแดชบอร์ด"
+    },
+    {
+      "case_id": "HO-TH-OTH-03",
+      "language": "th",
+      "expected_category": "other",
+      "tags": [
+        "clear"
+      ],
+      "summary": "ขอเปลี่ยนชื่อที่แสดงในโปรไฟล์ได้ที่ไหนคะ"
+    },
+    {
+      "case_id": "HO-TH-OTH-04",
+      "language": "th",
+      "expected_category": "other",
+      "tags": [
+        "clear"
+      ],
+      "summary": "หน้ารายงานโหลดช้ามากตั้งแต่เมื่อวาน"
+    },
+    {
+      "case_id": "HO-TH-OTH-05",
+      "language": "th",
+      "expected_category": "other",
+      "tags": [
+        "clear"
+      ],
+      "summary": "อยากสอบถามเวลาทำการของศูนย์บริการช่วงวันหยุด"
+    }
+  ]
+}

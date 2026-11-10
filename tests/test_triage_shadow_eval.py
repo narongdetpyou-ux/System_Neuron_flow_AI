@@ -9,6 +9,7 @@ from pathlib import Path
 from neuron_flow.model import decode
 
 from app.domains.case_triage import build_shadow_workflow
+from app.domains.case_triage.rules import rule_version
 from app.eval import triage_shadow_eval as ev
 from app.llm import LLMConfig
 
@@ -98,6 +99,8 @@ class EndToEndEvalTests(unittest.TestCase):
         self.assertEqual(provenance["golden"]["sha256"], GOLDEN["sha256"])
         self.assertEqual(provenance["llm"]["provider"], "mock")
         self.assertEqual(len(provenance["prompt"]["sha256"]), 64)
+        self.assertEqual(provenance["rules"], {"version": rule_version()})
+        self.assertTrue(all(c["rule_version"] == rule_version() for c in report["cases"]))
         text = ev.summary_markdown(report)
         self.assertIn("AI จำลอง", text)
         self.assertIn("กฎเดิมจัดหมวดถูก", text)
@@ -178,6 +181,14 @@ class EvalGateTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 ev.as_baseline(broken)
         self.assertEqual(ev.as_baseline(self.full), good)  # a full report (--out) is accepted, reduced to answers
+
+    def test_rules_identity_is_part_of_the_gate_even_when_answers_stay_the_same(self):
+        before = ev.baseline_view(self.full)
+        after = json.loads(json.dumps(before))
+        after["rules"]["version"] = "changed-keyword-list"
+        changes = ev.answer_changes(before, after)
+        self.assertEqual(len(changes), 1)
+        self.assertTrue(changes[0].startswith("rules version:"), changes)
 
     def test_command_line_writes_a_baseline_and_gates_on_it(self):
         with tempfile.TemporaryDirectory() as folder:

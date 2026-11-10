@@ -7,7 +7,7 @@ from unittest import mock as patch
 
 from neuron_flow import Runtime, SpecError
 from app.domains.case_triage import agents, build_shadow_workflow, shadow_registry
-from app.domains.case_triage import shadow_agents
+from app.domains.case_triage import rules, shadow_agents
 from app.domains.case_triage.contracts import QUEUE_FOR
 from app.llm import LLMConfig, LLMConfigError
 from app.observability import SentryReporter
@@ -69,22 +69,23 @@ class ShadowFlowTests(unittest.TestCase):
     def test_disagreement_elevates_review_but_never_changes_the_official_suggestion(self):
         result = proposal(self.runs["disagree"])
         self.assertEqual(result["suggested_queue"], "upload_review")
-        self.assertEqual(result["suggestion_source"], "rules:keywords-v1")
+        self.assertEqual(result["suggestion_source"], "rules:" + rules.rule_version())
         self.assertEqual(result["second_opinion"]["queue"], "billing_review")
         self.assertEqual((result["agreement"], result["review_priority"]), ("disagree", "elevated"))
         self.assertEqual(result["review_reasons"], ["rules_llm_disagree"])
 
-    def test_thai_case_missed_by_rules_is_flagged(self):
+    def test_thai_upload_rules_agree_without_a_needless_raise(self):
         result = proposal(self.runs["thai"])
-        self.assertEqual(result["suggested_queue"], "general_review")  # v1 rules know no Thai
+        self.assertEqual(result["suggested_queue"], "upload_review")
         self.assertEqual(result["second_opinion"]["category"], "upload")
-        self.assertEqual(result["review_reasons"], ["rules_llm_disagree", "rules_no_keyword_match"])
+        self.assertEqual((result["agreement"], result["review_priority"], result["review_reasons"]),
+                         ("agree", "normal", []))
 
     def test_prompt_injection_cannot_pick_a_queue_or_decide(self):
         injected = proposal(self.runs["inject"])
         self.assertEqual(injected["decision"], "PENDING_HUMAN_REVIEW")
         self.assertNotIn("priority_override", str(injected))
-        self.assertEqual(injected["review_priority"], "elevated")  # rules were fooled into billing
+        self.assertEqual((injected["suggested_queue"], injected["review_priority"]), ("access_review", "normal"))
         obeyed = self.runs["obeyed_injection"]
         self.assertEqual(obeyed["steps"]["classify_llm"]["attempts"], 2)
         self.assertEqual(proposal(obeyed)["second_opinion"], {"status": "unavailable",

@@ -1,0 +1,3019 @@
+{
+  "schema": "neuron-flow-rules-comparison-v1",
+  "sets": [
+    {
+      "cases": [
+        {
+          "case_id": "EN-ACC-01",
+          "expected": "access",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "access",
+          "llm_status": "ok",
+          "rules_v1": "access",
+          "rules_v2": "access",
+          "source_sha256": "2e416fb027053dac485f3505f114bd5276abd07ebc92b07e0d83770837f8db2a"
+        },
+        {
+          "case_id": "EN-ACC-02",
+          "expected": "access",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "access",
+          "llm_status": "ok",
+          "rules_v1": "access",
+          "rules_v2": "access",
+          "source_sha256": "3989430b9841239551331f092c183feb2184c7653cf50e8f41246dd1aa7020a9"
+        },
+        {
+          "case_id": "EN-ACC-03",
+          "expected": "access",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "access",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "access",
+          "source_sha256": "835c92e50abfa290f6649d9b0608449e9a5b99f12c8de7388fc6ba058a1e14d4"
+        },
+        {
+          "case_id": "EN-ACC-04",
+          "expected": "access",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "access",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "access",
+          "source_sha256": "f50f7c70e40849d2ce025d4642a7f306ea0800548015810d7f495a7160484ae5"
+        },
+        {
+          "case_id": "EN-ACC-05",
+          "expected": "access",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "access",
+          "llm_status": "ok",
+          "rules_v1": "access",
+          "rules_v2": "access",
+          "source_sha256": "af2ea140c8fc7af92b508448cbeba5bf1dea5925a6e223240283b6992784cce9"
+        },
+        {
+          "case_id": "EN-ACC-06",
+          "expected": "access",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "access",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "access",
+          "source_sha256": "7dd96442d169f811414af9adc2421e010bcfd87709d064c29ac5edc764055b1f"
+        },
+        {
+          "case_id": "EN-ACC-07",
+          "expected": "access",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "access",
+          "llm_status": "ok",
+          "rules_v1": "access",
+          "rules_v2": "access",
+          "source_sha256": "67bb0a1014b00d16d7cbbebf1f4847916fca492678db5a02fb17c8fc2a516eb2"
+        },
+        {
+          "case_id": "EN-ACC-08",
+          "expected": "access",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "access",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "access",
+          "source_sha256": "fb400a7bc0f34c9971e03dbc9dbd6e090b7b2e00b08c86e2b01833abaad731ee"
+        },
+        {
+          "case_id": "EN-UPL-01",
+          "expected": "upload",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "upload",
+          "llm_status": "ok",
+          "rules_v1": "upload",
+          "rules_v2": "upload",
+          "source_sha256": "934ec03c472083fabb47247939ed9f87f74882e950b9b7507f40cdb5069e00b0"
+        },
+        {
+          "case_id": "EN-UPL-02",
+          "expected": "upload",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "upload",
+          "llm_status": "ok",
+          "rules_v1": "upload",
+          "rules_v2": "upload",
+          "source_sha256": "c61fdaf9834dfbc58a38ea3830992300b16737ffb0f04e5fba2a7244adfccc57"
+        },
+        {
+          "case_id": "EN-UPL-03",
+          "expected": "upload",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "upload",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "upload",
+          "source_sha256": "840b87728245994cfb18e5235df23a1e88549ef2bf8759686bd371567ee5e487"
+        },
+        {
+          "case_id": "EN-UPL-04",
+          "expected": "upload",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "upload",
+          "llm_status": "ok",
+          "rules_v1": "upload",
+          "rules_v2": "upload",
+          "source_sha256": "37b41b57d898461d4dfb0d9b5c0062ab480fd92170b9a620ad4f7da3e3bac869"
+        },
+        {
+          "case_id": "EN-UPL-05",
+          "expected": "upload",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "upload",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "upload",
+          "source_sha256": "632cd554fdbf1536c8955ce0a35add25e5e5f355841a2a4f43a66fc676b62808"
+        },
+        {
+          "case_id": "EN-UPL-06",
+          "expected": "upload",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "upload",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "upload",
+          "source_sha256": "8198831326b63f403a1aabadb0f0593be2c543c97fc4123e2b85726be97f1075"
+        },
+        {
+          "case_id": "EN-UPL-07",
+          "expected": "upload",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "upload",
+          "llm_status": "ok",
+          "rules_v1": "upload",
+          "rules_v2": "upload",
+          "source_sha256": "249a587b783b78d1346285f97b0bb400e5f4295787915baf53cc8dc578ed63a6"
+        },
+        {
+          "case_id": "EN-BIL-01",
+          "expected": "billing",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "billing",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "billing",
+          "source_sha256": "02eeec410a2a9f1893169e605e34c549f66753c480096bf6fdbac4e1954f33f0"
+        },
+        {
+          "case_id": "EN-BIL-02",
+          "expected": "billing",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "billing",
+          "llm_status": "ok",
+          "rules_v1": "billing",
+          "rules_v2": "billing",
+          "source_sha256": "de561bbffd16c0bb498ac333aa3293eaafc70d66fdee5e6781a0bbe96ee86cfb"
+        },
+        {
+          "case_id": "EN-BIL-03",
+          "expected": "billing",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "billing",
+          "llm_status": "ok",
+          "rules_v1": "billing",
+          "rules_v2": "billing",
+          "source_sha256": "811e74375344077cf430e436d2a22a016335c773699d2158a1568d6ceb1b977e"
+        },
+        {
+          "case_id": "EN-BIL-04",
+          "expected": "billing",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "billing",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "billing",
+          "source_sha256": "d5faabb5b91f50aa69f6cea31c6edbe8e181b76438be64957c984bcbbb0201fa"
+        },
+        {
+          "case_id": "EN-BIL-05",
+          "expected": "billing",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "billing",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "billing",
+          "source_sha256": "591c13ca1fda1b9df0f67c3c9b8d07624844d6db5f75843408fbf0886a3f45ee"
+        },
+        {
+          "case_id": "EN-BIL-06",
+          "expected": "billing",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "billing",
+          "llm_status": "ok",
+          "rules_v1": "billing",
+          "rules_v2": "billing",
+          "source_sha256": "4e4d2aad97f05711568337f5e2a1a6f04646ea0bd1a96c818ae5a46bdab85aa6"
+        },
+        {
+          "case_id": "EN-BIL-07",
+          "expected": "billing",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "billing",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "billing",
+          "source_sha256": "81dc689a67e29a4532d8ca8f39892a98d33c1471edfc1b445223d63987e11c27"
+        },
+        {
+          "case_id": "EN-BIL-08",
+          "expected": "billing",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "billing",
+          "llm_status": "ok",
+          "rules_v1": "billing",
+          "rules_v2": "billing",
+          "source_sha256": "a8ee2c022ee4974bc6ab8fd53f5f6aa2a6ef33093d7ad1daa4b2a5d4166d617a"
+        },
+        {
+          "case_id": "EN-OTH-01",
+          "expected": "other",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "other",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "other",
+          "source_sha256": "5d1612357ab68b5a395df69a36a149ff18ccdeb8216c5a2f96dd3d65be14df2b"
+        },
+        {
+          "case_id": "EN-OTH-02",
+          "expected": "other",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "other",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "other",
+          "source_sha256": "03297f00ccf4e2a90c854047efb96e8d84f26fc40fe2a302143e7d844efdbeb1"
+        },
+        {
+          "case_id": "EN-OTH-03",
+          "expected": "other",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "other",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "other",
+          "source_sha256": "e79a574b3434e5c26adac0bd68b4b097ffeff978b5ccc464652eb0989c6fe7ad"
+        },
+        {
+          "case_id": "EN-OTH-04",
+          "expected": "other",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "other",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "other",
+          "source_sha256": "9858a64d9f23497f7955587b14a354e42f8a69a16d95f36c0d1deca5443b5f82"
+        },
+        {
+          "case_id": "EN-OTH-05",
+          "expected": "other",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "other",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "other",
+          "source_sha256": "03b08fc90939cd1e354f380488810ba4204457fa80eb4365f36024a0b45c62c2"
+        },
+        {
+          "case_id": "EN-OTH-06",
+          "expected": "other",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "other",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "other",
+          "source_sha256": "81b42dfee5d5b5b963af355dc034cd67c45fbb60caaf1b8d2e93eb3048b49161"
+        },
+        {
+          "case_id": "EN-OTH-07",
+          "expected": "other",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "other",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "other",
+          "source_sha256": "f7aade386a31524c9b85ef22ea6c34929ebc54e4654a843ac844e6c24d1ef7ba"
+        },
+        {
+          "case_id": "EN-ADV-01",
+          "expected": "access",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "access",
+          "llm_status": "ok",
+          "rules_v1": "billing",
+          "rules_v2": "access",
+          "source_sha256": "d01aa6a99c47d5a7d8cc71fddc3e1c43ff56d07497192145be7671ccdebbb87a"
+        },
+        {
+          "case_id": "EN-ADV-02",
+          "expected": "upload",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "upload",
+          "llm_status": "ok",
+          "rules_v1": "upload",
+          "rules_v2": "upload",
+          "source_sha256": "e6a390db35799ea1f8572ff7ab4c377eb3d798a9669558118d554110aac4c572"
+        },
+        {
+          "case_id": "EN-ADV-03",
+          "expected": "access",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "access",
+          "llm_status": "ok",
+          "rules_v1": "access",
+          "rules_v2": "access",
+          "source_sha256": "af4c50678ec717d6fe80386c35763b2dee500fe95b61649c8a5d14b02fba5d58"
+        },
+        {
+          "case_id": "EN-ADV-04",
+          "expected": "other",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "access",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "other",
+          "source_sha256": "9f384f85d74ab196530cdfa4af99ab1d0a61725d332f34e67dffbda74e6e7287"
+        },
+        {
+          "case_id": "EN-ADV-05",
+          "expected": "upload",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "upload",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "upload",
+          "source_sha256": "9070b02bba65958191528195e85bd19b5fd49565e79a1dec97853791db8d5621"
+        },
+        {
+          "case_id": "TH-ACC-01",
+          "expected": "access",
+          "job_status": "SUCCEEDED",
+          "language": "th",
+          "llm_category": "access",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "access",
+          "source_sha256": "e0c9de2d4b5b77d79b41f723e9cfff27061cde32a48c1b6f58e0775b986f1bfc"
+        },
+        {
+          "case_id": "TH-ACC-02",
+          "expected": "access",
+          "job_status": "SUCCEEDED",
+          "language": "th",
+          "llm_category": "access",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "access",
+          "source_sha256": "ca6bd5042ffde6c8b3f764ecdd17c02b3132cef91d634f1bf4090f24bd3a6a30"
+        },
+        {
+          "case_id": "TH-ACC-03",
+          "expected": "access",
+          "job_status": "SUCCEEDED",
+          "language": "th",
+          "llm_category": "access",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "access",
+          "source_sha256": "35f0535ff6ac599a3dc62a2b197d10450518b02c851f0d4e0c8c12c019993d90"
+        },
+        {
+          "case_id": "TH-ACC-04",
+          "expected": "access",
+          "job_status": "SUCCEEDED",
+          "language": "th",
+          "llm_category": "access",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "access",
+          "source_sha256": "a66d62dee0951ffa10e87d4b377c5060635e193e16a46f8b9702f1eb8abf9983"
+        },
+        {
+          "case_id": "TH-ACC-05",
+          "expected": "access",
+          "job_status": "SUCCEEDED",
+          "language": "th",
+          "llm_category": "access",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "access",
+          "source_sha256": "18c697c930e12783dafc9d6d123142082fd9fa06ee4889584f559c17e17cd060"
+        },
+        {
+          "case_id": "TH-ACC-06",
+          "expected": "access",
+          "job_status": "SUCCEEDED",
+          "language": "th",
+          "llm_category": "access",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "access",
+          "source_sha256": "ccd8ee3d4e715c708f7d33abaac5d6a6d31e5b7e57f1e163c21e1a0ae5df23f3"
+        },
+        {
+          "case_id": "TH-UPL-01",
+          "expected": "upload",
+          "job_status": "SUCCEEDED",
+          "language": "th",
+          "llm_category": "upload",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "upload",
+          "source_sha256": "e64360b9d540479769df1b8d9fb4b311d62f7896cfcda9612237540cf5209483"
+        },
+        {
+          "case_id": "TH-UPL-02",
+          "expected": "upload",
+          "job_status": "SUCCEEDED",
+          "language": "th",
+          "llm_category": "upload",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "upload",
+          "source_sha256": "5fae37e14c473d9020d20832e84215d42f7aeb38a8c3731186b0f1fd566c028d"
+        },
+        {
+          "case_id": "TH-UPL-03",
+          "expected": "upload",
+          "job_status": "SUCCEEDED",
+          "language": "th",
+          "llm_category": "upload",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "upload",
+          "source_sha256": "4889f3fd4ebc29861a9f403ca7525f3329ed2536574f0fe2c7c9cfa00877221d"
+        },
+        {
+          "case_id": "TH-UPL-04",
+          "expected": "upload",
+          "job_status": "SUCCEEDED",
+          "language": "th",
+          "llm_category": "upload",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "upload",
+          "source_sha256": "7670a85ca45575bcac02628e4780e8e0fe9618ce96629af309a88c093922d5f4"
+        },
+        {
+          "case_id": "TH-UPL-05",
+          "expected": "upload",
+          "job_status": "SUCCEEDED",
+          "language": "th",
+          "llm_category": "upload",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "upload",
+          "source_sha256": "87cdcbde4176e854ce42268c55e8b6d12a4007dc954e458526751d31ab2c305d"
+        },
+        {
+          "case_id": "TH-UPL-06",
+          "expected": "upload",
+          "job_status": "SUCCEEDED",
+          "language": "th",
+          "llm_category": "upload",
+          "llm_status": "ok",
+          "rules_v1": "upload",
+          "rules_v2": "upload",
+          "source_sha256": "c99ce744c5c14151c44e9876528e0ccb3328b88087601eb6d3fbdade75e51d42"
+        },
+        {
+          "case_id": "TH-BIL-01",
+          "expected": "billing",
+          "job_status": "SUCCEEDED",
+          "language": "th",
+          "llm_category": "billing",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "billing",
+          "source_sha256": "04d30d92f23fba0b9fc7fbfec05acd0527a21e07b4f437e09794620d8bf954b1"
+        },
+        {
+          "case_id": "TH-BIL-02",
+          "expected": "billing",
+          "job_status": "SUCCEEDED",
+          "language": "th",
+          "llm_category": "billing",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "billing",
+          "source_sha256": "ad61b1a13a69ee63ee41562e88bb49dcf3e28c5d694ad1c4b5ab497effa13ff2"
+        },
+        {
+          "case_id": "TH-BIL-03",
+          "expected": "billing",
+          "job_status": "SUCCEEDED",
+          "language": "th",
+          "llm_category": "billing",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "billing",
+          "source_sha256": "6f12dd6071f6e087400c2ad0db4b4043a0e9abcf953870579bfb7a0150b79c67"
+        },
+        {
+          "case_id": "TH-BIL-04",
+          "expected": "billing",
+          "job_status": "SUCCEEDED",
+          "language": "th",
+          "llm_category": "billing",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "billing",
+          "source_sha256": "53b1591a1401f63ee8c22c066f3660ef564aced1c13300824ceeede93988cc29"
+        },
+        {
+          "case_id": "TH-BIL-05",
+          "expected": "billing",
+          "job_status": "SUCCEEDED",
+          "language": "th",
+          "llm_category": "billing",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "billing",
+          "source_sha256": "eea58582708c0d51c33d4ca0fb78af598db089aa929f7b63f3a3695f4e50b50e"
+        },
+        {
+          "case_id": "TH-BIL-06",
+          "expected": "billing",
+          "job_status": "SUCCEEDED",
+          "language": "th",
+          "llm_category": "billing",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "billing",
+          "source_sha256": "ceb0e51c46650d475bf1d04e9e7fed3d16f8d2bcea5f821cc512c36bed1eb6af"
+        },
+        {
+          "case_id": "TH-BIL-07",
+          "expected": "billing",
+          "job_status": "SUCCEEDED",
+          "language": "th",
+          "llm_category": "billing",
+          "llm_status": "ok",
+          "rules_v1": "billing",
+          "rules_v2": "billing",
+          "source_sha256": "32aedbe7092e07f8505b9f582c09cce3fcc7c6dd91b9a0cb0ca330f217fdd688"
+        },
+        {
+          "case_id": "TH-OTH-01",
+          "expected": "other",
+          "job_status": "SUCCEEDED",
+          "language": "th",
+          "llm_category": "other",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "other",
+          "source_sha256": "f1931786d22550eceb6f5c6a4245a63784d81382330e0e16add3113c5bd3184d"
+        },
+        {
+          "case_id": "TH-OTH-02",
+          "expected": "other",
+          "job_status": "SUCCEEDED",
+          "language": "th",
+          "llm_category": "other",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "other",
+          "source_sha256": "d9fc552bb8d0e5fbb1653c18e7c914084719fcd201540f74c762c88e3275a398"
+        },
+        {
+          "case_id": "TH-OTH-03",
+          "expected": "other",
+          "job_status": "SUCCEEDED",
+          "language": "th",
+          "llm_category": "other",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "other",
+          "source_sha256": "70488132cb25a378c4336b615048455c5e1b165bbb97f88f7d7cd0b8363309bc"
+        },
+        {
+          "case_id": "TH-OTH-04",
+          "expected": "other",
+          "job_status": "SUCCEEDED",
+          "language": "th",
+          "llm_category": "other",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "other",
+          "source_sha256": "7671c8f4f08fc0f5b22d4a431cf648894b4495e307d7e97f09979299cdea70fa"
+        },
+        {
+          "case_id": "TH-OTH-05",
+          "expected": "other",
+          "job_status": "SUCCEEDED",
+          "language": "th",
+          "llm_category": "other",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "other",
+          "source_sha256": "1b8b998daed6caeb653cc81e8c92cadf89342ff49b02ba7b4c3552d6a8cc3133"
+        },
+        {
+          "case_id": "TH-ADV-01",
+          "expected": "access",
+          "job_status": "SUCCEEDED",
+          "language": "th",
+          "llm_category": "access",
+          "llm_status": "ok",
+          "rules_v1": "billing",
+          "rules_v2": "access",
+          "source_sha256": "db80b191bdfef8fc63d5f15ed1e08b96e27c111ca5d75bd304a5c4efc1087457"
+        },
+        {
+          "case_id": "TH-ADV-02",
+          "expected": "upload",
+          "job_status": "SUCCEEDED",
+          "language": "th",
+          "llm_category": "upload",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "upload",
+          "source_sha256": "c98c081fbedac77efff8244a6d647d61868cf93ebd7a24fa349cb07570b6b087"
+        }
+      ],
+      "changed_cases": [
+        "EN-ACC-03",
+        "EN-ACC-04",
+        "EN-ACC-06",
+        "EN-ACC-08",
+        "EN-UPL-03",
+        "EN-UPL-05",
+        "EN-UPL-06",
+        "EN-BIL-01",
+        "EN-BIL-04",
+        "EN-BIL-05",
+        "EN-BIL-07",
+        "EN-ADV-01",
+        "EN-ADV-05",
+        "TH-ACC-01",
+        "TH-ACC-02",
+        "TH-ACC-03",
+        "TH-ACC-04",
+        "TH-ACC-05",
+        "TH-ACC-06",
+        "TH-UPL-01",
+        "TH-UPL-02",
+        "TH-UPL-03",
+        "TH-UPL-04",
+        "TH-UPL-05",
+        "TH-BIL-01",
+        "TH-BIL-02",
+        "TH-BIL-03",
+        "TH-BIL-04",
+        "TH-BIL-05",
+        "TH-BIL-06",
+        "TH-ADV-01",
+        "TH-ADV-02"
+      ],
+      "improvements": [
+        "EN-ACC-03",
+        "EN-ACC-04",
+        "EN-ACC-06",
+        "EN-ACC-08",
+        "EN-UPL-03",
+        "EN-UPL-05",
+        "EN-UPL-06",
+        "EN-BIL-01",
+        "EN-BIL-04",
+        "EN-BIL-05",
+        "EN-BIL-07",
+        "EN-ADV-01",
+        "EN-ADV-05",
+        "TH-ACC-01",
+        "TH-ACC-02",
+        "TH-ACC-03",
+        "TH-ACC-04",
+        "TH-ACC-05",
+        "TH-ACC-06",
+        "TH-UPL-01",
+        "TH-UPL-02",
+        "TH-UPL-03",
+        "TH-UPL-04",
+        "TH-UPL-05",
+        "TH-BIL-01",
+        "TH-BIL-02",
+        "TH-BIL-03",
+        "TH-BIL-04",
+        "TH-BIL-05",
+        "TH-BIL-06",
+        "TH-ADV-01",
+        "TH-ADV-02"
+      ],
+      "provenance": {
+        "duration_s": 64.95,
+        "generated_at": "2026-11-10T19:56:42+00:00",
+        "git_sha": "efb937253193b3be9618721d0586868732c7f6d9",
+        "golden": {
+          "cases": 61,
+          "label_scope": "Synthetic support cases written and labelled by the developer to exercise the pipeline. Not real customer data and not independent ground truth.",
+          "name": "case_triage_synthetic_v1",
+          "sha256": "ec966c44a80c59f841d94287e1a1dc5d4d0ddc16ee65e4e7ca0d0e7afd890856"
+        },
+        "llm": {
+          "base_url": null,
+          "effort": null,
+          "max_tokens": 2048,
+          "model": "typhoon-v2.5-30b-a3b-instruct",
+          "provider": "typhoon",
+          "request_timeout_s": 30.0
+        },
+        "min_interval_s": 1.0,
+        "prompt": {
+          "id": "triage_classify_v1",
+          "sha256": "5cb3b35cb3bcc16ae45cb8275ee0111b71d2e57fe3fe1db4059aaa79dca2a0ec"
+        },
+        "python": "3.12.16",
+        "rules": {
+          "version": "keywords-v2:50f64599c8980562ae81e60bcd9f62cdd8e836ab8eb533cfff631e6ed5358d3a"
+        }
+      },
+      "regressions": [],
+      "rules_v1": {
+        "metrics": {
+          "both_wrong": [],
+          "by_language": {
+            "en": {
+              "denominator": 35,
+              "numerator": 22,
+              "rate": 0.6286
+            },
+            "th": {
+              "denominator": 26,
+              "numerator": 7,
+              "rate": 0.2692
+            }
+          },
+          "cases": 61,
+          "elevated_review": {
+            "denominator": 61,
+            "numerator": 33,
+            "rate": 0.541
+          },
+          "jobs_completed": {
+            "denominator": 61,
+            "numerator": 61,
+            "rate": 1.0
+          },
+          "llm_answered": {
+            "denominator": 61,
+            "numerator": 61,
+            "rate": 1.0
+          },
+          "llm_correct": {
+            "denominator": 61,
+            "numerator": 60,
+            "rate": 0.9836
+          },
+          "rule_wrong_ai_unavailable": [],
+          "rules_correct": {
+            "denominator": 61,
+            "numerator": 29,
+            "rate": 0.4754
+          },
+          "rules_errors_flagged": {
+            "denominator": 32,
+            "numerator": 32,
+            "rate": 1.0
+          }
+        },
+        "source_sha256": "fc424eed379946f576c6f4b0e19afa7ae8b591eb2c4680465909c73348f8a80f",
+        "version": "keywords-v1"
+      },
+      "rules_v2": {
+        "metrics": {
+          "both_wrong": [],
+          "by_language": {
+            "en": {
+              "denominator": 35,
+              "numerator": 35,
+              "rate": 1.0
+            },
+            "th": {
+              "denominator": 26,
+              "numerator": 26,
+              "rate": 1.0
+            }
+          },
+          "cases": 61,
+          "elevated_review": {
+            "denominator": 61,
+            "numerator": 1,
+            "rate": 0.0164
+          },
+          "jobs_completed": {
+            "denominator": 61,
+            "numerator": 61,
+            "rate": 1.0
+          },
+          "llm_answered": {
+            "denominator": 61,
+            "numerator": 61,
+            "rate": 1.0
+          },
+          "llm_correct": {
+            "denominator": 61,
+            "numerator": 60,
+            "rate": 0.9836
+          },
+          "rule_wrong_ai_unavailable": [],
+          "rules_correct": {
+            "denominator": 61,
+            "numerator": 61,
+            "rate": 1.0
+          },
+          "rules_errors_flagged": {
+            "denominator": 0,
+            "numerator": 0,
+            "rate": null
+          }
+        },
+        "version": "keywords-v2:50f64599c8980562ae81e60bcd9f62cdd8e836ab8eb533cfff631e6ed5358d3a"
+      }
+    },
+    {
+      "cases": [
+        {
+          "case_id": "SYN-RUL-001",
+          "expected": "access",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "access",
+          "llm_status": "ok",
+          "rules_v1": "access",
+          "rules_v2": "access",
+          "source_sha256": "c699f5c2a489bc646be463e5dd6df2230949b98f68409cfc406ea87bd6615de5"
+        },
+        {
+          "case_id": "SYN-RUL-002",
+          "expected": "upload",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "upload",
+          "llm_status": "ok",
+          "rules_v1": "upload",
+          "rules_v2": "upload",
+          "source_sha256": "68014074ce4da22c3cbcc76cb8797ba53b29273eab65b8836975bfae1f842b7c"
+        },
+        {
+          "case_id": "SYN-RUL-003",
+          "expected": "billing",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "billing",
+          "llm_status": "ok",
+          "rules_v1": "billing",
+          "rules_v2": "billing",
+          "source_sha256": "299246eb0747001d7b86766d1fe72e56292fca47652139fe1e59f9c9dfd57369"
+        },
+        {
+          "case_id": "SYN-RUL-004",
+          "expected": "other",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "other",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "other",
+          "source_sha256": "81b42dfee5d5b5b963af355dc034cd67c45fbb60caaf1b8d2e93eb3048b49161"
+        },
+        {
+          "case_id": "SYN-RUL-005",
+          "expected": "access",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "access",
+          "llm_status": "ok",
+          "rules_v1": "access",
+          "rules_v2": "access",
+          "source_sha256": "ad8bebeafd0830ca8be5d8933e74e1ae01b4b125739bcb1ebe9cc0ceb44c1efe"
+        },
+        {
+          "case_id": "SYN-RUL-006",
+          "expected": "access",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "access",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "access",
+          "source_sha256": "0bc1fb4bf0eb72e00303f0b5721bfeebd5143c59128898dc687c896e4762c603"
+        },
+        {
+          "case_id": "SYN-RUL-007",
+          "expected": "access",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "access",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "access",
+          "source_sha256": "c655d57a0cca39c908fe1caaacb5599592bc49141911b5b94c377a88ebd15e62"
+        },
+        {
+          "case_id": "SYN-RUL-008",
+          "expected": "access",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "access",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "access",
+          "source_sha256": "530538526e9171d739a03fefa041e2acbbd8d63b1b035d577a732f1d4aa6d745"
+        },
+        {
+          "case_id": "SYN-RUL-009",
+          "expected": "access",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "access",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "other",
+          "source_sha256": "6d647afdcf89601b702efac094b90a1f7f9754b1b57988108b0d7458662b9c6f"
+        },
+        {
+          "case_id": "SYN-RUL-010",
+          "expected": "access",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "access",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "access",
+          "source_sha256": "a45401ea0d703b70cb7b096292967c88c27df849b516ff366242b0458c8aedf5"
+        },
+        {
+          "case_id": "SYN-RUL-011",
+          "expected": "access",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "access",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "access",
+          "source_sha256": "67094cd60ee86a2f74b6c8dce79feee68849eb5e59e3787b100d42375b9bd190"
+        },
+        {
+          "case_id": "SYN-RUL-012",
+          "expected": "access",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "access",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "access",
+          "source_sha256": "aa796d8250ec2901a1e65a704401e955203535bd2ac97cdb666932c7f8e098d8"
+        },
+        {
+          "case_id": "SYN-RUL-013",
+          "expected": "access",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "access",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "access",
+          "source_sha256": "3a567eda6257aa5efadb47bd539dfc507c142ae1d6758c92a6ea45bf5cf0f794"
+        },
+        {
+          "case_id": "SYN-RUL-014",
+          "expected": "access",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "access",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "access",
+          "source_sha256": "97d9e17f872572502a90dbd30aa85567977380c8327c5f1827b152248d729c6b"
+        },
+        {
+          "case_id": "SYN-RUL-015",
+          "expected": "access",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "access",
+          "llm_status": "ok",
+          "rules_v1": "access",
+          "rules_v2": "access",
+          "source_sha256": "6b85147f5c8d0b23c4faafad2f4c7e17d8b4ba979b93fb42c435a84631577734"
+        },
+        {
+          "case_id": "SYN-RUL-016",
+          "expected": "access",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "access",
+          "llm_status": "ok",
+          "rules_v1": "access",
+          "rules_v2": "access",
+          "source_sha256": "704516791724db57481ad91ad99d3034a519dacf4901328560192d5f9b38c990"
+        },
+        {
+          "case_id": "SYN-RUL-017",
+          "expected": "access",
+          "job_status": "SUCCEEDED",
+          "language": "th",
+          "llm_category": "access",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "access",
+          "source_sha256": "1aac34ca154da77064a52f467699cc34430bfe3b0ee6ddb1d238353de0596f02"
+        },
+        {
+          "case_id": "SYN-RUL-018",
+          "expected": "access",
+          "job_status": "SUCCEEDED",
+          "language": "th",
+          "llm_category": "access",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "access",
+          "source_sha256": "5bfcb3570bd96751efa416ef8875340be3840206516ae18528de0d130d08d7ac"
+        },
+        {
+          "case_id": "SYN-RUL-019",
+          "expected": "access",
+          "job_status": "SUCCEEDED",
+          "language": "th",
+          "llm_category": "access",
+          "llm_status": "ok",
+          "rules_v1": "access",
+          "rules_v2": "access",
+          "source_sha256": "c11a3b2c8c4ef1b823ca6b636b9ce4efba4afd9fac39d9821e8eacecae155369"
+        },
+        {
+          "case_id": "SYN-RUL-020",
+          "expected": "access",
+          "job_status": "SUCCEEDED",
+          "language": "th",
+          "llm_category": "access",
+          "llm_status": "ok",
+          "rules_v1": "access",
+          "rules_v2": "access",
+          "source_sha256": "db8e950520e46bd49cd787079fd319c300a96342ac3420b10a6deddd880d8c3b"
+        },
+        {
+          "case_id": "SYN-RUL-021",
+          "expected": "access",
+          "job_status": "SUCCEEDED",
+          "language": "th",
+          "llm_category": "access",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "access",
+          "source_sha256": "3e8a15654e49864da636699438d58c75d452525dd1e312243c74bb57a2564695"
+        },
+        {
+          "case_id": "SYN-RUL-022",
+          "expected": "upload",
+          "job_status": "SUCCEEDED",
+          "language": "th",
+          "llm_category": "upload",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "upload",
+          "source_sha256": "184057686b94c35340eff8a62fd93ecbbd135fe2f59684c700395b3053defce8"
+        },
+        {
+          "case_id": "SYN-RUL-023",
+          "expected": "upload",
+          "job_status": "SUCCEEDED",
+          "language": "th",
+          "llm_category": "upload",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "upload",
+          "source_sha256": "77b34a99b23bf91adf9a81894d47e270800c9cbeceb5f5e2ceb575eb9803c5ca"
+        },
+        {
+          "case_id": "SYN-RUL-024",
+          "expected": "upload",
+          "job_status": "SUCCEEDED",
+          "language": "th",
+          "llm_category": "upload",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "upload",
+          "source_sha256": "f3480d7fdfd6f0558169e1ca9c9936acdffc83e0e2c0b6ea3cea66e711fc6538"
+        },
+        {
+          "case_id": "SYN-RUL-025",
+          "expected": "upload",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "upload",
+          "llm_status": "ok",
+          "rules_v1": "upload",
+          "rules_v2": "upload",
+          "source_sha256": "5b88298d7a3d396cbc8cd93ebd09e3359d4684906a4255acacc8fb2b056a44c6"
+        },
+        {
+          "case_id": "SYN-RUL-026",
+          "expected": "upload",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "upload",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "upload",
+          "source_sha256": "0055ac6d2688a5b1dc126c71cd9d768350f4819d7214fca5af4b7316192f0e22"
+        },
+        {
+          "case_id": "SYN-RUL-027",
+          "expected": "billing",
+          "job_status": "SUCCEEDED",
+          "language": "th",
+          "llm_category": "billing",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "billing",
+          "source_sha256": "1d0f722497ce69b92d8c3df4ef40e2eed774cb01640bd80166eaf6a6ae117fa4"
+        },
+        {
+          "case_id": "SYN-RUL-028",
+          "expected": "billing",
+          "job_status": "SUCCEEDED",
+          "language": "th",
+          "llm_category": "billing",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "billing",
+          "source_sha256": "65d4862d5df59cf6e75bf52fa09a0517e1f8587acb8dbf196bedc0f1161d73cb"
+        },
+        {
+          "case_id": "SYN-RUL-029",
+          "expected": "billing",
+          "job_status": "SUCCEEDED",
+          "language": "th",
+          "llm_category": "billing",
+          "llm_status": "ok",
+          "rules_v1": "billing",
+          "rules_v2": "billing",
+          "source_sha256": "ba5c8c08de47ef7ec907145673a8e38935eb60ebf93dd25ed5935e3b04899fa9"
+        },
+        {
+          "case_id": "SYN-RUL-030",
+          "expected": "billing",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "billing",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "billing",
+          "source_sha256": "6bff7a183e572b38c72ab1c8e7c396e3af6ab76fdf8d9be127a31790effedc7c"
+        },
+        {
+          "case_id": "SYN-RUL-031",
+          "expected": "billing",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "billing",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "billing",
+          "source_sha256": "460b88aff74f2c1f98207a83053040f495c0ac1fdcd9c53d2718ce6ad5375494"
+        },
+        {
+          "case_id": "SYN-RUL-032",
+          "expected": "billing",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "billing",
+          "llm_status": "ok",
+          "rules_v1": "access",
+          "rules_v2": "access",
+          "source_sha256": "63e74c8637a8231ebe91aa56d098080dabf91d41a41f6137e11eaef34e96b969"
+        },
+        {
+          "case_id": "SYN-RUL-033",
+          "expected": "billing",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "billing",
+          "llm_status": "ok",
+          "rules_v1": "access",
+          "rules_v2": "access",
+          "source_sha256": "21995a3a338d0150cd86f50ab2530cbb5875c0cf3b4674699d8573d235f45430"
+        },
+        {
+          "case_id": "SYN-RUL-034",
+          "expected": "access",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "access",
+          "llm_status": "ok",
+          "rules_v1": "access",
+          "rules_v2": "access",
+          "source_sha256": "dae277899770cca8ccfe56631b1e4b47a3be3c30f58e564581847de732397227"
+        },
+        {
+          "case_id": "SYN-RUL-035",
+          "expected": "other",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "other",
+          "llm_status": "ok",
+          "rules_v1": "access",
+          "rules_v2": "other",
+          "source_sha256": "c397893640bf0dc0ea945e5416cb50d8fe93ccd664000d63937abeb862da5336"
+        },
+        {
+          "case_id": "SYN-RUL-036",
+          "expected": "billing",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "billing",
+          "llm_status": "ok",
+          "rules_v1": "access",
+          "rules_v2": "billing",
+          "source_sha256": "d5bf13b264ed4328ca10c4dff4a60fbb02fb82790a290a997438189945470d17"
+        },
+        {
+          "case_id": "SYN-RUL-037",
+          "expected": "access",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "access",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "access",
+          "source_sha256": "cd0dcdb52e08d8b06a5fddc541037a88a193810cb8896ecfb912b61e0c182de7"
+        },
+        {
+          "case_id": "SYN-RUL-038",
+          "expected": "access",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "access",
+          "llm_status": "ok",
+          "rules_v1": "access",
+          "rules_v2": "access",
+          "source_sha256": "e65baaf0dc7bbb0022c3b6ac4beb25abc34c323a5120484da236a625720f3aa5"
+        },
+        {
+          "case_id": "SYN-RUL-039",
+          "expected": "upload",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "upload",
+          "llm_status": "ok",
+          "rules_v1": "upload",
+          "rules_v2": "upload",
+          "source_sha256": "3003daa3eb2a2486144f3eab4346ef467612ac1889423622890f90aab06b1649"
+        },
+        {
+          "case_id": "SYN-RUL-040",
+          "expected": "upload",
+          "job_status": "SUCCEEDED",
+          "language": "th",
+          "llm_category": "upload",
+          "llm_status": "ok",
+          "rules_v1": "billing",
+          "rules_v2": "upload",
+          "source_sha256": "853c43b465b590d7124e128509127b4441e85a9096d41a9a7876f0810e3d9b13"
+        },
+        {
+          "case_id": "SYN-RUL-041",
+          "expected": "access",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "access",
+          "llm_status": "ok",
+          "rules_v1": "access",
+          "rules_v2": "access",
+          "source_sha256": "b9dd562fec88493b10879b1f2808fc2daed2f148ed217d1af2a992c4e477c3f1"
+        },
+        {
+          "case_id": "SYN-RUL-042",
+          "expected": "billing",
+          "job_status": "SUCCEEDED",
+          "language": "th",
+          "llm_category": "billing",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "billing",
+          "source_sha256": "e38a4368338a0fd94b3e463a2e0f42646cc2d49df15a4209925e8f1af79891d2"
+        },
+        {
+          "case_id": "SYN-RUL-043",
+          "expected": "access",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "access",
+          "llm_status": "ok",
+          "rules_v1": "access",
+          "rules_v2": "access",
+          "source_sha256": "d56531821de67c06d85753af1541c158b53dcd5bdc3b53b181a71f2dca699181"
+        },
+        {
+          "case_id": "CLINC150-test-0294",
+          "expected": "other",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "billing",
+          "llm_status": "ok",
+          "rules_v1": "billing",
+          "rules_v2": "billing",
+          "source_sha256": "a62ecf093abcbef21d98bf03c36cc4bf164c6121f899ad26e53089e34307016b"
+        },
+        {
+          "case_id": "CLINC150-test-0299",
+          "expected": "other",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "billing",
+          "llm_status": "ok",
+          "rules_v1": "billing",
+          "rules_v2": "billing",
+          "source_sha256": "b70426805765cac7e2f09d0e8e30e103f5b19a86bfc5d72b3e2eab36492f8dcb"
+        },
+        {
+          "case_id": "CLINC150-test-0380",
+          "expected": "other",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "billing",
+          "llm_status": "ok",
+          "rules_v1": "billing",
+          "rules_v2": "billing",
+          "source_sha256": "4c1ea4a272acfdfabe1bbacfa3e3c8413293878830ea9bb22957a2fb7e45968d"
+        },
+        {
+          "case_id": "CLINC150-test-0383",
+          "expected": "other",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "billing",
+          "llm_status": "ok",
+          "rules_v1": "billing",
+          "rules_v2": "billing",
+          "source_sha256": "40a2d7a2c41d3f326d62ea3ab3b5e389ca02a7f98570d00abddcbc3a193721c4"
+        },
+        {
+          "case_id": "CLINC150-test-0385",
+          "expected": "other",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "billing",
+          "llm_status": "ok",
+          "rules_v1": "billing",
+          "rules_v2": "billing",
+          "source_sha256": "bb3afb851c2449821c0846c9a3c1f97f56db72c6a5255205084bcf7156b7cff3"
+        },
+        {
+          "case_id": "CLINC150-test-1110",
+          "expected": "billing",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "billing",
+          "llm_status": "ok",
+          "rules_v1": "billing",
+          "rules_v2": "billing",
+          "source_sha256": "4516c44a04d7dabd208832dd81c8ee2d6d0d7ce3b5e85526f4ea816b88fbdfd5"
+        },
+        {
+          "case_id": "CLINC150-test-1111",
+          "expected": "billing",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "billing",
+          "llm_status": "ok",
+          "rules_v1": "billing",
+          "rules_v2": "billing",
+          "source_sha256": "fbb0e7263870c1c3964f1980e7e5f7f64cab97036c0761b1f518593b8aef93aa"
+        },
+        {
+          "case_id": "CLINC150-test-2320",
+          "expected": "billing",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "billing",
+          "llm_status": "ok",
+          "rules_v1": "billing",
+          "rules_v2": "billing",
+          "source_sha256": "870cd0a60576e4cd0888744d66bbdc86243ad638878e7ef0a51934d80d23b60b"
+        },
+        {
+          "case_id": "CLINC150-test-2329",
+          "expected": "billing",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "billing",
+          "llm_status": "ok",
+          "rules_v1": "billing",
+          "rules_v2": "billing",
+          "source_sha256": "bd472be7dc4bdb81e186eb6e0066170ee23ec4953d8a0602fa228c2b5d2b32da"
+        },
+        {
+          "case_id": "CLINC150-test-2337",
+          "expected": "billing",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "billing",
+          "llm_status": "ok",
+          "rules_v1": "billing",
+          "rules_v2": "billing",
+          "source_sha256": "34b202f117115f81ffc73ca7de4341021d9d2333ab2bb3ea5e71caafc48aa475"
+        },
+        {
+          "case_id": "CLINC150-test-3303",
+          "expected": "billing",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "billing",
+          "llm_status": "ok",
+          "rules_v1": "billing",
+          "rules_v2": "billing",
+          "source_sha256": "3e2cfd1f40effb5f7176858f193993795d5e6476706d8ad5ea03cd18c4daa5b2"
+        },
+        {
+          "case_id": "CLINC150-test-3306",
+          "expected": "billing",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "billing",
+          "llm_status": "ok",
+          "rules_v1": "billing",
+          "rules_v2": "billing",
+          "source_sha256": "c793476bf415ce25a641aafd253a2a847c8a582ace3736a1fc57058d7396ac2b"
+        },
+        {
+          "case_id": "CLINC150-test-3307",
+          "expected": "billing",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "billing",
+          "llm_status": "ok",
+          "rules_v1": "billing",
+          "rules_v2": "billing",
+          "source_sha256": "a0ba9919a8466ae837ac1b9f0fd743d99e266506d223ebbe8bd882e2d869f46e"
+        },
+        {
+          "case_id": "CLINC150-test-3308",
+          "expected": "billing",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "billing",
+          "llm_status": "ok",
+          "rules_v1": "billing",
+          "rules_v2": "billing",
+          "source_sha256": "6025e6d1b0e33112112a9bd96f82aca2df9e080ab6d2bf55b8a5027588453c1b"
+        },
+        {
+          "case_id": "CLINC150-test-3309",
+          "expected": "billing",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "billing",
+          "llm_status": "ok",
+          "rules_v1": "billing",
+          "rules_v2": "billing",
+          "source_sha256": "662dcb8f5f3f31630987a397896a5095a1218233a8230fa64f91bc4a79264571"
+        },
+        {
+          "case_id": "CLINC150-test-3328",
+          "expected": "billing",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "billing",
+          "llm_status": "ok",
+          "rules_v1": "billing",
+          "rules_v2": "billing",
+          "source_sha256": "0297e2d2da2e17067b2f493bfe3c3ac2f9e34ae4cb1ff95ec710d9f0f14efb3c"
+        },
+        {
+          "case_id": "CLINC150-test-3771",
+          "expected": "other",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "other",
+          "llm_status": "ok",
+          "rules_v1": "billing",
+          "rules_v2": "other",
+          "source_sha256": "90b13f0b2b81a7ae57aa916a7d9ac0adcae580208553409b13983e7b08741611"
+        },
+        {
+          "case_id": "CLINC150-test-3845",
+          "expected": "billing",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "billing",
+          "llm_status": "ok",
+          "rules_v1": "billing",
+          "rules_v2": "billing",
+          "source_sha256": "15b611c6fba8da6a48a04c5ecc97a47bdccc09df409de40c279dbae813f46643"
+        },
+        {
+          "case_id": "CLINC150-test-4378",
+          "expected": "other",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "billing",
+          "llm_status": "ok",
+          "rules_v1": "billing",
+          "rules_v2": "billing",
+          "source_sha256": "ea33c503f74a608bdfd2016b4114e55ae19565bf9ab8eee1321387c9782950b2"
+        },
+        {
+          "case_id": "CLINC150-oos_test-0121",
+          "expected": "other",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "access",
+          "llm_status": "ok",
+          "rules_v1": "access",
+          "rules_v2": "access",
+          "source_sha256": "eeac2d45b356a5c12829a7b745b483d8e24124e78a841d7d1d8f7dd3a6062232"
+        },
+        {
+          "case_id": "CLINC150-oos_test-0484",
+          "expected": "other",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "upload",
+          "llm_status": "ok",
+          "rules_v1": "upload",
+          "rules_v2": "upload",
+          "source_sha256": "86d4a8abe10b3181e76870a531348fcf0332000e8208e2dafa4a0bc5ad68bd7b"
+        },
+        {
+          "case_id": "CLINC150-test-2310",
+          "expected": "billing",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "billing",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "billing",
+          "source_sha256": "230a43ef40f869e9edbb482dd4457aa8ec2bdd0ee61513b11781d1d1e3fbd3e0"
+        },
+        {
+          "case_id": "CLINC150-test-2311",
+          "expected": "billing",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "billing",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "billing",
+          "source_sha256": "4ce4d4e1b17cc885491f00ffa7f22409ef89350ac88481d11505078c9f068e08"
+        },
+        {
+          "case_id": "CLINC150-test-2850",
+          "expected": "access",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "access",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "access",
+          "source_sha256": "66beb5179b4e49dcdca5c3a834513e77322dcd6b2e4b012e01d1a6589839af22"
+        },
+        {
+          "case_id": "CLINC150-test-2851",
+          "expected": "access",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "access",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "access",
+          "source_sha256": "2953e3c4ec4599a2e6966d9188d45d852736bb8a594e39c36fac5da3b9699fbc"
+        },
+        {
+          "case_id": "CLINC150-test-2910",
+          "expected": "access",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "access",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "access",
+          "source_sha256": "5fd7286f7157c929105159a2af7a176f9f17d498b9f84b3b48d36d98732d544d"
+        },
+        {
+          "case_id": "CLINC150-test-2911",
+          "expected": "access",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "access",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "access",
+          "source_sha256": "12dfea75a0f9749d83616a46559a70a65dbb80f011df1a11a7d8d2f9fddf875c"
+        },
+        {
+          "case_id": "CLINC150-test-3300",
+          "expected": "billing",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "billing",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "billing",
+          "source_sha256": "e6608e8fb15bd6ff9c6c9acb10c0133c14b38a1fcc7b0c11e49984b1c0f2d1dc"
+        },
+        {
+          "case_id": "CLINC150-test-3301",
+          "expected": "billing",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "billing",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "billing",
+          "source_sha256": "573ddd7c2577387a1a165dfe90ca53b5108617fb205be4a925765ba8e6c7d711"
+        },
+        {
+          "case_id": "CLINC150-test-3840",
+          "expected": "billing",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "billing",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "billing",
+          "source_sha256": "3b560a5c644a44014b42d8456759dbd8ff370242dd82451c1cbcd6ce1bc4a34f"
+        },
+        {
+          "case_id": "CLINC150-test-3841",
+          "expected": "billing",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "billing",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "billing",
+          "source_sha256": "7d4983a7bf2b2c6c6022d3839184bd4ce431f1f2b053e6f87f95cf93d08484bf"
+        },
+        {
+          "case_id": "CLINC150-test-4470",
+          "expected": "billing",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "billing",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "billing",
+          "source_sha256": "a78db452821f323f8e66eaba0e8183bf5119d36408e54d9b80686e8c1f99f72d"
+        },
+        {
+          "case_id": "CLINC150-test-4471",
+          "expected": "billing",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "billing",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "billing",
+          "source_sha256": "e255b820a2a854e86df77bc20c43782cec862fb90f4d4f9d748575939d757306"
+        },
+        {
+          "case_id": "CLINC150-oos_test-0000",
+          "expected": "other",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "other",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "other",
+          "source_sha256": "f7ba2714418e36864975db47e89925a12eb88059165940cded918de7999c1068"
+        },
+        {
+          "case_id": "CLINC150-oos_test-0001",
+          "expected": "other",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "other",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "other",
+          "source_sha256": "0282b35fd3e135d8fb606941ee39adc1cf8266dbaefdc9d8e429a49314948276"
+        },
+        {
+          "case_id": "CLINC150-oos_test-0002",
+          "expected": "other",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "other",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "other",
+          "source_sha256": "0901fd82fb4b96614ed8a6efec22f030e7957734792e98f9c3ebc3932a82e8b8"
+        },
+        {
+          "case_id": "CLINC150-oos_test-0003",
+          "expected": "other",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "other",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "other",
+          "source_sha256": "553ea29827b950572f64a809bb95d2d1ffe7745e4e3ff19a25d9e2817fc28601"
+        },
+        {
+          "case_id": "CLINC150-oos_test-0004",
+          "expected": "other",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "access",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "other",
+          "source_sha256": "ef340e0603cbfc104979c393169d1b7e4e524dd4d0dd2d9245592ba8d983b742"
+        },
+        {
+          "case_id": "CLINC150-oos_test-0005",
+          "expected": "other",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "other",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "other",
+          "source_sha256": "ee4df6c0800ee74618e0d5b079cddc01cc6c37f3a406278b26cb32d68c943e08"
+        },
+        {
+          "case_id": "BANKING77-test-0000",
+          "expected": "other",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "other",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "other",
+          "source_sha256": "57a5a4533e3e3cf2792c4d5b2efe5c003df50a3588a8505158a0f0c16da5313f"
+        },
+        {
+          "case_id": "BANKING77-test-0001",
+          "expected": "other",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "other",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "other",
+          "source_sha256": "81ccf0c11fdfd3275eb01f371abbf38920cbbad5851de604fd33cc3552c69cab"
+        },
+        {
+          "case_id": "BANKING77-test-0080",
+          "expected": "other",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "other",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "other",
+          "source_sha256": "07aeb9fab22f9a330e311ba8fb83128a89b921b69b4e32cbefe21c9afcf540d5"
+        },
+        {
+          "case_id": "BANKING77-test-0081",
+          "expected": "other",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "other",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "other",
+          "source_sha256": "a03a263b5814087dbd8033b581c9efd28014c9c18ee5940fd280f3b1cc652d77"
+        },
+        {
+          "case_id": "BANKING77-test-0160",
+          "expected": "billing",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "billing",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "billing",
+          "source_sha256": "527a01385efd0f890edcac895dbf47396320d66707f7be539a8c21d5d89915aa"
+        },
+        {
+          "case_id": "BANKING77-test-0161",
+          "expected": "billing",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "billing",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "billing",
+          "source_sha256": "4c5cbd1d6d2a655581ebb52740ca8ece74197591de62111917349a59b3eff84c"
+        },
+        {
+          "case_id": "BANKING77-test-0480",
+          "expected": "other",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "other",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "other",
+          "source_sha256": "18dbe4c7bac3d1876f15c5843f7a86fc8c8b3a79f2329a23b70690d437cd6343"
+        },
+        {
+          "case_id": "BANKING77-test-0481",
+          "expected": "other",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "access",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "other",
+          "source_sha256": "c0deb4e56903d4287e0facf9b8476219a91cc591e4a6aff00e1b9d7ed3a474c0"
+        },
+        {
+          "case_id": "BANKING77-test-0520",
+          "expected": "access",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "access",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "access",
+          "source_sha256": "cb8fd9731954cc585640fd877f143588ebcf1bcd968852017a0ce3962beff938"
+        },
+        {
+          "case_id": "BANKING77-test-0521",
+          "expected": "access",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "access",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "access",
+          "source_sha256": "ee7742ee5bd3e4abf9c143a6e0d8c454febe4acbb50a67dce98a22bef6662ed8"
+        },
+        {
+          "case_id": "BANKING77-test-0800",
+          "expected": "billing",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "billing",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "billing",
+          "source_sha256": "f1c7bac23b5dca0be76393c0fe162416040311d37a5d3e0b98142e3def6d7b90"
+        },
+        {
+          "case_id": "BANKING77-test-0801",
+          "expected": "billing",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "billing",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "billing",
+          "source_sha256": "4274bc367d25f686fe78566db0b714bdf0ead6d89a0988784fa2eeba06923c7d"
+        },
+        {
+          "case_id": "BANKING77-test-1200",
+          "expected": "access",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "access",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "access",
+          "source_sha256": "e87a1aa6f706d38572285784da7e310c6e229b56ae48ba77d2eabe4b0fde3e99"
+        },
+        {
+          "case_id": "BANKING77-test-1201",
+          "expected": "access",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "access",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "access",
+          "source_sha256": "33c331087db902a55eaa52b5793bd15d8ca40b2ac865fb54583c7866329eb470"
+        },
+        {
+          "case_id": "BANKING77-test-1440",
+          "expected": "other",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "other",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "other",
+          "source_sha256": "01d9a5bc59acbfb4b9692c6132644340eacd4bc58a946dd26b87dc3f18e430d6"
+        },
+        {
+          "case_id": "BANKING77-test-1441",
+          "expected": "other",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "other",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "other",
+          "source_sha256": "6b8d513943525bb33e16c70ced916c74bbc98177bd19d0fa4e1549df6d0d42c8"
+        },
+        {
+          "case_id": "BANKING77-test-1480",
+          "expected": "billing",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "billing",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "billing",
+          "source_sha256": "0ad54f03d1e2aec988ed6a1fec98597b5443308cc329eb309dd41e4d3fea34c0"
+        },
+        {
+          "case_id": "BANKING77-test-1481",
+          "expected": "billing",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "billing",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "billing",
+          "source_sha256": "cacd93434c334e74968810f591b3137e1aae0b4c28ff04d29dd8d8a656f6bb47"
+        },
+        {
+          "case_id": "BANKING77-test-1520",
+          "expected": "access",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "access",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "access",
+          "source_sha256": "0182174c7daf28cc2131f16e958f85c5ed1bca0ea6eac2dd7c5560cca7bb1770"
+        },
+        {
+          "case_id": "BANKING77-test-1521",
+          "expected": "access",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "access",
+          "llm_status": "ok",
+          "rules_v1": "access",
+          "rules_v2": "access",
+          "source_sha256": "23d4f62d7aca5576a5f7f283152ddbda309dca93b4f4caf2c672260ff5a0cd11"
+        },
+        {
+          "case_id": "BANKING77-test-1640",
+          "expected": "other",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "access",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "other",
+          "source_sha256": "52a9c178e533aac1de4064532a1263f97e03b1ac814392da5686bdba204c941a"
+        },
+        {
+          "case_id": "BANKING77-test-1641",
+          "expected": "other",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "access",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "other",
+          "source_sha256": "4c0d4a190cb4a4570592f46d378db13db6c0c24f2f8f8e3c5d066eeb52c1f6f0"
+        },
+        {
+          "case_id": "BANKING77-test-1680",
+          "expected": "billing",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "billing",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "billing",
+          "source_sha256": "3f8c6e37b74ea44914f28d9010cb908d0c5826e3d9de2ed555da03ff4c336f1a"
+        },
+        {
+          "case_id": "BANKING77-test-1681",
+          "expected": "billing",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "billing",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "billing",
+          "source_sha256": "a16ea274e53d5bf0ea83b295e5e11d660fb0971238b5a95aad25a5898555c967"
+        },
+        {
+          "case_id": "BANKING77-test-1760",
+          "expected": "billing",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "billing",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "billing",
+          "source_sha256": "77d105933341b06b3f3141483c93a09afa0bf35406254569c712fdf503b7b1f5"
+        },
+        {
+          "case_id": "BANKING77-test-1761",
+          "expected": "billing",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "billing",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "billing",
+          "source_sha256": "52a772cf2c277306c6c4c65c822e4336de24ef9f14f586a7d4a9af47bf3e0f7b"
+        },
+        {
+          "case_id": "BANKING77-test-1800",
+          "expected": "billing",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "billing",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "billing",
+          "source_sha256": "0a62524666331d0890a27d90e1c6f818ad69243491828a745d92009f331c8c9e"
+        },
+        {
+          "case_id": "BANKING77-test-1801",
+          "expected": "billing",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "billing",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "billing",
+          "source_sha256": "8002ee606f36ad757b9269fedb62b84d40121553f9b8ef250287c0990ae4626d"
+        },
+        {
+          "case_id": "BANKING77-test-1880",
+          "expected": "other",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "access",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "other",
+          "source_sha256": "82a60c10a124442ae508e70c1fbc562e8b472318c4787fb0846ec74a6683e97b"
+        },
+        {
+          "case_id": "BANKING77-test-1881",
+          "expected": "other",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "other",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "other",
+          "source_sha256": "32cffa1a76599974de11fccb7392bfd555246cf174543f49ef49e197def1fd3b"
+        },
+        {
+          "case_id": "BANKING77-test-1960",
+          "expected": "billing",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "billing",
+          "llm_status": "ok",
+          "rules_v1": "billing",
+          "rules_v2": "billing",
+          "source_sha256": "c5a4e1c5b01bfdb196014d3b1d24a8f111e0b23cfc555af1ac5854862abbb77d"
+        },
+        {
+          "case_id": "BANKING77-test-1961",
+          "expected": "billing",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "billing",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "billing",
+          "source_sha256": "8d960f0c39db346a7260ca622324c73a37af1eaea024e52b540d689a84979f58"
+        },
+        {
+          "case_id": "BANKING77-test-2120",
+          "expected": "access",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "access",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "access",
+          "source_sha256": "c28652dbd29c4a711b8b50412cc96c3df3444e2611161be43f38cd578644205b"
+        },
+        {
+          "case_id": "BANKING77-test-2121",
+          "expected": "access",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "access",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "access",
+          "source_sha256": "0f8900af960d7462dbb5f47ef831dbb31d2bb311ba210f56fdda6d2f39ffb617"
+        }
+      ],
+      "changed_cases": [
+        "SYN-RUL-006",
+        "SYN-RUL-007",
+        "SYN-RUL-008",
+        "SYN-RUL-010",
+        "SYN-RUL-011",
+        "SYN-RUL-012",
+        "SYN-RUL-013",
+        "SYN-RUL-014",
+        "SYN-RUL-017",
+        "SYN-RUL-018",
+        "SYN-RUL-021",
+        "SYN-RUL-022",
+        "SYN-RUL-023",
+        "SYN-RUL-024",
+        "SYN-RUL-026",
+        "SYN-RUL-027",
+        "SYN-RUL-028",
+        "SYN-RUL-030",
+        "SYN-RUL-031",
+        "SYN-RUL-035",
+        "SYN-RUL-036",
+        "SYN-RUL-037",
+        "SYN-RUL-040",
+        "SYN-RUL-042",
+        "CLINC150-test-3771",
+        "CLINC150-test-2310",
+        "CLINC150-test-2311",
+        "CLINC150-test-2850",
+        "CLINC150-test-2851",
+        "CLINC150-test-2910",
+        "CLINC150-test-2911",
+        "CLINC150-test-3300",
+        "CLINC150-test-3301",
+        "CLINC150-test-3840",
+        "CLINC150-test-3841",
+        "CLINC150-test-4470",
+        "CLINC150-test-4471",
+        "BANKING77-test-0160",
+        "BANKING77-test-0161",
+        "BANKING77-test-0520",
+        "BANKING77-test-0521",
+        "BANKING77-test-0800",
+        "BANKING77-test-0801",
+        "BANKING77-test-1200",
+        "BANKING77-test-1201",
+        "BANKING77-test-1480",
+        "BANKING77-test-1481",
+        "BANKING77-test-1520",
+        "BANKING77-test-1680",
+        "BANKING77-test-1681",
+        "BANKING77-test-1760",
+        "BANKING77-test-1761",
+        "BANKING77-test-1800",
+        "BANKING77-test-1801",
+        "BANKING77-test-1961",
+        "BANKING77-test-2120",
+        "BANKING77-test-2121"
+      ],
+      "improvements": [
+        "SYN-RUL-006",
+        "SYN-RUL-007",
+        "SYN-RUL-008",
+        "SYN-RUL-010",
+        "SYN-RUL-011",
+        "SYN-RUL-012",
+        "SYN-RUL-013",
+        "SYN-RUL-014",
+        "SYN-RUL-017",
+        "SYN-RUL-018",
+        "SYN-RUL-021",
+        "SYN-RUL-022",
+        "SYN-RUL-023",
+        "SYN-RUL-024",
+        "SYN-RUL-026",
+        "SYN-RUL-027",
+        "SYN-RUL-028",
+        "SYN-RUL-030",
+        "SYN-RUL-031",
+        "SYN-RUL-035",
+        "SYN-RUL-036",
+        "SYN-RUL-037",
+        "SYN-RUL-040",
+        "SYN-RUL-042",
+        "CLINC150-test-3771",
+        "CLINC150-test-2310",
+        "CLINC150-test-2311",
+        "CLINC150-test-2850",
+        "CLINC150-test-2851",
+        "CLINC150-test-2910",
+        "CLINC150-test-2911",
+        "CLINC150-test-3300",
+        "CLINC150-test-3301",
+        "CLINC150-test-3840",
+        "CLINC150-test-3841",
+        "CLINC150-test-4470",
+        "CLINC150-test-4471",
+        "BANKING77-test-0160",
+        "BANKING77-test-0161",
+        "BANKING77-test-0520",
+        "BANKING77-test-0521",
+        "BANKING77-test-0800",
+        "BANKING77-test-0801",
+        "BANKING77-test-1200",
+        "BANKING77-test-1201",
+        "BANKING77-test-1480",
+        "BANKING77-test-1481",
+        "BANKING77-test-1520",
+        "BANKING77-test-1680",
+        "BANKING77-test-1681",
+        "BANKING77-test-1760",
+        "BANKING77-test-1761",
+        "BANKING77-test-1800",
+        "BANKING77-test-1801",
+        "BANKING77-test-1961",
+        "BANKING77-test-2120",
+        "BANKING77-test-2121"
+      ],
+      "provenance": {
+        "duration_s": 201.39,
+        "generated_at": "2026-11-10T20:00:03+00:00",
+        "git_sha": "efb937253193b3be9618721d0586868732c7f6d9",
+        "golden": {
+          "cases": 116,
+          "label_scope": "Edge cases written and labelled by the developer, plus requests from CLINC150 (CC BY 3.0) and BANKING77 (CC BY 4.0) re-labelled into this project's categories by the developer (tests/robustness/NOTICE.md). Synthetic or crowdsourced text, no real customer data, and not independent ground truth.",
+          "name": "triage_edge_robustness_v1",
+          "sha256": "a6127ad36a8218154dba200aa77f970b88867336389c10afe9a844503d4ca307"
+        },
+        "llm": {
+          "base_url": null,
+          "effort": null,
+          "max_tokens": 2048,
+          "model": "typhoon-v2.5-30b-a3b-instruct",
+          "provider": "typhoon",
+          "request_timeout_s": 30.0
+        },
+        "min_interval_s": 1.0,
+        "prompt": {
+          "id": "triage_classify_v1",
+          "sha256": "5cb3b35cb3bcc16ae45cb8275ee0111b71d2e57fe3fe1db4059aaa79dca2a0ec"
+        },
+        "python": "3.12.16",
+        "rules": {
+          "version": "keywords-v2:50f64599c8980562ae81e60bcd9f62cdd8e836ab8eb533cfff631e6ed5358d3a"
+        }
+      },
+      "regressions": [],
+      "rules_v1": {
+        "metrics": {
+          "both_wrong": [
+            "CLINC150-test-0294",
+            "CLINC150-test-0299",
+            "CLINC150-test-0380",
+            "CLINC150-test-0383",
+            "CLINC150-test-0385",
+            "CLINC150-test-4378",
+            "CLINC150-oos_test-0121",
+            "CLINC150-oos_test-0484"
+          ],
+          "by_language": {
+            "en": {
+              "denominator": 103,
+              "numerator": 45,
+              "rate": 0.4369
+            },
+            "th": {
+              "denominator": 13,
+              "numerator": 3,
+              "rate": 0.2308
+            }
+          },
+          "cases": 116,
+          "elevated_review": {
+            "denominator": 116,
+            "numerator": 65,
+            "rate": 0.5603
+          },
+          "jobs_completed": {
+            "denominator": 116,
+            "numerator": 116,
+            "rate": 1.0
+          },
+          "llm_answered": {
+            "denominator": 116,
+            "numerator": 116,
+            "rate": 1.0
+          },
+          "llm_correct": {
+            "denominator": 116,
+            "numerator": 103,
+            "rate": 0.8879
+          },
+          "rule_wrong_ai_unavailable": [],
+          "rules_correct": {
+            "denominator": 116,
+            "numerator": 48,
+            "rate": 0.4138
+          },
+          "rules_errors_flagged": {
+            "denominator": 68,
+            "numerator": 60,
+            "rate": 0.8824
+          }
+        },
+        "source_sha256": "fc424eed379946f576c6f4b0e19afa7ae8b591eb2c4680465909c73348f8a80f",
+        "version": "keywords-v1"
+      },
+      "rules_v2": {
+        "metrics": {
+          "both_wrong": [
+            "CLINC150-test-0294",
+            "CLINC150-test-0299",
+            "CLINC150-test-0380",
+            "CLINC150-test-0383",
+            "CLINC150-test-0385",
+            "CLINC150-test-4378",
+            "CLINC150-oos_test-0121",
+            "CLINC150-oos_test-0484"
+          ],
+          "by_language": {
+            "en": {
+              "denominator": 103,
+              "numerator": 92,
+              "rate": 0.8932
+            },
+            "th": {
+              "denominator": 13,
+              "numerator": 13,
+              "rate": 1.0
+            }
+          },
+          "cases": 116,
+          "elevated_review": {
+            "denominator": 116,
+            "numerator": 8,
+            "rate": 0.069
+          },
+          "jobs_completed": {
+            "denominator": 116,
+            "numerator": 116,
+            "rate": 1.0
+          },
+          "llm_answered": {
+            "denominator": 116,
+            "numerator": 116,
+            "rate": 1.0
+          },
+          "llm_correct": {
+            "denominator": 116,
+            "numerator": 103,
+            "rate": 0.8879
+          },
+          "rule_wrong_ai_unavailable": [],
+          "rules_correct": {
+            "denominator": 116,
+            "numerator": 105,
+            "rate": 0.9052
+          },
+          "rules_errors_flagged": {
+            "denominator": 11,
+            "numerator": 3,
+            "rate": 0.2727
+          }
+        },
+        "version": "keywords-v2:50f64599c8980562ae81e60bcd9f62cdd8e836ab8eb533cfff631e6ed5358d3a"
+      }
+    },
+    {
+      "cases": [
+        {
+          "case_id": "HO-EN-ACC-01",
+          "expected": "access",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "access",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "access",
+          "source_sha256": "606ee0f011e62daec2f8c5296e72ccd172530e79a133b3bf586e77918f8d9fb6"
+        },
+        {
+          "case_id": "HO-EN-ACC-02",
+          "expected": "access",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "access",
+          "llm_status": "ok",
+          "rules_v1": "access",
+          "rules_v2": "access",
+          "source_sha256": "0d85c6a8f9c39b6666017fca60ade409e70a50dba0d7626227122275eb4f78a5"
+        },
+        {
+          "case_id": "HO-EN-ACC-03",
+          "expected": "access",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "access",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "other",
+          "source_sha256": "0b90b23c7916d15f7e758a4c730c8cc1c1b66521f11ac4f75ccbb3bc7f6ab569"
+        },
+        {
+          "case_id": "HO-EN-ACC-04",
+          "expected": "access",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "access",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "other",
+          "source_sha256": "1f6091dca4b704a1f3bb989fb2f3fc3294048dd408b3a4076205b5faee4a30cb"
+        },
+        {
+          "case_id": "HO-EN-ACC-05",
+          "expected": "access",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "access",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "other",
+          "source_sha256": "31c44ec86d2a352147f5eb17789e9182bfe8e2bfdc4fcb45f06b5febf100fd5d"
+        },
+        {
+          "case_id": "HO-EN-UPL-01",
+          "expected": "upload",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "upload",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "upload",
+          "source_sha256": "acf76916abb190cf449712201531989c063213c090f2d103d95049591d7e603b"
+        },
+        {
+          "case_id": "HO-EN-UPL-02",
+          "expected": "upload",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "upload",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "other",
+          "source_sha256": "151fa93150584dec982076bd7c3c7aa025de4e186e9b5518ec6b7365ace5bbcc"
+        },
+        {
+          "case_id": "HO-EN-UPL-03",
+          "expected": "upload",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "upload",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "other",
+          "source_sha256": "2ce0277cb76a5cd40b7b5fe3a2055b19010d63e0811bbe8caa479e476e26ba9c"
+        },
+        {
+          "case_id": "HO-EN-UPL-04",
+          "expected": "upload",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "upload",
+          "llm_status": "ok",
+          "rules_v1": "upload",
+          "rules_v2": "upload",
+          "source_sha256": "030e957cf0e346f96bb828f2491346bf5e071e3d4ee73c2356b7c5de5f0888de"
+        },
+        {
+          "case_id": "HO-EN-UPL-05",
+          "expected": "upload",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "upload",
+          "llm_status": "ok",
+          "rules_v1": "upload",
+          "rules_v2": "upload",
+          "source_sha256": "bc36036f225c652482487e9b4ac9e7d39af52d0d5db305391d1de446daf0948b"
+        },
+        {
+          "case_id": "HO-EN-BIL-01",
+          "expected": "billing",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "billing",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "other",
+          "source_sha256": "05cee7d8a78ddc73cb6bdc4e99b025386c7cb9cfbee9a440ee51536c2f52f229"
+        },
+        {
+          "case_id": "HO-EN-BIL-02",
+          "expected": "billing",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "billing",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "billing",
+          "source_sha256": "0ce3ae4d3e0cf97f9bb9c19d7747226b9b00f9f3da54b61eb7692329a8fd1cd1"
+        },
+        {
+          "case_id": "HO-EN-BIL-03",
+          "expected": "billing",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "billing",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "other",
+          "source_sha256": "7e5bb08ca0681d5273a88a6d45d168f02c44278ed4c4917d57582ffc8bc79158"
+        },
+        {
+          "case_id": "HO-EN-BIL-04",
+          "expected": "billing",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "billing",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "other",
+          "source_sha256": "3d6c9754335439071faf011f3418bdd44bc169bb360323f0561e1e487261f219"
+        },
+        {
+          "case_id": "HO-EN-BIL-05",
+          "expected": "billing",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "billing",
+          "llm_status": "ok",
+          "rules_v1": "billing",
+          "rules_v2": "billing",
+          "source_sha256": "8ab8491830ab4a4cce6a58cb33f21eaaf6157e07cf91060fa11f67d8b0b51537"
+        },
+        {
+          "case_id": "HO-EN-OTH-01",
+          "expected": "other",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "other",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "other",
+          "source_sha256": "4ef255eed979999d78b0729553c931e10172e31bf69ca230b3a9047a14ab1b45"
+        },
+        {
+          "case_id": "HO-EN-OTH-02",
+          "expected": "other",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "other",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "other",
+          "source_sha256": "3d70c42208fbe170a705c7dd13783ce4015cc322c613c422a3294fbe3ec0b243"
+        },
+        {
+          "case_id": "HO-EN-OTH-03",
+          "expected": "other",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "other",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "other",
+          "source_sha256": "71196090acf2784be2ed2d4e5dc6214e5a0102d3879313e55c34ef5c14d195c9"
+        },
+        {
+          "case_id": "HO-EN-OTH-04",
+          "expected": "other",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "other",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "other",
+          "source_sha256": "233d3cb0aa5e9cfa47d768b0f4c79b84483079ccdb8c768ff11dc00edbfd4078"
+        },
+        {
+          "case_id": "HO-EN-OTH-05",
+          "expected": "other",
+          "job_status": "SUCCEEDED",
+          "language": "en",
+          "llm_category": "other",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "other",
+          "source_sha256": "265556f351d8265965aa68248e7ef7b261105a1ac2edaf1905f49c82f0d0f4c3"
+        },
+        {
+          "case_id": "HO-TH-ACC-01",
+          "expected": "access",
+          "job_status": "SUCCEEDED",
+          "language": "th",
+          "llm_category": "access",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "access",
+          "source_sha256": "40861da20fcb3df109566ec2a6de5174f938f71c9c33c2503e9b545f09f7b0ff"
+        },
+        {
+          "case_id": "HO-TH-ACC-02",
+          "expected": "access",
+          "job_status": "SUCCEEDED",
+          "language": "th",
+          "llm_category": "access",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "access",
+          "source_sha256": "5c8990d275efd43bc813b50fe6e57daf3da7aa50def435d5d257d36fae0b8291"
+        },
+        {
+          "case_id": "HO-TH-ACC-03",
+          "expected": "access",
+          "job_status": "SUCCEEDED",
+          "language": "th",
+          "llm_category": "access",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "access",
+          "source_sha256": "d4da232e2598b83566b7cd5224dbfd5ebbce980c13cc73b805c4b9580f4f58e8"
+        },
+        {
+          "case_id": "HO-TH-ACC-04",
+          "expected": "access",
+          "job_status": "SUCCEEDED",
+          "language": "th",
+          "llm_category": "access",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "other",
+          "source_sha256": "0d18a9488feab83e75aabc7014696119d9486ea380009122584c3eb508a2a180"
+        },
+        {
+          "case_id": "HO-TH-ACC-05",
+          "expected": "access",
+          "job_status": "SUCCEEDED",
+          "language": "th",
+          "llm_category": "access",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "other",
+          "source_sha256": "40a5e44bd9f30535cb73b6b6668d9c28019a27e6b4a604de65e2a12cc2c4196f"
+        },
+        {
+          "case_id": "HO-TH-UPL-01",
+          "expected": "upload",
+          "job_status": "SUCCEEDED",
+          "language": "th",
+          "llm_category": "upload",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "access",
+          "source_sha256": "0480d2406c9f11657b442d578fd05bdb7edd85c3442a86a5a424567981c68fec"
+        },
+        {
+          "case_id": "HO-TH-UPL-02",
+          "expected": "upload",
+          "job_status": "SUCCEEDED",
+          "language": "th",
+          "llm_category": "upload",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "other",
+          "source_sha256": "5336c29bdc640d4c34c151002e7a494da627b3ddefa0aa1defa5097bb8c15e51"
+        },
+        {
+          "case_id": "HO-TH-UPL-03",
+          "expected": "upload",
+          "job_status": "SUCCEEDED",
+          "language": "th",
+          "llm_category": "upload",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "upload",
+          "source_sha256": "c1989c6434ece81fb9769ac0801ec1b6672fd8b5e280e5fb112a9f5dc66719e1"
+        },
+        {
+          "case_id": "HO-TH-UPL-04",
+          "expected": "upload",
+          "job_status": "SUCCEEDED",
+          "language": "th",
+          "llm_category": "upload",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "other",
+          "source_sha256": "fea2fa3e43313af386c6df279fc5e723b2787ce741fd69529b4a46234bb941f3"
+        },
+        {
+          "case_id": "HO-TH-UPL-05",
+          "expected": "upload",
+          "job_status": "SUCCEEDED",
+          "language": "th",
+          "llm_category": "upload",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "other",
+          "source_sha256": "b3d29ff94e3d96d1f418c27ff4874a2a44043e5d4b2721cfeb2c77f3e94706dc"
+        },
+        {
+          "case_id": "HO-TH-BIL-01",
+          "expected": "billing",
+          "job_status": "SUCCEEDED",
+          "language": "th",
+          "llm_category": "billing",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "other",
+          "source_sha256": "7cb146921ed76404660095ea1a7cfe2babd56e36dbbe6c1d8ea4fe3340693923"
+        },
+        {
+          "case_id": "HO-TH-BIL-02",
+          "expected": "billing",
+          "job_status": "SUCCEEDED",
+          "language": "th",
+          "llm_category": "billing",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "other",
+          "source_sha256": "995d6469d488ac93d14addfdde48484d7e3bb7213a095edb8e5e7f20c0677843"
+        },
+        {
+          "case_id": "HO-TH-BIL-03",
+          "expected": "billing",
+          "job_status": "SUCCEEDED",
+          "language": "th",
+          "llm_category": "billing",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "billing",
+          "source_sha256": "977065a5a4d35fb38ce1d22aa640cd9d9232854b640299b56efbeb7629471f03"
+        },
+        {
+          "case_id": "HO-TH-BIL-04",
+          "expected": "billing",
+          "job_status": "SUCCEEDED",
+          "language": "th",
+          "llm_category": "billing",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "other",
+          "source_sha256": "957aa18b83e6d0290285bef24f4ad13c799cb0c106aaad6d7099d47868169071"
+        },
+        {
+          "case_id": "HO-TH-BIL-05",
+          "expected": "billing",
+          "job_status": "SUCCEEDED",
+          "language": "th",
+          "llm_category": "billing",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "other",
+          "source_sha256": "9dcb92be6f52292502a050ef10b3727b06e83962ff7d1e57d315062b16e58b2a"
+        },
+        {
+          "case_id": "HO-TH-OTH-01",
+          "expected": "other",
+          "job_status": "SUCCEEDED",
+          "language": "th",
+          "llm_category": "other",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "other",
+          "source_sha256": "f7495d667435e6c0fe5932d62fb4f21870bb9a33bd46b026d0ece3a2a5064447"
+        },
+        {
+          "case_id": "HO-TH-OTH-02",
+          "expected": "other",
+          "job_status": "SUCCEEDED",
+          "language": "th",
+          "llm_category": "other",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "other",
+          "source_sha256": "db36bdff2ed0d5e5ca9db15252076dcf144e87888559f4774c8a6971bdfdf15c"
+        },
+        {
+          "case_id": "HO-TH-OTH-03",
+          "expected": "other",
+          "job_status": "SUCCEEDED",
+          "language": "th",
+          "llm_category": "other",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "other",
+          "source_sha256": "b35e025d17ae412b2783ccb67b1bdffa4ef3c9105758afd76c434b23b121cc65"
+        },
+        {
+          "case_id": "HO-TH-OTH-04",
+          "expected": "other",
+          "job_status": "SUCCEEDED",
+          "language": "th",
+          "llm_category": "other",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "other",
+          "source_sha256": "a85e399e6741597ecd2b44b4568ea0afc576748795d77a68136eab5252a3bd2a"
+        },
+        {
+          "case_id": "HO-TH-OTH-05",
+          "expected": "other",
+          "job_status": "SUCCEEDED",
+          "language": "th",
+          "llm_category": "other",
+          "llm_status": "ok",
+          "rules_v1": "other",
+          "rules_v2": "other",
+          "source_sha256": "56fca0f64a1d5c49395fafcc4880ddaa6f248c23ab1d95fbb10f522dc0a29679"
+        }
+      ],
+      "changed_cases": [
+        "HO-EN-ACC-01",
+        "HO-EN-UPL-01",
+        "HO-EN-BIL-02",
+        "HO-TH-ACC-01",
+        "HO-TH-ACC-02",
+        "HO-TH-ACC-03",
+        "HO-TH-UPL-01",
+        "HO-TH-UPL-03",
+        "HO-TH-BIL-03"
+      ],
+      "improvements": [
+        "HO-EN-ACC-01",
+        "HO-EN-UPL-01",
+        "HO-EN-BIL-02",
+        "HO-TH-ACC-01",
+        "HO-TH-ACC-02",
+        "HO-TH-ACC-03",
+        "HO-TH-UPL-03",
+        "HO-TH-BIL-03"
+      ],
+      "provenance": {
+        "duration_s": 70.13,
+        "generated_at": "2026-11-10T20:01:14+00:00",
+        "git_sha": "efb937253193b3be9618721d0586868732c7f6d9",
+        "golden": {
+          "cases": 40,
+          "label_scope": "Held-out synthetic support cases for rules v2 (effectiveness plan E2): written and labelled by the developer from the four category definitions, before the keyword list of rules v2 existed, and never used to choose or change a keyword. Not real customer data and not independent ground truth: the same developer wrote the cases, the labels and later the keyword list.",
+          "name": "case_triage_heldout_v1",
+          "sha256": "de34d76eac46c694b49c5739a867ecc624e9cf98b81e5a80cf4f63260c336ee8"
+        },
+        "llm": {
+          "base_url": null,
+          "effort": null,
+          "max_tokens": 2048,
+          "model": "typhoon-v2.5-30b-a3b-instruct",
+          "provider": "typhoon",
+          "request_timeout_s": 30.0
+        },
+        "min_interval_s": 1.0,
+        "prompt": {
+          "id": "triage_classify_v1",
+          "sha256": "5cb3b35cb3bcc16ae45cb8275ee0111b71d2e57fe3fe1db4059aaa79dca2a0ec"
+        },
+        "python": "3.12.16",
+        "rules": {
+          "version": "keywords-v2:50f64599c8980562ae81e60bcd9f62cdd8e836ab8eb533cfff631e6ed5358d3a"
+        }
+      },
+      "regressions": [],
+      "rules_v1": {
+        "metrics": {
+          "both_wrong": [],
+          "by_language": {
+            "en": {
+              "denominator": 20,
+              "numerator": 9,
+              "rate": 0.45
+            },
+            "th": {
+              "denominator": 20,
+              "numerator": 5,
+              "rate": 0.25
+            }
+          },
+          "cases": 40,
+          "elevated_review": {
+            "denominator": 40,
+            "numerator": 26,
+            "rate": 0.65
+          },
+          "jobs_completed": {
+            "denominator": 40,
+            "numerator": 40,
+            "rate": 1.0
+          },
+          "llm_answered": {
+            "denominator": 40,
+            "numerator": 40,
+            "rate": 1.0
+          },
+          "llm_correct": {
+            "denominator": 40,
+            "numerator": 40,
+            "rate": 1.0
+          },
+          "rule_wrong_ai_unavailable": [],
+          "rules_correct": {
+            "denominator": 40,
+            "numerator": 14,
+            "rate": 0.35
+          },
+          "rules_errors_flagged": {
+            "denominator": 26,
+            "numerator": 26,
+            "rate": 1.0
+          }
+        },
+        "source_sha256": "fc424eed379946f576c6f4b0e19afa7ae8b591eb2c4680465909c73348f8a80f",
+        "version": "keywords-v1"
+      },
+      "rules_v2": {
+        "metrics": {
+          "both_wrong": [],
+          "by_language": {
+            "en": {
+              "denominator": 20,
+              "numerator": 12,
+              "rate": 0.6
+            },
+            "th": {
+              "denominator": 20,
+              "numerator": 10,
+              "rate": 0.5
+            }
+          },
+          "cases": 40,
+          "elevated_review": {
+            "denominator": 40,
+            "numerator": 18,
+            "rate": 0.45
+          },
+          "jobs_completed": {
+            "denominator": 40,
+            "numerator": 40,
+            "rate": 1.0
+          },
+          "llm_answered": {
+            "denominator": 40,
+            "numerator": 40,
+            "rate": 1.0
+          },
+          "llm_correct": {
+            "denominator": 40,
+            "numerator": 40,
+            "rate": 1.0
+          },
+          "rule_wrong_ai_unavailable": [],
+          "rules_correct": {
+            "denominator": 40,
+            "numerator": 22,
+            "rate": 0.55
+          },
+          "rules_errors_flagged": {
+            "denominator": 18,
+            "numerator": 18,
+            "rate": 1.0
+          }
+        },
+        "version": "keywords-v2:50f64599c8980562ae81e60bcd9f62cdd8e836ab8eb533cfff631e6ed5358d3a"
+      }
+    }
+  ]
+}

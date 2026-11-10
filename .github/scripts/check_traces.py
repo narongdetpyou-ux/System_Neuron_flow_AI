@@ -23,7 +23,8 @@ PARENT = {"job case_triage.v2": "POST /v1/jobs", "queue wait": "job case_triage.
           "step classify_rules": "run", "step classify_llm": "run", "step compare": "run", "step prepare": "run",
           "chat mock-keyword-1": "step classify_llm"}
 # What the smoke test sent (examples/service_smoke_test.py) and must never come back out.
-PRIVATE = ["อัปโหลดไฟล์แนบไม่ได้ ค้างที่ 99%", "อัปโหลด", "SMOKE-TH-01", "SMOKE-2", "a different problem altogether"]
+PRIVATE = ["อัปโหลดไฟล์แนบไม่ได้ ค้างที่ 99%", "อัปโหลด", "SMOKE-TH-01", "SMOKE-2", "a different problem altogether",
+           "SMOKE-DISAGREE-01", "Please add dark mode for users in Billings."]
 
 
 def attributes(item):

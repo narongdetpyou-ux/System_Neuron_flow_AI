@@ -21,7 +21,7 @@ from unittest import mock
 from neuron_flow import __version__
 
 from app.api import ApiApp, make_server
-from app.domains.case_triage import build_shadow_workflow
+from app.domains.case_triage import build_shadow_workflow, rules
 from app.llm import LLMConfig, load_prompt
 from app.observability import Tracing, job_spans
 from app.observability import tracing as tracing_module
@@ -370,7 +370,7 @@ T0 = 1_762_160_000.0  # a Unix time in seconds, as the queue and Core store time
 
 def a_job(*, status="REVIEW_REQUIRED", claims=1, failure=None, ai=None, spec=True, started=T0 + 0.5,
           core_status="SUCCEEDED"):
-    steps = [{"id": "classify_rules", "agent": "triage.classify", "max_attempts": 1},
+    steps = [{"id": "classify_rules", "agent": "triage.classify_rules", "max_attempts": 1},
              {"id": "classify_llm", "agent": "triage.classify_llm", "max_attempts": 2,
               "params": {"llm": {"max_tokens": 2048}}},
              {"id": "compare", "agent": "triage.compare", "max_attempts": 2, "depends_on": ["classify_rules", "classify_llm"]}]
@@ -610,7 +610,7 @@ class TracedServiceTests(unittest.TestCase):
         versions = {name: attributes_of(items[0]).get("neuron_flow.agent.version")
                     for name, items in named.items() if name.startswith("step ")}
         self.assertEqual((versions["step classify_rules"], versions["step compare"], versions["step prepare"]),
-                         ("1", "shadow-1", "shadow-1"))
+                         (rules.rule_version(), "shadow-1", "shadow-1"))
         self.assertTrue(versions["step classify_llm"].startswith("llm=mock/mock-keyword-1;prompt="), versions)
         # Reading the job was a request of its own: its own trace, with the route template, not the path.
         reads = [item for spans in self.traces().values() for item in spans if item["name"] == "GET /v1/jobs/{job_id}"]

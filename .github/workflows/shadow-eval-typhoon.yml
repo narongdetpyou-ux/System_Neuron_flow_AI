@@ -3,7 +3,8 @@ name: Shadow eval with Typhoon (manual)
 # Typhoon's hosted API is free (a research showcase, rate-limited: about 200 requests a minute, 5 a second)
 # and collects usage data to improve its models, which is acceptable only because every case is synthetic.
 # Needs the repository secret TYPHOON_API_KEY (Settings -> Secrets and variables -> Actions).
-# One short request per case (61 cases), started at least 1 second apart.
+# Cases start at least 1 second apart; transient failures may retry. all_e2 measures
+# development (61), partly-development edges (116), and held-out (40) separately.
 on:
   workflow_dispatch:
     inputs:
@@ -16,11 +17,13 @@ on:
         default: ""
         required: false
       case_set:
-        description: "Which cases: synthetic_v1 (61 cases) or robustness_edge_v1 (116 edge cases, docs/benchmarking.md)"
+        description: "Case set, or all_e2 for the three-set rules comparison (217 cases)"
         type: choice
         options:
           - synthetic_v1
           - robustness_edge_v1
+          - heldout_v1
+          - all_e2
         default: synthetic_v1
 permissions:
   contents: read
@@ -52,14 +55,30 @@ jobs:
         run: |
           ARGS=()
           if [ -n "$LIMIT" ]; then ARGS+=(--limit "$LIMIT"); fi
-          # The robustness edge cases (roadmap 5.4) instead of the 61 synthetic cases.
-          if [ "$CASE_SET" = "robustness_edge_v1" ]; then ARGS+=(--golden tests/robustness/triage_edge_golden_v1.json); fi
-          python -m app.eval.triage_shadow_eval --min-interval-s 1 --summary "$GITHUB_STEP_SUMMARY" \
-            --out shadow-eval-typhoon.json "${ARGS[@]}"
+          SETS=("$CASE_SET")
+          if [ "$CASE_SET" = "all_e2" ]; then SETS=(synthetic_v1 robustness_edge_v1 heldout_v1); fi
+          COMPARE=()
+          for SET in "${SETS[@]}"; do
+            case "$SET" in
+              synthetic_v1) GOLDEN=app/eval/golden/case_triage_synthetic_v1.json ;;
+              robustness_edge_v1) GOLDEN=tests/robustness/triage_edge_golden_v1.json ;;
+              heldout_v1) GOLDEN=app/eval/golden/case_triage_heldout_v1.json ;;
+              *) echo "::error::Unknown case set"; exit 1 ;;
+            esac
+            REPORT="shadow-eval-typhoon-$SET.json"
+            python -m app.eval.triage_shadow_eval --golden "$GOLDEN" --min-interval-s 1 \
+              --summary "$GITHUB_STEP_SUMMARY" --out "$REPORT" "${ARGS[@]}"
+            COMPARE+=(--report "$REPORT")
+          done
+          # Replay v1 and v2 against the same saved model answers, without extra API calls.
+          python -m app.eval.rules_comparison "${COMPARE[@]}" \
+            --out rules-comparison-typhoon.json --summary "$GITHUB_STEP_SUMMARY"
       - name: Keep the scorecard
         if: always()
         uses: actions/upload-artifact@v7
         with:
           name: shadow-eval-typhoon
-          path: shadow-eval-typhoon.json
+          path: |
+            shadow-eval-typhoon-*.json
+            rules-comparison-typhoon.json
           if-no-files-found: ignore

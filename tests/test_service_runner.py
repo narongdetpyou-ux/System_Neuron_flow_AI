@@ -77,7 +77,8 @@ class QueueProcessingTests(RunnerTestCase):
                              ("PENDING_HUMAN_REVIEW", True, "shadow"))
             self.assertEqual(job["claims"], 1)
             self.assertIsNotNone(job["spec"])
-        self.assertEqual(jobs[1]["result"]["review"]["review_reasons"], ["rules_llm_disagree", "rules_no_keyword_match"])
+        self.assertEqual(jobs[1]["result"]["review"]["review_reasons"], [])
+        self.assertEqual(jobs[1]["result"]["review"]["suggested_queue"], "upload_review")
 
     def test_rules_only_workflow(self):
         job = self.admit("key-v1-0001", workflow_type="case_triage.v1")

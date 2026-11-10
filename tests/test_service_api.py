@@ -244,7 +244,8 @@ class ReadRouteTests(ApiTestCase):
         self.assertEqual(detail["status"], "REVIEW_REQUIRED")
         review = detail["result"]["review"]
         self.assertEqual((review["decision"], review["review_required"]), ("PENDING_HUMAN_REVIEW", True))
-        self.assertEqual((review["agreement"], review["review_priority"]), ("disagree", "elevated"))
+        self.assertEqual((review["agreement"], review["review_priority"]), ("agree", "normal"))
+        self.assertEqual(review["suggested_queue"], "upload_review")
         self.assertEqual(detail["result"]["ai"]["provider"], "mock")
         self.assertEqual(set(detail["result"]["receipt"]), {"sha256", "bytes"})
         self.assertNotIn(str(self.data_dir).encode(), response.body)
