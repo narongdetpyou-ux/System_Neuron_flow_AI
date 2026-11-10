@@ -115,7 +115,8 @@ forgets its cases when it sleeps or redeploys; a paid plan with a disk keeps the
   the edge cases and open datasets through every layer and compares every outcome with
   `tests/baselines/robustness_v1.json` (docs/benchmarking.md). Its summary, in Thai, is on the run page too.
 - *Actions → Service container* checks `render.yaml`, builds the same container as Render, submits cases
-  over HTTP, restarts it and checks that nothing was lost.
+  over HTTP, restarts it and checks that nothing was lost. It also fails when the image lacks a bytecode
+  cache for any of its code, and reports how long the first case after a start takes.
 - *Actions → Sentry smoke test* checks that error reporting reaches Sentry. It needs the repository secret
   `SENTRY_DSN`; without it, it skips with a notice.
 - *Actions → Secret scan* checks every commit of every branch for keys and tokens (gitleaks) on every push
@@ -137,7 +138,7 @@ forgets its cases when it sleeps or redeploys; a paid plan with a disk keeps the
 
 **Locally (Python 3.10+):**
 ```bash
-python -m unittest discover -s tests -v        # 318 tests
+python -m unittest discover -s tests -v        # 346 tests
 python -m examples.case_triage_demo            # v1 rules, one synthetic case
 python -m examples.case_triage_shadow_demo     # v2 shadow mode, three synthetic cases (offline mock AI)
 python -m app.eval.triage_shadow_eval          # scorecard on 61 synthetic cases
@@ -178,7 +179,7 @@ most 1 MiB. The agent `version` is frozen into each job, so an old job refuses t
 | [Effectiveness plan](docs/effectiveness_plan.md) | What "effective" means here, as eleven measures with today's values, and six planned work packages (E1 to E6) that move them: a faster first case, rules that read Thai, a real model behind the page, recorded feedback, the edge of `other`, more Thai study resources |
 | [Benchmarking plan](docs/benchmarking.md) | Three stages of testing beyond our own cases: the robustness gate (built), open benchmarks and attacks, privacy, load and live drift (planned); the datasets, their licences and the ones left out |
 | [Funding readiness pack](docs/funding/README.md) | Internal evidence register; not a submitted application |
-| [Evidence notes](docs/evidence/2026-11-03-render-operations.md) | Dated measurements; the first one covers Render operations (graceful stops, deploy filter, cold start), and [the first live AI runs](docs/evidence/2026-11-06-first-live-typhoon.md) are Typhoon's (2026-11-06); [the first robustness run](docs/evidence/2026-11-07-robustness-stage1.md) is from 2026-11-07, and [the local open model's first smoke run](docs/evidence/2026-11-08-first-local-model-smoke.md) and [first full run](docs/evidence/2026-11-08-first-local-model-full.md) from 2026-11-08; [the effectiveness baseline](docs/evidence/2026-11-10-effectiveness-baseline.md) (the 116 edge cases with Typhoon, and the first job after a start) is from 2026-11-10 |
+| [Evidence notes](docs/evidence/2026-11-03-render-operations.md) | Dated measurements; the first one covers Render operations (graceful stops, deploy filter, cold start), and [the first live AI runs](docs/evidence/2026-11-06-first-live-typhoon.md) are Typhoon's (2026-11-06); [the first robustness run](docs/evidence/2026-11-07-robustness-stage1.md) is from 2026-11-07, and [the local open model's first smoke run](docs/evidence/2026-11-08-first-local-model-smoke.md) and [first full run](docs/evidence/2026-11-08-first-local-model-full.md) from 2026-11-08; [the effectiveness baseline](docs/evidence/2026-11-10-effectiveness-baseline.md) (the 116 edge cases with Typhoon, and the first job after a start) is from 2026-11-10, and so is [the image's bytecode cache, before and after](docs/evidence/2026-11-10-e1-bytecode-cache.md) (measured in CI, not yet on Render) |
 
 ## Scope and limits
 

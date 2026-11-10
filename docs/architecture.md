@@ -204,16 +204,16 @@ app/api/                       routes.py (ApiApp), server.py (standard-library H
 app/web/                       index.html, app.css, app.js: the Thai web page (chat layout with a case / study-question switch, the study guide's layered answer, Flow and Trace, read-only settings)
 app/boot.py                    process 1 of the image: takes the data folder, drops root, becomes tini
 app/settings.py, app/serve.py  environment settings; the launcher (API + supervised Runner in one container)
-Dockerfile, render.yaml        the container and the Render Blueprint (railway.json kept for Railway)
+Dockerfile, render.yaml        the container (it compiles all its code once, so no process compiles at start) and the Render Blueprint (railway.json kept for Railway)
 examples/                      case_triage_demo, case_triage_shadow_demo, study_guide_demo, sentry_smoke_test, service_smoke_test
-tests/                         318 tests: core, triage v1/v2, AI gateway, Typhoon provider, local model provider and its model fetcher, masking, scorecards, eval gates, Sentry, tracing, API, queue, Runner, HTTP, metrics, study library, link check, study guide, web page, robustness benchmark, workflow permissions
+tests/                         346 tests: core, triage v1/v2, AI gateway, Typhoon provider, local model provider and its model fetcher, masking, scorecards, eval gates, Sentry, tracing, API, queue, Runner, HTTP, metrics, study library, link check, study guide, web page, robustness benchmark, workflow permissions, the image's bytecode cache
 tests/robustness/              the robustness benchmark, stage 1 (docs/benchmarking.md): synthetic_v1.json (270 edge cases), open_extract_v1.json
                                (BLNS, JSONTestSuite, CLINC150, BANKING77, pinned; NOTICE.md), bench.py, build_open_extract.py, triage_edge_golden_v1.json
 tests/baselines/               shadow_eval_mock.json, study_guide_eval_mock.json: every case's answer with the mock AI (the eval gates' baselines);
                                robustness_v1.json: every robustness item's outcome, failures included
 .github/workflows/             core-tests (with the robustness gate), service-container, tracing-check, secret-scan, sentry-smoke, study-links (weekly); manual: shadow-eval and study-guide-eval with Typhoon or Claude, local-model-eval (both scorecards on llama.cpp + Typhoon 2.5 4B on the runner; a 5-case smoke on PRs that change app/llm)
 .github/gitleaks.toml          secret scan rules (gitleaks defaults + Sentry DSN + Honeycomb keys); .github/.gitleaksignore: reviewed findings
-.github/scripts/               check_render_blueprint.py: render.yaml structure, build filter, Render's schema; check_traces.py; llm_probe.py (one fixed sentence before a live run); fetch_model.py (the local lane's model file, SHA-256 checked)
+.github/scripts/               check_render_blueprint.py: render.yaml structure, build filter, Render's schema; check_traces.py; check_image_bytecode.py (the image's bytecode cache, run inside the image); llm_probe.py (one fixed sentence before a live run); fetch_model.py (the local lane's model file, SHA-256 checked)
 .github/otel/                  collector.yaml: the OpenTelemetry Collector that the tracing check sends to
 planned: review ledger and artifact store
 ```
@@ -302,7 +302,11 @@ planned: review ledger and artifact store
   and whole jobs, on every push. It fails when any item's outcome changes from `tests/baselines/robustness_v1.json`,
   whose first run recorded 8 bugs (PR #41, [evidence](evidence/2026-11-07-robustness-stage1.md)), all fixed in
   5.5 (PR #42): a number too long to read or half of an emoji gets 400, never 500, and an AI answer holding
-  half of an emoji is cleaned so the case still reaches review.
+  half of an emoji is cleaned so the case still reaches review; a bytecode cache in the
+  image, required by the *Service container* job (effectiveness plan E1, PR #60): the image had none, so every
+  process compiled everything it imported at each start; in CI the first case after a start went from 0.989 s
+  to 0.256 s, and from 14.4 s to 3.1 s with the container held to 0.1 CPU
+  ([evidence](evidence/2026-11-10-e1-bytecode-cache.md)); the time on Render is measured after the merge.
 - Open: retention and backup/restore drills (1.4, needs a disk), API authentication hardening (2.1, 7.2).
 
 **P2 (do not build early):** multi-tenancy, distributed workers, Postgres, object storage, SLAs, a hosted

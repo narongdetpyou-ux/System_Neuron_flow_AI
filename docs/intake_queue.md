@@ -1,6 +1,6 @@
 # Intake API, job queue, Runner and web page (round 2, Milestone B)
 
-**Status:** built in PR #11 and tested offline (318 tests on 2026-11-08, including killing the Runner
+**Status:** built in PR #11 and tested offline (346 tests on 2026-11-10, including killing the Runner
 mid-step). The container build is checked on every push by *Actions → Service container*. Live on
 Render's free plan since 2026-11-01 (`render.yaml`). Railway was the first choice, but it has paused new
 sign-ups since 22 Oct 2026 after a security incident; `railway.json` stays in the repository for later.
@@ -164,6 +164,20 @@ container: app.boot (root) ─becomes─► tini ─► python -m app.serve
   ([evidence](evidence/2026-11-03-render-operations.md)). The *Service container* job runs the image with
   `--cap-drop KILL`, checks that process 1 runs as `neuron`, and fails unless both its restart and its stop
   are graceful.
+- The image carries a bytecode cache for everything it runs (effectiveness plan E1, PR #60). The base
+  image ships without one, and the service cannot write one (`PYTHONDONTWRITEBYTECODE=1`, and `neuron`
+  cannot write into the code folders), so before this every new process (the launcher, the Runner, each
+  worker) compiled every module it imported: 0 of the 141 modules the Runner imports had a cache file. The
+  `Dockerfile` compiles the standard library, the installed packages and then `neuron_flow/` and `app/`
+  with `--invalidation-mode unchecked-hash`, which does not depend on file times. The *Service container*
+  job runs `.github/scripts/check_image_bytecode.py` inside the image and fails when a file under `app/` or
+  `neuron_flow/` or in the installed packages (`sentry-sdk`, imported only when `SENTRY_DSN` is set, as on
+  Render), or a module the Runner imports, has no cache file or one that does not match its source.
+  It also reports, without gating, how long a process start and the first case after a start take, at the
+  runner's full speed and held to 0.1 CPU. In CI the first case went from 0.989 s to 0.256 s, and from
+  14.4 s to 3.1 s at 0.1 CPU; the time on Render is measured after the merge
+  ([evidence](evidence/2026-11-10-e1-bytecode-cache.md)). Keep the project's compile step after the last
+  step that changes a file under `neuron_flow/` or `app/`.
 - The API never opens the Core `Runtime` (ADR-001). A disk attaches to one instance only, and a service
   with a disk cannot scale out, so two Runners never share it. Without a disk (Render's free plan) each
   instance has its own throwaway data, so an overlapping deploy cannot share anything either.
@@ -359,6 +373,7 @@ text that cannot be stored (half of an emoji, a lone surrogate) is `invalid_inpu
 | A queued job can be withdrawn; a claim and a cancel never both win; a cancelled job never reaches Core (roadmap 1.3) | `test_service_api.CancelTests` (6 tests, including 150 claim-versus-cancel races) |
 | The access key never appears in responses, stored files or logs | `test_the_key_is_never_in_a_response_or_a_stored_file`, `test_the_service_starts_works_and_stops_cleanly`, CI container job |
 | The container runs without root, keeps data across a restart and stops cleanly | *Actions → Service container* (`examples/service_smoke_test.py`) |
+| The image carries an exact bytecode cache for all its code, so no process compiles at start (effectiveness plan E1) | *Actions → Service container* (`.github/scripts/check_image_bytecode.py --require`), `tests/test_image_bytecode.py` |
 
 The review-related P0 gates (one decision per version, unauthorised reviews denied, exactly one phase-B
 job) belong to Milestone C and are still open.
