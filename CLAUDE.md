@@ -466,9 +466,12 @@ Notes for cloud sessions (claude.ai/code):
 - **Next:** [docs/ROADMAP.md](docs/ROADMAP.md), the first item that is not ✅ and whose needs are met.
   - Waiting on the owner: 0.2 and 1.4 (D1, paid Render plan), 0.3 path B and 0.4 with Claude (D2, Claude
     API key); 0.4 with Typhoon is free but sends what is typed on the page to Typhoon, so it is the owner's
-    choice too; an open model behind the page needs a paid machine (D7); the GitHub e-mail setting that stops
-    new merges adding the personal address, and D8 about the 53 commits already public (ROADMAP 7.6); the
-    owner test of 2.4 on the live page after the merge.
+    choice too; an open model behind the page needs a paid machine (D7); the owner test of 2.4 on the live page
+    after the merge. D8 is decided (2026-11-10): the e-mail history stays as it is; do not propose a rewrite.
+  - E2 (PR #62, draft, branch `claude/brave-archimedes-9pupu7`): on 2026-11-10 the owner asked to finish it in a
+    7-minute time box; it was read and nothing more was built in that time. Its notes in that branch's CLAUDE.md
+    §8 are the plan; continue from them on a branch from `main` (PR #63 changed CLAUDE.md and the roadmap,
+    so merge `main` into that work first).
   - 5.8's first full run is recorded: the owner chooses its branch (not good enough, close or good enough;
     roadmap 5.8, "After the first full run", step 2), then follow it.
   - Buildable now without an owner decision: the rest of 5.5 (decide and fix the stage-1 gaps), 5.6 and 5.7,

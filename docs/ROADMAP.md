@@ -139,7 +139,7 @@ Marks: ✅ done · 🟡 built or partly checked (the status says what is left) �
 | 7.3 | Independent security review | ⬜ owner; a first independent review of the code and docs on 2026-11-10 found four problems, all answered ([evidence](evidence/2026-11-10-independent-review-response.md)); the threat model and a test of the running service are left | 7.1, 7.2 |
 | 7.4 | Public-release checklist | ✅ public since 2026-11-08 with its full history (D5): history audited, the 7 run logs that could print the old DSN deleted, read-only workflow tokens, README section for visitors and SECURITY.md (PR #44); the owner replaced the Sentry DSN, deleted the merged branches, switched the visibility and turned on secret scanning, push protection and private vulnerability reporting | — |
 | 7.5 | Consented pilot with real volunteers | ⬜ owner decision D4 | 7.1–7.3 |
-| 7.6 | The personal e-mail address in the public history | 🟡 new commits checked in CI (2026-11-10); the owner's GitHub setting and D8 are left | the owner's setting; D8 |
+| 7.6 | The personal e-mail address in the public history | ✅ new commits checked in CI (2026-11-10); D8 decided the same day: the history stays as it is | — |
 | E1 | First case after a start: seconds, not ten ([effectiveness plan](effectiveness_plan.md)) | 🟡 built in PR #60 (2026-11-10): the image had no bytecode cache (0 of the 141 modules the Runner imports) and now carries one, required by *Service container*; in CI the first case went from 0.989 s to 0.256 s, and from 14.4 s to 3.1 s with the container held to 0.1 CPU ([evidence note](evidence/2026-11-10-e1-bytecode-cache.md)); on Render it was 9.0 to 10.5 s before, and the time after is measured once the PR is merged | — |
 | E2 | Rules v2: an official suggestion that reads Thai (also decides the 27 rules gaps of 5.5) | ⬜ planned; today rules correct 29/61, Thai 7/26, edge set 48/116 | — |
 | E3 | A real model behind the online page | ⬜ owner decision (0.4, D7); today the page's mock finds the study topic for 2/48 | 0.1 |
@@ -1391,7 +1391,9 @@ workflow types.
      Support, but loses the issues, pull requests, Actions history and settings; the repository secrets
      (`TYPHOON_API_KEY`, `SENTRY_DSN`) must be added again and Render connected to the new repository.
 
-  Neither 2 nor 3 reaches copies made since 2026-11-08. **Recommendation:** the setting above now, then 1 unless
+  **Decided (2026-11-10): option 1.** The owner said to leave the history as it is. No rewrite is planned.
+
+  Neither 2 nor 3 reaches copies made since 2026-11-08. **Recommendation (before the decision):** the setting above now, then 1 unless
   the owner wants the address out of the public view; then 2, and 3 only if Support declines.
 - **Owner test (ไทย):**
   1. คลิกรูปโปรไฟล์ GitHub มุมขวาบน → Settings → Emails
@@ -1443,7 +1445,7 @@ in the table above. The baseline they start from is in
 | D4 | Real data | 7.5 | Synthetic only · consented pilot | Synthetic only |
 | D5 | Public repository and funding application | 7.4 | Stay private · publish an approved snapshot · publish this repository with its full history (chosen on 2026-11-08) | Public since 2026-11-08 |
 | D6 | The AI's role in triage | after 2.8 has enough reviewed cases | Keep shadow mode · AI suggestion first, still with human review | Shadow mode (ADR-010) |
-| D8 | The personal e-mail address in 53 public commits | — (the setting in 7.6 stops new ones now) | Keep the history · rewrite it and ask GitHub Support to purge the old commits · re-create the repository from the rewritten history (7.6) | Kept; new commits checked in CI |
+| D8 | The personal e-mail address in 53 public commits | — (the setting in 7.6 stops new ones now) | Keep the history (chosen by the owner on 2026-11-10) · rewrite it and ask GitHub Support to purge the old commits · re-create the repository from the rewritten history (7.6) | Decided: kept as it is; new commits checked in CI |
 | D7 | An open model behind the online page | 5.8 step 4 | Mock (today) · Typhoon through 0.4 (free; what is typed goes to SCB 10X) · the local model on a paid machine with room for it (prices checked at the time) | The mock on the page; the local model only in GitHub Actions, for measuring |
 
 ## Evidence track
