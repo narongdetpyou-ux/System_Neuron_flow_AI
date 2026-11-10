@@ -338,7 +338,9 @@ The order of the remaining work, with tasks, acceptance checks and owner decisio
   submit events. Before the repository went public on 2026-11-08, the owner replaced it with a new key and
   reported the old one disabled, and the 7 run logs that could print it were deleted (ROADMAP 7.4).
 - The only live-model results are Typhoon's first runs on the synthetic sets (2026-11-06, one or two runs
-  per scorecard, [evidence](evidence/2026-11-06-first-live-typhoon.md)). The cases and labels are the developer's,
+  per scorecard, [evidence](evidence/2026-11-06-first-live-typhoon.md)) and one run of the 116 robustness edge
+  cases (2026-11-10: AI correct 104/116, rules 48/116,
+  [evidence](evidence/2026-11-10-effectiveness-baseline.md)). The cases and labels are the developer's,
   so they are a first measurement, not accuracy, and they describe that model only. Claude has not been run
   (D2). The local open model (ADR-026) has had two smoke runs on the first 5 items of each set and one full
   run of both sets (2026-11-08, [smoke](evidence/2026-11-08-first-local-model-smoke.md),

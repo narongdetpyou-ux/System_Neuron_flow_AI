@@ -8,7 +8,7 @@ truth for status. Every "now" figure below was measured and is in an evidence no
 ## สรุปสำหรับเจ้าของโปรเจกต์
 
 **สรุปบรรทัดเดียว:** ระบบแข็งแรงแล้ว (ไม่มีข้อผิดพลาดค้างใน Sentry และคำมั่นที่โค้ดคุมไว้เป็นจริงทุกครั้งที่วัด)
-สิ่งที่ถ่วงประสิทธิผลตอนนี้ไม่ใช่ความเร็วของเครื่องหรือจำนวนงาน แต่เป็น 4 จุดที่วัดได้ และแผนนี้แก้ทีละจุดโดยวัดก่อนและหลังทุกครั้ง
+สิ่งที่ถ่วงประสิทธิผลตอนนี้ไม่ใช่กำลังของเครื่องหรือจำนวนงาน แต่เป็นจุดอ่อน 5 จุดที่วัดได้ แผนนี้แก้ทีละจุด และวัดก่อนกับหลังทุกครั้ง
 
 **"ประสิทธิผล" ในแผนนี้หมายถึงอะไร** คือ 5 อย่างที่วัดเป็นตัวเลขได้
 
@@ -25,7 +25,7 @@ truth for status. Every "now" figure below was measured and is in an evidence no
 | กฎคำสำคัญ (ข้อเสนอหลัก) จัดหมวดถูก | 29 จาก 61 เคส ภาษาไทยถูกแค่ 7 จาก 26 เคสยาก 48 จาก 116 | E2 |
 | เคสที่ถูกยกเป็น "ต้องดูก่อน" (เมื่อใช้ AI จริง) | 33 จาก 61 และ 64 จาก 116 คือเกินครึ่ง ป้ายจึงแทบไม่ช่วยจัดลำดับ | E2 |
 | AI จริง (Typhoon) จัดหมวดถูก | 60 จาก 61 และ 104 จาก 116 ภาษาไทยถูกทุกข้อ (26 จาก 26 และ 13 จาก 13) | รักษาไว้ |
-| จุดที่ AI จริงพลาด | 12 จาก 12 ข้อที่พลาดในชุดเคสยาก เฉลยว่า "อื่น ๆ" แต่ AI จับใส่หมวดใกล้เคียง และ AI บอก "มั่นใจสูง" ทุกข้อ | E5 |
+| จุดที่ AI จริงพลาด | ทั้ง 12 ข้อที่ AI พลาดในชุดเคสยาก เฉลยว่า "อื่น ๆ" แต่ AI จับใส่หมวดใกล้เคียง และ AI บอก "มั่นใจสูง" ทุกข้อ ทั้งข้อถูกและข้อผิด | E5 |
 | เคสแรกหลังระบบตื่น | ราว 10 วินาที (วัดได้ 4 ครั้ง ช้าทั้ง 4 ครั้ง) เคสถัดไป 0.1–0.4 วินาที | E1 |
 | ผู้ช่วยแนะนำแหล่งเรียนบนหน้าเว็บจริง หาหัวข้อถูก | 2 จาก 48 ข้อ เพราะหน้าเว็บยังใช้ AI จำลอง (Typhoon ได้ 46 จาก 48) | E3 |
 | คำตอบของคนต่อคำถาม "เข้าใจถูกไหม" | ไม่ได้เก็บ | E4 |
@@ -101,7 +101,8 @@ these sets, not accuracy.
    study topic for 2/48 requests (Typhoon 46/48), and on the hard triage set it would raise 26 of the rules'
    68 mistakes (Typhoon 60).
 4. **The first case after a start takes about 10 s**, and on the free plan the service sleeps after 15 idle
-   minutes, so most visits begin with a start. The time goes into starting worker processes.
+   minutes, so a visit after a pause begins with a start: both triage cases of the last 7 days did. The
+   time goes into starting worker processes.
 5. **Nothing a person does after reading an answer is recorded:** no review decision (Phase 2) and no answer
    to "เข้าใจถูกไหม". The project therefore has no number from real use.
 6. **Capacity is not a limit.** The online service ran 3 jobs in the last 7 days, a warm job takes 0.1 to
@@ -220,8 +221,8 @@ Each package is one pull request unless it says otherwise, and follows the defin
 
 - **Goal:** the first number that comes from use, not from a test set.
 - **Why (M9):** every study answer asks "did I understand you?" (67/67 on the scorecard), and the page offers
-  only "แก้คำถาม". The answer is the cheapest honest signal there is, and today it is thrown away. With 3
-  jobs a week it will be a small number; it is still the only one of its kind.
+  only "แก้คำถาม". The answer is the cheapest honest signal there is, and today it is thrown away. At the
+  last 7 days' rate of 3 jobs it will be a small number; it is still the only one of its kind.
 - **Design (an ADR first, because it adds a write after a job has ended):**
   - Two buttons under the restatement, "ใช่ ตรง" and "ไม่ตรง".
   - `POST /v1/jobs/{job_id}/feedback` with `{"understood": "yes"}` or `"no"`, only for a finished job of an

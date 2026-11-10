@@ -232,8 +232,11 @@ bare `OK` back, which the connection check above made visible.
 - Synthetic cases labelled by the developer. These are not real customer data and not independent ground truth.
 - Masking is pattern-based (see "Safety rules built in"). It lowers the risk; it does not make real
   personal data safe to send.
-- The only live runs are Typhoon's on this synthetic set (2026-11-06): a first measurement of that model,
-  not accuracy, and nothing about Claude. Its latency was measured from GitHub's runners, not from Render.
+- The only live runs are Typhoon's on this synthetic set (2026-11-06) and one on the 116 robustness edge
+  cases (2026-11-10: AI correct 104/116, rules 48/116; all 12 of its mistakes are cases labelled `other`, and
+  it said `high` confidence for all 116, [evidence](evidence/2026-11-10-effectiveness-baseline.md)): a first
+  measurement of that model, not accuracy, and nothing about Claude. Its latency was measured from GitHub's
+  runners and from a cloud session, not from Render.
   No cost claims are made.
 - Typhoon's API is a free beta research showcase that collects usage data; synthetic data only.
 - Token counts cover answered calls only. No money estimate is made, because prices change.
