@@ -33,7 +33,8 @@ flowchart TD
       EV[Scorecards app/eval: triage and study guide - built]
       OBS[Sentry reporting and Honeycomb tracing app/observability - built]
       Q[Admission queue + single Runner + reconciliation app/persistence, app/services - built in round 2]
-      REV[Review ledger - built; linked phase-B jobs - planned]
+      REV[Review ledger and linked phase-B job after an approval - built]
+      EX[Skill handoff exchange app/exchange: routes, common language, translators - built, ADR-030]
     end
     subgraph L2[Layer 2: Domains, agents, AI gateway]
       TRI[case_triage v1 rules + v2 shadow mode - built]
@@ -51,7 +52,7 @@ flowchart TD
 |---|---|---|---|
 | 1 Core `neuron_flow/` | Spec validation, static DAG scheduling, bounded child processes, retries, recovery, events, verified receipts, integrity, case memory, candidate gate. No HTTP, business rules, credentials or user authorisation. | All of it; two changes since commit `09100f7`: the telemetry fix (roadmap 1.1, PR #21) and `decode()`'s error contract (ADR-025, PR #42) | No further Core change planned |
 | 2 Domains & agents `app/domains/`, `app/llm/` | Input contracts, trusted agent registry, fixed DAG templates, validators, AI calls | case_triage v1 demo and v2 shadow mode with versioned Thai/English rules (E2, PR #64), AI gateway; `study_guide.v1`, a second unrelated domain: versioned topic catalog, verified resource library with a weekly link check, five-step workflow and scorecard (roadmap 3.1–3.3) | — |
-| 3 Application services | Admission, idempotency, the only Runtime owner, crash reconciliation, review decisions, results, measurement, monitoring | Scorecard (`app/eval/`), Sentry reporting (`app/observability/`), admission queue (`app/persistence/`), admission, Runner with reconciliation, results and review decisions (`app/services/`, ADR-027) | Linked phase-B jobs, artifact store (Milestone C) |
+| 3 Application services | Admission, idempotency, the only Runtime owner, crash reconciliation, review decisions, results, measurement, monitoring | Scorecard (`app/eval/`), Sentry reporting (`app/observability/`), admission queue (`app/persistence/`), admission, Runner with reconciliation, results and review decisions (`app/services/`, ADR-027); the skill-handoff exchange (`app/exchange/`, ADR-030), whose first route starts the linked phase-B job after an approval | Artifact store (Milestone C) |
 | 4 Interfaces | Authentication, request validation, status pages, human decisions | GitHub Actions workflows (tests, scorecard, Sentry check, container check, manual live runs with Claude, Typhoon or the local open model); HTTP API and web page (`app/api/`, `app/web/`) behind one shared access key, started by `app/serve.py` in one container for Render (`render.yaml`; Railway also configured) | n8n intake and notifications, per-reviewer identity |
 
 **Dependency rule:** Interface → Services → Domain → Core. Core never imports `app.*`. A domain builds specs
@@ -145,7 +146,7 @@ Each row was re-checked against the current code.
   - B: a planner step that produces a plan, validated and run as a new linked job.
   - C: a dynamic DAG inside Core is **not** recommended.
 
-## 5. Job lifecycle (steps 1–3 and 5 built in round 2; step 4's decision built on 2026-11-10, its linked job open)
+## 5. Job lifecycle (steps 1–3 and 5 built in round 2; step 4's decision built on 2026-11-10, its linked job on 2026-11-11)
 
 1. **Built.** `POST /v1/jobs` checks the access key and the input, assigns a `job_id`, and stores
    `idempotency_key` + request fingerprint in the application queue (`<data>/app/queue.sqlite3`). It replies
@@ -155,12 +156,13 @@ Each row was re-checked against the current code.
    path-free summary of the Core outcome back into the job record.
 3. **Built.** A proposal that needs approval marks the job `REVIEW_REQUIRED`. The Core job itself has
    already finished.
-4. **Decision built (roadmap 2.2, 2.4, ADR-027); linked job open (2.3).** The Runner's `REVIEW_REQUIRED`
+4. **Decision built (roadmap 2.2, 2.4, ADR-027); linked job built (2.3, ADR-030).** The Runner's `REVIEW_REQUIRED`
    creates a `PENDING` review in the same transaction. A person sends a versioned decision
    (`POST /v1/reviews/{review_id}/decisions`): **approve** (the rules' category or another) moves the job to
    `APPROVED`, **reject** to `REJECTED`, in one transaction with the append-only decision row. Who decides
-   comes from the credential: until per-person tokens (2.1), the owner's shared key. The linked phase-B job
-   that writes a Core receipt for an approval (ADR-004) is not built yet.
+   comes from the credential: until per-person tokens (2.1), the owner's shared key. In the same transaction, the
+   approval's skill-handoff route starts the linked phase-B job (ADR-004): a `QUEUED` `case_triage.v2.apply` job
+   that records the approved category, queue and decision id, and gets its own Core receipt.
 5. **Built.** After a Runner restart, every job still `RUNNING` in the queue is reconciled with Core state,
    always with its frozen spec. A job whose spec would now be built differently (model, prompt or code
    changed) fails as `configuration_changed`; a job claimed `max_claims` times fails as
@@ -169,8 +171,14 @@ Each row was re-checked against the current code.
 Application states: `QUEUED → RUNNING → COMPLETED | REVIEW_REQUIRED | FAILED | DELIVERY_FAILED` (case triage
 always ends `REVIEW_REQUIRED`; the informational `study_guide.v1` ends `COMPLETED`, ADR-018) and
 `QUEUED → CANCELLED` (built; cancel only before the claim, roadmap 1.3), then
-`REVIEW_REQUIRED → APPROVED | REJECTED` (built, a person's decision; the linked phase-B job after `APPROVED` is
-roadmap 2.3).
+`REVIEW_REQUIRED → APPROVED | REJECTED` (built, a person's decision); `APPROVED` starts the linked
+`case_triage.v2.apply` job (built, roadmap 2.3), `REJECTED` starts nothing.
+
+Skill handoffs (ADR-030, built on 2026-11-11, [skill_handoff.md](skill_handoff.md)): a job that reaches `COMPLETED`
+or `APPROVED` may start one linked job of another skill along a fixed, versioned route, through an out-translator,
+one common language and the target's in-translator; the target's `QUEUED` row and the `handoffs` row are written in
+the same transaction as the source's new state, or the refusal with its reason code. Today one route exists, from
+an approved `case_triage.v2` case.
 
 On storage that is not persistent (Render's free plan) every state above lasts until the next sleep, restart or
 deploy. The API says so instead of implying otherwise (ADR-029): see §6.
@@ -204,6 +212,11 @@ Built in round 2 (full reference in [intake_queue.md](intake_queue.md)):
   `retention: {persistent, lost_on, store_id, store_started_at}`. A new `store_id` means the queue started
   empty again.
 
+- Skill handoffs (built on 2026-11-11, ADR-030): a job's detail has `handoff: {from, to}`, the job list gives
+  `from_job_id`, a decision's reply lists `handoffs`, and `/v1/status` lists the routes in plain words with the
+  fact meanings and counts. A route-only type (`case_triage.v2.apply`) is refused at `POST /v1/jobs` as
+  `unknown_workflow_type`.
+
 Planned:
 - `GET /v1/artifacts/{artifact_id}` is authorised access by id, never by a user-supplied path.
 
@@ -227,15 +240,17 @@ app/eval/                      triage_shadow_eval.py, rules_comparison.py (same 
                                golden/case_triage_synthetic_v1.json (61 development cases), case_triage_heldout_v1.json
                                (40 held-out cases), golden/study_guide_synthetic_v1.json (67 requests)
 app/observability/             sentry.py (step failures, degraded AI, Runner recoveries); tracing.py (OTLP/JSON exporter) and job_spans.py (a job's spans)
-app/persistence/               queue_store.py: the application job queue, events, Runner heartbeat, reviews and decisions (SQLite, schema 2)
+app/persistence/               queue_store.py: the application job queue, events, Runner heartbeat, reviews and decisions, handoffs (SQLite, schema 3)
 app/services/                  workflows.py (catalog), admission.py, runner.py (with reconciliation), results.py, metrics.py, reviews.py (decisions)
 app/api/                       routes.py (ApiApp), server.py (standard-library HTTP server), limits.py
 app/web/                       index.html, app.css, app.js: the Thai web page (chat layout with a case / study-question switch, the study guide's layered answer, Flow and Trace, read-only settings)
 app/boot.py                    process 1 of the image: takes the data folder, drops root, becomes tini
 app/settings.py, app/serve.py  environment settings; the launcher (API + supervised Runner in one container)
 Dockerfile, render.yaml        the container (it compiles all its code once, so no process compiles at start) and the Render Blueprint (railway.json kept for Railway)
-examples/                      case_triage_demo, case_triage_shadow_demo, study_guide_demo, sentry_smoke_test, service_smoke_test
-tests/                         411 tests: core, triage v1/v2, AI gateway, Typhoon provider, local model provider and its model fetcher, masking, scorecards, eval gates, Sentry, tracing, API, queue, Runner, HTTP, metrics, study library, link check, study guide, web page, robustness benchmark, workflow permissions, the image's bytecode cache, review decisions and retention, the commit e-mail check
+app/exchange/                  the skill-handoff exchange (ADR-030): common.py + vocabulary_v1.json (the common language), translators/,
+                               routes.py + routes_v1.json (the route table), exchange.py (checks at start, prepares each handoff)
+examples/                      case_triage_demo, case_triage_shadow_demo, study_guide_demo, skill_handoff_demo, sentry_smoke_test, service_smoke_test
+tests/                         448 tests: core, triage v1/v2, AI gateway, Typhoon provider, local model provider and its model fetcher, masking, scorecards, eval gates, Sentry, tracing, API, queue, Runner, HTTP, metrics, study library, link check, study guide, web page, robustness benchmark, workflow permissions, the image's bytecode cache, review decisions and retention, the commit e-mail check
 tests/robustness/              the robustness benchmark, stage 1 (docs/benchmarking.md): synthetic_v1.json (270 edge cases), open_extract_v1.json
                                (BLNS, JSONTestSuite, CLINC150, BANKING77, pinned; NOTICE.md), bench.py, build_open_extract.py, triage_edge_golden_v1.json
 tests/baselines/               shadow_eval_mock.json, study_guide_eval_mock.json: every case's answer with the mock AI (the eval gates' baselines);
@@ -254,7 +269,7 @@ planned: artifact store
 | 001 | One controller per workspace; only the Runner opens Runtime | In force; the API never opens it, and a second Runner fails with `WorkspaceBusy` |
 | 002 | Durable admission before execution; reply 202 only after commit | In force |
 | 003 | Single machine first; no Redis, Postgres or distributed claims | In force: SQLite queue on one disk |
-| 004 | Two-phase human review as linked jobs | Accepted; the decision is built (ADR-027), the linked job is roadmap 2.3 |
+| 004 | Two-phase human review as linked jobs | In force: the decision is built (ADR-027), and since 2026-11-11 the linked job after an approval (roadmap 2.3), as the first skill-handoff route (ADR-030) |
 | 005 | Trusted agents only; versions frozen per job | In force; E2 carries the keyword data hash in the separate shadow-rules agent version and frozen params (PR #64) |
 | 006 | Large artifacts stay outside Core messages | Accepted; not needed yet |
 | 007 | Side effects are not automatically exactly-once | In force; no side-effect agents exist yet |
@@ -280,6 +295,7 @@ planned: artifact store
 | 027 | Review decisions (roadmap 2.2) and the page's decision card (2.4) are built before per-person tokens (2.1). Until 2.1, the one credential is the shared access key (ADR-016), which the owner holds, and the owner is the only reviewer (D3's default). A decision is recorded with `reviewer_token_id = shared-access-key` and `reviewer_role = owner`, taken from the credential and never from the request body. Ledger: `reviews` (one per job, state and version) and append-only `review_decisions` in the queue database at schema version 2, with a tested 1 → 2 upgrade that gives every waiting job its review. One transaction writes the decision, the review's state and version and the job's new state (`APPROVED` or `REJECTED`); the idempotency key is checked first, so a retried click returns the same decision. Events and logs carry the decision, never the reviewer's reason | In force (2026-11-10), because the independent review of that day found that a case could not be closed by a person (point 4). Trade-offs: anyone who has the shared key decides as the owner, so the key must stay the owner's alone until 2.1; the linked phase-B job with a Core receipt (ADR-004, roadmap 2.3) is not built, so an approval is recorded in the queue database only; on the free plan decisions vanish with the queue (ADR-029, D1) |
 | 028 | The AI gateway enforces personal-data masking itself instead of trusting the type of its input. `MaskedText` can be made only by `mask()` (a module-private seal; read-only; no copy or pickle); `structured_answer()` accepts only one made under the current rules, reads its text once, masks that text again (`redaction.leftover`) and raises `UnmaskedText` (a permanent agent error, so the step fails loudly and nothing is sent) when the rules would still change anything. A static test keeps the networked providers out of reach except through the gateway. This relies on masking being idempotent; the re-check found three inputs where `redact-v1` was not, so `redact-v2` runs the rules until nothing changes and never treats สาว after นาง as a name | In force (2026-11-10), from the independent review of that day (point 2). Trade-offs: Python cannot stop code that goes out of its way (it could reach the private seal), which is why the gateway re-checks the text; the re-check doubles the masking work per call (microseconds next to a model call); the masking itself is still pattern-based (rule 9) |
 | 029 | Retention is stated, not implied. `/v1/status`, every new job's reply and every decision's reply carry `retention`: whether the data folder survives a restart, what wipes it (`sleep`, `restart`, `deploy` on the free plan) and the queue database's `store_id` and start time (random, written once by the first `migrate()`). The page never says "saved permanently" on temporary storage, warns before a case is sent and on every waiting case, and keeps in the browser the ids (never the text) of what it sent with the store id; when the store id changes, it says how many of those cases are gone | In force (2026-11-10), from the independent review of that day (point 3). ADR-002 still holds: the 202 comes after the commit, which protects against a crashed process, not against a replaced container. Only a disk keeps cases (D1, about $7.25 a month); no free durable store fits ADR-003 and the P2 list |
+| 030 | Skills hand work to each other only through the exchange, along fixed routes, with a translator on each side of one common language. A skill (a workflow type and its domain) never imports, calls or names another, and does not know the exchange exists. When a job reaches `COMPLETED` (informational, ADR-018) or `APPROVED` (a person's decision, ADR-027), the exchange looks up the one route for that workflow type and state in a versioned route table (`routes-v1`, complete SHA-256). The source's out-translator turns what the queue database holds for the job (input, result, decision) into facts of a versioned vocabulary, each with its origin (`input`, `rules`, `person` or `ai`); the exchange checks them; the target's in-translator turns them into the target's own input, which must pass the target's own `check_input`. The source's new state, the handoff record and the target's `QUEUED` job commit in one transaction, with the idempotency key `handoff:<source_job_id>:<route_id>`, so a retry or a recovery never makes a second job. Translators are pure, versioned code (no AI, no I/O); a handoff that cannot be translated is refused with a reason code, never guessed, and the source keeps its outcome. In the first version routes have no conditions, there is at most one route per workflow type and state, no cycle and at most 3 handoffs in a chain; an `ai` fact is data, never a reason to route. A workflow type that only a route may start is refused at `POST /v1/jobs`. No Core change; the exchange never opens `Runtime` (ADR-001) | In force (2026-11-11, roadmap H1–H3; [design and tests](skill_handoff.md), [evidence](evidence/2026-11-11-skill-handoff.md)); asked for by the owner, who then asked for it to be built. The first route is roadmap 2.3's linked job after an approval, with the route-only `case_triage.v2.apply`; queue schema 3 adds the `handoffs` ledger. Trade-offs: the exchange's translators must follow every change in a skill's output, which contract tests in CI catch; one unconditional route per state is narrow on purpose; each handoff is a new Core job with its own receipt, so one piece of work has several receipts joined by the handoff record; on the free plan handoffs vanish with the queue (ADR-029) |
 
 ## 9. Acceptance gates
 
@@ -319,9 +335,14 @@ planned: artifact store
 - The decision, the review's state and the job's state change together or not at all (a failure injected
   mid-transaction leaves all three as they were); the Runner's outcome and the review are written together.
 
+**P0 for the linked phase-B job, met on 2026-11-11 (automated, `tests/test_service_handoff.py`; ADR-030):**
+- Approval creates exactly one phase-B job: also with 16 identical clicks at once and 16 different decisions at
+  once; a rejection creates none; a failure injected inside the transaction leaves no decision, handoff or job; a
+  Runner crash before the outcome's commit hands on once after recovery. Over the three triage sets (217 cases,
+  `tests/handoff_check.py`), every approval started one apply job that recorded exactly the decision.
+
 **P0 still open:**
-- Approval creates exactly one phase-B job (roadmap 2.3), and a reviewer with the wrong role is denied
-  (roadmap 2.1).
+- A reviewer with the wrong role is denied (roadmap 2.1).
 - Side-effect agents need an idempotency contract (none exist yet).
 - Hash checks catch changed artifacts (no artifact store yet).
 
@@ -357,7 +378,7 @@ planned: artifact store
   answered all 217 cases and completed all workflows; local comparison replay exactly matched its artifact.
   Rules correct: 61/61 development, 105/116 edge, 22/40 held-out, with no regressions from v1-correct cases.
   Measurements and all 27 rules-gap dispositions are in the [E2 evidence](evidence/2026-11-11-e2-rules-v2.md).
-  Code checks passed. No Core file changed; the PR awaits the owner's merge instruction. The eight edge
+  Code checks passed. No Core file changed; PR #64 was merged on 2026-11-11. The eight edge
   cases where rules and Typhoon agree on a wrong category remain unflagged, so E5 is still open.
 - Open: retention and backup/restore drills (1.4, needs a disk), API authentication hardening (2.1, 7.2).
 
@@ -372,11 +393,12 @@ dashboard.
 | A2 | AI gateway, v2 shadow mode, scorecard, Sentry reporting | Done (PR #8, #9); a free Typhoon provider added (ADR-021, after GitHub Models was found retired). First live runs with Typhoon on 2026-11-06 after the answer-format fix (ADR-022): AI correct 60/61 on the synthetic triage set in two runs ([evidence](evidence/2026-11-06-first-live-typhoon.md)); Claude not run yet (D2); a local open-model lane on the GitHub runner, Typhoon 2.5 4B through llama.cpp (ADR-026, PR #46, ROADMAP 5.8), first full run on 2026-11-08: AI correct 58/61, every rule mistake raised (32/32) ([evidence](evidence/2026-11-08-first-local-model-full.md)) |
 | P1-fix | Neutral telemetry phase names | Done (PR #21, roadmap 1.1) |
 | B | Admission queue, single Runner, reconciliation, thin API, web page | Done (PR #11); live on Render's free plan since 2026-11-01; page redesigned as a chat layout with Flow, Trace and read-only settings (PR #18, roadmap 1.6) |
-| C | Two-phase review, decision ledger, n8n notifications | Started 2026-11-10: the decision ledger and API (2.2) and the page's decision card and inbox (2.4), with the owner's shared key as the reviewer's credential (ADR-027); per-person tokens (2.1), the linked phase-B job (2.3) and n8n (2.5) open |
+| C | Two-phase review, decision ledger, n8n notifications | Started 2026-11-10: the decision ledger and API (2.2) and the page's decision card and inbox (2.4), with the owner's shared key as the reviewer's credential (ADR-027); the linked phase-B job (2.3) built on 2026-11-11 as the first skill-handoff route (ADR-030); per-person tokens (2.1) and n8n (2.5) open |
 | D | OpenTelemetry tracing, eval gates in CI | Done: the per-case eval gates (5.2 for triage; 3.3 for the study guide), queue/run-time figures (5.3), Sentry, request ids, and tracing (5.1, PR #30), with the first trace seen in Honeycomb on 2026-11-03. Added on 2026-11-07: the robustness benchmark, stage 1 of the plan in [benchmarking.md](benchmarking.md) (5.4, PR #41; its 8 bugs fixed in 5.5, PR #42); stages 2–3 (5.6, 5.7) planned |
 | E | Planner pattern (B), MCP server, second domain with zero Core changes | Open |
-| Effectiveness E2 | Versioned Thai/English rules for the official shadow suggestion | Built and measured in PR #64, pending merge; original v1 demo retained; all 217 cases answered in the three-set Typhoon run, no v1-correct case regressed; [measurement and gap dispositions](evidence/2026-11-11-e2-rules-v2.md) |
-| — | `study_guide.v1`: first-response study guide ([design_philosophy.md](design_philosophy.md), [study_guide.md](study_guide.md)) | Workflow and scorecard built: the topic catalog, the verified resource library, the weekly link check (3.1, PR #32), the five-step workflow in the catalog (3.2, PR #33) and the 67-request scorecard with its eval gate (3.3, PR #34), with the mock AI in CI; first live run with Typhoon on 2026-11-06: topic correct 46/48, 0 of 142 links outside the library ([evidence](evidence/2026-11-06-first-live-typhoon.md)); on the web page with a layered answer (3.4, PR #39; questions sent without a confirm card, ADR-023), tried by the owner on the live page on 2026-11-08 with the mock AI; Claude after D2 |
+| Effectiveness E2 | Versioned Thai/English rules for the official shadow suggestion | Built and measured in PR #64, merged on 2026-11-11; original v1 demo retained; all 217 cases answered in the three-set Typhoon run, no v1-correct case regressed; [measurement and gap dispositions](evidence/2026-11-11-e2-rules-v2.md) |
+| — | `study_guide.v1`: first-response study guide ([design_philosophy.md](design_philosophy.md), [study_guide.md](study_guide.md)) | Workflow and scorecard built: the topic catalog, the verified resource library, the weekly link check (3.1, PR #32), the five-step workflow in the catalog (3.2, PR #33) and the 67-request scorecard with its eval gate (3.3, PR #34), with the mock AI in CI; first live run with Typhoon on 2026-11-06: topic correct 46/48, 0 of 142 links outside the library ([evidence](evidence/2026-11-06-first-live-typhoon.md)); on the web page with a layered answer (3.4, PR #39; questions sent without a confirm card, ADR-023), tried by the owner on the live page on 2026-11-08 with the mock AI; Claude after D2. New work paused by the owner on 2026-11-11 (E4, E6 and any further study-guide feature); what is built stays on the page and its checks keep running |
+| Skill handoff (H1–H5) | Separate skills that pass work through one exchange, with a translator on each side of a common language ([skill_handoff.md](skill_handoff.md)) | Built on 2026-11-11 because the owner asked for it (H1–H3 and the page part of H5, ADR-030): one route, from an approved case to `case_triage.v2.apply` (roadmap 2.3); tested with a new suite and over all 217 existing triage cases ([evidence](evidence/2026-11-11-skill-handoff.md)). The first new skill (H4) waits for the owner's choice; the trace link is not built |
 
 The order of the remaining work, with tasks, acceptance checks and owner decisions for each step, is in
 [ROADMAP.md](ROADMAP.md).

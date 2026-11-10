@@ -78,10 +78,12 @@
     prepare: "เตรียมข้อเสนอให้คนตรวจ", classify: "กฎจัดหมวด",
     detect_topic: "AI ถอดความว่าอยากเรียนเรื่องอะไร", pick_resources: "กฎเลือกแหล่งเรียน (ไม่เกิน 5)",
     build_path: "กฎเรียงลำดับการเรียน", explain: "AI อธิบายเป็นภาษาธรรมดา", answer: "เตรียมคำตอบเป็นชั้น",
+    record_routing: "บันทึกว่าเคสไปคิวไหน และใครอนุมัติ",
   };
   const STEP_SHORT = {
     classify_rules: "กฎเดิม", classify_llm: "AI", compare: "เทียบ", prepare: "เตรียม", classify: "กฎ",
     detect_topic: "ถอดความ", pick_resources: "เลือกแหล่ง", build_path: "เรียงลำดับ", explain: "อธิบาย", answer: "คำตอบ",
+    record_routing: "บันทึกผล",
   };
   const AI_STEPS = new Set(["classify_llm", "detect_topic", "explain"]);
   const ROLE = {
@@ -89,12 +91,28 @@
     compare: "เทียบสองความเห็น", prepare: "เตรียมให้คนตรวจ",
     detect_topic: "AI เสนอหัวข้อจากสมุดหัวข้อ", pick_resources: "กฎ: เฉพาะแหล่งในคลังที่ตรวจแล้ว",
     build_path: "กฎ: พื้นฐานก่อน ง่ายไปยาก", explain: "AI อธิบาย (ไม่เขียนลิงก์เอง)", answer: "คำตอบ ไม่ต้องรอคนตรวจ",
+    record_routing: "กฎ: บันทึกตามที่คนอนุมัติ ไม่ส่งอะไรออกนอกระบบ",
   };
   const STUDY = "study_guide.v1";
   const WORKFLOW = {
     "case_triage.v2": "จัดหมวดเคส: กฎเดิม + AI ความเห็นที่สอง",
     "case_triage.v1": "จัดหมวดเคส: กฎอย่างเดียว",
     "study_guide.v1": "ผู้ช่วยแนะนำแหล่งเรียน: ถามด้วยคำธรรมดา ได้แหล่งเรียนไม่เกิน 5 แหล่ง",
+    "case_triage.v2.apply": "บันทึกผลหลังอนุมัติ: ส่งต่อมาจากเคสที่อนุมัติแล้ว ผ่านตัวกลางและล่าม",
+  };
+  /* Skill handoffs (ADR-030, docs/skill_handoff.md): one skill hands work to the next only through the exchange,
+   * along a fixed route, through an out-translator, the common language and the target's in-translator. The
+   * routes and the Thai meaning of every fact come from /v1/status (handoff); the fixed codes are here.
+   * tests/test_web_page.py keeps these tables in step with app/exchange. */
+  const ORIGIN_TH = { input: "คนพิมพ์เข้ามา", rules: "โค้ดหรือกฎ", person: "คนตัดสิน", ai: "AI เสนอ (เป็นแค่ข้อมูล)" };
+  const HANDOFF_STATE = { STARTED: "ส่งต่อแล้ว", REFUSED: "ส่งต่อไม่ได้" };
+  const HANDOFF_REASON = {
+    source_incomplete: "ข้อมูลของงานต้นทางไม่ครบ ระบบจึงไม่เดา",
+    fact_invalid: "ล่ามขาออกให้ข้อมูลที่ไม่ตรงกับสมุดคำศัพท์กลาง",
+    fact_missing: "ขาดข้อมูลที่เส้นทางนี้ต้องใช้",
+    target_input_invalid: "ข้อมูลที่แปลแล้วไม่ผ่านด่านตรวจของงานปลายทาง",
+    chain_too_long: "ส่งต่อกันเกินจำนวนทอดที่อนุญาตแล้ว ระบบจึงหยุด",
+    translator_error: "ล่ามทำงานผิดพลาด ระบบจึงไม่ส่งต่อ",
   };
   /* The study guide's answer is result.output of a study_guide.v1 job (docs/study_guide.md, "The answer").
    * Its fixed codes get the page's own Thai words, so every label reads the same whichever language the
@@ -265,7 +283,14 @@
   }
   function stepName(id) { return STEP[id] || id; }
   function isStudy(job) { return Boolean(job) && job.workflow_type === STUDY; }
-  function jobTitle(job) { return isStudy(job) ? "คำถามอยากเรียน" : (job.case_id || job.job_id); }
+  function isRouteOnly(job) {
+    const info = job ? workflowInfo(job.workflow_type) : null;
+    return Boolean(info && info.route_only);
+  }
+  function jobTitle(job) {
+    if (isStudy(job)) return "คำถามอยากเรียน";
+    return (isRouteOnly(job) ? "บันทึกผล " : "") + (job.case_id || job.job_id);
+  }
   function studyAnswer(job) {
     const output = ((job || {}).result || {}).output;
     return output && output.kind === "study_guide" ? output : null;
@@ -589,7 +614,7 @@
       }, [
         el("span", { class: "job-title" }, [el("span", { class: "case" + (isStudy(job) ? " kind-study" : ""), text: jobTitle(job) }),
           el("span", { class: "time", text: shortTime(job.created_at) })]),
-        el("span", { class: "job-preview", text: job.summary_preview }),
+        el("span", { class: "job-preview", text: job.summary_preview || (job.from_job_id ? "ส่งต่อมาจากเคสที่อนุมัติแล้ว" : "") }),
         el("span", { class: "job-status " + tone }, [el("span", { class: "dot" + (blink ? " blink" : "") }), text]),
       ]));
     }
@@ -752,6 +777,7 @@
   function stepDetail(stepId, job) {
     const answer = studyAnswer(job);
     if (answer) return studyStepDetail(stepId, answer);
+    if (isRouteOnly(job)) return routingStepDetail(stepId, job);
     const review = ((job || {}).result || {}).review;
     if (!review) return null;
     if (stepId === "classify_rules" || stepId === "classify") {
@@ -769,6 +795,12 @@
     }
     if (stepId === "prepare") return `→ ${QUEUE[review.suggested_queue] || review.suggested_queue}`;
     return null;
+  }
+
+  function routingStepDetail(stepId, job) {
+    const output = ((job || {}).result || {}).output || {};
+    if (stepId !== "record_routing" || output.kind !== "routing_record") return null;
+    return `→ ${QUEUE[output.final_queue] || output.final_queue}`;
   }
 
   /* What each study guide step contributed, read back from the answer (the steps' own outputs stay inside). */
@@ -1043,7 +1075,8 @@
       case "QUEUED": return `รับเคสเข้าคิวแล้ว (${persistent() ? "บันทึกถาวรก่อนตอบ" : "บันทึกก่อนตอบ แต่เป็นที่เก็บชั่วคราว"}) · รอลำดับที่ ${job.queue_position || "-"}`;
       case "RUNNING": return job.claims > 1 ? "ตัวรันงานกำลังทำเคสนี้ต่อหลังระบบเปิดใหม่…" : "ตัวรันงานกำลังทำเคสนี้…";
       case "REVIEW_REQUIRED": return "ทำครบทุกขั้นแล้ว ข้อเสนอด้านล่างรอคนตัดสิน — AI ไม่มีสิทธิ์ตัดสินเอง";
-      case "APPROVED": return "คนตัดสินแล้ว: อนุมัติ เคสนี้ปิดแล้ว";
+      case "APPROVED": return routeFrom(job.workflow_type, "APPROVED")
+        ? "คนตัดสินแล้ว: อนุมัติ ตัวกลางส่งต่อให้งานถัดไปแล้ว (ดูด้านล่าง)" : "คนตัดสินแล้ว: อนุมัติ เคสนี้ปิดแล้ว";
       case "REJECTED": return "คนตัดสินแล้ว: ไม่อนุมัติ เคสนี้ปิดแล้ว";
       case "COMPLETED": return "ทำครบทุกขั้นแล้ว";
       case "DELIVERY_FAILED": return "ทำครบทุกขั้น แต่บันทึกรายงานไม่สำเร็จ";
@@ -1182,7 +1215,15 @@
           disabled: form.sending || !form.decision, text: label }),
         el("span", { class: "hint", text: `ตัดสินในนาม ${ROLE_TH[policy.reviewer_role] || "เจ้าของระบบ"} · ตัดสินแล้วแก้ไม่ได้ · รหัสผู้ตรวจรายคนอยู่ในแผนขั้น 2.1` }),
       ]),
+      approvalRouteHint(job),
     ]);
+  }
+
+  /* What an approval will start (ADR-030), said before the person decides; a rejection starts nothing. */
+  function approvalRouteHint(job) {
+    const route = routeFrom(job.workflow_type, "APPROVED");
+    if (!route) return null;
+    return el("p", { class: "hint", text: `ถ้าอนุมัติ ตัวกลางจะส่งต่อให้ "${WORKFLOW[route.to] || route.to}" ทันทีผ่านล่ามและภาษากลาง: ${route.why.th} · ถ้าไม่อนุมัติ จะไม่ส่งต่อ` });
   }
 
   function chooseDecision(decision) {
@@ -1236,8 +1277,10 @@
     const stillOpen = state.review === form;
     if (result && (result.status === 201 || result.status === 200)) {
       const decided = result.data.decision || {};
+      const handed = (result.data.handoffs || []).filter((item) => item.state === "STARTED");
       toast(`บันทึกการตัดสินแล้ว: ${DECISION[decided.decision] || decided.decision}` +
-        (decided.final_queue ? ` → ${QUEUE[decided.final_queue] || decided.final_queue}` : ""));
+        (decided.final_queue ? ` → ${QUEUE[decided.final_queue] || decided.final_queue}` : "") +
+        (handed.length ? ` · ส่งต่อให้ "${WORKFLOW[handed[0].target_workflow_type] || handed[0].target_workflow_type}" แล้ว` : ""));
       if (stillOpen) state.review = null;
     } else if (result && result.status === 409) {
       toast(API_ERROR[result.data.error] || "เคสนี้ตัดสินไม่ได้แล้ว");
@@ -1296,8 +1339,104 @@
     return details;
   }
 
+  // ---------- render: skill handoffs (ADR-030) ----------------------------------------------
+
+  function handoffInfo() { return ((state.status || {}).handoff) || {}; }
+  function factLabel(name) {
+    const fact = (handoffInfo().facts || {})[name];
+    return fact && fact.meaning && fact.meaning.th ? fact.meaning.th : name;
+  }
+  function routeOf(id) { return (handoffInfo().routes || []).find((route) => route.id === id) || null; }
+  function routeFrom(workflow, on) {
+    return (handoffInfo().routes || []).find((route) => route.from === workflow && route.on === on) || null;
+  }
+  function shortVersion(tag) { return String(tag || "").replace(/@sha256:([0-9a-f]{12})[0-9a-f]*$/, "@$1…"); }
+  function factValue(item) {
+    if (typeof item.chars === "number") return `ข้อความ ${item.chars} ตัวอักษร (ไม่แสดง)`;
+    const value = String(item.value);
+    return CATEGORY[value] || QUEUE[value] || ROLE_TH[value] || value;
+  }
+  function openJobButton(jobId, label) {
+    if (!JOB_ID.test(jobId || "")) return null;
+    return el("button", { type: "button", class: "btn btn-secondary", dataset: { action: "open-job", job: jobId }, text: label });
+  }
+
+  /* One handoff, step by step: the source, the out-translator, the facts of the common language with where each
+   * came from, what was left out, the in-translator, and the job it started (or why it could not). */
+  function handoffCard(handoff, incoming) {
+    const route = routeOf(handoff.route_id);
+    const started = handoff.state === "STARTED";
+    const facts = el("dl", { class: "facts handoff-facts" }, (handoff.facts || []).flatMap((item) => [
+      el("dt", { text: factLabel(item.name) }),
+      el("dd", {}, [factValue(item), " ", el("span", { class: "tag " + (item.origin === "ai" ? "tag-warn" : "tag-neutral"),
+        text: ORIGIN_TH[item.origin] || item.origin })]),
+    ]));
+    const left = (handoff.left_out || []).map(factLabel);
+    const translated = Boolean((handoff.facts || []).length);  // a refusal before the facts were checked has none
+    const steps = [
+      el("li", {}, [`ต้นทาง: ${WORKFLOW[route ? route.from : ""] || (route ? route.from : "งานต้นทาง")} · ${STATUS[handoff.source_state] || handoff.source_state} `,
+        incoming ? openJobButton(handoff.source_job_id, "เปิดเคสต้นทาง") : null]),
+      el("li", { text: `ล่ามขาออก (${handoff.translator_out}) แปลผลของต้นทางเป็นภาษากลาง` }),
+      translated ? el("li", {}, [`ภาษากลาง (${shortVersion(handoff.vocabulary_version)}): ข้อมูลที่เส้นทางนี้ส่งต่อ`, facts]) : null,
+      translated && left.length ? el("li", { class: "muted", text: `ไม่ส่งต่อ เพราะเส้นทางนี้ไม่ต้องใช้: ${left.join(", ")}` }) : null,
+      translated ? el("li", { text: `ล่ามขาเข้า (${handoff.translator_in}) แปลภาษากลางเป็นภาษาของงานปลายทาง แล้วผ่านด่านตรวจของงานนั้นเอง` }) : null,
+      started
+        ? el("li", {}, [`ปลายทาง: ${WORKFLOW[handoff.target_workflow_type] || handoff.target_workflow_type} `,
+          incoming ? null : openJobButton(handoff.target_job_id, "เปิดงานที่ส่งต่อไป")])
+        : el("li", { class: "form-error", text: `ส่งต่อไม่ได้: ${HANDOFF_REASON[handoff.reason] || handoff.reason}` }),
+    ];
+    return el("section", { class: "handoff" + (started ? "" : " refused"), "aria-label": "การส่งต่อระหว่างทักษะ" }, [
+      el("h3", { text: incoming ? "งานนี้ถูกส่งต่อมาผ่านตัวกลาง" : `${HANDOFF_STATE[handoff.state] || handoff.state}: ${route ? route.why.th : handoff.route_id}` }),
+      el("ol", { class: "handoff-steps" }, steps.filter(Boolean)),
+      el("p", { class: "muted", text: `เส้นทาง ${handoff.route_id} · ตาราง ${shortVersion(handoff.routes_version)} · ส่งต่อทอดที่ ${handoff.depth} · ${fullTime(handoff.created_at)}` }),
+    ]);
+  }
+
+  function handoffsOut(job) {
+    const handoffs = ((job.handoff || {}).to) || [];
+    return handoffs.map((handoff) => handoffCard(handoff, false));
+  }
+
+  function routingIntro(job) {
+    switch (job.status) {
+      case "QUEUED": return "ตัวกลางสร้างงานนี้ให้ทันทีที่เคสต้นทางได้รับอนุมัติ ตอนนี้รอคิว";
+      case "RUNNING": return "ตัวรันงานกำลังบันทึกผล…";
+      case "COMPLETED": return "บันทึกผลเสร็จแล้ว พร้อมใบรับจาก Core ไม่มีอะไรถูกส่งออกนอกระบบ";
+      default: return introText(job);
+    }
+  }
+
+  function routingVerdict(job) {
+    const output = (job.result || {}).output || {};
+    if (output.kind !== "routing_record") return null;
+    return el("div", { class: "verdict decided" }, [
+      el("div", { class: "label", text: "บันทึกแล้ว: เคสที่อนุมัติไปที่" }),
+      el("div", { class: "big", text: QUEUE[output.final_queue] || output.final_queue }),
+      el("span", { class: "tag tag-neutral", text: `${CATEGORY[output.final_category] || output.final_category} · อนุมัติโดย ${ROLE_TH[output.approved_by] || output.approved_by} · ไม่ส่งออกนอกระบบ` }),
+    ]);
+  }
+
+  /* A job that a route started (today: the record after an approval). Its "message" is the handoff, not text. */
+  function routedJobView(job) {
+    const came = (job.handoff || {}).from;
+    const plan = planFor(job);
+    const states = plan ? stepStates(job, plan) : null;
+    const route = came ? routeOf(came.route_id) : null;
+    const body = [el("p", { class: "msg-text", text: routingIntro(job) }),
+      runCard({ plan, states, workflow: job.workflow_type, tag: statusTag(job), foot: jobFoot(job) }),
+      routingVerdict(job), came ? handoffCard(came, true) : null];
+    if (TERMINAL.has(job.status)) body.push(technical(job));
+    return [
+      el("div", { class: "msg-user msg-routed", text: `ส่งต่ออัตโนมัติจากเคส ${job.case_id || ""}` + (route ? `: ${route.why.th}` : "") }),
+      el("div", { class: "msg-meta" }, [el("span", { class: "file-chip", text: job.case_id || job.job_id }),
+        el("span", { text: `สร้างเมื่อ ${shortTime(job.created_at)}` })]),
+      botMsg(body.filter(Boolean)),
+    ];
+  }
+
   function jobView(job) {
     if (isStudy(job)) return studyJobView(job);
+    if (isRouteOnly(job) || ((job.handoff || {}).from)) return routedJobView(job);
     const plan = planFor(job);
     const states = plan ? stepStates(job, plan) : null;
     const body = [el("p", { class: "msg-text", text: introText(job) }),
@@ -1306,7 +1445,7 @@
       body.push(el("p", { class: "progress-line" }, [el("span", { class: "spinner" }),
         "กฎเดิมกับ AI กำลังวิเคราะห์คู่กัน ผลของแต่ละขั้นจะขึ้นเมื่อเคสเสร็จ หน้านี้อัปเดตเอง"]));
     }
-    body.push(verdict(job), facts(job), decisionForm(job));
+    body.push(verdict(job), facts(job), decisionForm(job), ...handoffsOut(job));
     if (!persistent() && !["FAILED", "CANCELLED"].includes(job.status)) {
       body.push(el("p", { class: job.status === "REVIEW_REQUIRED" ? "notice" : "muted",
         text: TEMPORARY_NOTE + (job.status === "REVIEW_REQUIRED" ? " ตัดสินให้เสร็จก่อนระบบหลับ" : "") }));
@@ -1753,7 +1892,10 @@
     const p = event.payload || {};
     const kind = event.kind || "";
     const base = { t: clockTime(event.at), raw: `${kind} ${JSON.stringify(p)}` };
+    if (kind === "job.queued" && p.from_job_id) return { ...base, lv: "info", msg: "รับเข้าคิว (ตัวกลางส่งต่อมาจากเคสที่อนุมัติ)", k: [p.route_id, p.from_job_id].filter(Boolean).join(" · ") };
     if (kind === "job.queued") return { ...base, lv: "info", msg: "รับเข้าคิว", k: [p.workflow_type, p.request_id].filter(Boolean).join(" · ") };
+    if (kind === "handoff.started") return { ...base, lv: "ok", msg: `ส่งต่อให้ "${WORKFLOW[p.target_workflow_type] || p.target_workflow_type}" แล้ว`, k: [p.route_id, p.target_job_id].filter(Boolean).join(" · ") };
+    if (kind === "handoff.refused") return { ...base, lv: "warn", msg: `ส่งต่อไม่ได้ · ${HANDOFF_REASON[p.reason] || p.reason || ""}`, k: p.route_id };
     if (kind === "job.cancelled") return { ...base, lv: "warn", msg: "ยกเลิกก่อนตัวรันงานหยิบไปทำ" };
     if (kind === "job.claimed") return { ...base, lv: "run", msg: `ตัวรันงานหยิบเคส (ครั้งที่ ${p.claim})` };
     if (kind === "job.recovering") return { ...base, lv: "warn", msg: `ทำต่อหลังระบบเปิดใหม่ (ครั้งที่ ${p.claim})` };
@@ -2530,6 +2672,7 @@
       else if (action === "edit-question") editQuestion();
       else if (action === "review-choose") chooseDecision(button.dataset.decision);
       else if (action === "review-submit") submitDecision();
+      else if (action === "open-job" && JOB_ID.test(button.dataset.job || "")) selectJob(button.dataset.job);
     });
     // The decision card's fields live in state, so a redraw (a status refresh) never loses what was typed.
     $("thread").addEventListener("input", (event) => {

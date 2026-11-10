@@ -692,3 +692,14 @@ details.layer > .kv { padding: 0; }
 .decide .seg.decide-choice { margin-left: 0; align-self: flex-start; }
 .decide .seg-opt { padding: 6px 16px; font-size: 13px; }
 .decide .form-error { margin: 0; }
+
+/* a skill handoff (ADR-030): one skill hands work to the next through the exchange, step by step */
+.handoff { display: flex; flex-direction: column; gap: 8px; padding: 14px 16px; border-radius: 10px; background: var(--surface-3); box-shadow: 0 0 0 1px var(--accent-800); }
+.handoff.refused { box-shadow: 0 0 0 1px var(--err-line); }
+.handoff h3 { margin: 0; font-size: 14px; font-weight: 500; color: var(--accent-300); }
+.handoff.refused h3 { color: var(--err-ink); }
+.handoff-steps { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 8px; color: var(--text-2); font-size: 13px; }
+.handoff-steps .btn { margin-left: 6px; padding: 3px 10px; font-size: 12px; }
+.handoff-facts { margin-top: 6px; }
+.handoff .muted { margin: 0; font-size: 12px; }
+.msg-user.msg-routed { background: var(--accent-900); box-shadow: 0 0 0 1px var(--accent-800); color: var(--accent-300); }

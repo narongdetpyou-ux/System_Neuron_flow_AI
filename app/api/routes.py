@@ -23,7 +23,10 @@ that a request admits records that span as its parent, so the Runner's spans of 
 trace. The page files and ``/healthz`` are not traced.
 
 The API only reads, admits and cancels jobs that are still queued, and records people's review decisions in the
-queue database (``app.services.reviews``); it never opens the Core ``Runtime`` (ADR-001).
+queue database (``app.services.reviews``); it never opens the Core ``Runtime`` (ADR-001). An approval's
+skill-handoff route (ADR-030, ``app.exchange``) is written in the same transaction as the decision; a job's detail
+shows where it came from (``handoff.from``) and what it handed on (``handoff.to``), and ``/v1/status`` lists the
+routes. A route-only workflow type cannot be admitted here.
 
 Retention is stated, not implied: ``/v1/status``, every new job's reply and every decision's reply carry
 ``retention`` (whether the data folder survives a restart, and the queue database's ``store_id``). On storage
@@ -46,6 +49,7 @@ from neuron_flow.model import decode
 
 from app.domains.case_triage.contracts import SUMMARY_MAX_CHARS, SUMMARY_MIN_CHARS
 from app.domains.study_guide.contracts import MESSAGE_MAX_CHARS, MESSAGE_MIN_CHARS
+from app.exchange import Exchange
 from app.llm import LLMConfig, LLMConfigError
 from app.observability.tracing import Tracing, parse_traceparent
 from app.persistence import DECIDED, PENDING, QUEUED, REVIEW_REQUIRED, StateError
@@ -122,10 +126,12 @@ def new_request_id():
 
 
 class ApiApp:
-    def __init__(self, settings, store, *, catalog=None, clock=time.time, reporter=None, tracing=None):
+    def __init__(self, settings, store, *, catalog=None, clock=time.time, reporter=None, tracing=None, exchange=None):
         self.settings = settings
         self.store = store
         self.catalog = CATALOG if catalog is None else catalog
+        # The skill-handoff exchange (ADR-030); a route table that does not fit the catalog fails at start.
+        self.exchange = exchange or Exchange(self.catalog)
         self.clock = clock
         self.reporter = reporter
         self.tracing = tracing if tracing is not None else Tracing.off()
@@ -276,8 +282,10 @@ class ApiApp:
                        "summary_min_chars": SUMMARY_MIN_CHARS, "summary_max_chars": SUMMARY_MAX_CHARS,
                        "message_min_chars": MESSAGE_MIN_CHARS, "message_max_chars": MESSAGE_MAX_CHARS,
                        "max_body_bytes": MAX_BODY_BYTES},
-            "workflows": [{"name": w.name, "description": w.description, "steps": self._steps(w)}
-                          for w in self.catalog.values()],
+            "workflows": [{"name": w.name, "description": w.description, "steps": self._steps(w),
+                           "route_only": w.route_only} for w in self.catalog.values()],
+            # The skill-handoff routes and their common language (ADR-030), in plain words; never a fact value.
+            "handoff": {**self.exchange.view(), "counts": self.store.handoff_counts()},
             "default_workflow": DEFAULT_WORKFLOW if DEFAULT_WORKFLOW in self.catalog else next(iter(self.catalog)),
         })
 
@@ -367,12 +375,16 @@ class ApiApp:
         except ValueError:  # a SpecError, or any other parse failure: the client's input, never a 500
             return error(400, "invalid_json", "The body is not valid JSON, or it repeats a field")
         try:
-            review, row, created = review_service.decide(self.store, review_id, body, request_id=request.request_id)
+            review, row, created = review_service.decide(self.store, review_id, body, request_id=request.request_id,
+                                                         exchange=self.exchange)
         except review_service.DecisionError as exc:
             return error(exc.status, exc.code, exc.message, **exc.extra)
+        # What the decision handed on (ADR-030): the same rows for a repeated click, never a second job.
+        handoffs = [self.exchange.handoff_view(item) for item in self.store.handoffs_from(review["job_id"])]
         return json_response(201 if created else 200,
                              {"created": created, "decision": review_service.decision_view(row),
-                              "review": review_service.review_detail(review), "retention": self._retention()},
+                              "review": review_service.review_detail(review), "handoffs": handoffs,
+                              "retention": self._retention()},
                              [("Location", f"/v1/reviews/{review_id}")])
 
     def _retention(self):
@@ -435,8 +447,14 @@ class ApiApp:
             # A person's review: waiting (REVIEW_REQUIRED) or decided (APPROVED, REJECTED); None for other jobs.
             view["human_review"] = (review_service.job_review_view(self.store.review_of_job(job["job_id"]))
                                     if job["status"] == REVIEW_REQUIRED or job["status"] in DECIDED else None)
+            # Skill handoffs (ADR-030): the one that started this job, and those this job started or had refused.
+            came = self.store.handoff_to(job["job_id"])
+            view["handoff"] = {"from": self.exchange.handoff_view(came) if came else None,
+                               "to": [self.exchange.handoff_view(item) for item in self.store.handoffs_from(job["job_id"])]}
         else:
             view["summary_preview"] = (case.get("summary") or case.get("message") or "")[:90]
+            came = self.store.handoff_to(job["job_id"])
+            view["from_job_id"] = came["source_job_id"] if came else None
         return view
 
 

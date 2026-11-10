@@ -3,12 +3,17 @@
 A request only names a ``workflow_type``. It can never carry agent names, import paths, step lists,
 params or callbacks: this catalog is the whole frame, and anything outside it is refused at
 admission ("out of scope" is a valid answer).
+
+A workflow type marked ``route_only`` is started only by a skill-handoff route (ADR-030, ``app/exchange/``), from
+a recorded state of another job; ``POST /v1/jobs`` refuses it like a type outside the frame.
 """
 
 from dataclasses import dataclass, field
 from typing import Callable, Optional
 
-from app.domains.case_triage import build_shadow_workflow, build_workflow, registry, shadow_registry
+from app.domains.case_triage import (apply_registry, build_apply_workflow, build_shadow_workflow, build_workflow,
+                                     check_apply_input, registry, shadow_registry)
+from app.domains.case_triage.apply import PREVIEW_INPUT as _APPLY_PREVIEW, STEP_ID as _APPLY_STEP
 from app.domains.study_guide import build_study_workflow, check_message, study_registry
 
 _CHECK_JOB_ID = "admission_check"
@@ -26,6 +31,7 @@ class WorkflowType:
     agents: Callable           # (llm_config) -> [AgentDefinition]
     ai_step: Optional[str] = None  # the step whose output becomes the result's AI view (and the trace's AI span)
     preview_input: dict = field(default_factory=lambda: dict(_PREVIEW_CASE))  # a placeholder that passes check_input
+    route_only: bool = False   # True: only a skill-handoff route starts it (ADR-030); admission refuses it
 
 
 def check_case(case):
@@ -51,8 +57,20 @@ CATALOG = {
         lambda job_id, request, config: build_study_workflow(job_id, request, config),
         lambda config: study_registry(config), ai_step="detect_topic",
         preview_input={"message": "Placeholder request that shows the shape of this workflow"}),
+    # Started only by the route "triage-approved-to-apply" after a person approves a case (roadmap 2.3, ADR-030).
+    "case_triage.v2.apply": WorkflowType(
+        "case_triage.v2.apply", "Record where an approved case goes, with a Core receipt (started only after a "
+        "person approves a case_triage.v2 case)",
+        _APPLY_STEP, check_apply_input,
+        lambda job_id, inp, config: build_apply_workflow(job_id, inp),
+        lambda config: apply_registry(), preview_input=dict(_APPLY_PREVIEW), route_only=True),
 }
 DEFAULT_WORKFLOW = "case_triage.v2"
+
+
+def admissible(catalog):
+    """The workflow types a request from outside may name: every type that is not route-only."""
+    return sorted(name for name, workflow in catalog.items() if not workflow.route_only)
 
 
 def preview_spec(workflow, config):

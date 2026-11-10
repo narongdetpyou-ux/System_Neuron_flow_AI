@@ -1,0 +1,45 @@
+{
+  "version": "vocabulary-v1",
+  "origins": {
+    "input": {"en": "typed by a person, through the API or the page", "th": "คนพิมพ์เข้ามา"},
+    "rules": {"en": "made by code: rules or a fixed mapping", "th": "โค้ดหรือกฎสร้าง"},
+    "person": {"en": "a reviewer's recorded decision", "th": "คนตัดสิน"},
+    "ai": {"en": "a model's answer, after its checks; data only, never a reason to route", "th": "AI เสนอ (เป็นแค่ข้อมูล)"}
+  },
+  "facts": {
+    "request.text": {
+      "type": "text", "max_chars": 500, "origins": ["input"],
+      "meaning": {"en": "The words a person typed, such as a case summary", "th": "ข้อความที่คนพิมพ์ เช่น เนื้อหาเคส"}
+    },
+    "case.id": {
+      "type": "id", "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,79}$", "origins": ["input"],
+      "meaning": {"en": "The case's own id", "th": "รหัสเคส"}
+    },
+    "case.suggested_category": {
+      "type": "choice", "values": ["access", "upload", "billing", "other"], "origins": ["rules"],
+      "meaning": {"en": "The category the keyword rules suggested", "th": "หมวดที่กฎเสนอ"}
+    },
+    "case.second_opinion": {
+      "type": "choice", "values": ["access", "upload", "billing", "other"], "origins": ["ai"],
+      "meaning": {"en": "The category the AI gave as a second opinion", "th": "หมวดที่ AI ให้เป็นความเห็นที่สอง"}
+    },
+    "case.final_category": {
+      "type": "choice", "values": ["access", "upload", "billing", "other"], "origins": ["person"],
+      "meaning": {"en": "The category a person approved", "th": "หมวดที่คนอนุมัติ"}
+    },
+    "case.final_queue": {
+      "type": "choice", "values": ["access_review", "upload_review", "billing_review", "general_review"],
+      "origins": ["person"],
+      "meaning": {"en": "The review queue of the approved category", "th": "คิวของหมวดที่คนอนุมัติ"}
+    },
+    "review.decision_id": {
+      "type": "id", "pattern": "^dec_[0-9a-f]{24}$", "origins": ["person"],
+      "meaning": {"en": "The id of the decision a person recorded", "th": "รหัสการตัดสินของคน"}
+    },
+    "review.reviewer_role": {
+      "type": "choice", "values": ["owner"], "origins": ["person"],
+      "meaning": {"en": "Who decided: today only the owner, through the shared access key (ADR-027)",
+                  "th": "ใครเป็นคนตัดสิน (ตอนนี้มีแค่เจ้าของระบบ)"}
+    }
+  }
+}

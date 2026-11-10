@@ -17,8 +17,15 @@
   found the labelled topic for 46 of 48 in-scope requests, with 0 of 142 links outside the library
   ([evidence](evidence/2026-11-06-first-live-typhoon.md)). The requests and labels are the developer's and it ran once, so this is
   a first measurement, not how well it understands people. Claude needs D2.
+- **Paused (2026-11-11):** the owner paused new work on the study guide. What is built stays on the page, and
+  its checks keep running (the eval gate, the robustness gate and the weekly link check). Its planned packages
+  E4 and E6 wait until the owner resumes it. The skill-handoff design ([skill_handoff.md](skill_handoff.md)) does
+  not edit it.
 
 ## ภาพรวมสำหรับเจ้าของโปรเจกต์
+
+**หยุดพัฒนาไว้ก่อน (11 พ.ย. 2026):** ตามที่คุณสั่ง ผู้ช่วยยังใช้ได้บนหน้าเว็บและช่องตรวจยังรันเหมือนเดิม แต่ยังไม่เพิ่มอะไรใหม่
+จนกว่าคุณจะสั่งให้ทำต่อ
 
 **สรุป:** ผู้ช่วยแนะนำแหล่งเรียนใช้ได้บนหน้าเว็บแล้ว กด "อยากเรียน" เหนือช่องพิมพ์ พิมพ์เรื่องที่อยากรู้ด้วยคำธรรมดา
 แล้วได้แหล่งเรียนไม่เกิน 5 แหล่ง เรียงว่าเรียนอะไรก่อน พร้อมบอกว่าแต่ละแหล่งใช้ทำอะไร ทุกลิงก์มาจากคลังที่ตรวจแล้วเท่านั้น (ขั้น 3.4)

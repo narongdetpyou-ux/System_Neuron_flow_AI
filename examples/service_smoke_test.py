@@ -189,6 +189,32 @@ def first_run(client, state_file, timeout_s, summary=None):
                mismatch_review.get("review_priority"), mismatch_review.get("decision"))
           == ("general_review", "disagree", "elevated", "PENDING_HUMAN_REVIEW"),
           "a real rules/mock disagreement is still raised and waits for a person")
+    applied = approval_hands_on(client, mismatch["job_id"], timeout_s)
+    if state_file:
+        Path(state_file).write_text(json.dumps({"job_id": job["job_id"], "apply_job_id": applied}), encoding="utf-8")
+
+
+def approval_hands_on(client, job_id, timeout_s):
+    """Skill handoff (ADR-030): an approval starts exactly one apply job, which records it with a Core receipt."""
+    decision = {"decision": "APPROVE", "final_category": "other", "reason": "smoke test: approved as other",
+                "expected_version": 1, "idempotency_key": f"smoke-decide-{uuid.uuid4()}"}
+    status, decided = client.call("POST", f"/v1/reviews/rev_{job_id[len('job_'):]}/decisions", decision)
+    handoffs = decided.get("handoffs") or []
+    check(status == 201 and [h.get("state") for h in handoffs] == ["STARTED"],
+          "an approval hands the case on through the exchange (one STARTED handoff)")
+    status, again = client.call("POST", f"/v1/reviews/rev_{job_id[len('job_'):]}/decisions", decision)
+    check(status == 200 and again.get("handoffs") == handoffs, "the same click again hands on nothing more")
+    applied = wait_for_result(client, handoffs[0]["target_job_id"], timeout_s)
+    record = (applied.get("result") or {}).get("output") or {}
+    check(applied["status"] == "COMPLETED" and record.get("final_queue") == "general_review"
+          and record.get("decision_id") == decided["decision"]["decision_id"]
+          and len(((applied.get("result") or {}).get("receipt") or {}).get("sha256", "")) == 64,
+          "the apply job recorded the approval with a Core receipt")
+    status, forged = client.call("POST", "/v1/jobs", {"workflow_type": "case_triage.v2.apply",
+                                                      "idempotency_key": f"smoke-{uuid.uuid4()}",
+                                                      "input": applied.get("input")})
+    check(status == 400 and forged.get("error") == "unknown_workflow_type", "nobody can start the apply skill directly")
+    return applied["job_id"]
 
 
 def after_restart(client, state_file, timeout_s):
@@ -196,6 +222,10 @@ def after_restart(client, state_file, timeout_s):
     wait_for_runner(client, timeout_s)
     status, job = client.call("GET", f"/v1/jobs/{saved['job_id']}")
     check(status == 200 and job["status"] == "REVIEW_REQUIRED", "the case from before the restart is still stored")
+    if saved.get("apply_job_id"):
+        status, applied = client.call("GET", f"/v1/jobs/{saved['apply_job_id']}")
+        check(status == 200 and applied["status"] == "COMPLETED" and applied["handoff"]["from"] is not None,
+              "the apply job and its handoff survive the restart")
     body = {"workflow_type": "case_triage.v2", "idempotency_key": f"smoke-{uuid.uuid4()}",
             "input": {"case_id": "SMOKE-EN-02", "summary": "I cannot sign in to my account"}}
     status, fresh = client.call("POST", "/v1/jobs", body)

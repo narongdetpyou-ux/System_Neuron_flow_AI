@@ -26,6 +26,12 @@ trusted agents in bounded child processes, retries, recovers after a crash and w
   most 5 library resources in study order (roadmap 3.1, 3.2). It ends `COMPLETED` without review (ADR-018).
   The page has a box for it (3.4): a switch above the message box chooses a case or a study question, and a
   question is sent without the confirm card that cases have (ADR-023), then answered in layers.
+- a skill-handoff exchange (`app/exchange/`, ADR-030, [docs/skill_handoff.md](docs/skill_handoff.md); built on
+  2026-11-11 at the owner's request): skills never import each other; work passes along fixed, versioned routes,
+  through an out-translator, one common language of versioned facts and the target's in-translator, written in the
+  same queue transaction as the source's new state. The one route today: an approved `case_triage.v2` case starts
+  the route-only `case_triage.v2.apply` job, which records the decision with a Core receipt (roadmap 2.3). New work
+  on the study guide is paused by the owner (2026-11-11);
 - a robustness benchmark (`tests/robustness/`, roadmap 5.4; plan in
   [docs/benchmarking.md](docs/benchmarking.md)): 270 hard synthetic edge cases and four pinned open datasets
   (BLNS, JSONTestSuite, CLINC150, BANKING77; ADR-024) through every layer. It is a CI gate on every outcome,
@@ -44,7 +50,8 @@ Read in this order when you need depth:
    [case_triage_v2_shadow.md](docs/case_triage_v2_shadow.md) (the AI second opinion),
    [observability_sentry.md](docs/observability_sentry.md),
    [observability_tracing.md](docs/observability_tracing.md) (traces to Honeycomb),
-   [study_guide.md](docs/study_guide.md) (the study guide: workflow, scorecard, topic catalog, library, link check).
+   [study_guide.md](docs/study_guide.md) (the study guide: workflow, scorecard, topic catalog, library, link check),
+   [skill_handoff.md](docs/skill_handoff.md) (the exchange between skills: routes, common language, translators, tests).
 
 ## 2. Working with the owner (read this first)
 
@@ -113,6 +120,9 @@ Read in this order when you need depth:
    - Every AI output passes schema, invariant and policy checks before Core stores it.
    - Nothing is decided automatically. The AI never chooses the queue or approves anything.
    - n8n and MCP clients never decide either.
+   - Skills hand work to each other only through the exchange (`app/exchange/`, ADR-030): fixed, versioned routes;
+     translators in plain code, never AI; a fact from AI is data and never routes anything; a route-only skill is
+     refused at `POST /v1/jobs`. Only the API (a person's request) records decisions inside `app/`; a test checks.
    - An informational answer that decides nothing about anyone and sends nothing outside (the study guide)
      ends `COMPLETED` without review (ADR-018). Its links come only from the verified library, inserted by
      code. Anything that decides about a person or acts outside still waits for a person.
@@ -152,13 +162,15 @@ If a task seems to need breaking a rule:
 ## 4. Checking your work
 
 ```bash
-python -m unittest discover -s tests -v        # all tests (411 on 2026-11-11); CI: Python 3.10 and 3.12
+python -m unittest discover -s tests -v        # all tests (448 on 2026-11-11); CI: Python 3.10 and 3.12
 python -m examples.case_triage_demo            # v1 rules, one synthetic case
 python -m examples.case_triage_shadow_demo     # v2 shadow mode with the offline mock AI
 python -m examples.study_guide_demo            # the study guide's answers to four synthetic requests
 python -m app.eval.triage_shadow_eval --compare-with tests/baselines/shadow_eval_mock.json  # scorecard + eval gate
 python -m app.eval.study_guide_eval --compare-with tests/baselines/study_guide_eval_mock.json  # study guide's
 python -m tests.robustness.bench --compare-with tests/baselines/robustness_v1.json  # robustness gate (~25 s)
+python -m tests.handoff_check                  # skill handoffs over all 217 triage cases, end to end (~16 s)
+python -m examples.skill_handoff_demo          # one case step by step through the exchange
 NEURON_FLOW_ACCESS_KEY=$(python -c "import secrets; print(secrets.token_urlsafe(24))") python -m app.serve
 ```
 
@@ -169,7 +181,8 @@ GitHub Actions (the owner can open these; the first three run on every push and 
   `tests/baselines/study_guide_eval_mock.json` (roadmap 3.3), and the study guide's also fails when an answer
   has a link outside the library or more than 5 resources. Last, the robustness benchmark (roadmap 5.4) fails when
   any item's outcome or sweep differs from `tests/baselines/robustness_v1.json`; its Thai summary lists the
-  open bugs.
+  open bugs. Then the skill-handoff demo (one case step by step) and the handoff check over every case of the
+  three triage sets (ADR-030), which fails on any broken check; both write Thai summaries to the run page.
 - *Service container* (`service-container.yml`):
   - checks `render.yaml` against Render's schema;
   - builds the same container as Render and submits cases over HTTP;
@@ -290,10 +303,11 @@ Notes for cloud sessions (claude.ai/code):
 | `app/domains/case_triage/` | v1 rules, the input contract, the v2 shadow agents and workflow |
 | `app/domains/study_guide/` | the study guide: topic catalog and verified resource library (`catalog/*_v1.json`), their checks and hash (`library.py`), the link check (`link_check.py`), and the `study_guide.v1` workflow (`workflow.py`, `agents.py`, `planning.py`, `ai_prompts.py`, `mock_answers.py`); no `.md` files here, because the Render build filter ignores them |
 | `app/llm/` | AI gateway, prompt library (prompt + answer schema, one hash), personal-data masking, mock, Claude, Typhoon and local providers (`providers/openai_compat.py` serves OpenAI-format services, Typhoon and a server we run ourselves, and states the answer format in words for both, ADR-022, ADR-026; `providers/_http.py` refuses redirects for every real client) |
+| `app/exchange/` | the skill-handoff exchange (ADR-030): the common language (`common.py`, `vocabulary_v1.json`), translators (`translators/`, one module per skill, outside `app/domains/`), the route table (`routes.py`, `routes_v1.json`) and `exchange.py`, which checks the table at start and prepares each handoff for the queue store |
 | `app/eval/` | the two scorecards (triage: 61 labelled cases; study guide: 67 labelled requests) and the eval gate's shared code (`common.py`) |
 | `app/observability/sentry.py` | Sentry reporting: step failures, degraded AI, Runner recoveries |
 | `app/observability/tracing.py`, `job_spans.py` | tracing: the OTLP/JSON exporter with its attribute allow-list, and a finished job's spans (ADR-017) |
-| `app/persistence/queue_store.py` | the application queue in its own SQLite file (`<data>/app/queue.sqlite3`, schema 2): jobs, events, the Runner heartbeat, reviews and append-only decisions, and the store id that shows when the queue started empty |
+| `app/persistence/queue_store.py` | the application queue in its own SQLite file (`<data>/app/queue.sqlite3`, schema 3): jobs, events, the Runner heartbeat, reviews and append-only decisions, skill handoffs, and the store id that shows when the queue started empty |
 | `app/services/` | workflow catalog, admission, Runner with reconciliation, result summaries, queue and run-time figures, review decisions (`reviews.py`) |
 | `app/api/`, `app/web/` | standard-library HTTP API and the Thai web page (chat layout with a case / study-question switch, the study guide's layered answer, Flow and Trace, read-only settings); `tests/test_web_page.py` holds the page to its contracts |
 | `app/boot.py` | the image's process 1: takes the data folder as root, switches to `neuron`, becomes tini |
@@ -468,17 +482,30 @@ Notes for cloud sessions (claude.ai/code):
     same answers for v1 and v2, rather than comparing separate model runs. Eight edge cases remain wrong
     for both and unflagged; fewer flags do not fix that risk (E5). The local 4B model has had one full run
     of each set (2026-11-08) besides the PR's two smoke runs.
-  - Per-person reviewer identity (2.1), the linked job after an approval (2.3) and the n8n intake (2.5) are not
-    built; review decisions are (ADR-027).
+  - Per-person reviewer identity (2.1) and the n8n intake (2.5) are not built; review decisions (ADR-027) and the
+    linked job after an approval (2.3, ADR-030) are.
+  - The first new skill on the exchange (H4) waits for the owner's choice; the link between two handed-off jobs'
+    traces (H5) is not built.
   - The live page uses the mock AI unless the owner adds Typhoon (or Claude) in Render's Environment tab
     (roadmap 0.4).
   - The rest of the roadmap is open.
 - **Next:** [docs/ROADMAP.md](docs/ROADMAP.md), the first item that is not ✅ and whose needs are met.
+  - **The skill-handoff exchange is built in its pull request (2026-11-11), pending merge** (ADR-030, roadmap
+    H1–H3 and H5's page part). The owner paused new study-guide work, asked for skills that stay separate and pass
+    work through a go-between with a translator on the way, then asked for it to be built and shown working, and to
+    be tested with a new suite and the existing ones. Built: `app/exchange/`, the route-only `case_triage.v2.apply`
+    (roadmap 2.3), queue schema 3 with the `handoffs` ledger, the handoff inside the decision's transaction, the API
+    fields and the page. 37 new tests (448 in all); `tests/handoff_check.py` ran all 217 existing triage cases end
+    to end with 0 problems; every earlier gate unchanged
+    ([evidence](docs/evidence/2026-11-11-skill-handoff.md)). After the merge: the owner's test on the live page.
   - Waiting on the owner: 0.2 and 1.4 (D1, paid Render plan), 0.3 path B and 0.4 with Claude (D2, Claude
     API key); 0.4 with Typhoon is free but sends what is typed on the page to Typhoon, so it is the owner's
     choice too; an open model behind the page needs a paid machine (D7); the owner test of 2.4 on the live page
-    after the merge. D8 is decided (2026-11-10): the e-mail history stays as it is; do not propose a rewrite.
-  - **E2 is built and measured in PR #64 (2026-11-11), pending merge**, from PR #62's held-out-set commit `a30de92`, preserved in
+    after the merge; the owner test of the skill handoff (H3) on the live page after its merge; the first new
+    skill (H4). D8 is decided (2026-11-10): the e-mail history stays as it is; do not propose a rewrite.
+  - **The study guide is paused (owner, 2026-11-11):** no new study-guide work (E4, E6 or changes to
+    `app/domains/study_guide/`) until the owner resumes it; its checks keep running.
+  - **E2 is built and measured in PR #64, merged on 2026-11-11**, from PR #62's held-out-set commit `a30de92`, preserved in
     history before changing any rule. Thai/English rules, versioned keyword data, frozen-job checks,
     integration tests, both regenerated gates and a same-answer v1/v2 comparison are built. The original
     `case_triage.v1` demonstration stays on `keywords-v1`; this replaces PR #62's unbuilt plan to move it too.
@@ -487,16 +514,15 @@ Notes for cloud sessions (claude.ai/code):
     saved artifact exactly. Measurement and gap dispositions: [E2 evidence](docs/evidence/2026-11-11-e2-rules-v2.md).
     The earlier v1 scorecard printed held-out mistakes to the previous developer; disclose that limitation
     and never add a keyword because of a held-out result. A change to the rules after measurement requires
-    another version and new evidence. Main has not been merged or deployed by this work.
+    another version and new evidence.
   - 5.8's first full run is recorded: the owner chooses its branch (not good enough, close or good enough;
     roadmap 5.8, "After the first full run", step 2), then follow it.
   - Buildable now without an owner decision: the rest of 5.5 (decide and fix the stage-1 gaps), 5.6 and 5.7,
-    the rest of Phase 2 (2.1 next, then 2.3; 2.2 and 2.4 are built) and Phase 4 (4.1 first; Phase 3, which it
+    the rest of Phase 2 (2.1 next; 2.2, 2.3 and 2.4 are built), H5's trace link, and Phase 4 (4.1 first; Phase 3, which it
     needs, is built). The rest of 7.1 (who can read the AI key) needs an ADR first.
   - The effectiveness track (2026-11-10, PR #50, [docs/effectiveness_plan.md](docs/effectiveness_plan.md)): E1
     is built (PR #60) and waits for its measurement on Render (9.0 to 10.5 s before); E2 (Thai/English
-    rules v2) is built and measured in PR #64, pending merge, with results and limits in its evidence note; E3 (a real model
-    behind the page) is the owner's decision; E4 needs an ADR, E5 needs 5.6, E6 needs the owner to read
-    each candidate.
+    rules v2) is built and measured in PR #64, merged on 2026-11-11, with results and limits in its evidence note; E3 (a real model
+    behind the page) is the owner's decision; E4 and E6 are paused with the study guide; E5 needs 5.6.
   - The owner decides which phase or package comes next; ask before starting one.
 - Keep this section and the ROADMAP status table true in every PR.

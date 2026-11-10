@@ -1,0 +1,19 @@
+{
+  "version": "routes-v1",
+  "max_depth": 3,
+  "routes": [
+    {
+      "id": "triage-approved-to-apply",
+      "from": "case_triage.v2",
+      "on": "APPROVED",
+      "to": "case_triage.v2.apply",
+      "out": "out.case_triage.v2@1",
+      "in": "in.case_triage.v2.apply@1",
+      "needs": ["case.id", "case.final_category", "case.final_queue", "review.decision_id", "review.reviewer_role"],
+      "why": {
+        "en": "Record where an approved case goes, with a Core receipt (roadmap 2.3)",
+        "th": "บันทึกว่าเคสที่อนุมัติแล้วไปคิวไหน และใครอนุมัติ พร้อมใบรับจาก Core (ขั้น 2.3)"
+      }
+    }
+  ]
+}

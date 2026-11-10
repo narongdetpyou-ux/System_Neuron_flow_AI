@@ -252,6 +252,24 @@ class ReviewAndRetentionTests(unittest.TestCase):
             with self.subTest(line=line):
                 self.assertIn("if (stillOpen)", line)
 
+    def test_every_handoff_code_has_thai_words_and_links_open_only_job_ids(self):
+        # Skill handoffs (ADR-030): the page names every origin, state and refusal code of app/exchange in Thai, and
+        # its only way to another job is a button whose id passes JOB_ID, never an address.
+        from app.exchange import REASONS, Vocabulary
+        from app.persistence import HANDOFF_STATES
+        self.assertEqual(set(js_table("ORIGIN_TH")), set(Vocabulary.load().origins))
+        self.assertEqual(set(js_table("HANDOFF_STATE")), set(HANDOFF_STATES))
+        self.assertEqual(set(js_table("HANDOFF_REASON")), set(REASONS))
+        for table in ("ORIGIN_TH", "HANDOFF_STATE", "HANDOFF_REASON"):
+            with self.subTest(table=table):
+                self.assertTrue(all(re.search(r"[฀-๿]", word) for word in js_table(table).values()))
+        self.assertIn('action === "open-job" && JOB_ID.test(', SCRIPT)
+        opener = SCRIPT[SCRIPT.index("function openJobButton"):]
+        self.assertIn("JOB_ID.test(", opener[:opener.index("\n  }\n")])
+        # A route-only workflow is shown, never offered: the composer sends only the default workflow or the study one.
+        self.assertIn("info.route_only", SCRIPT)
+        self.assertNotIn("case_triage.v2.apply", SCRIPT[SCRIPT.index("function modeWorkflow"):][:200])
+
     def test_the_page_never_says_who_decides(self):
         submit = SCRIPT[SCRIPT.index("async function submitDecision"):]
         submit = submit[:submit.index("\n  }\n")]

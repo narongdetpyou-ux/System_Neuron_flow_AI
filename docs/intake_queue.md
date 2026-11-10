@@ -1,6 +1,6 @@
 # Intake API, job queue, Runner and web page (round 2, Milestone B)
 
-**Status:** built in PR #11 and tested offline (411 tests on 2026-11-11, including killing the Runner
+**Status:** built in PR #11 and tested offline (448 tests on 2026-11-11, including killing the Runner
 mid-step). The container build is checked on every push by *Actions → Service container*. Live on
 Render's free plan since 2026-11-01 (`render.yaml`). Railway was the first choice, but it has paused new
 sign-ups since 22 Oct 2026 after a security incident; `railway.json` stays in the repository for later.
@@ -19,6 +19,9 @@ in Honeycomb, one trace per job ([observability_tracing.md](observability_tracin
 The study guide on the page (roadmap 3.4, PR #39): a switch above the message box chooses a case or a study
 question; a question is sent without the confirm card (ADR-023) and answered in layers (see "ถามเรื่องที่อยากเรียน"
 and "Web page" below, and [study_guide.md](study_guide.md#the-page-roadmap-34)).
+Skill handoffs (2026-11-11, ADR-030, [skill_handoff.md](skill_handoff.md)): an approval starts the linked
+`case_triage.v2.apply` job in the decision's own transaction (queue schema 3, a `handoffs` table with a tested
+2 → 3 upgrade), and the page shows the chain both ways (see "Skill handoffs" under "API reference").
 Design principles: [design_philosophy.md](design_philosophy.md).
 
 ## ภาพรวมการทำงาน (ภาษาไทย)
@@ -35,6 +38,7 @@ Design principles: [design_philosophy.md](design_philosophy.md).
 6. **บันทึกผล** สถานะเป็น "รอคนตรวจ" (`REVIEW_REQUIRED`) พร้อมสรุปที่อ่านง่าย ไม่มีที่อยู่ไฟล์ภายในหรือรหัสลับ และในธุรกรรมเดียวกันระบบเปิด "รายการรอตัดสิน" (review) ของเคสนั้น
 7. **ดูผล** หน้าเว็บอัปเดตเอง หรือเรียก `GET /v1/jobs/{job_id}`
 8. **คนตัดสิน** กด "อนุมัติ" (ใช้หมวดที่กฎเสนอหรือเลือกเอง) หรือ "ไม่อนุมัติ" พร้อมเหตุผล เคสเปลี่ยนเป็น "อนุมัติแล้ว" (`APPROVED`) หรือ "ไม่อนุมัติ" (`REJECTED`) ตัดสินแล้วแก้ไม่ได้ กดซ้ำก็ไม่บันทึกซ้ำ ผู้ตัดสินมาจากรหัสเข้าใช้ ไม่ได้มาจากสิ่งที่หน้าเว็บส่ง ตอนนี้มีรหัสเดียว คือของเจ้าของระบบ (รหัสรายคนอยู่ในขั้น 2.1)
+9. **ส่งต่อ (ตั้งแต่ 11 พ.ย.)** ถ้าอนุมัติ ตัวกลาง (exchange) ส่งเคสต่อให้งาน "บันทึกผลหลังอนุมัติ" ทันทีในครั้งเดียวกับการตัดสิน ผ่านล่ามขาออก ภาษากลาง และล่ามขาเข้า งานใหม่บันทึกว่าเคสไปคิวไหนและใครอนุมัติ พร้อมใบรับจาก Core ข้อความเคสไม่ถูกส่งต่อ ถ้าไม่อนุมัติ จะไม่ส่งต่อ ([skill_handoff.md](skill_handoff.md))
 
 ### ถ้ามีอะไรผิดพลาด
 
@@ -52,6 +56,7 @@ Design principles: [design_philosophy.md](design_philosophy.md).
 | ใส่รหัสเข้าใช้ผิด 10 ครั้งในหนึ่งนาที | พักการลองจากเครื่องนั้นชั่วคราว (429) | "ลองรหัสผิดหลายครั้งเกินไป" |
 | กดบันทึกการตัดสินซ้ำ หรือเน็ตหลุดแล้วกดใหม่ | ใช้การตัดสินเดิม (200) ไม่บันทึกซ้ำ | "บันทึกการตัดสินแล้ว" ครั้งเดียว |
 | มีคนตัดสินเคสนี้ไปแล้ว (อีกแท็บหนึ่ง) | ปฏิเสธ (409) ไม่เปลี่ยนอะไร | "เคสนี้มีคนตัดสินไปแล้ว" แล้วหน้าเว็บโหลดผลการตัดสินให้ดู |
+| ล่ามแปลข้อมูลของเคสที่อนุมัติไม่ได้ | ไม่เดา บันทึกว่า "ส่งต่อไม่ได้" พร้อมเหตุผล การอนุมัติยังอยู่ | กล่อง "ส่งต่อไม่ได้" สีแดงใต้เคส บอกเหตุผล |
 | ระบบเริ่มใหม่ด้วยที่เก็บว่าง (แผนฟรี: หลับ รีสตาร์ท อัปเดต) | เคส ผล และการตัดสินเก่าหายทั้งหมด รหัสชุดข้อมูล (`store_id`) เปลี่ยน | แถบสีเหลืองบอกว่าเคสที่ส่งจากเครื่องนี้หายไปกี่รายการ กด "รับทราบ" เพื่อปิด |
 
 **ตามรอยคำขอ (request id)** ทุกคำตอบจากระบบมี "รหัสคำขอ" ติดมาด้วย (หัวข้อ `X-Request-Id`) รหัสเดียวกันนี้อยู่ในบันทึกการเข้าใช้ (access log) และในเหตุการณ์แรกของงาน ("รับเข้าคิว") เมื่อมีปัญหา ให้เปิดเคสนั้น → "รายละเอียดเชิงเทคนิค" → ดู "รหัสคำขอที่ส่งเคสนี้" แล้วส่งรหัสนี้ให้ Claude ไล่ดูใน log ได้ตรงคำขอนั้นทันที ถ้าระบบขัดข้องฝั่งเซิร์ฟเวอร์ ข้อความเตือนบนหน้าเว็บก็จะบอกรหัสคำขอด้วย รหัสนี้ไม่มีข้อความเคสหรือรหัสลับ
@@ -286,8 +291,13 @@ cannot pause or stop a running job, so `RUNNING` jobs cannot be cancelled.
 `APPROVED` and `REJECTED` (roadmap 2.2, ADR-027) are reachable only from `REVIEW_REQUIRED`, through a decision
 (below). The decision row, the review's new state and version, the job's new state and its `review.approved` or
 `review.rejected` event are written in one `BEGIN IMMEDIATE` transaction. The event carries the decision, the
-final category and the reviewer's role, never the reason (free text that could repeat the case). The linked
-follow-up job after an approval (ADR-004) is roadmap 2.3, not built.
+final category and the reviewer's role, never the reason (free text that could repeat the case).
+
+Since 2026-11-11 (roadmap 2.3 and H3, ADR-030) an approval of a `case_triage.v2` case also starts its linked
+follow-up job in the same transaction, through the skill-handoff exchange ([skill_handoff.md](skill_handoff.md)): a
+`QUEUED` `case_triage.v2.apply` job, whose one step records the approved category, queue and decision id, and Core
+writes its receipt. The source gets a `handoff.started` event (or `handoff.refused` with a reason code), and the new
+job's `job.queued` event names the source job and the route. A rejection starts nothing.
 
 ### Recovery rules (the Runner at start-up)
 
@@ -343,13 +353,28 @@ hex) in the same transaction. A job view (`GET /v1/jobs/{job_id}`) has `human_re
 - `reason` is required: 1–500 characters after trimming, without control characters (new lines are fine);
 - who decides comes from the credential, never the body: today `{"token_id": "shared-access-key", "role":
   "owner"}`, the only credential until per-person tokens (2.1);
-- the reply has the `decision` (with `final_queue` for an approval), the updated `review` and `retention`;
+- the reply has the `decision` (with `final_queue` for an approval), the updated `review`, `handoffs` (what the
+  decision handed on, below; the same rows for a repeated click) and `retention`;
 - the same key and body again → `200` with the same decision; the same key with another body or another review
   → `409 idempotency_conflict`; a decided review → `409 already_decided` (with `review_state`); another
   `expected_version` → `409 version_conflict` (with the current `version`). None of them changes anything;
 - other codes: `invalid_decision`, `invalid_category`, `invalid_reason`, `invalid_version`,
   `invalid_idempotency_key`, `invalid_fields`, `not_reviewable` (the job left `REVIEW_REQUIRED` behind the
   review's back; the transaction rolls back), `review_not_found`, `rate_limited`.
+
+**Skill handoffs (ADR-030, [skill_handoff.md](skill_handoff.md)).**
+- `GET /v1/jobs/{job_id}` has `handoff: {"from": …, "to": [...]}`: the handoff that started this job (`null` for a
+  job admitted from outside) and every handoff it started or that was refused. Each one has `handoff_id`,
+  `route_id`, `state` (`STARTED` or `REFUSED`), `reason` (a refusal code: `source_incomplete`, `fact_invalid`,
+  `fact_missing`, `target_input_invalid`, `chain_too_long`, `translator_error`), the source and target job ids and
+  types, `depth`, both translator versions, the route table's and the vocabulary's versions, `envelope_sha256`,
+  `facts` (name and origin, with the value of a code or id fact and only the length of a text fact) and
+  `left_out` (facts the out-translator gave that the route does not carry).
+- `GET /v1/jobs` gives each job `from_job_id`.
+- `GET /v1/status` has `handoff`: the routes in plain words (`from`, `on`, `to`, `why` in English and Thai), the
+  fact meanings and origins, the refusal codes, the versions and `counts`; each workflow says `route_only`.
+- `POST /v1/jobs` refuses a route-only type (today `case_triage.v2.apply`) as `400 unknown_workflow_type`, and its
+  `allowed` list leaves it out.
 
 **Retention (ADR-029).** `GET /v1/status`, a new job's reply (202 and the duplicate's 200) and a decision's reply
 carry `retention`: `{"persistent": false, "lost_on": ["sleep", "restart", "deploy"], "store_id": "store_<16 hex>",

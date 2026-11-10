@@ -48,12 +48,17 @@ def raw_db(path):
 
 
 def waiting_job(store, key, *, priority="normal", category="upload", summary="I cannot upload an attachment"):
-    """A job the Runner finished as REVIEW_REQUIRED, without running Core (the Runner test does that once)."""
+    """A job the Runner finished as REVIEW_REQUIRED, without running Core (the Runner test does that once).
+
+    It claims this job by id: since ADR-030 an approval queues its follow-up job, which ``claim_next`` would take
+    first."""
     job, _ = store.admit(job_id="job_" + hashlib.sha256(key.encode()).hexdigest()[:24], idempotency_key=key,
                          request_fingerprint=key, workflow_type="case_triage.v2",
                          input={"case_id": key[-12:], "summary": summary}, max_queued=1000)
-    claimed = store.claim_next("runner-test")
-    assert claimed["job_id"] == job["job_id"]
+    with raw_db(store.path) as db:
+        claimed = db.execute("UPDATE jobs SET status='RUNNING', claims=claims+1, runner_id='runner-test'"
+                             " WHERE job_id=? AND status='QUEUED'", (job["job_id"],)).rowcount
+    assert claimed == 1
     review = dict(PROPOSAL, case_id=key[-12:], review_priority=priority, suggested_category=category,
                   suggested_queue=f"{category}_review")
     store.finish(job["job_id"], "REVIEW_REQUIRED", result={"review": review, "steps": [], "ai": None})
@@ -367,7 +372,9 @@ class MigrationTests(unittest.TestCase):
         self.assertEqual([review["job_id"] for review in reviews], jobs)  # the elevated one first
         self.assertEqual(reviews[0]["priority"], "elevated")
         with raw_db(self.path) as db:
-            self.assertEqual(db.execute("SELECT value FROM meta WHERE key='schema_version'").fetchone()[0], "2")
+            # Upgraded step by step to the current version (3 since ADR-030 added handoffs).
+            self.assertEqual(db.execute("SELECT value FROM meta WHERE key='schema_version'").fetchone()[0],
+                             str(queue_store.SCHEMA_VERSION))
         store.migrate()  # again: nothing changes
         self.assertEqual(len(store.list_reviews(limit=10)[0]), 2)
 
@@ -393,8 +400,8 @@ class MigrationTests(unittest.TestCase):
         store = QueueStore(self.path)
         store.migrate()
         with raw_db(self.path) as db:
-            db.execute("UPDATE meta SET value='3' WHERE key='schema_version'")
-        with self.assertRaisesRegex(RuntimeError, "schema 3 is not supported"):
+            db.execute("UPDATE meta SET value='4' WHERE key='schema_version'")
+        with self.assertRaisesRegex(RuntimeError, "schema 4 is not supported"):
             store.migrate()
 
 

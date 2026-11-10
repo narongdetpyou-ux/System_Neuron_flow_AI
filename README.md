@@ -98,9 +98,10 @@ guide** (`study_guide.v1`, the owner's first-response rule):
 | Scorecards: 61 development triage cases, 116 robustness triage cases, 40 held-out triage cases, and 67 study-guide requests (EN + TH, metaphors, out of scope, injection) | `app/eval/` | The 61 triage and 67 study-guide cases are CI eval gates; the robustness gate covers the 116 edge cases. Held-out measurement and the three-set live comparison are manual. Mock scores test the pipeline, not AI accuracy |
 | Robustness benchmark, stage 1: 270 hard synthetic edge cases (EN + TH) and four pinned open datasets (BLNS, JSONTestSuite, CLINC150, BANKING77) through every layer, offline | `tests/robustness/` | Runs in CI as a gate on every outcome; the first run found 8 bugs, all fixed in roadmap 5.5 (now 0 bugs, 239/270 own items pass after E2). Plan for stages 2–3: [benchmarking.md](docs/benchmarking.md) |
 | Intake API, durable job queue, single Runner with crash recovery, Thai web page | `app/api/`, `app/persistence/`, `app/services/`, `app/web/`, `app/serve.py` | Working (round 2), tested offline and as a container in CI; live on Render's free plan since 2026-11-01 |
-| Study guide (`study_guide.v1`): versioned topic catalog (11 topics, Thai and English), verified resource library (17 links) with a weekly link check, and the five-step workflow | `app/domains/study_guide/` | Working through the API and on the web page (roadmap 3.1–3.4); mock AI in CI; **first live run with Typhoon** on 2026-11-06 (synthetic set) |
+| Study guide (`study_guide.v1`): versioned topic catalog (11 topics, Thai and English), verified resource library (17 links) with a weekly link check, and the five-step workflow | `app/domains/study_guide/` | Working through the API and on the web page (roadmap 3.1–3.4); mock AI in CI; **first live run with Typhoon** on 2026-11-06 (synthetic set). New work paused by the owner on 2026-11-11; its checks keep running |
 | Human-review decisions: a ledger, a decisions API and a decision card with a "รอรีวิว" list on the page | `app/services/reviews.py`, `app/persistence/queue_store.py`, `app/web/` | Working since 2026-11-10 (roadmap 2.2, 2.4), with the owner's shared key as the only reviewer (ADR-027) |
-| Per-person reviewer tokens, the linked job after an approval, n8n intake, reviewer notifications | — | **Not built yet** (Milestone C in [architecture](docs/architecture.md)) |
+| Per-person reviewer tokens, n8n intake, reviewer notifications | — | **Not built yet** (Milestone C in [architecture](docs/architecture.md)) |
+| Skill handoff: separate skills that pass work through one exchange, with a translator on each side of a common language; the first route starts the linked job after an approval (roadmap 2.3) | `app/exchange/`, `app/domains/case_triage/apply.py` | **Working since 2026-11-11** (ADR-030, [design and tests](docs/skill_handoff.md)): checked over all 217 triage cases end to end; the first new skill waits for the owner's choice |
 
 ## Try it
 
@@ -119,8 +120,12 @@ so; a paid plan with a disk keeps them.
   fails when an answer has a link outside the library or more than 5 resources. Then the robustness benchmark sends
   the edge cases and open datasets through every layer and compares every outcome with
   `tests/baselines/robustness_v1.json` (docs/benchmarking.md). Its summary, in Thai, is on the run page too.
+  Last, one case goes step by step through the skill-handoff exchange, and every case of the three triage sets
+  goes end to end through a decision and the follow-up job it starts (`tests/handoff_check.py`); both are on the
+  run page.
 - *Actions → Service container* checks `render.yaml`, builds the same container as Render, submits cases
-  over HTTP, restarts it and checks that nothing was lost. It also fails when the image lacks a bytecode
+  over HTTP, approves one and checks the follow-up job it hands on to, restarts it and checks that nothing was
+  lost. It also fails when the image lacks a bytecode
   cache for any of its code, and reports how long the first case after a start takes.
 - *Actions → Sentry smoke test* checks that error reporting reaches Sentry. It needs the repository secret
   `SENTRY_DSN`; without it, it skips with a notice.
@@ -144,7 +149,7 @@ so; a paid plan with a disk keeps them.
 
 **Locally (Python 3.10+):**
 ```bash
-python -m unittest discover -s tests -v        # 411 tests
+python -m unittest discover -s tests -v        # 448 tests
 python -m examples.case_triage_demo            # v1 rules, one synthetic case
 python -m examples.case_triage_shadow_demo     # v2 shadow mode, three synthetic cases (offline mock AI)
 python -m app.eval.triage_shadow_eval          # scorecard on 61 synthetic cases
@@ -183,6 +188,7 @@ most 1 MiB. The agent `version` is frozen into each job, so an old job refuses t
 | [Tracing to Honeycomb](docs/observability_tracing.md) | One trace per case: what a span carries and never carries, setup in Render, how it is checked |
 | [Study guide](docs/study_guide.md) | `study_guide.v1`: the workflow and its answer, failure handling, the mock's limits; the scorecard; the box and layered answer on the web page; the topic catalog and verified library, the weekly link check |
 | [Effectiveness plan](docs/effectiveness_plan.md) | What "effective" means here, as eleven measures with today's values, and six planned work packages (E1 to E6) that move them: a faster first case, rules that read Thai, a real model behind the page, recorded feedback, the edge of `other`, more Thai study resources |
+| [Skill handoff](docs/skill_handoff.md) | How separate skills pass work to each other: one exchange, fixed versioned routes, a common language with a translator on each side; what is recorded and shown, every refusal, and how it is tested |
 | [Benchmarking plan](docs/benchmarking.md) | Three stages of testing beyond our own cases: the robustness gate (built), open benchmarks and attacks, privacy, load and live drift (planned); the datasets, their licences and the ones left out |
 | [Funding readiness pack](docs/funding/README.md) | Internal evidence register; not a submitted application |
 | [Evidence notes](docs/evidence/2026-11-03-render-operations.md) | Dated measurements; the first one covers Render operations (graceful stops, deploy filter, cold start), and [the first live AI runs](docs/evidence/2026-11-06-first-live-typhoon.md) are Typhoon's (2026-11-06); [the first robustness run](docs/evidence/2026-11-07-robustness-stage1.md) is from 2026-11-07, and [the local open model's first smoke run](docs/evidence/2026-11-08-first-local-model-smoke.md) and [first full run](docs/evidence/2026-11-08-first-local-model-full.md) from 2026-11-08; [the effectiveness baseline](docs/evidence/2026-11-10-effectiveness-baseline.md) (the 116 edge cases with Typhoon, and the first job after a start) is from 2026-11-10, and so is [the image's bytecode cache, before and after](docs/evidence/2026-11-10-e1-bytecode-cache.md) (measured in CI, not yet on Render), and [the answer to the first independent review](docs/evidence/2026-11-10-independent-review-response.md) |
