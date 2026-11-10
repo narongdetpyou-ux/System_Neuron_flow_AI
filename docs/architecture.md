@@ -206,7 +206,7 @@ app/boot.py                    process 1 of the image: takes the data folder, dr
 app/settings.py, app/serve.py  environment settings; the launcher (API + supervised Runner in one container)
 Dockerfile, render.yaml        the container and the Render Blueprint (railway.json kept for Railway)
 examples/                      case_triage_demo, case_triage_shadow_demo, study_guide_demo, sentry_smoke_test, service_smoke_test
-tests/                         318 tests: core, triage v1/v2, AI gateway, Typhoon provider, local model provider and its model fetcher, masking, scorecards, eval gates, Sentry, tracing, API, queue, Runner, HTTP, metrics, study library, link check, study guide, web page, robustness benchmark, workflow permissions
+tests/                         344 tests: core, triage v1/v2, AI gateway, Typhoon provider, local model provider and its model fetcher, masking, scorecards, eval gates, Sentry, tracing, API, queue, Runner, HTTP, metrics, study library, link check, study guide, web page, robustness benchmark, workflow permissions, the image's bytecode cache
 tests/robustness/              the robustness benchmark, stage 1 (docs/benchmarking.md): synthetic_v1.json (270 edge cases), open_extract_v1.json
                                (BLNS, JSONTestSuite, CLINC150, BANKING77, pinned; NOTICE.md), bench.py, build_open_extract.py, triage_edge_golden_v1.json
 tests/baselines/               shadow_eval_mock.json, study_guide_eval_mock.json: every case's answer with the mock AI (the eval gates' baselines);

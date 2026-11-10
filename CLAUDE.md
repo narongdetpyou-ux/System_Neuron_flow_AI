@@ -138,7 +138,7 @@ If a task seems to need breaking a rule:
 ## 4. Checking your work
 
 ```bash
-python -m unittest discover -s tests -v        # all tests (318 on 2026-11-08); Python 3.10–3.13
+python -m unittest discover -s tests -v        # all tests (344 on 2026-11-10); Python 3.10–3.13
 python -m examples.case_triage_demo            # v1 rules, one synthetic case
 python -m examples.case_triage_shadow_demo     # v2 shadow mode with the offline mock AI
 python -m examples.study_guide_demo            # the study guide's answers to four synthetic requests
