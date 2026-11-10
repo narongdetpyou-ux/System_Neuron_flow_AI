@@ -395,7 +395,7 @@ class FlowTests(unittest.TestCase):
             self.assertIn(f"library={LIBRARY.tag}", version, name)
         self.assertIn("prompt=study_detect_topic_v1@sha256:", versions["study.detect_topic"])
         self.assertIn("prompt=study_explain_v1@sha256:", versions["study.explain"])
-        self.assertIn("redaction=redact-v1", versions["study.explain"])
+        self.assertIn("redaction=redact-v2", versions["study.explain"])
 
     def test_a_job_frozen_with_another_library_is_never_answered(self):
         spec = build_study_workflow("other_library", {"message": PROMPT_EN})

@@ -8,11 +8,11 @@ open-weight model on a server we run ourselves, by default llama.cpp on this mac
 
 from .config import LLMConfig
 from .errors import (InvalidModelOutput, LLMConfigError, LLMRequestError, LLMTransientError,
-                     ModelDeclined)
+                     ModelDeclined, UnmaskedText)
 from .gateway import structured_answer
 from .prompts import PromptTemplate, load_prompt
 from .redaction import REDACTION_VERSION, MaskedText, mask
 
 __all__ = ["LLMConfig", "PromptTemplate", "load_prompt", "structured_answer", "mask", "MaskedText",
            "REDACTION_VERSION", "InvalidModelOutput", "LLMConfigError", "LLMRequestError", "LLMTransientError",
-           "ModelDeclined"]
+           "ModelDeclined", "UnmaskedText"]
