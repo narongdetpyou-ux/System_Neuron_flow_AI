@@ -522,7 +522,9 @@ Notes for cloud sessions (claude.ai/code):
   - **The auto-approve limits are built in PR #66 (2026-11-11), pending merge** (ADR-031, roadmap 5.6, 5.9 and the
     first injection measurement of 5.7): the hard set, the open-benchmark builder, the simulation, the CI step with
     the mock, the manual workflow and the first Typhoon run. After the merge: the owner's run of *Auto-approve
-    limits* by hand. Docs, tests and CI only, so the merge does not redeploy Render.
+    limits* by hand. It also changes `app/eval/`, which is part of the image, so the merge redeploys Render (on the
+    free plan the queued cases are lost, as with every deploy); the service never imports the simulation, so what
+    the page does is unchanged.
   - **The skill-handoff exchange was built in PR #65 and merged on 2026-11-11** (ADR-030, roadmap
     H1–H3 and H5's page part). The owner paused new study-guide work, asked for skills that stay separate and pass
     work through a go-between with a translator on the way, then asked for it to be built and shown working, and to
