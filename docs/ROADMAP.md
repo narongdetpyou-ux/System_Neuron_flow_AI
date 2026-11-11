@@ -311,7 +311,8 @@ decisions would vanish on every sleep. Since 2026-11-10 the API and the page say
   `NEURON_FLOW_LLM_PROVIDER=typhoon` and `TYPHOON_API_KEY` as new rows in the Environment tab, then the
   same checks. Case triage and the study guide then both use it; a study question makes one or two calls.
   Typhoon collects usage data, so synthetic data only. The settings tab of the page lists these steps, and
-  how to go back to the mock.
+  how to go back to the mock. A step-by-step Thai guide for the owner, with how to switch back and what to
+  check: [switch_ai_guide_th.md](switch_ai_guide_th.md) (2026-11-11).
 - **Changing the model or prompt later** is a new agent version. Jobs caught mid-way then fail as
   `configuration_changed`, by design.
 
