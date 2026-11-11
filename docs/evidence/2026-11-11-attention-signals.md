@@ -170,6 +170,49 @@ priority are recomputed. Result: [`replay-saved-answers.json`](2026-11-11-attent
   file, gave the same 29/32 and 1/32 (AI correct 55/64); it is not kept.
 - The saved reports leave out the case text (joined to the case files by `source_sha256`), as in the limits run.
 
+## Measurement 3: signals v2 on open data, a development half and a sealed half
+
+After the owner said the first result was not enough, the phrase list was improved under a protocol fixed before
+any of the data was read (`tests/open_benchmarks/attention_open_check.py`, commit `a2ec9a3`):
+
+- security requests by the datasets' own intent labels: BANKING77 `test.csv` (six intents: lost or stolen card or
+  phone, compromised card, three "not recognised" intents), split by the first hex digit of the SHA-256 of the
+  text (even: development; odd: sealed), and CLINC150 (`report_fraud`, `report_lost_card`, `freeze_account`;
+  `train` is development, `test` is sealed);
+- every other intent of the same files as ordinary requests, split the same way;
+- BIPIA's 75 attacks: positions 0, 2 and 4 of each of the 15 categories are development (45), 1 and 3 sealed (30);
+- rows of the 300-request BANKING77 sample measured (and partly read) with v1 are left out of the sealed half.
+
+signals v1 (`5a030d1f536f…`) was measured on both halves first. Then the development half's misses and needless
+flags were read, phrases were added and four v1 forms dropped (`afraid`, `sue`, bare `didn't make`, `you are
+now`), the list was committed (`fe7ec38`, `signals-v2:cc8a905167cc…`), and the sealed half was measured once.
+The sealed half prints counts only; no sealed text was read at any point
+([v1 counts](2026-11-11-attention-raw/open-sealed-signals-v1.json),
+[v2 counts](2026-11-11-attention-raw/open-sealed-signals-v2.json)).
+
+| | signals v1 | signals v2 |
+|---|---|---|
+| **Sealed:** BANKING77 security requests with the security signal | 33/106 | **73/106** |
+| **Sealed:** CLINC150 security requests with the security signal | 18/90 | **43/90** |
+| **Sealed:** BIPIA attacks with the instruction signal | 0/30 | **11/30** |
+| **Sealed:** ordinary BANKING77 requests with any signal (needless) | 4/1,273 | 6/1,273 |
+| **Sealed:** ordinary CLINC150 requests with any signal (needless) | 22/5,391 | 27/5,391 |
+| Development: BANKING77 security | 38/124 | 100/124 |
+| Development: CLINC150 security | 120/300 | 217/300 |
+| Development: BIPIA attacks | 0/45 | 37/45 |
+| Development: ordinary requests with any signal, BANKING77 / CLINC150 | 0/1,431 / 27/14,743 | 3/1,431 / 31/14,743 |
+| The 10 sealed-side security rows of the earlier sample (already seen) | 3/10 | 3/10 |
+| Hard set (`needs_person` / others) | 38/38 / 0/90 | 38/38 / 0/90 |
+| Held-out attention set (`needs_person` / others), measured again, no phrase taken from it | 25/32 / 1/32 | 25/32 / 1/32 |
+
+Reading it: on text nobody here wrote, the security signal went from about a third to about two thirds of
+BANKING77's security requests and from a fifth to under a half of CLINC150's, for a handful more needless
+flags. The gap between the development and sealed figures (100/124 against 73/106; 37/45 against 11/30) is the
+part of the gain that was memorised wording. By intent, sealed: `freeze_account` 8/30, and 0/2 in seven of
+BIPIA's fifteen categories, are where phrases do not reach. The developer's own
+held-out set did not move at all: its seven misses are worded unlike anything in the open data. Phrase lists
+have a ceiling, which is why the second source below exists.
+
 ## Tests and gates in this session
 
 - `python -m unittest discover -s tests`: 503 tests pass on Python 3.10 and 3.12 (25 new in
