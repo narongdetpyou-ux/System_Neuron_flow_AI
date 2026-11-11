@@ -9,7 +9,7 @@ name: Auto-approve limits (open benchmarks + hard set)
 # - Actions -> Auto-approve limits -> Run workflow, with Typhoon (default), measures a real model. It needs the
 #   repository secret TYPHOON_API_KEY. Typhoon is free (about 200 requests a minute) and collects usage data,
 #   which is acceptable only because every case is synthetic or openly licensed text written for a dataset
-#   (ADR-024). Cases start at least 1 second apart: the whole run is about 1,300 cases, about 45 minutes.
+#   (ADR-024). Cases start at least 1 second apart: the whole run is about 1,800 cases, about 60 minutes.
 on:
   pull_request:
     paths:
@@ -19,6 +19,7 @@ on:
       - "app/eval/golden/case_triage_autosend_hard_v1.json"
       - "app/eval/golden/case_triage_attention_heldout_v1.json"
       - "app/domains/case_triage/signals*"
+      - "app/llm/prompt_library/triage_classify_v2.json"
   workflow_dispatch:
     inputs:
       provider:
@@ -33,7 +34,7 @@ on:
         default: "typhoon-v2.5-30b-a3b-instruct"
         required: true
       sets:
-        description: "all (about 1,300 cases), hard (128), open (975 from the public sets) or existing (217)"
+        description: "all (about 1,800 cases), hard (192 with the held-out attention set), open (about 1,370 from the public sets) or existing (217)"
         type: choice
         options:
           - all
@@ -71,6 +72,17 @@ jobs:
       # Isolated (-I): the builder imports nothing from this repository and reads the downloads as data.
       - name: Build the open-benchmark case sets and check them against the manifest
         run: python -I tests/open_benchmarks/build_sets.py --out open-sets --cache ~/open-bench-cache --check
+      # The sealed half of the open data for the attention signals and the AI's flag (ADR-032, ADR-033): the
+      # sources are the ones just checked against their pinned SHA-256; the step prints counts only, never a text.
+      - name: Measure the attention signals on the sealed half and write it as a case set
+        run: |
+          {
+            echo '### สัญญาณ "ต้องให้คนดูก่อน" ของโค้ด กับข้อสอบกลางครึ่งที่ปิดไว้ (นับอย่างเดียว ไม่แสดงข้อความ)'
+            echo '```text'
+            python -m tests.open_benchmarks.attention_open_check --cache ~/open-bench-cache --part sealed \
+              --export-sealed open-sets/open_attention_sealed_v1.json
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
       - name: Check the API key is configured
         if: env.PROVIDER == 'typhoon'
         env:
@@ -100,7 +112,8 @@ jobs:
           # The held-out attention set (ADR-032) runs with the hard set: 64 more cases.
           HARD=(hard=app/eval/golden/case_triage_autosend_hard_v1.json
                 attention=app/eval/golden/case_triage_attention_heldout_v1.json)
-          OPEN=(bipia=open-sets/open_bipia_injection_v1.json clinc150=open-sets/open_clinc150_v1.json
+          OPEN=(sealed=open-sets/open_attention_sealed_v1.json
+                bipia=open-sets/open_bipia_injection_v1.json clinc150=open-sets/open_clinc150_v1.json
                 banking77=open-sets/open_banking77_v1.json massive=open-sets/open_massive_th_en_v1.json)
           EXISTING=(synthetic=app/eval/golden/case_triage_synthetic_v1.json
                     heldout=app/eval/golden/case_triage_heldout_v1.json
@@ -122,7 +135,9 @@ jobs:
             REPORTS+=(--report "reports/$PROVIDER-$NAME.json")
           done
           # The held-out attention scorecard goes on the run page: which cases were raised for a person first.
-          if [ -f "reports/$PROVIDER-attention.md" ]; then cat "reports/$PROVIDER-attention.md" >> "$GITHUB_STEP_SUMMARY"; fi
+          for NAME in attention sealed; do
+            if [ -f "reports/$PROVIDER-$NAME.md" ]; then cat "reports/$PROVIDER-$NAME.md" >> "$GITHUB_STEP_SUMMARY"; fi
+          done
           # Fails only if a real job did not wait for a person (a promise, not a score threshold).
           python -m app.eval.autosend_sim "${REPORTS[@]}" --out "reports/autosend-sim-$PROVIDER.json" \
             --summary "$GITHUB_STEP_SUMMARY"

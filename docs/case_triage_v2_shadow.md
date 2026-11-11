@@ -26,7 +26,10 @@ still Milestone C (2.1). No Core (`neuron_flow/`) file was changed. Design princ
    ผู้เขียนอาจกำลังลำบากหรือไม่ปลอดภัย เหตุด้านความปลอดภัยของบัญชีหรือการเงิน เรื่องกฎหมายหรือข้อมูลส่วนบุคคล และข้อความที่มีลักษณะสั่งระบบ
    - สัญญาณไม่เปลี่ยนหมวดและไม่ตัดสินอะไร ทำได้อย่างเดียวคือยกเคสขึ้นให้คนดูก่อน พร้อมบอกเหตุผล
    - เป็นรายการคำตัวอย่าง จึงพลาดเคสที่ใช้คำอื่น ผลวัดจริงอยู่ใน [บันทึกหลักฐาน](evidence/2026-11-11-attention-signals.md)
-5. ระบบ **เทียบ** สองความเห็น ถ้าไม่ตรงกัน หรือเจอสัญญาณ เคสถูกยกเป็น "ต้องดูก่อน" (priority elevated) พร้อมเหตุผล
+   - **AI ช่วยชี้ด้วย (ADR-033):** นอกจากเสนอหมวด AI ตอบอีกช่องหนึ่งว่าเคสนี้ "ต้องให้คนดูก่อน" ด้วยเหตุ 4 แบบเดียวกันหรือไม่
+     AI อ่านประโยคที่รายการคำไม่รู้จักได้ แต่ถูกหลอกได้ ระบบจึงให้ AI **เพิ่มป้ายได้อย่างเดียว** ลดป้ายของโค้ดไม่ได้
+     และถ้าหน้าเว็บใช้ AI จำลอง ช่องนี้จะเป็น "ไม่มี" เสมอ (เหลือแต่สัญญาณของโค้ด)
+5. ระบบ **เทียบ** สองความเห็น ถ้าไม่ตรงกัน เจอสัญญาณ หรือ AI ชี้ เคสถูกยกเป็น "ต้องดูก่อน" (priority elevated) พร้อมเหตุผล
 6. ผู้รีวิวได้รับข้อเสนอที่ **รอคนตัดสินเสมอ** (PENDING_HUMAN_REVIEW) AI ไม่มีสิทธิ์ตัดสินหรือเปลี่ยนคิวเอง
 7. ทุกคำตอบของ AI ถูกบันทึกว่ามาจากรุ่นไหน ใช้ prompt ฉบับไหน ถ้าเปลี่ยน prompt หรือรุ่น AI งานเก่าจะไม่ถูกรันซ้ำด้วยค่าใหม่โดยไม่รู้ตัว
 8. **ด่านตรวจผลรายเคส (eval gate, ขั้น 5.2)** ทุกครั้งที่มีการส่งโค้ดขึ้น GitHub ระบบรันเคสทดสอบ 61 เคสด้วย AI จำลอง แล้วเทียบคำตอบของทุกเคสกับไฟล์ต้นแบบ (`tests/baselines/shadow_eval_mock.json`) ถ้ามีเคสไหนตอบต่างจากเดิม แม้แต่ช่องเดียว (หมวดของกฎ หมวดของ AI ความมั่นใจ การเห็นตรงกัน ความสำคัญ หรือเหตุผล) ช่องตรวจ *Core logic tests* จะเป็นสีแดง และหน้าผลรันจะบอกว่าเคสไหนเปลี่ยนอะไร ถ้าตั้งใจเปลี่ยน ต้องอัปเดตไฟล์ต้นแบบใน PR เดียวกันและเขียนเหตุผลไว้ ถ้าเปลี่ยน prompt หรือรุ่น AI ต้องแนบผลรันกับ AI จริงด้วย
@@ -51,7 +54,9 @@ case ──► classify_rules (v2 keywords) ──┐
    reports the kinds it found, never the text. The phrase file's SHA-256 is frozen into the job like the rules'.
 3. `classify_llm` masks personal data in the case text (`app/llm/redaction.py`), then sends the
    versioned prompt, with the masked text wrapped as a JSON string. The provider's structured output limits the answer to
-   `{category, confidence, rationale}` with fixed choices. Our code checks the answer again.
+   `{category, confidence, attention, rationale}` with fixed choices. Our code checks the answer again.
+   `attention` (prompt `triage_classify_v2`, ADR-033) is the AI's own view of whether a person should look
+   first: `none`, `distress`, `security`, `legal_privacy` or `instruction`.
 4. `compare` lines the two up:
    - `agree`: normal priority.
    - `disagree`: **elevated** priority, with reason `rules_llm_disagree`.
@@ -59,6 +64,9 @@ case ──► classify_rules (v2 keywords) ──┐
    - Any attention signal: **elevated** priority, with one reason per kind (`signal_distress`,
      `signal_security`, `signal_legal_privacy`, `signal_instruction`), whatever the agreement is, also when
      the AI is unavailable. A signal never changes a category or a queue.
+   - The AI's `attention` other than `none`: **elevated** priority, with reason `ai_flag_<kind>`. The flag
+     only adds: `none` lowers nothing, so text that talks the model out of a flag leaves the code's signals
+     and the disagreement flag in place. With the mock AI it is always `none`.
    - Extra reasons `llm_low_confidence` and `rules_no_keyword_match` add context.
 5. `prepare` builds the reviewer's proposal. The **official suggestion is always the
    rules result**, and the AI's view is shown as `second_opinion`. The decision is always
@@ -253,7 +261,7 @@ bare `OK` back, which the connection check above made visible.
 | File | Role |
 |---|---|
 | `app/llm/config.py` | provider/model settings frozen into each job; never holds the key |
-| `app/llm/prompt_library/triage_classify_v1.json` | the prompt and answer schema (one file, one SHA-256) |
+| `app/llm/prompt_library/triage_classify_v2.json` | the prompt and answer schema (one file, one SHA-256); v2 adds `attention` (ADR-033). `triage_classify_v1.json` is kept for the saved v1 reports |
 | `app/llm/gateway.py` | asks the provider and checks the answer's shape |
 | `app/llm/providers/anthropic.py` | Claude Messages API over the standard library |
 | `app/llm/providers/openai_compat.py` | OpenAI-format chat completions (Typhoon) over the standard library (ADR-021) |
@@ -262,7 +270,7 @@ bare `OK` back, which the connection check above made visible.
 | `app/llm/providers/mock.py` | offline keyword simulation + failure scenarios for tests |
 | `app/domains/case_triage/rules.py` + `keywords_v2.json` | normalised, deterministic Thai/English rules with a frozen data hash |
 | `app/domains/case_triage/shadow_agents.py` | the AI, compare and prepare agents and their validators |
-| `app/domains/case_triage/signals.py` + `signals_v1.json` | attention signals: versioned phrases of four kinds, matched by plain code (ADR-032) |
+| `app/domains/case_triage/signals.py` + `signals_v2.json` | attention signals: versioned phrases of four kinds, matched by plain code (ADR-032) |
 | `app/domains/case_triage/shadow_workflow.py` | trusted registry and the five-step DAG |
 | `app/eval/attention_replay.py` | the flag before and after the signals, on saved answers (no model call) |
 | `app/eval/triage_shadow_eval.py` + `app/eval/golden/` | scorecard and 61 labelled synthetic cases (EN + TH) |
@@ -282,9 +290,9 @@ bare `OK` back, which the connection check above made visible.
   No cost claims are made.
 - Typhoon's API is a free beta research showcase that collects usage data; synthetic data only.
 - Token counts cover answered calls only. No money estimate is made, because prices change.
-- The attention signals are demonstration phrases, not a safety classifier. Measured on 2026-11-11
-  ([evidence](evidence/2026-11-11-attention-signals.md)): they raise every `needs_person` case of the set they
-  were written against, fewer on held-out text, a minority of BANKING77's security intents and none of BIPIA's
-  75 attacks. A case without a signal is not thereby safe, and every case still waits for a person.
+- The attention signals are demonstration phrases, not a safety classifier, and the AI's flag is one model's
+  judgement on synthetic and open-benchmark text. Both are measured in
+  [the evidence note](evidence/2026-11-11-attention-signals.md), with their misses and needless flags. A case
+  that neither raised is not thereby safe, and every case still waits for a person.
 - Shadow mode does not reduce reviewer work. It orders that work and explains it.
 - Core's single-machine limits still apply. Agent child processes are not a security sandbox.

@@ -107,7 +107,7 @@ unavailable, is always held.
 | `ai_high` | the AI answered with `high` confidence | the AI's category |
 | `agree` | rules and AI chose the same category | that category |
 | `agree_high` | they agree and the AI said `high` | that category |
-| `screened` | they agree, `high`, and the attention signals found nothing in the case text (ADR-032, added 2026-11-11) | that category |
+| `screened` | they agree, `high`, the attention signals found nothing in the case text and the AI did not flag the case (ADR-032, ADR-033; added 2026-11-11) | that category |
 | `strict` | they agree, `high`, no review reason at all (so the rules matched a keyword, which also means never `other`) and nothing was masked | that category |
 
 ## What is measured (every rate as numerator/denominator)

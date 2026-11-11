@@ -2,7 +2,7 @@
   "schema": "neuron-flow-shadow-eval-baseline-v1",
   "golden": {"cases": 64, "name": "case_triage_attention_heldout_v1", "sha256": "9db675676bd349fd13ec4d74fb7d574124d8cac1e6eea255587e711bd766a128"},
   "llm": {"model": "mock-keyword-1", "provider": "mock"},
-  "prompt": {"id": "triage_classify_v2", "sha256": "13d7bc94afc240775eee10c121ac56afd1b63be8e93d0d523867e6047c4ce818"},
+  "prompt": {"id": "triage_classify_v2", "sha256": "62ffdd0530050fede0fe0d445a77ca0b2c409affba18850ba4e0d0ac075c6081"},
   "rules": {"version": "keywords-v2:50f64599c8980562ae81e60bcd9f62cdd8e836ab8eb533cfff631e6ed5358d3a"},
   "signals": {"version": "signals-v2:cc8a905167ccb7382c40c40ecb9738c623d712ef3bdb57bad43102446e2d2315"},
   "cases": [
