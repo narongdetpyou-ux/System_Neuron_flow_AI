@@ -14,6 +14,11 @@ Matching reuses the rules' normalisation: English forms are whole words, Thai fo
 needs no spaces), and ``markers`` are raw substrings for tag- or key-like text (``</case_text>``,
 ``category=``). These are demonstration phrases, not a safety classifier: they miss anything worded
 differently, and a lookalike word raises a needless flag. Both rates are measured, never assumed.
+
+``signals-v2`` (the current list) adds wording from the development half of the pinned open data
+(``tests/open_benchmarks/attention_open_check.py``: BANKING77 and CLINC150 security intents, BIPIA attacks) and
+drops four v1 forms that raised needless flags there. The sealed half and the held-out set are measured,
+never read for phrases.
 """
 
 import hashlib
@@ -23,10 +28,10 @@ from pathlib import Path
 
 from .rules import _forms, normalize
 
-SIGNALS_PATH = Path(__file__).with_name("signals_v1.json")
+SIGNALS_PATH = Path(__file__).with_name("signals_v2.json")
 KINDS = ("distress", "security", "legal_privacy", "instruction")
 REASON_FOR = {kind: "signal_" + kind for kind in KINDS}
-_SCHEMA = "neuron-flow-triage-signals-v1"
+_SCHEMA = "neuron-flow-triage-signals-v2"
 _GROUPS = ({"en", "th"}, {"en", "th", "markers"})
 
 
@@ -47,7 +52,7 @@ def _load(path=None):
                 raise ValueError("Signal phrases must be distinct nonempty strings")
             if language == "en" and any(not word.isascii() for word in words):
                 raise ValueError("English signal phrases must be ASCII")
-    return data, "signals-v1:" + hashlib.sha256(raw).hexdigest()
+    return data, "signals-v2:" + hashlib.sha256(raw).hexdigest()
 
 
 def signal_version():
@@ -82,4 +87,4 @@ def screen(message):
 
 def validate_screen(message, output):
     if output != screen(message):
-        raise ValueError("Screen output violates the signals-v1 deterministic contract")
+        raise ValueError("Screen output violates the signals-v2 deterministic contract")

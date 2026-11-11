@@ -38,7 +38,7 @@ class SignalDataTests(unittest.TestCase):
     def test_version_is_the_hash_of_the_exact_bytes(self):
         import hashlib
         digest = hashlib.sha256(signals.SIGNALS_PATH.read_bytes()).hexdigest()
-        self.assertEqual(signals.signal_version(), "signals-v1:" + digest)
+        self.assertEqual(signals.signal_version(), "signals-v2:" + digest)
         self.assertEqual(tuple("signal_" + kind for kind in signals.KINDS), SIGNAL_REASONS)
         self.assertEqual(REVIEW_REASONS[:4], SIGNAL_REASONS)  # signals are listed first for the reviewer
 
@@ -147,7 +147,7 @@ class SignalWorkflowTests(unittest.TestCase):
         self.assertEqual(step["output"], {"signals": ["security"], "signal_version": signals.signal_version()})
 
     def test_changed_signal_data_fails_a_frozen_job_instead_of_answering(self):
-        message = {"input": {"summary": TAKEOVER}, "params": {"signal_version": "signals-v1:" + "0" * 64}}
+        message = {"input": {"summary": TAKEOVER}, "params": {"signal_version": "signals-v2:" + "0" * 64}}
         with self.assertRaisesRegex(ValueError, "changed after this job was submitted"):
             signals.screen(message)
 
