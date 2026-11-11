@@ -82,6 +82,37 @@ def reason_line(rows, status_key, reason_key):
     return [f"เหตุที่ AI ไม่ได้ตอบ (why the AI gave no answer): {listed}", ""]
 
 
+def category_scores(rows, column, categories, *, expected="expected"):
+    """Precision, recall and F1 per category, and their macro average, for one predictor (roadmap 5.6).
+
+    ``column`` names the prediction in each row; a missing prediction (``None``, an AI that did not answer)
+    counts as a miss for the expected category and as no prediction for any other. Every value keeps its
+    counts. A category that never occurs and is never predicted is left out of the macro average.
+    """
+    per_category, f1s = {}, []
+    for category in categories:
+        true_positive = sum(r[column] == category and r[expected] == category for r in rows)
+        predicted = sum(r[column] == category for r in rows)
+        support = sum(r[expected] == category for r in rows)
+        precision = true_positive / predicted if predicted else None
+        recall = true_positive / support if support else None
+        if precision is None and recall is None:
+            f1 = None
+        elif not precision or not recall:
+            f1 = 0.0
+        else:
+            f1 = 2 * precision * recall / (precision + recall)
+        per_category[category] = {"support": support, "predicted": predicted, "correct": true_positive,
+                                  "precision": None if precision is None else round(precision, 4),
+                                  "recall": None if recall is None else round(recall, 4),
+                                  "f1": None if f1 is None else round(f1, 4)}
+        if f1 is not None:
+            f1s.append(f1)
+    return {"per_category": per_category,
+            "macro_f1": round(sum(f1s) / len(f1s), 4) if f1s else None,
+            "categories_in_macro": len(f1s)}
+
+
 def git_sha():
     try:
         result = subprocess.run(["git", "rev-parse", "HEAD"], capture_output=True, text=True, timeout=5,

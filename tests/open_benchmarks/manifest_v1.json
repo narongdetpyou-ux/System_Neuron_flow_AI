@@ -1,0 +1,84 @@
+{
+ "schema": "neuron-flow-open-bench-manifest-v1",
+ "seed": "neuron-flow-open-bench-v1",
+ "mapping_sha256": "d243b03da749902a428620b9de0fe521dac2b6670a4acf35e7a56aa11ce9d1c4",
+ "hard_set_sha256": "81131666c419e4c5972b741b402f8c93d9eea7fb96da44dcc2bb6015a28510a2",
+ "sources": {
+  "clinc150": {
+   "name": "CLINC150",
+   "license": "CC BY 3.0",
+   "repo": "clinc/oos-eval",
+   "commit": "828f8093932c8fe6ca7936c3d2e52903b1c523de",
+   "path": "data/data_full.json",
+   "sha256": "36923c3705a59e08fe9c3883d8bc2dd966ef93e22cb78ac41171782a698d56e0"
+  },
+  "banking77": {
+   "name": "BANKING77",
+   "license": "CC BY 4.0",
+   "repo": "PolyAI-LDN/task-specific-datasets",
+   "commit": "57ec275d8078af65b7731c2a98be812d844a6d6b",
+   "path": "banking_data/test.csv",
+   "sha256": "d12d6e3bc4c3103966ae786dc435913c0c563dfa328f5a3646d0e62cfeeb474d"
+  },
+  "massive": {
+   "name": "MASSIVE 1.1",
+   "license": "CC BY 4.0",
+   "url": "https://amazon-massive-nlu-dataset.s3.amazonaws.com/amazon-massive-dataset-1.1.tar.gz",
+   "sha256": "4cba5faa11c71437928e17cb1b9b3d8b8e727e7ea363a3a9a8045e19c0491577",
+   "members": [
+    "1.1/data/en-US.jsonl",
+    "1.1/data/th-TH.jsonl"
+   ]
+  },
+  "bipia": {
+   "name": "BIPIA",
+   "license": "MIT",
+   "repo": "microsoft/BIPIA",
+   "commit": "a004b69ec0dd446e0afd461d98cb5e96e120a5d0",
+   "path": "benchmark/text_attack_test.json",
+   "sha256": "75750e7b4e8b34e8f9d88d89b357aeaaf02bd07f9e493ccd37eda74a0cd7c7f8"
+  }
+ },
+ "sets": {
+  "open_clinc150_v1.json": {
+   "cases": 300,
+   "sha256": "ae0d6604047f1930f0196bfe1a22bff0d1372434c08f78f5f80e39f5dd778445",
+   "by_language_and_category": {
+    "en:access": 30,
+    "en:billing": 75,
+    "en:other": 195
+   }
+  },
+  "open_banking77_v1.json": {
+   "cases": 300,
+   "sha256": "1c06e73453f206f26bf608f8094b4f767d96890dfbd4c77614eecee4ecdc02ad",
+   "by_language_and_category": {
+    "en:access": 29,
+    "en:billing": 107,
+    "en:other": 164
+   }
+  },
+  "open_massive_th_en_v1.json": {
+   "cases": 300,
+   "sha256": "1335a5a6fe9c25c5aae1b0eb69da67ffc35b564293c98ac2cdea6e3707d65781",
+   "by_language_and_category": {
+    "en:other": 150,
+    "th:other": 150
+   }
+  },
+  "open_bipia_injection_v1.json": {
+   "cases": 75,
+   "sha256": "2401ea06121d08401d576db6104190973283b6e9596362ba062811c4c581985d",
+   "by_language_and_category": {
+    "en:access": 12,
+    "en:billing": 12,
+    "en:other": 8,
+    "en:upload": 8,
+    "th:access": 12,
+    "th:billing": 9,
+    "th:other": 6,
+    "th:upload": 8
+   }
+  }
+ }
+}

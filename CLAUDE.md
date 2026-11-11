@@ -36,6 +36,13 @@ trusted agents in bounded child processes, retries, recovers after a crash and w
   [docs/benchmarking.md](docs/benchmarking.md)): 270 hard synthetic edge cases and four pinned open datasets
   (BLNS, JSONTestSuite, CLINC150, BANKING77; ADR-024) through every layer. It is a CI gate on every outcome,
   failures included; its first run found 8 bugs, all fixed in 5.5 (PR #42).
+- auto-approve limits (ADR-031, [docs/autosend_simulation.md](docs/autosend_simulation.md); asked for by the owner on
+  2026-11-11): a **simulated** button that would send a case without a person when the system is confident, replayed
+  on saved scorecard answers (`app/eval/autosend_sim.py`). It is never wired into the service: every real job still
+  waits for a person, and the replay fails if one did not. It runs on a 128-case hard set
+  (`case_triage_autosend_hard_v1`, 38 cases tagged `needs_person`) and on open benchmarks built at run time from
+  pinned public files (`tests/open_benchmarks/`, roadmap 5.6: CLINC150, BANKING77, MASSIVE th/en pairs, BIPIA's
+  injection attacks; nothing downloaded is committed).
 
 All data is synthetic. Milestones A, A2 and B are done.
 
@@ -92,7 +99,9 @@ Read in this order when you need depth:
   - The live-model measurements are Typhoon's on the synthetic sets (first runs 2026-11-06,
     `docs/evidence/2026-11-06-first-live-typhoon.md`) and on the 116 robustness edge cases (one run from a
     cloud session, `docs/evidence/2026-11-10-effectiveness-baseline.md`), followed by one E2 three-set run
-    (2026-11-11, 217 cases, `docs/evidence/2026-11-11-e2-rules-v2.md`), and the local 4B model's: a smoke run on the first 5
+    (2026-11-11, 217 cases, `docs/evidence/2026-11-11-e2-rules-v2.md`) and one auto-approve limits run over the hard set,
+    the open benchmarks and the three triage sets again (2026-11-11, `docs/evidence/2026-11-11-autosend-limits.md`;
+    the button is simulated, ADR-031), and the local 4B model's: a smoke run on the first 5
     items of each set, twice, and one full run of both sets (2026-11-08,
     `docs/evidence/2026-11-08-first-local-model-smoke.md`, `docs/evidence/2026-11-08-first-local-model-full.md`).
     There is none for Claude, and no security review or user study yet. A Typhoon or local result describes
@@ -162,7 +171,7 @@ If a task seems to need breaking a rule:
 ## 4. Checking your work
 
 ```bash
-python -m unittest discover -s tests -v        # all tests (448 on 2026-11-11); CI: Python 3.10 and 3.12
+python -m unittest discover -s tests -v        # all tests (477 on 2026-11-11); CI: Python 3.10 and 3.12
 python -m examples.case_triage_demo            # v1 rules, one synthetic case
 python -m examples.case_triage_shadow_demo     # v2 shadow mode with the offline mock AI
 python -m examples.study_guide_demo            # the study guide's answers to four synthetic requests
@@ -170,6 +179,10 @@ python -m app.eval.triage_shadow_eval --compare-with tests/baselines/shadow_eval
 python -m app.eval.study_guide_eval --compare-with tests/baselines/study_guide_eval_mock.json  # study guide's
 python -m tests.robustness.bench --compare-with tests/baselines/robustness_v1.json  # robustness gate (~25 s)
 python -m tests.handoff_check                  # skill handoffs over all 217 triage cases, end to end (~16 s)
+python -m app.eval.triage_shadow_eval --golden app/eval/golden/case_triage_autosend_hard_v1.json --out hard.json \
+    --compare-with tests/baselines/autosend_hard_mock.json   # the hard auto-send set and its gate
+python -m app.eval.autosend_sim --report hard.json --report shadow.json  # simulate the button on saved answers
+python -I tests/open_benchmarks/build_sets.py --out open-sets --cache ~/open-bench-cache --check  # open sets (network)
 python -m examples.skill_handoff_demo          # one case step by step through the exchange
 NEURON_FLOW_ACCESS_KEY=$(python -c "import secrets; print(secrets.token_urlsafe(24))") python -m app.serve
 ```
@@ -183,6 +196,9 @@ GitHub Actions (the owner can open these; the first three run on every push and 
   any item's outcome or sweep differs from `tests/baselines/robustness_v1.json`; its Thai summary lists the
   open bugs. Then the skill-handoff demo (one case step by step) and the handoff check over every case of the
   three triage sets (ADR-030), which fails on any broken check; both write Thai summaries to the run page.
+  Before the study guide's scorecard, the 128 hard auto-send cases run with the mock against
+  `tests/baselines/autosend_hard_mock.json`, and the auto-approve simulation replays them with the 61 development
+  cases (ADR-031); its Thai summary is on the run page and it fails only if a real job did not wait for a person.
 - *Service container* (`service-container.yml`):
   - checks `render.yaml` against Render's schema;
   - builds the same container as Render and submits cases over HTTP;
@@ -221,6 +237,13 @@ GitHub Actions (the owner can open these; the first three run on every push and 
   connector downloaded the E2 artifact and supplied a reusable file URL; its ZIP hash was verified and
   all three reports replayed locally. Prefer that supported route when available; otherwise the run page
   records the scorecards and their mistakes.
+- *Auto-approve limits (open benchmarks + hard set)* (`autosend-limits.yml`, ADR-031, roadmap 5.6 and 5.9) builds
+  the open-benchmark sets from their pinned sources (checked against `tests/open_benchmarks/manifest_v1.json`),
+  runs the shadow scorecard on them, the hard auto-send set and the three existing sets (`sets`: `all`, `hard`,
+  `open` or `existing`), then the auto-approve simulation on every saved answer. *Run workflow* uses Typhoon by
+  default (`TYPHOON_API_KEY`, cases 1 s apart; about 1,300 cases); pull requests that change this lane get a run
+  with the mock. This session can build the sets itself: `raw.githubusercontent.com` and MASSIVE's S3 archive
+  are reachable from its network, Hugging Face is not.
 - *Local open model eval* (`local-model-eval.yml`, ADR-026, roadmap 5.8) runs both scorecards against an
   open-weight model that the job runs itself: llama.cpp's server built from a pinned commit (cached), serving
   Typhoon 2.5 Qwen3 4B from a Hugging Face file checked against its SHA-256 (`.github/scripts/fetch_model.py`),
@@ -304,7 +327,7 @@ Notes for cloud sessions (claude.ai/code):
 | `app/domains/study_guide/` | the study guide: topic catalog and verified resource library (`catalog/*_v1.json`), their checks and hash (`library.py`), the link check (`link_check.py`), and the `study_guide.v1` workflow (`workflow.py`, `agents.py`, `planning.py`, `ai_prompts.py`, `mock_answers.py`); no `.md` files here, because the Render build filter ignores them |
 | `app/llm/` | AI gateway, prompt library (prompt + answer schema, one hash), personal-data masking, mock, Claude, Typhoon and local providers (`providers/openai_compat.py` serves OpenAI-format services, Typhoon and a server we run ourselves, and states the answer format in words for both, ADR-022, ADR-026; `providers/_http.py` refuses redirects for every real client) |
 | `app/exchange/` | the skill-handoff exchange (ADR-030): the common language (`common.py`, `vocabulary_v1.json`), translators (`translators/`, one module per skill, outside `app/domains/`), the route table (`routes.py`, `routes_v1.json`) and `exchange.py`, which checks the table at start and prepares each handoff for the queue store |
-| `app/eval/` | the two scorecards (triage: 61 labelled cases; study guide: 67 labelled requests) and the eval gate's shared code (`common.py`) |
+| `app/eval/` | the two scorecards (triage: 61 labelled cases; study guide: 67 labelled requests), the eval gate's shared code and per-category scores (`common.py`), the rules v1/v2 replay (`rules_comparison.py`) and the auto-approve simulation (`autosend_sim.py`, ADR-031: a replay only, never imported by the service); `golden/` holds the case sets, among them the 128-case hard auto-send set |
 | `app/observability/sentry.py` | Sentry reporting: step failures, degraded AI, Runner recoveries |
 | `app/observability/tracing.py`, `job_spans.py` | tracing: the OTLP/JSON exporter with its attribute allow-list, and a finished job's spans (ADR-017) |
 | `app/persistence/queue_store.py` | the application queue in its own SQLite file (`<data>/app/queue.sqlite3`, schema 3): jobs, events, the Runner heartbeat, reviews and append-only decisions, skill handoffs, and the store id that shows when the queue started empty |
@@ -313,6 +336,7 @@ Notes for cloud sessions (claude.ai/code):
 | `app/boot.py` | the image's process 1: takes the data folder as root, switches to `neuron`, becomes tini |
 | `app/settings.py`, `app/serve.py` | settings from the environment; the launcher (API + supervised Runner) |
 | `Dockerfile`, `render.yaml`, `railway.json` | the container, the Render Blueprint, the Railway config kept for later |
+| `tests/open_benchmarks/` | stage 2 of the benchmarking plan (roadmap 5.6): `build_sets.py` builds the CLINC150, BANKING77, MASSIVE th/en and BIPIA case sets at run time from pinned sources (standard library, run with `python -I`; refuses any SHA-256 it does not expect), `manifest_v1.json` (the sources and every built file's SHA-256; `--check`), `NOTICE.md` (licences). Nothing downloaded is committed |
 | `tests/robustness/` | the robustness benchmark (docs/benchmarking.md): the synthetic set, the pinned open extract with its licences (`NOTICE.md`), the runner `bench.py`, the extract builder (`build_open_extract.py verify` re-checks the upstream files) and the 116-case file for live runs |
 | `tests/`, `examples/`, `.github/` | tests (`tests/baselines/` holds the eval gate's baseline), demos and smoke tests, CI (`.github/scripts/` holds the `render.yaml` and trace checks and the image's bytecode-cache check, `.github/otel/` the tracing check's collector; `.github/gitleaks.toml` and `.github/.gitleaksignore` the secret scan's rules and reviewed findings) |
 | `.claude/` | the session-start hook for Claude Code cloud sessions |
@@ -482,6 +506,11 @@ Notes for cloud sessions (claude.ai/code):
     same answers for v1 and v2, rather than comparing separate model runs. Eight edge cases remain wrong
     for both and unflagged; fewer flags do not fix that risk (E5). The local 4B model has had one full run
     of each set (2026-11-08) besides the PR's two smoke runs.
+  - The auto-approve limits run (2026-11-11, ADR-031) answered the owner's "how far could a button go that sends a
+    case without a person?" on paper only: on the 128-case hard set Typhoon said `high` on 122 answers and was
+    wrong on 13, 12 of them `high`, so its own confidence cannot carry a button; no policy holds the cases that
+    must see a person ([evidence](docs/evidence/2026-11-11-autosend-limits.md)). No real button exists or is planned
+    (D9).
   - Per-person reviewer identity (2.1) and the n8n intake (2.5) are not built; review decisions (ADR-027) and the
     linked job after an approval (2.3, ADR-030) are.
   - The first new skill on the exchange (H4) waits for the owner's choice; the link between two handed-off jobs'
@@ -490,14 +519,20 @@ Notes for cloud sessions (claude.ai/code):
     (roadmap 0.4).
   - The rest of the roadmap is open.
 - **Next:** [docs/ROADMAP.md](docs/ROADMAP.md), the first item that is not ✅ and whose needs are met.
-  - **The skill-handoff exchange is built in its pull request (2026-11-11), pending merge** (ADR-030, roadmap
+  - **The auto-approve limits are built in PR #66 (2026-11-11), pending merge** (ADR-031, roadmap 5.6, 5.9 and the
+    first injection measurement of 5.7): the hard set, the open-benchmark builder, the simulation, the CI step with
+    the mock, the manual workflow and the first Typhoon run. After the merge: the owner's run of *Auto-approve
+    limits* by hand. It also changes `app/eval/`, which is part of the image, so the merge redeploys Render (on the
+    free plan the queued cases are lost, as with every deploy); the service never imports the simulation, so what
+    the page does is unchanged.
+  - **The skill-handoff exchange was built in PR #65 and merged on 2026-11-11** (ADR-030, roadmap
     H1–H3 and H5's page part). The owner paused new study-guide work, asked for skills that stay separate and pass
     work through a go-between with a translator on the way, then asked for it to be built and shown working, and to
     be tested with a new suite and the existing ones. Built: `app/exchange/`, the route-only `case_triage.v2.apply`
     (roadmap 2.3), queue schema 3 with the `handoffs` ledger, the handoff inside the decision's transaction, the API
     fields and the page. 37 new tests (448 in all); `tests/handoff_check.py` ran all 217 existing triage cases end
     to end with 0 problems; every earlier gate unchanged
-    ([evidence](docs/evidence/2026-11-11-skill-handoff.md)). After the merge: the owner's test on the live page.
+    ([evidence](docs/evidence/2026-11-11-skill-handoff.md)). Next: the owner's test on the live page.
   - Waiting on the owner: 0.2 and 1.4 (D1, paid Render plan), 0.3 path B and 0.4 with Claude (D2, Claude
     API key); 0.4 with Typhoon is free but sends what is typed on the page to Typhoon, so it is the owner's
     choice too; an open model behind the page needs a paid machine (D7); the owner test of 2.4 on the live page

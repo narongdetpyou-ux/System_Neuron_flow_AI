@@ -126,9 +126,13 @@ def case_row(case, snapshot):
             "llm_attempts": llm_state["attempts"], "llm_latency_ms": llm["latency_ms"] if ok else None,
             "input_tokens": usage["input_tokens"], "output_tokens": usage["output_tokens"],
             "usage_estimated": usage["estimated"],
+            # How many personal-data items were masked before the AI call (the auto-send simulation's strict
+            # policy holds any case that had one), and what the real workflow decided: always a person.
+            "masked": llm["masked"] if llm is not None else {},
             "agreement": final["agreement"] if final else None,
             "review_priority": final["review_priority"] if final else None,
-            "review_reasons": final["review_reasons"] if final else []}
+            "review_reasons": final["review_reasons"] if final else [],
+            "decision": final["decision"] if final else None}
 
 
 def compute_metrics(rows):

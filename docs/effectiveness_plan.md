@@ -272,6 +272,9 @@ Each package is one pull request unless it says otherwise, and follows the defin
   out-of-scope requests; two were pulled in by one word. The local model said `high` for 67/67 topic answers.
 - **Tasks:**
   1. Roadmap 5.6 first. Its open sample measures the same edge on text nobody in this project wrote.
+     Done on 2026-11-11 (PR #66, [evidence](evidence/2026-11-11-autosend-limits.md)): on the open sets, as on
+     the edge set, most of Typhoon's mistakes are `other` requests put into a near category, and nearly all of its
+     mistakes said `high`.
   2. The owner as the first independent labeller: about 20 borderline requests, the 12 above among them,
      shown without any answer. The owner picks a category for each. The note records how often the owner
      and the developer's label agree. Labels change only by this route, in their own commit.

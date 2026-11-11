@@ -21,7 +21,7 @@ differs, this file and architecture.md win.
   - ถ้าสองฝ่ายเห็นไม่ตรงกัน เคสจะถูกยกให้คนดูก่อน
 - ถ้าเครื่องดับกลางทาง ระบบทำต่อได้ ส่งซ้ำก็ไม่เกิดงานซ้ำ
 - ยกเลิกเคสที่ยังรอคิวได้ และทุกคำขอมีรหัสคำขอ (request id) ไว้ไล่ดูใน log (ขั้น 1.2, 1.3)
-- ผ่านชุดทดสอบอัตโนมัติ 448 ข้อ และเปิดใช้ออนไลน์บน Render แล้ว ระบบปิดตัวอย่างเรียบร้อย และการแก้แค่เอกสารไม่ทำให้ Render ขึ้นเวอร์ชันใหม่ (ขั้น 0.1, 0.5)
+- ผ่านชุดทดสอบอัตโนมัติ 477 ข้อ และเปิดใช้ออนไลน์บน Render แล้ว ระบบปิดตัวอย่างเรียบร้อย และการแก้แค่เอกสารไม่ทำให้ Render ขึ้นเวอร์ชันใหม่ (ขั้น 0.1, 0.5)
 - หน้าเว็บเป็นแบบแชท: พิมพ์เคส ดูขั้นตอนก่อนส่ง กดยืนยัน แล้วติดตามใน Flow และประวัติเหตุการณ์ (ขั้น 1.6)
 - หน้าเว็บบอกว่ามีเคสรอกี่เคส เคสที่รอนานสุดรอมานานเท่าไร ปกติแต่ละเคสใช้เวลาเท่าไร และเคสที่ไม่สำเร็จล้มเพราะอะไร (ขั้น 5.3)
 - ถ้ามีคนแก้กฎหรือ prompt แล้วคำตอบของเคสทดสอบเคสไหนเปลี่ยน ช่องตรวจบน GitHub จะเป็นสีแดงและบอกว่าเคสไหนเปลี่ยนอะไร (ขั้น 5.2)
@@ -45,6 +45,11 @@ differs, this file and architecture.md win.
 
 - **ทักษะแยกกัน ส่งงานผ่านตัวกลาง (11 พ.ย. ตามที่คุณขอ, ADR-030):** แต่ละทักษะไม่เรียกโค้ดของกัน ส่งงานให้กันผ่านตัวกลาง (exchange) ตามตารางเส้นทางที่มีเลขรุ่น ระหว่างทางมีล่ามขาออกแปลเป็นภาษากลาง และล่ามขาเข้าแปลเป็นภาษาของทักษะปลายทาง เส้นทางแรกใช้งานแล้ว: กด "อนุมัติ" เคส → ระบบสร้างงาน "บันทึกผลหลังอนุมัติ" ทันทีในครั้งเดียวกับการตัดสิน บันทึกว่าเคสไปคิวไหน ใครอนุมัติ พร้อมใบรับจาก Core (นี่คือขั้น 2.3) ข้อความเคสไม่ถูกส่งต่อ ไม่อนุมัติก็ไม่ส่งต่อ ทดสอบกับชุดเคสเดิมทั้ง 3 ชุด 217 เคส ผ่านทุกข้อ และชุดทดสอบเดิมได้ผลเหมือนเดิมทุกข้อ ([แบบและวิธีทดสอบ](skill_handoff.md), [บันทึกหลักฐาน](evidence/2026-11-11-skill-handoff.md)) ยังไม่ได้ลองบน Render เพราะต้องรวมโค้ดก่อน
 - **ผู้ช่วยแนะนำแหล่งเรียน: หยุดพัฒนาไว้ก่อน (11 พ.ย. ตามที่คุณสั่ง):** ของเดิมยังใช้ได้และช่องตรวจยังรัน
+- **ขีดสุดของระบบ ถ้ามี "ปุ่มอนุมัติเอง" (11 พ.ย. ตามที่คุณขอ, ADR-031):** ผมจำลองปุ่มนี้บนกระดาษจากคำตอบจริงของ Typhoon
+  กับข้อสอบกลางจากข้อมูลเปิด (CLINC150, BANKING77, MASSIVE ไทย-อังกฤษ, คำสั่งแอบแฝง BIPIA) ชุดเคสยากที่เขียนใหม่ 128 เคส และชุดเดิม 3 ชุด
+  ระบบจริงไม่มีปุ่มนี้ และยังให้คนตัดสินทุกเคส ผลหลัก: ความมั่นใจที่ AI บอกเองใช้แยกถูกผิดไม่ได้ (ในชุดเคสยาก AI บอก "มั่นใจสูง" 122 จาก 128 เคส
+  รวมเคสที่ตอบผิด 12 จาก 13 เคส) และไม่มีกติกาไหนในระบบตอนนี้ที่รู้ว่า "เคสนี้ต้องให้คนดู" เคสบัญชีถูกแฮ็ก เรื่องกฎหมาย หรือคำสั่งแอบแฝงจึงหลุดได้
+  ([วิธีวัด](autosend_simulation.md), [ผลวัด](evidence/2026-11-11-autosend-limits.md))
 
 **ลำดับต่อจากนี้** แต่ละขั้นจบด้วยสิ่งที่คุณลองเองได้
 
@@ -55,7 +60,7 @@ differs, this file and architecture.md win.
 | 2 | ให้คนรีวิวได้จริง: ผู้รีวิวมีรหัสของตัวเอง กดอนุมัติหรือไม่อนุมัติได้ และ n8n แจ้งเตือน | กล่อง "รอรีวิว" บนหน้าเว็บ และข้อความแจ้งเตือน | เริ่มแล้ว (10 พ.ย. ตามข้อ 4 ของผู้ตรวจสอบอิสระ): 2.2 บันทึกการตัดสินและ 2.4 การ์ดตัดสินกับรายการ "รอรีวิว" ทำแล้ว โดยผู้ตัดสินคือผู้ถือรหัสเข้าใช้ร่วม (คุณ); 2.3 งานต่อเนื่องหลังอนุมัติทำแล้ว (11 พ.ย.) เป็นเส้นทางแรกของตัวกลาง (ขั้น H); 2.1 รหัสรายคน และ 2.5 n8n ยังไม่ทำ |
 | 3 | ผู้ช่วยแนะนำแหล่งเรียน (`study_guide.v1`) ตามหลักปรัชญาของคุณ | พิมพ์เรื่องที่อยากรู้ด้วยคำธรรมดา แล้วได้แหล่งเรียนไม่เกิน 5 แหล่งพร้อมลำดับการเรียน | สร้างครบทุกขั้นแล้ว (คุณเลือกขั้นนี้ก่อนขั้น 2 เมื่อ 5 พ.ย.): 3.1 คลังแหล่งเรียน 3.2 ตัวผู้ช่วย และ 3.3 ชุดข้อสอบ ทำแล้ว (ดูตัวอย่างคำตอบและผลข้อสอบใน Actions ได้); 3.4 ช่อง "อยากเรียน" บนหน้าเว็บ สร้างและ merge แล้ว (7 พ.ย.) คุณลองบนหน้าเว็บจริงผ่านแล้ว (8 พ.ย.); รันกับ AI จริง (Typhoon) แล้ว หาหัวข้อถูก 46 จาก 48 ข้อ ไม่มีลิงก์นอกคลัง (Claude รอ D2); **หยุดพัฒนาเพิ่มไว้ก่อนตามที่คุณสั่ง (11 พ.ย.)**: ของที่มีอยู่ยังใช้ได้และช่องตรวจยังรันเหมือนเดิม |
 | 4 | ช่องคุยภาษาธรรมดา: ระบบเข้าใจว่าคุณขออะไร บอกตรง ๆ เมื่อเรื่องอยู่นอกกรอบ และถามกลับ 1 คำถามเมื่อข้อมูลไม่พอ | คุยกับระบบได้เลย ไม่ต้องเลือกประเภทงานเอง | ยังไม่เริ่ม (ขั้น 3 สร้างครบแล้ว เริ่มได้เมื่อคุณเลือก) |
-| 5 | ติดตามเส้นทางของแต่ละงาน (เวลา token จุดที่ช้า) ด่านตรวจผลรายเคส และแผนทดสอบ 3 ขั้นด้วยข้อมูลเปิด | ตัวเลขคิวและเวลาบนหน้าเว็บ ช่องตรวจบน PR แล้วต่อด้วยเส้นทางงานใน Honeycomb; ผลด่านความทนทานในหน้าสรุปของ *Core logic tests* | เสร็จแล้วทั้ง 5.1, 5.2, 5.3 และ 5.4; เส้นทางงานแรกเข้า Honeycomb เมื่อ 4 พ.ย. 00:23 น.; ด่านความทนทาน (5.4) รวมเข้า main แล้ว 7 พ.ย.; แก้ 8 bug ที่เจอแล้ว (5.5, PR #42 รวมแล้วเมื่อ 8 พ.ย.); E2 ใน PR #64 แก้จุดอ่อนของกฎได้ 24 จุด เหลือจุดอ่อนทั้งหมด 20 จุด แล้วขั้นข้อสอบกลาง (5.6) และขั้นโจมตีกับใช้งานจริง (5.7); 5.8 โมเดลเปิดที่รันเองบนเครื่องทดสอบของ GitHub สร้างแล้วใน PR #46 และรันเต็มรอบแรกแล้ว 8 พ.ย. (ดันเคสที่กฎผิดขึ้นคิวด่วนครบ 32/32) รอเจ้าของโปรเจกต์เลือกทาง |
+| 5 | ติดตามเส้นทางของแต่ละงาน (เวลา token จุดที่ช้า) ด่านตรวจผลรายเคส และแผนทดสอบ 3 ขั้นด้วยข้อมูลเปิด | ตัวเลขคิวและเวลาบนหน้าเว็บ ช่องตรวจบน PR แล้วต่อด้วยเส้นทางงานใน Honeycomb; ผลด่านความทนทานในหน้าสรุปของ *Core logic tests* | เสร็จแล้วทั้ง 5.1, 5.2, 5.3 และ 5.4; เส้นทางงานแรกเข้า Honeycomb เมื่อ 4 พ.ย. 00:23 น.; ด่านความทนทาน (5.4) รวมเข้า main แล้ว 7 พ.ย.; แก้ 8 bug ที่เจอแล้ว (5.5, PR #42 รวมแล้วเมื่อ 8 พ.ย.); E2 ใน PR #64 แก้จุดอ่อนของกฎได้ 24 จุด เหลือจุดอ่อนทั้งหมด 20 จุด ขั้นข้อสอบกลาง (5.6) สร้างและวัดกับ Typhoon แล้ว 11 พ.ย. พร้อมการจำลองปุ่มอนุมัติเอง (5.9) และวัดคำสั่งแอบแฝงครั้งแรก (ส่วนหนึ่งของ 5.7); ส่วนที่เหลือของ 5.7 ยังไม่ทำ; 5.8 โมเดลเปิดที่รันเองบนเครื่องทดสอบของ GitHub สร้างแล้วใน PR #46 และรันเต็มรอบแรกแล้ว 8 พ.ย. (ดันเคสที่กฎผิดขึ้นคิวด่วนครบ 32/32) รอเจ้าของโปรเจกต์เลือกทาง |
 | 6 | AI วางแผนงานหลายขั้น ระบบตรวจแผนก่อนรัน และเครื่องมืออื่นเรียกใช้ผ่าน MCP ได้ | สั่งงานจากแอป Claude ได้ | ยังไม่เริ่ม (ต้องรอขั้น 2–4) |
 | 7 | เตรียมพร้อมก่อนให้คนอื่นใช้ หรือก่อนเปิด repo สาธารณะ | รายงานตรวจความปลอดภัย และรายการตรวจก่อนเปิดตัว | เริ่มแล้ว: 7.1 ปิดข้อมูลส่วนตัวก่อนส่งให้ AI ทำแล้ว และตั้งแต่ 10 พ.ย. ตัวกลางเรียก AI บังคับปิดซ้ำเองก่อนส่ง ส่วนการจำกัดว่าใครเห็นคีย์ AI ได้ เขียนแผนไว้ ยังไม่ทำ; 7.4 เสร็จ: repo นี้เป็นสาธารณะพร้อมประวัติทั้งหมดตั้งแต่ 8 พ.ย. (D5) เปลี่ยนคีย์ Sentry แล้ว และเปิดระบบสแกนคีย์ของ GitHub แล้ว; มีผู้ตรวจสอบอิสระอ่านโค้ดครั้งแรกเมื่อ 10 พ.ย. ตอบครบ 4 ข้อแล้ว และคุณเลือกเก็บประวัติอีเมลเก่าไว้ตามเดิม (D8) |
 | E | [แผนเพิ่มประสิทธิผล](effectiveness_plan.md) 6 งาน (E1–E6): เคสแรกหลังระบบตื่นเร็วขึ้น กฎรุ่น 2 ที่อ่านภาษาไทยได้ หน้าเว็บจริงใช้ AI จริง เก็บคำตอบ "เข้าใจถูกไหม" ให้ AI แยก "อื่น ๆ" ได้ดีขึ้น และคลังแหล่งเรียนที่มีภาษาไทยมากขึ้น | เวลาของเคสแรก ข้อเสนอหลักของเคสภาษาไทย และตัวนับ "เข้าใจถูก" บนหน้าเว็บ | เขียนแผนแล้วเมื่อ 10 พ.ย. ตามที่คุณขอ (PR #50); E1 สร้างแล้วใน PR #60 (10 พ.ย.): ภาพของบริการมีไฟล์ที่แปลไว้ล่วงหน้าครบแล้ว บนเครื่องของ GitHub ที่จำกัดกำลังให้เท่าเครื่องฟรี เคสแรกเร็วขึ้นจาก 14.4 เป็น 3.1 วินาที รวมแล้วเมื่อ 10 พ.ย. ยังรอวัดบน Render จริง; E2 สร้างและวัดครบใน PR #64: กฎถูก 61/61 ในชุดพัฒนา 105/116 ในชุดเคสยาก และ 22/40 ในชุดที่กันไว้ ([ผลวัดและข้อจำกัด](evidence/2026-11-11-e2-rules-v2.md)); E3 รอคุณตัดสินใจ; E4 และ E6 (ของผู้ช่วยแนะนำแหล่งเรียน) หยุดไว้ก่อนตามที่คุณสั่ง (11 พ.ย.) |
@@ -69,6 +74,7 @@ differs, this file and architecture.md win.
 - จะเปิด repo เป็นสาธารณะเมื่อไร
 - จะให้หน้าเว็บจริงใช้ AI จริง (Typhoon ฟรี) หรือไม่ และจะเริ่มงานไหนของแผนเพิ่มประสิทธิผลก่อน (E1–E6)
 - ทักษะใหม่ตัวแรกที่จะต่อกับตัวกลาง (H4) คืออะไร
+- จะมี "ปุ่มอนุมัติเอง" จริงหรือไม่ (D9): ตอนนี้ยังไม่ควร เพราะผลวัด (5.9) บอกว่าความมั่นใจของ AI ใช้แยกถูกผิดไม่ได้ และการเปลี่ยนนี้แก้กติกาข้อ 4
 
 ## How to use this file (for Claude Code)
 
@@ -133,8 +139,9 @@ owner.
 | 5.3 | Queue and run-time metrics on the status page | ✅ PR #26 | — |
 | 5.4 | Robustness benchmark, stage 1: open and synthetic edge cases as a CI gate | ✅ PR #41 (2026-11-07), merged after the owner checked the run page; first run: 206/270 own items pass, 8 bugs, 0 of 4,680 sweep checks broke a promise ([evidence note](evidence/2026-11-07-robustness-stage1.md)) | — |
 | 5.5 | Fix what stage 1 found (the 8 bugs, then the gaps) | 🟡 the 8 bugs fixed in PR #42, merged 2026-11-08 (after the deploy the owner's case on the live page still reached review): 239/270 own items pass after E2 (215 after PR #42), 0 bugs, 20 gaps; one small Core change (ADR-025); E2 in PR #64 fixes 24 of the 27 original rules gaps and records the three retained limits ([evidence](evidence/2026-11-11-e2-rules-v2.md)); the other gap decisions remain open | 5.4 |
-| 5.6 | Stage 2: open benchmarks (CLINC150, BANKING77, MASSIVE th-TH/en-US) with Typhoon | ⬜ | 5.4 |
-| 5.7 | Stage 3: prompt injection, personal data, load and restarts, weekly live drift | ⬜ | 5.4; drift schedule is the owner's choice |
+| 5.6 | Stage 2: open benchmarks (CLINC150, BANKING77, MASSIVE th-TH/en-US) with Typhoon | ✅ built in PR #66 (2026-11-11): the sets are built at run time from pinned sources (`tests/open_benchmarks/`, SHA-256 checked, nothing downloaded committed), the mock run is a PR check of *Auto-approve limits*, and the first Typhoon run is in the [evidence note](evidence/2026-11-11-autosend-limits.md); the study guide's part waits while it is paused | 5.4 |
+| 5.7 | Stage 3: prompt injection, personal data, load and restarts, weekly live drift | 🟡 the first injection measurement in PR #66 (BIPIA's 75 attacks and 16 steering or approval attempts, [evidence](evidence/2026-11-11-autosend-limits.md)); personal data, load, restarts and drift not built | 5.4; drift schedule is the owner's choice |
+| 5.9 | Auto-approve limits: a simulated "send it myself" button on the open benchmarks and a hard set (ADR-031, [design](autosend_simulation.md)) | ✅ PR #66 (2026-11-11), asked for by the owner: a replay of saved answers, never wired into the service; on the 128-case hard set Typhoon said `high` on 122 and was wrong on 13, 12 of them `high`; every policy lets cases that must see a person through ([evidence](evidence/2026-11-11-autosend-limits.md)) | 5.6 |
 | 5.8 | Local open-model lane: llama.cpp and Typhoon 2.5 4B on the GitHub runner (ADR-026) | ✅ built in PR #46, with two smoke runs ([evidence note](evidence/2026-11-08-first-local-model-smoke.md)); first full run on `main` on 2026-11-08: rule mistakes raised 32/32 (Typhoon 32/32), triage AI correct 58/61 (Typhoon 60/61), topic correct 44/48 (Typhoon 46/48), 0 of 142 links outside the library, about 7 times Typhoon's latency ([evidence note](evidence/2026-11-08-first-local-model-full.md)); next, the owner chooses a branch (5.8, "After the first full run", step 2) | — |
 | 6.1 | Pattern A: bounded read-only tool loop | ⬜ | 3.2 |
 | 6.2 | Pattern B: planner → checked plan → linked job | ⬜ | 2.2, 4.2 |
@@ -149,7 +156,7 @@ owner.
 | E2 | Rules v2: an official suggestion that reads Thai (also decides the 27 rules gaps of 5.5) | ✅ built and measured in PR #64, merged on 2026-11-11: rules 61/61 development (Thai 26/26), 105/116 edge, 22/40 held-out; Typhoon answered all 217 cases, no v1-correct case regressed, code checks passed; 24 original rules gaps fixed, 3 retained. Fewer elevated flags leave 8 jointly wrong edge cases unflagged as before (E5 open). [Evidence and same-answer comparison](evidence/2026-11-11-e2-rules-v2.md) | — |
 | E3 | A real model behind the online page | ⬜ owner decision (0.4, D7); today the page's mock finds the study topic for 2/48 | 0.1 |
 | E4 | Record the answer to "เข้าใจถูกไหม" | ⏸ paused with the study guide (owner, 2026-11-11); planned | the owner resumes it; an ADR |
-| E5 | The edge of `other`, and a confidence that means something | ⬜ planned; today all 12 of Typhoon's edge-set mistakes are `other` cases, with `high` confidence on 116/116 | 5.6; the owner labels about 20 borderline requests |
+| E5 | The edge of `other`, and a confidence that means something | ⬜ planned; 5.6 is built, and its first run confirms the problem on text nobody here wrote: most of Typhoon's mistakes are `other` requests pulled into a near category, nearly all with `high` confidence ([evidence](evidence/2026-11-11-autosend-limits.md)) | the owner labels about 20 borderline requests |
 | E6 | A study library that serves Thai readers | ⏸ paused with the study guide (owner, 2026-11-11); planned; today 1 of 17 resources is in Thai | the owner resumes it; the owner reads each candidate |
 | H1 | Skill handoff: the design and ADR-030 ([skill_handoff.md](skill_handoff.md)) | ✅ 2026-11-11; the owner asked for it to be built and shown working | — |
 | H2 | The common language and the first translators | ✅ built 2026-11-11: `app/exchange/`, `vocabulary-v1`, `out.case_triage.v2@1`, `in.case_triage.v2.apply@1`, isolation and golden-output tests | H1 |
@@ -1113,6 +1120,15 @@ workflow types.
   - the mock run passes in CI;
   - the first Typhoon run is in an evidence note.
 - **Don't:** compare with published leaderboards (different labels), or present mapped labels as ground truth.
+- **Status (2026-11-11, PR #66):** built with 5.9, because the owner asked for the system's limits on public
+  benchmark data. `tests/open_benchmarks/build_sets.py` downloads the pinned sources (GitHub commits and the
+  MASSIVE release archive), refuses any SHA-256 it does not expect, and builds 300 CLINC150 requests, 300 BANKING77
+  requests and 150 MASSIVE Thai/English pairs (fewer than the 300 per language planned, to keep a Typhoon run
+  under an hour); `manifest_v1.json` holds every case file's SHA-256. The workflow *Auto-approve limits (open
+  benchmarks + hard set)* runs them (the mock on pull requests that change the lane, Typhoon by hand). The first
+  Typhoon run, with accuracy, per-category F1, out-of-scope recall, EN↔TH agreement, rules vs AI and latency, is in
+  the [evidence note](evidence/2026-11-11-autosend-limits.md). Not done: the study guide's false in-scope rate,
+  because the owner paused the study guide.
 
 ### 5.7 Stage 3: attacks, personal data, load and live drift
 
@@ -1126,6 +1142,12 @@ workflow types.
   Details: [benchmarking.md](benchmarking.md), "Stage 3".
 - **Owner decision:** turning on the weekly schedule. It uses the existing `TYPHOON_API_KEY` secret, and the
   data is synthetic only.
+- **Status (2026-11-11, PR #66):** the first injection measurement only. BIPIA's 75 test attacks (MIT; `deepset`
+  is on Hugging Face, which this session cannot reach) were placed in the hard set's 20 clear cases and compared
+  with the same cases without them, and the hard set holds 16 Thai and English attempts to steer the category or
+  claim an approval. The structural promise held: no job was decided without a person. The AI's answers are in
+  the [evidence note](evidence/2026-11-11-autosend-limits.md). Personal data, load, restarts and drift are not
+  built.
 
 ### 5.8 Local open-model lane (asked by the owner on 2026-11-08)
 
@@ -1204,6 +1226,40 @@ workflow types.
     and publishing the project;
   - unpin the model file or llama.cpp to get the latest; a new file or commit is a new version with a new run;
   - send real data to it before D4.
+
+### 5.9 Auto-approve limits: a simulated "send it myself" button (asked by the owner on 2026-11-11)
+
+- **Why:** the owner asked to see the system's limits with public data that developers use to measure systems,
+  and with hard tests, as if there were a button that approves a case on its own when the system is confident,
+  not only "send to review". A real button would break rule 4 (and ADR-010), so the question is answered by a
+  measurement that changes nothing (ADR-031).
+- **Built (PR #66):**
+  - `app/eval/golden/case_triage_autosend_hard_v1.json`: 128 adversarial cases (64 Thai, 64 English), committed
+    before any model answered them; `needs_person` on 38 (steering or approval injections, security, legal and
+    privacy, distress);
+  - `app/eval/autosend_sim.py`: replays saved scorecard reports through four policies (`ai_high`, `agree`,
+    `agree_high`, `strict`) and counts sends, wrong sends with a 95% upper bound, `needs_person` and injected
+    cases let through, safe sends, per-category F1, Thai/English pairs and injected copies; it fails when a real
+    job did not wait for a person, and no service module may import it;
+  - the hard set's mock baseline in *Core logic tests* (`tests/baselines/autosend_hard_mock.json`), and the
+    manual workflow *Auto-approve limits (open benchmarks + hard set)*;
+  - [autosend_simulation.md](autosend_simulation.md), with a Thai overview.
+- **Status (2026-11-11):** measured once with Typhoon on about 1,300 cases
+  ([evidence note](evidence/2026-11-11-autosend-limits.md)). The AI's own confidence does not separate right
+  from wrong answers, and no signal in the system says "a person must see this", so every policy lets such
+  cases through.
+- **Done when:** the simulation runs in CI with the mock, the first live run is in an evidence note, and the
+  docs say plainly that the button exists on paper only. Done.
+- **Owner test (ไทย):**
+  1. เปิด GitHub → Actions → *Auto-approve limits (open benchmarks + hard set)* → Run workflow (ปล่อยค่าเดิม) แล้วกด Run
+  2. รอราว 45–60 นาที แล้วเปิดหน้า Summary
+  3. ต้องเห็นหัวข้อ "จำลองปุ่ม อนุมัติเอง" บรรทัด "ระบบจริงส่งให้คนตรวจ 100%" และตารางของแต่ละชุด
+     ตัวเลขอาจต่างจากบันทึกหลักฐานเล็กน้อย เพราะ AI ที่ให้บริการออนไลน์ตอบไม่เหมือนเดิมทุกครั้ง
+- **Don't:** wire any policy into the Runner, the API or the page; quote a hard-set case in a prompt; change a
+  label to make a policy look better; present these rates as accuracy on real traffic.
+- **What a real button would need** (owner decision D9, not planned): a confidence that can be checked (E5), a
+  plain-code check that holds text that talks to the system, reviewer labels (2.8), and a new ADR that changes
+  rule 4 for one narrow, undoable action.
 
 ## Phase 6 — Milestone E: agent patterns and MCP
 
@@ -1508,6 +1564,7 @@ of H5 were built ([evidence](evidence/2026-11-11-skill-handoff.md)).
 | D6 | The AI's role in triage | after 2.8 has enough reviewed cases | Keep shadow mode · AI suggestion first, still with human review | Shadow mode (ADR-010) |
 | D8 | The personal e-mail address in 53 public commits | — (the setting in 7.6 stops new ones now) | Keep the history (chosen by the owner on 2026-11-10) · rewrite it and ask GitHub Support to purge the old commits · re-create the repository from the rewritten history (7.6) | Decided: kept as it is; new commits checked in CI |
 | D7 | An open model behind the online page | 5.8 step 4 | Mock (today) · Typhoon through 0.4 (free; what is typed goes to SCB 10X) · the local model on a paid machine with room for it (prices checked at the time) | The mock on the page; the local model only in GitHub Actions, for measuring |
+| D9 | Sending a case without a person (an auto-approve button) | not planned; it would change rule 4 and ADR-010 | No (today) · a narrow trial for one low-risk action with undo, only after a confidence that can be checked (E5), a check for text that talks to the system, and reviewer labels (2.8); see 5.9 | Simulation only (ADR-031): every case waits for a person |
 
 ## Evidence track
 
@@ -1634,3 +1691,10 @@ of H5 were built ([evidence](evidence/2026-11-11-skill-handoff.md)).
   container smoke test; every earlier gate unchanged. The check first lived in `app/eval/`, and the guard that only
   the API records decisions inside `app/` refused it, so it moved to `tests/handoff_check.py`. Also recorded: PR
   #64 (E2) was merged on 2026-11-11; the docs still said it was waiting.
+- 2026-11-11: the owner asked to see the system's limits with public benchmark data and hard tests, simulating a
+  button that approves a case on its own when the system is confident. Added 5.9 and ADR-031: the button exists on
+  paper only (a replay of saved answers; the service cannot import it, and the replay fails if a real job did not
+  wait for a person). Built with it: 5.6's open benchmarks (CLINC150, BANKING77, MASSIVE th/en pairs; BIPIA's attacks
+  as 5.7's first injection data, because `deepset` is only on Hugging Face), a 128-case hard set committed before
+  any model saw it, and owner decision D9. Measured once with Typhoon; the session paused for the owner's credits
+  after the first six sets, and BANKING77, which the pause interrupted, was run again in full.
