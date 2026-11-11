@@ -58,7 +58,7 @@ reads them from Core. No Core (`neuron_flow/`) file was changed and no dependenc
    `https://ui.honeycomb.io/<ชื่อทีม>/environments/test/trace?trace_id=<รหัสเส้นทาง>`
    (ชื่อทีมดูได้จากที่อยู่เว็บตอนเปิด Honeycomb; ลิงก์นี้หาเส้นทางในช่วง 2 ชั่วโมงล่าสุด)
 4. ต้องเห็นแถบเรียงเป็นชั้น 9 แถบ: `POST /v1/jobs` อยู่บนสุด ใต้มันคือ `job case_triage.v2`
-   แล้วแตกเป็น `queue wait` กับ `run` และใต้ `run` มี 4 ขั้น โดยใต้ `step classify_llm` มี `chat …`
+   แล้วแตกเป็น `queue wait` กับ `run` และใต้ `run` มี 5 ขั้น โดยใต้ `step classify_llm` มี `chat …`
 
 ถ้ากล่องในหน้าตั้งค่าขึ้น "ส่งไม่สำเร็จ" ข้อความจะบอกสาเหตุ เช่น คีย์ไม่ถูกต้อง (401) ระบบยังทำเคสได้ตามปกติ
 เพราะการส่งเส้นทางงานไม่มีผลกับการทำงาน
@@ -91,6 +91,7 @@ POST /v1/jobs                    SERVER  the request that admitted the case (API
         ├── step classify_rules  one span per attempt: attempt, max attempts, outcome, agent version, error type
         ├── step classify_llm
         │   └── chat <model>     CLIENT  the AI call: GenAI attributes, tokens, latency
+        ├── step screen          attention signals (plain code, ADR-032)
         ├── step compare
         └── step prepare
 ```

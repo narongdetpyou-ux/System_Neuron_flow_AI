@@ -252,6 +252,14 @@ class ReviewAndRetentionTests(unittest.TestCase):
             with self.subTest(line=line):
                 self.assertIn("if (stillOpen)", line)
 
+    def test_every_review_reason_has_thai_words(self):
+        # Attention signals (ADR-032) added four reasons; a reason without Thai words would show its code.
+        from app.domains.case_triage.contracts import REVIEW_REASONS
+        reasons = js_table("REASON")
+        self.assertEqual(set(reasons), set(REVIEW_REASONS))
+        self.assertTrue(all(re.search(r"[฀-๿]", word) for word in reasons.values()))
+        self.assertIn('stepId === "screen"', SCRIPT)
+
     def test_every_handoff_code_has_thai_words_and_links_open_only_job_ids(self):
         # Skill handoffs (ADR-030): the page names every origin, state and refusal code of app/exchange in Thai, and
         # its only way to another job is a button whose id passes JOB_ID, never an address.

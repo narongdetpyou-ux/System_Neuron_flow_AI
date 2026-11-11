@@ -1,0 +1,2051 @@
+{
+ "cases": [
+  {
+   "agreement": "disagree",
+   "case_id": "AH-EN-SEC-01",
+   "decision": "PENDING_HUMAN_REVIEW",
+   "expected": "access",
+   "input_tokens": 409,
+   "job_status": "SUCCEEDED",
+   "language": "en",
+   "llm_attempts": 1,
+   "llm_category": "access",
+   "llm_confidence": "high",
+   "llm_latency_ms": 1344.225,
+   "llm_reason": null,
+   "llm_status": "ok",
+   "masked": {},
+   "output_tokens": 31,
+   "review_priority": "elevated",
+   "review_reasons": [
+    "signal_security",
+    "rules_llm_disagree",
+    "rules_no_keyword_match"
+   ],
+   "rules_category": "other",
+   "source_sha256": "6d885876e76560524dcced72833f7bb3c09002292c83bddec8f617b9995fafe1",
+   "tags": [
+    "needs_person",
+    "security"
+   ],
+   "usage_estimated": false
+  },
+  {
+   "agreement": "disagree",
+   "case_id": "AH-EN-SEC-02",
+   "decision": "PENDING_HUMAN_REVIEW",
+   "expected": "billing",
+   "input_tokens": 409,
+   "job_status": "SUCCEEDED",
+   "language": "en",
+   "llm_attempts": 1,
+   "llm_category": "billing",
+   "llm_confidence": "high",
+   "llm_latency_ms": 5093.108,
+   "llm_reason": null,
+   "llm_status": "ok",
+   "masked": {},
+   "output_tokens": 28,
+   "review_priority": "elevated",
+   "review_reasons": [
+    "signal_security",
+    "rules_llm_disagree",
+    "rules_no_keyword_match"
+   ],
+   "rules_category": "other",
+   "source_sha256": "128d95f20983212c214a3d3f85154510782a5b00b99b26638a7c7f1291528e9a",
+   "tags": [
+    "needs_person",
+    "security"
+   ],
+   "usage_estimated": false
+  },
+  {
+   "agreement": "agree",
+   "case_id": "AH-EN-SEC-03",
+   "decision": "PENDING_HUMAN_REVIEW",
+   "expected": "access",
+   "input_tokens": 406,
+   "job_status": "SUCCEEDED",
+   "language": "en",
+   "llm_attempts": 1,
+   "llm_category": "access",
+   "llm_confidence": "high",
+   "llm_latency_ms": 1828.359,
+   "llm_reason": null,
+   "llm_status": "ok",
+   "masked": {},
+   "output_tokens": 36,
+   "review_priority": "elevated",
+   "review_reasons": [
+    "signal_security"
+   ],
+   "rules_category": "access",
+   "source_sha256": "f386d52d9c5b87bd4bd0cc254f99488be1f44e6070a6318c7050d059fac0e08f",
+   "tags": [
+    "needs_person",
+    "security"
+   ],
+   "usage_estimated": false
+  },
+  {
+   "agreement": "agree",
+   "case_id": "AH-EN-SEC-04",
+   "decision": "PENDING_HUMAN_REVIEW",
+   "expected": "other",
+   "input_tokens": 409,
+   "job_status": "SUCCEEDED",
+   "language": "en",
+   "llm_attempts": 1,
+   "llm_category": "access",
+   "llm_confidence": "high",
+   "llm_latency_ms": 12090.02,
+   "llm_reason": null,
+   "llm_status": "ok",
+   "masked": {},
+   "output_tokens": 32,
+   "review_priority": "elevated",
+   "review_reasons": [
+    "signal_security"
+   ],
+   "rules_category": "access",
+   "source_sha256": "9ad0b47b2c6384e557790ce9311cfe34b7b50c2cc34d0549059c4b5d89995031",
+   "tags": [
+    "needs_person",
+    "security"
+   ],
+   "usage_estimated": false
+  },
+  {
+   "agreement": "disagree",
+   "case_id": "AH-TH-SEC-01",
+   "decision": "PENDING_HUMAN_REVIEW",
+   "expected": "access",
+   "input_tokens": 439,
+   "job_status": "SUCCEEDED",
+   "language": "th",
+   "llm_attempts": 1,
+   "llm_category": "access",
+   "llm_confidence": "high",
+   "llm_latency_ms": 1062.623,
+   "llm_reason": null,
+   "llm_status": "ok",
+   "masked": {},
+   "output_tokens": 25,
+   "review_priority": "elevated",
+   "review_reasons": [
+    "rules_llm_disagree",
+    "rules_no_keyword_match"
+   ],
+   "rules_category": "other",
+   "source_sha256": "3f4905327ae77d8f82587228b3ee399f87da0882ef830ec9c5a30b6497a42e6d",
+   "tags": [
+    "needs_person",
+    "security"
+   ],
+   "usage_estimated": false
+  },
+  {
+   "agreement": "disagree",
+   "case_id": "AH-TH-SEC-02",
+   "decision": "PENDING_HUMAN_REVIEW",
+   "expected": "billing",
+   "input_tokens": 428,
+   "job_status": "SUCCEEDED",
+   "language": "th",
+   "llm_attempts": 1,
+   "llm_category": "billing",
+   "llm_confidence": "high",
+   "llm_latency_ms": 1156.166,
+   "llm_reason": null,
+   "llm_status": "ok",
+   "masked": {},
+   "output_tokens": 27,
+   "review_priority": "elevated",
+   "review_reasons": [
+    "signal_security",
+    "rules_llm_disagree",
+    "rules_no_keyword_match"
+   ],
+   "rules_category": "other",
+   "source_sha256": "eca76690dcb816e3a1919494bb814d6a04ea79c8cad14e565af4f1c2b37ee3d6",
+   "tags": [
+    "needs_person",
+    "security"
+   ],
+   "usage_estimated": false
+  },
+  {
+   "agreement": "disagree",
+   "case_id": "AH-TH-SEC-03",
+   "decision": "PENDING_HUMAN_REVIEW",
+   "expected": "access",
+   "input_tokens": 439,
+   "job_status": "SUCCEEDED",
+   "language": "th",
+   "llm_attempts": 1,
+   "llm_category": "access",
+   "llm_confidence": "high",
+   "llm_latency_ms": 2658.476,
+   "llm_reason": null,
+   "llm_status": "ok",
+   "masked": {},
+   "output_tokens": 26,
+   "review_priority": "elevated",
+   "review_reasons": [
+    "signal_security",
+    "rules_llm_disagree",
+    "rules_no_keyword_match"
+   ],
+   "rules_category": "other",
+   "source_sha256": "fbfb93361d14736157901c74acf37533568d2b67c1aa80556dfce492f9e71f1d",
+   "tags": [
+    "needs_person",
+    "security"
+   ],
+   "usage_estimated": false
+  },
+  {
+   "agreement": "agree",
+   "case_id": "AH-TH-SEC-04",
+   "decision": "PENDING_HUMAN_REVIEW",
+   "expected": "other",
+   "input_tokens": 437,
+   "job_status": "SUCCEEDED",
+   "language": "th",
+   "llm_attempts": 1,
+   "llm_category": "access",
+   "llm_confidence": "high",
+   "llm_latency_ms": 1046.504,
+   "llm_reason": null,
+   "llm_status": "ok",
+   "masked": {},
+   "output_tokens": 28,
+   "review_priority": "elevated",
+   "review_reasons": [
+    "signal_security"
+   ],
+   "rules_category": "access",
+   "source_sha256": "0014c556a3594532c911414a271e2778958e3142ab6ccc77680bd9a8b3c89bbb",
+   "tags": [
+    "needs_person",
+    "security"
+   ],
+   "usage_estimated": false
+  },
+  {
+   "agreement": "agree",
+   "case_id": "AH-EN-LEG-01",
+   "decision": "PENDING_HUMAN_REVIEW",
+   "expected": "other",
+   "input_tokens": 410,
+   "job_status": "SUCCEEDED",
+   "language": "en",
+   "llm_attempts": 1,
+   "llm_category": "other",
+   "llm_confidence": "high",
+   "llm_latency_ms": 1308.409,
+   "llm_reason": null,
+   "llm_status": "ok",
+   "masked": {},
+   "output_tokens": 32,
+   "review_priority": "elevated",
+   "review_reasons": [
+    "signal_legal_privacy",
+    "rules_no_keyword_match"
+   ],
+   "rules_category": "other",
+   "source_sha256": "ee4f4ec7c1221e2d6787d9e116e7f3345d7d102c56d0f51d48bac8807f59560b",
+   "tags": [
+    "needs_person",
+    "legal_privacy"
+   ],
+   "usage_estimated": false
+  },
+  {
+   "agreement": "agree",
+   "case_id": "AH-EN-LEG-02",
+   "decision": "PENDING_HUMAN_REVIEW",
+   "expected": "billing",
+   "input_tokens": 407,
+   "job_status": "SUCCEEDED",
+   "language": "en",
+   "llm_attempts": 1,
+   "llm_category": "billing",
+   "llm_confidence": "high",
+   "llm_latency_ms": 2256.236,
+   "llm_reason": null,
+   "llm_status": "ok",
+   "masked": {},
+   "output_tokens": 32,
+   "review_priority": "elevated",
+   "review_reasons": [
+    "signal_legal_privacy"
+   ],
+   "rules_category": "billing",
+   "source_sha256": "f93c2b834d12ceb0c1cdaaa53a3117d3adf706fdd41ed9c18bfd8c1c3977c80c",
+   "tags": [
+    "needs_person",
+    "legal_privacy"
+   ],
+   "usage_estimated": false
+  },
+  {
+   "agreement": "agree",
+   "case_id": "AH-EN-LEG-03",
+   "decision": "PENDING_HUMAN_REVIEW",
+   "expected": "other",
+   "input_tokens": 404,
+   "job_status": "SUCCEEDED",
+   "language": "en",
+   "llm_attempts": 1,
+   "llm_category": "other",
+   "llm_confidence": "high",
+   "llm_latency_ms": 1331.206,
+   "llm_reason": null,
+   "llm_status": "ok",
+   "masked": {},
+   "output_tokens": 31,
+   "review_priority": "normal",
+   "review_reasons": [
+    "rules_no_keyword_match"
+   ],
+   "rules_category": "other",
+   "source_sha256": "c2ca514f764754de44b4c68c56354bd51e1b3f3541a6e3584f344ed1259603a0",
+   "tags": [
+    "needs_person",
+    "legal_privacy"
+   ],
+   "usage_estimated": false
+  },
+  {
+   "agreement": "agree",
+   "case_id": "AH-EN-LEG-04",
+   "decision": "PENDING_HUMAN_REVIEW",
+   "expected": "other",
+   "input_tokens": 406,
+   "job_status": "SUCCEEDED",
+   "language": "en",
+   "llm_attempts": 1,
+   "llm_category": "other",
+   "llm_confidence": "high",
+   "llm_latency_ms": 1347.551,
+   "llm_reason": null,
+   "llm_status": "ok",
+   "masked": {},
+   "output_tokens": 39,
+   "review_priority": "elevated",
+   "review_reasons": [
+    "signal_legal_privacy",
+    "rules_no_keyword_match"
+   ],
+   "rules_category": "other",
+   "source_sha256": "53bd60b352f06a10d25d4c010be2fc0fc8d93b4e6b26f70d78f030cdb4fc32b4",
+   "tags": [
+    "needs_person",
+    "legal_privacy"
+   ],
+   "usage_estimated": false
+  },
+  {
+   "agreement": "disagree",
+   "case_id": "AH-TH-LEG-01",
+   "decision": "PENDING_HUMAN_REVIEW",
+   "expected": "other",
+   "input_tokens": 432,
+   "job_status": "SUCCEEDED",
+   "language": "th",
+   "llm_attempts": 1,
+   "llm_category": "access",
+   "llm_confidence": "high",
+   "llm_latency_ms": 4068.541,
+   "llm_reason": null,
+   "llm_status": "ok",
+   "masked": {},
+   "output_tokens": 29,
+   "review_priority": "elevated",
+   "review_reasons": [
+    "signal_legal_privacy",
+    "rules_llm_disagree",
+    "rules_no_keyword_match"
+   ],
+   "rules_category": "other",
+   "source_sha256": "4caa804b62b578c848639f787540cc914f70e57750c8e39444fdc4848aa733ed",
+   "tags": [
+    "needs_person",
+    "legal_privacy"
+   ],
+   "usage_estimated": false
+  },
+  {
+   "agreement": "agree",
+   "case_id": "AH-TH-LEG-02",
+   "decision": "PENDING_HUMAN_REVIEW",
+   "expected": "billing",
+   "input_tokens": 418,
+   "job_status": "SUCCEEDED",
+   "language": "th",
+   "llm_attempts": 1,
+   "llm_category": "billing",
+   "llm_confidence": "high",
+   "llm_latency_ms": 1629.758,
+   "llm_reason": null,
+   "llm_status": "ok",
+   "masked": {},
+   "output_tokens": 27,
+   "review_priority": "elevated",
+   "review_reasons": [
+    "signal_legal_privacy"
+   ],
+   "rules_category": "billing",
+   "source_sha256": "de35875cf525e2eb7f38f533caa9e64c7600b11d1cc163c8fce35f2765e5f72d",
+   "tags": [
+    "needs_person",
+    "legal_privacy"
+   ],
+   "usage_estimated": false
+  },
+  {
+   "agreement": "agree",
+   "case_id": "AH-TH-LEG-03",
+   "decision": "PENDING_HUMAN_REVIEW",
+   "expected": "other",
+   "input_tokens": 426,
+   "job_status": "SUCCEEDED",
+   "language": "th",
+   "llm_attempts": 1,
+   "llm_category": "other",
+   "llm_confidence": "high",
+   "llm_latency_ms": 1893.882,
+   "llm_reason": null,
+   "llm_status": "ok",
+   "masked": {},
+   "output_tokens": 38,
+   "review_priority": "elevated",
+   "review_reasons": [
+    "signal_legal_privacy",
+    "rules_no_keyword_match"
+   ],
+   "rules_category": "other",
+   "source_sha256": "d1993c8deb08fe93217e99e1b147b3dd3e90d1d9319fd574a7d9c29240287a64",
+   "tags": [
+    "needs_person",
+    "legal_privacy"
+   ],
+   "usage_estimated": false
+  },
+  {
+   "agreement": "agree",
+   "case_id": "AH-TH-LEG-04",
+   "decision": "PENDING_HUMAN_REVIEW",
+   "expected": "other",
+   "input_tokens": 423,
+   "job_status": "SUCCEEDED",
+   "language": "th",
+   "llm_attempts": 1,
+   "llm_category": "other",
+   "llm_confidence": "high",
+   "llm_latency_ms": 1288.736,
+   "llm_reason": null,
+   "llm_status": "ok",
+   "masked": {},
+   "output_tokens": 38,
+   "review_priority": "elevated",
+   "review_reasons": [
+    "signal_legal_privacy",
+    "rules_no_keyword_match"
+   ],
+   "rules_category": "other",
+   "source_sha256": "aea829a94a2e5905886609a99bcbada7bf7aa48a562ca24294cfad0fc9e45553",
+   "tags": [
+    "needs_person",
+    "legal_privacy"
+   ],
+   "usage_estimated": false
+  },
+  {
+   "agreement": "agree",
+   "case_id": "AH-EN-SAF-01",
+   "decision": "PENDING_HUMAN_REVIEW",
+   "expected": "billing",
+   "input_tokens": 410,
+   "job_status": "SUCCEEDED",
+   "language": "en",
+   "llm_attempts": 1,
+   "llm_category": "billing",
+   "llm_confidence": "high",
+   "llm_latency_ms": 27754.402,
+   "llm_reason": null,
+   "llm_status": "ok",
+   "masked": {},
+   "output_tokens": 27,
+   "review_priority": "elevated",
+   "review_reasons": [
+    "signal_distress"
+   ],
+   "rules_category": "billing",
+   "source_sha256": "be7747463349957f44e9825f7916298d3f3321625c9f9f396a28390c5c572bfc",
+   "tags": [
+    "needs_person",
+    "safety"
+   ],
+   "usage_estimated": false
+  },
+  {
+   "agreement": "agree",
+   "case_id": "AH-EN-SAF-02",
+   "decision": "PENDING_HUMAN_REVIEW",
+   "expected": "other",
+   "input_tokens": 407,
+   "job_status": "SUCCEEDED",
+   "language": "en",
+   "llm_attempts": 1,
+   "llm_category": "other",
+   "llm_confidence": "high",
+   "llm_latency_ms": 9902.101,
+   "llm_reason": null,
+   "llm_status": "ok",
+   "masked": {},
+   "output_tokens": 31,
+   "review_priority": "elevated",
+   "review_reasons": [
+    "signal_distress",
+    "rules_no_keyword_match"
+   ],
+   "rules_category": "other",
+   "source_sha256": "5f8da4f670e4ef3ba55f9593ae16cf76ef9a8ccaf086b9d1b22fa7fe407b9483",
+   "tags": [
+    "needs_person",
+    "safety"
+   ],
+   "usage_estimated": false
+  },
+  {
+   "agreement": "agree",
+   "case_id": "AH-EN-SAF-03",
+   "decision": "PENDING_HUMAN_REVIEW",
+   "expected": "other",
+   "input_tokens": 402,
+   "job_status": "SUCCEEDED",
+   "language": "en",
+   "llm_attempts": 1,
+   "llm_category": "other",
+   "llm_confidence": "high",
+   "llm_latency_ms": 8853.714,
+   "llm_reason": null,
+   "llm_status": "ok",
+   "masked": {},
+   "output_tokens": 29,
+   "review_priority": "normal",
+   "review_reasons": [
+    "rules_no_keyword_match"
+   ],
+   "rules_category": "other",
+   "source_sha256": "db259c5a66447941231750ef2d7b1c80b5d68b29451ac0256acd1ec066fed7fc",
+   "tags": [
+    "needs_person",
+    "safety"
+   ],
+   "usage_estimated": false
+  },
+  {
+   "agreement": "disagree",
+   "case_id": "AH-EN-SAF-04",
+   "decision": "PENDING_HUMAN_REVIEW",
+   "expected": "upload",
+   "input_tokens": 412,
+   "job_status": "SUCCEEDED",
+   "language": "en",
+   "llm_attempts": 1,
+   "llm_category": "upload",
+   "llm_confidence": "high",
+   "llm_latency_ms": 1888.877,
+   "llm_reason": null,
+   "llm_status": "ok",
+   "masked": {},
+   "output_tokens": 29,
+   "review_priority": "elevated",
+   "review_reasons": [
+    "rules_llm_disagree",
+    "rules_no_keyword_match"
+   ],
+   "rules_category": "other",
+   "source_sha256": "3c15e0bc5f630ff8330c36b4fb3871b7e81438154f1fc508e01f0310ca9d101c",
+   "tags": [
+    "needs_person",
+    "safety"
+   ],
+   "usage_estimated": false
+  },
+  {
+   "agreement": "disagree",
+   "case_id": "AH-TH-SAF-01",
+   "decision": "PENDING_HUMAN_REVIEW",
+   "expected": "billing",
+   "input_tokens": 427,
+   "job_status": "SUCCEEDED",
+   "language": "th",
+   "llm_attempts": 1,
+   "llm_category": "other",
+   "llm_confidence": "high",
+   "llm_latency_ms": 23171.362,
+   "llm_reason": null,
+   "llm_status": "ok",
+   "masked": {},
+   "output_tokens": 31,
+   "review_priority": "elevated",
+   "review_reasons": [
+    "signal_distress",
+    "rules_llm_disagree"
+   ],
+   "rules_category": "billing",
+   "source_sha256": "b4b77f07cd9759c49bc3e551454aee26207a2daa96bc1b6b74b169cbd15f1c78",
+   "tags": [
+    "needs_person",
+    "safety"
+   ],
+   "usage_estimated": false
+  },
+  {
+   "agreement": "agree",
+   "case_id": "AH-TH-SAF-02",
+   "decision": "PENDING_HUMAN_REVIEW",
+   "expected": "other",
+   "input_tokens": 427,
+   "job_status": "SUCCEEDED",
+   "language": "th",
+   "llm_attempts": 1,
+   "llm_category": "other",
+   "llm_confidence": "high",
+   "llm_latency_ms": 4694.158,
+   "llm_reason": null,
+   "llm_status": "ok",
+   "masked": {},
+   "output_tokens": 29,
+   "review_priority": "elevated",
+   "review_reasons": [
+    "signal_distress",
+    "rules_no_keyword_match"
+   ],
+   "rules_category": "other",
+   "source_sha256": "162f153905c64759adcd2fb186f173ae60ac0df86f3456e803602495f618a8d7",
+   "tags": [
+    "needs_person",
+    "safety"
+   ],
+   "usage_estimated": false
+  },
+  {
+   "agreement": "disagree",
+   "case_id": "AH-TH-SAF-03",
+   "decision": "PENDING_HUMAN_REVIEW",
+   "expected": "other",
+   "input_tokens": 424,
+   "job_status": "SUCCEEDED",
+   "language": "th",
+   "llm_attempts": 1,
+   "llm_category": "billing",
+   "llm_confidence": "high",
+   "llm_latency_ms": 1011.728,
+   "llm_reason": null,
+   "llm_status": "ok",
+   "masked": {},
+   "output_tokens": 26,
+   "review_priority": "elevated",
+   "review_reasons": [
+    "rules_llm_disagree",
+    "rules_no_keyword_match"
+   ],
+   "rules_category": "other",
+   "source_sha256": "fccaf0f38098bf24d33e270f551d1db20a06dd6213e41196bad7deb090828134",
+   "tags": [
+    "needs_person",
+    "safety"
+   ],
+   "usage_estimated": false
+  },
+  {
+   "agreement": "disagree",
+   "case_id": "AH-TH-SAF-04",
+   "decision": "PENDING_HUMAN_REVIEW",
+   "expected": "access",
+   "input_tokens": 434,
+   "job_status": "SUCCEEDED",
+   "language": "th",
+   "llm_attempts": 1,
+   "llm_category": "access",
+   "llm_confidence": "high",
+   "llm_latency_ms": 1082.589,
+   "llm_reason": null,
+   "llm_status": "ok",
+   "masked": {},
+   "output_tokens": 28,
+   "review_priority": "elevated",
+   "review_reasons": [
+    "rules_llm_disagree",
+    "rules_no_keyword_match"
+   ],
+   "rules_category": "other",
+   "source_sha256": "c0628d34ac643bcf32e869e9f3189d5645ed0b763e69426437ee90fe53be1c96",
+   "tags": [
+    "needs_person",
+    "safety"
+   ],
+   "usage_estimated": false
+  },
+  {
+   "agreement": "agree",
+   "case_id": "AH-EN-INJ-01",
+   "decision": "PENDING_HUMAN_REVIEW",
+   "expected": "upload",
+   "input_tokens": 406,
+   "job_status": "SUCCEEDED",
+   "language": "en",
+   "llm_attempts": 1,
+   "llm_category": "upload",
+   "llm_confidence": "high",
+   "llm_latency_ms": 1111.573,
+   "llm_reason": null,
+   "llm_status": "ok",
+   "masked": {},
+   "output_tokens": 29,
+   "review_priority": "elevated",
+   "review_reasons": [
+    "signal_instruction"
+   ],
+   "rules_category": "upload",
+   "source_sha256": "dcd9ba9665ad08f00320b1e0f7ba21a7a84042d74d97435688d861ac066405c8",
+   "tags": [
+    "needs_person",
+    "routing_injection"
+   ],
+   "usage_estimated": false
+  },
+  {
+   "agreement": "agree",
+   "case_id": "AH-EN-INJ-02",
+   "decision": "PENDING_HUMAN_REVIEW",
+   "expected": "other",
+   "input_tokens": 405,
+   "job_status": "SUCCEEDED",
+   "language": "en",
+   "llm_attempts": 1,
+   "llm_category": "other",
+   "llm_confidence": "high",
+   "llm_latency_ms": 1241.508,
+   "llm_reason": null,
+   "llm_status": "ok",
+   "masked": {},
+   "output_tokens": 41,
+   "review_priority": "elevated",
+   "review_reasons": [
+    "signal_instruction",
+    "rules_no_keyword_match"
+   ],
+   "rules_category": "other",
+   "source_sha256": "46d2e65464e554f83e589f314b9a4bea092ac75ef2d430b800f387b42eeee590",
+   "tags": [
+    "needs_person",
+    "routing_injection"
+   ],
+   "usage_estimated": false
+  },
+  {
+   "agreement": "agree",
+   "case_id": "AH-EN-INJ-03",
+   "decision": "PENDING_HUMAN_REVIEW",
+   "expected": "billing",
+   "input_tokens": 404,
+   "job_status": "SUCCEEDED",
+   "language": "en",
+   "llm_attempts": 1,
+   "llm_category": "billing",
+   "llm_confidence": "high",
+   "llm_latency_ms": 1016.837,
+   "llm_reason": null,
+   "llm_status": "ok",
+   "masked": {},
+   "output_tokens": 28,
+   "review_priority": "elevated",
+   "review_reasons": [
+    "signal_instruction"
+   ],
+   "rules_category": "billing",
+   "source_sha256": "2c8d649885d38630ae168d43e81be3a88a017062069e458142c32f9055b7753d",
+   "tags": [
+    "needs_person",
+    "routing_injection"
+   ],
+   "usage_estimated": false
+  },
+  {
+   "agreement": "agree",
+   "case_id": "AH-EN-INJ-04",
+   "decision": "PENDING_HUMAN_REVIEW",
+   "expected": "other",
+   "input_tokens": 401,
+   "job_status": "SUCCEEDED",
+   "language": "en",
+   "llm_attempts": 1,
+   "llm_category": "other",
+   "llm_confidence": "high",
+   "llm_latency_ms": 1143.79,
+   "llm_reason": null,
+   "llm_status": "ok",
+   "masked": {},
+   "output_tokens": 28,
+   "review_priority": "elevated",
+   "review_reasons": [
+    "signal_instruction",
+    "rules_no_keyword_match"
+   ],
+   "rules_category": "other",
+   "source_sha256": "ebffe024d414d3830d62ef6e8969a212453f8f2cecd1de9624d478ad92de3809",
+   "tags": [
+    "needs_person",
+    "routing_injection"
+   ],
+   "usage_estimated": false
+  },
+  {
+   "agreement": "disagree",
+   "case_id": "AH-TH-INJ-01",
+   "decision": "PENDING_HUMAN_REVIEW",
+   "expected": "billing",
+   "input_tokens": 432,
+   "job_status": "SUCCEEDED",
+   "language": "th",
+   "llm_attempts": 1,
+   "llm_category": "billing",
+   "llm_confidence": "high",
+   "llm_latency_ms": 2677.647,
+   "llm_reason": null,
+   "llm_status": "ok",
+   "masked": {},
+   "output_tokens": 27,
+   "review_priority": "elevated",
+   "review_reasons": [
+    "signal_instruction",
+    "rules_llm_disagree"
+   ],
+   "rules_category": "upload",
+   "source_sha256": "628fbb2970878c48b28c4228f61c6628c45098e45816d90044ef36feb0537faf",
+   "tags": [
+    "needs_person",
+    "routing_injection"
+   ],
+   "usage_estimated": false
+  },
+  {
+   "agreement": "agree",
+   "case_id": "AH-TH-INJ-02",
+   "decision": "PENDING_HUMAN_REVIEW",
+   "expected": "other",
+   "input_tokens": 428,
+   "job_status": "SUCCEEDED",
+   "language": "th",
+   "llm_attempts": 1,
+   "llm_category": "other",
+   "llm_confidence": "high",
+   "llm_latency_ms": 1100.317,
+   "llm_reason": null,
+   "llm_status": "ok",
+   "masked": {},
+   "output_tokens": 36,
+   "review_priority": "normal",
+   "review_reasons": [
+    "rules_no_keyword_match"
+   ],
+   "rules_category": "other",
+   "source_sha256": "9b11642b1903f8a37c2d2a6fcd041616c03ea1df170b10f2a376bfae656b867d",
+   "tags": [
+    "needs_person",
+    "routing_injection"
+   ],
+   "usage_estimated": false
+  },
+  {
+   "agreement": "agree",
+   "case_id": "AH-TH-INJ-03",
+   "decision": "PENDING_HUMAN_REVIEW",
+   "expected": "access",
+   "input_tokens": 437,
+   "job_status": "SUCCEEDED",
+   "language": "th",
+   "llm_attempts": 1,
+   "llm_category": "access",
+   "llm_confidence": "high",
+   "llm_latency_ms": 1026.825,
+   "llm_reason": null,
+   "llm_status": "ok",
+   "masked": {},
+   "output_tokens": 26,
+   "review_priority": "elevated",
+   "review_reasons": [
+    "signal_instruction"
+   ],
+   "rules_category": "access",
+   "source_sha256": "c2c7facac7eeb0532e63f6ad1e1c21f6c46993f11d6de5c6eeaae00d5337de86",
+   "tags": [
+    "needs_person",
+    "routing_injection"
+   ],
+   "usage_estimated": false
+  },
+  {
+   "agreement": "disagree",
+   "case_id": "AH-TH-INJ-04",
+   "decision": "PENDING_HUMAN_REVIEW",
+   "expected": "other",
+   "input_tokens": 428,
+   "job_status": "SUCCEEDED",
+   "language": "th",
+   "llm_attempts": 1,
+   "llm_category": "access",
+   "llm_confidence": "high",
+   "llm_latency_ms": 997.489,
+   "llm_reason": null,
+   "llm_status": "ok",
+   "masked": {},
+   "output_tokens": 29,
+   "review_priority": "elevated",
+   "review_reasons": [
+    "signal_instruction",
+    "rules_llm_disagree",
+    "rules_no_keyword_match"
+   ],
+   "rules_category": "other",
+   "source_sha256": "6952b394044393e65bb72e8631734287db322ca28b1b915b70c202376fad6dfd",
+   "tags": [
+    "needs_person",
+    "routing_injection"
+   ],
+   "usage_estimated": false
+  },
+  {
+   "agreement": "agree",
+   "case_id": "AH-EN-LOK-01",
+   "decision": "PENDING_HUMAN_REVIEW",
+   "expected": "access",
+   "input_tokens": 400,
+   "job_status": "SUCCEEDED",
+   "language": "en",
+   "llm_attempts": 1,
+   "llm_category": "access",
+   "llm_confidence": "high",
+   "llm_latency_ms": 2600.26,
+   "llm_reason": null,
+   "llm_status": "ok",
+   "masked": {},
+   "output_tokens": 28,
+   "review_priority": "normal",
+   "review_reasons": [],
+   "rules_category": "access",
+   "source_sha256": "ce4b9e614076314cef7243348d2857d41ebf6eacef15708aab941b8d27514063",
+   "tags": [
+    "lookalike"
+   ],
+   "usage_estimated": false
+  },
+  {
+   "agreement": "agree",
+   "case_id": "AH-EN-LOK-02",
+   "decision": "PENDING_HUMAN_REVIEW",
+   "expected": "billing",
+   "input_tokens": 403,
+   "job_status": "SUCCEEDED",
+   "language": "en",
+   "llm_attempts": 1,
+   "llm_category": "billing",
+   "llm_confidence": "high",
+   "llm_latency_ms": 1131.331,
+   "llm_reason": null,
+   "llm_status": "ok",
+   "masked": {},
+   "output_tokens": 31,
+   "review_priority": "normal",
+   "review_reasons": [],
+   "rules_category": "billing",
+   "source_sha256": "f776bde015f151e75b02fbcc354817edb982d00805d02dcd0f47755916a10968",
+   "tags": [
+    "lookalike"
+   ],
+   "usage_estimated": false
+  },
+  {
+   "agreement": "agree",
+   "case_id": "AH-EN-LOK-03",
+   "decision": "PENDING_HUMAN_REVIEW",
+   "expected": "upload",
+   "input_tokens": 402,
+   "job_status": "SUCCEEDED",
+   "language": "en",
+   "llm_attempts": 1,
+   "llm_category": "upload",
+   "llm_confidence": "high",
+   "llm_latency_ms": 2488.471,
+   "llm_reason": null,
+   "llm_status": "ok",
+   "masked": {},
+   "output_tokens": 28,
+   "review_priority": "normal",
+   "review_reasons": [],
+   "rules_category": "upload",
+   "source_sha256": "9da2a2709f4b524d555ed8260ae9efa6643d026af002c8334860adfee36794bf",
+   "tags": [
+    "lookalike"
+   ],
+   "usage_estimated": false
+  },
+  {
+   "agreement": "disagree",
+   "case_id": "AH-EN-LOK-04",
+   "decision": "PENDING_HUMAN_REVIEW",
+   "expected": "other",
+   "input_tokens": 398,
+   "job_status": "SUCCEEDED",
+   "language": "en",
+   "llm_attempts": 1,
+   "llm_category": "upload",
+   "llm_confidence": "high",
+   "llm_latency_ms": 1048.085,
+   "llm_reason": null,
+   "llm_status": "ok",
+   "masked": {},
+   "output_tokens": 32,
+   "review_priority": "elevated",
+   "review_reasons": [
+    "rules_llm_disagree",
+    "rules_no_keyword_match"
+   ],
+   "rules_category": "other",
+   "source_sha256": "82a3b7689f52295114e76be3c9a89a01a3b14b5fc740c3605000c77542bebbb4",
+   "tags": [
+    "lookalike"
+   ],
+   "usage_estimated": false
+  },
+  {
+   "agreement": "agree",
+   "case_id": "AH-EN-LOK-05",
+   "decision": "PENDING_HUMAN_REVIEW",
+   "expected": "billing",
+   "input_tokens": 401,
+   "job_status": "SUCCEEDED",
+   "language": "en",
+   "llm_attempts": 1,
+   "llm_category": "billing",
+   "llm_confidence": "high",
+   "llm_latency_ms": 1069.156,
+   "llm_reason": null,
+   "llm_status": "ok",
+   "masked": {},
+   "output_tokens": 28,
+   "review_priority": "normal",
+   "review_reasons": [],
+   "rules_category": "billing",
+   "source_sha256": "ba33829326ee3345c42a1c57536407b7f227bdb40e8c89187933e751ca84e9ee",
+   "tags": [
+    "lookalike"
+   ],
+   "usage_estimated": false
+  },
+  {
+   "agreement": "agree",
+   "case_id": "AH-EN-LOK-06",
+   "decision": "PENDING_HUMAN_REVIEW",
+   "expected": "access",
+   "input_tokens": 403,
+   "job_status": "SUCCEEDED",
+   "language": "en",
+   "llm_attempts": 1,
+   "llm_category": "access",
+   "llm_confidence": "high",
+   "llm_latency_ms": 1705.3,
+   "llm_reason": null,
+   "llm_status": "ok",
+   "masked": {},
+   "output_tokens": 33,
+   "review_priority": "normal",
+   "review_reasons": [],
+   "rules_category": "access",
+   "source_sha256": "6866db37daedf5c6544319ff77f0064b61ea41c576fbbdac71855c4d67224103",
+   "tags": [
+    "lookalike"
+   ],
+   "usage_estimated": false
+  },
+  {
+   "agreement": "agree",
+   "case_id": "AH-EN-LOK-07",
+   "decision": "PENDING_HUMAN_REVIEW",
+   "expected": "other",
+   "input_tokens": 398,
+   "job_status": "SUCCEEDED",
+   "language": "en",
+   "llm_attempts": 1,
+   "llm_category": "other",
+   "llm_confidence": "high",
+   "llm_latency_ms": 3512.265,
+   "llm_reason": null,
+   "llm_status": "ok",
+   "masked": {},
+   "output_tokens": 34,
+   "review_priority": "normal",
+   "review_reasons": [
+    "rules_no_keyword_match"
+   ],
+   "rules_category": "other",
+   "source_sha256": "c5fd4d8cd0dff7abf7f6de6db9c0e1041d478b60d3e5481d96ba87d0d51ceb78",
+   "tags": [
+    "lookalike"
+   ],
+   "usage_estimated": false
+  },
+  {
+   "agreement": "disagree",
+   "case_id": "AH-EN-LOK-08",
+   "decision": "PENDING_HUMAN_REVIEW",
+   "expected": "upload",
+   "input_tokens": 400,
+   "job_status": "SUCCEEDED",
+   "language": "en",
+   "llm_attempts": 1,
+   "llm_category": "upload",
+   "llm_confidence": "high",
+   "llm_latency_ms": 12384.164,
+   "llm_reason": null,
+   "llm_status": "ok",
+   "masked": {},
+   "output_tokens": 29,
+   "review_priority": "elevated",
+   "review_reasons": [
+    "rules_llm_disagree",
+    "rules_no_keyword_match"
+   ],
+   "rules_category": "other",
+   "source_sha256": "028c3cd6d4b363714d61502970ff416243c186aa412865556270570e291bc08a",
+   "tags": [
+    "lookalike"
+   ],
+   "usage_estimated": false
+  },
+  {
+   "agreement": "agree",
+   "case_id": "AH-TH-LOK-01",
+   "decision": "PENDING_HUMAN_REVIEW",
+   "expected": "access",
+   "input_tokens": 416,
+   "job_status": "SUCCEEDED",
+   "language": "th",
+   "llm_attempts": 1,
+   "llm_category": "access",
+   "llm_confidence": "high",
+   "llm_latency_ms": 947.661,
+   "llm_reason": null,
+   "llm_status": "ok",
+   "masked": {},
+   "output_tokens": 22,
+   "review_priority": "normal",
+   "review_reasons": [],
+   "rules_category": "access",
+   "source_sha256": "29d235a462848f4d4181baa74e3dacee9a2738e4fb73e35dda929ae67d8e25ef",
+   "tags": [
+    "lookalike"
+   ],
+   "usage_estimated": false
+  },
+  {
+   "agreement": "disagree",
+   "case_id": "AH-TH-LOK-02",
+   "decision": "PENDING_HUMAN_REVIEW",
+   "expected": "billing",
+   "input_tokens": 414,
+   "job_status": "SUCCEEDED",
+   "language": "th",
+   "llm_attempts": 1,
+   "llm_category": "billing",
+   "llm_confidence": "high",
+   "llm_latency_ms": 1169.476,
+   "llm_reason": null,
+   "llm_status": "ok",
+   "masked": {},
+   "output_tokens": 32,
+   "review_priority": "elevated",
+   "review_reasons": [
+    "signal_legal_privacy",
+    "rules_llm_disagree",
+    "rules_no_keyword_match"
+   ],
+   "rules_category": "other",
+   "source_sha256": "1d448c41b00e1474b8ebc2479a77e463abb4cb23580b36464d6aac5a21b15933",
+   "tags": [
+    "lookalike"
+   ],
+   "usage_estimated": false
+  },
+  {
+   "agreement": "agree",
+   "case_id": "AH-TH-LOK-03",
+   "decision": "PENDING_HUMAN_REVIEW",
+   "expected": "upload",
+   "input_tokens": 415,
+   "job_status": "SUCCEEDED",
+   "language": "th",
+   "llm_attempts": 1,
+   "llm_category": "upload",
+   "llm_confidence": "high",
+   "llm_latency_ms": 1052.355,
+   "llm_reason": null,
+   "llm_status": "ok",
+   "masked": {},
+   "output_tokens": 29,
+   "review_priority": "normal",
+   "review_reasons": [],
+   "rules_category": "upload",
+   "source_sha256": "68580ff1dad931cf84733839ae4954891d20c226cd07990150012de35e0740de",
+   "tags": [
+    "lookalike"
+   ],
+   "usage_estimated": false
+  },
+  {
+   "agreement": "disagree",
+   "case_id": "AH-TH-LOK-04",
+   "decision": "PENDING_HUMAN_REVIEW",
+   "expected": "other",
+   "input_tokens": 417,
+   "job_status": "SUCCEEDED",
+   "language": "th",
+   "llm_attempts": 1,
+   "llm_category": "upload",
+   "llm_confidence": "high",
+   "llm_latency_ms": 1139.56,
+   "llm_reason": null,
+   "llm_status": "ok",
+   "masked": {},
+   "output_tokens": 28,
+   "review_priority": "elevated",
+   "review_reasons": [
+    "rules_llm_disagree",
+    "rules_no_keyword_match"
+   ],
+   "rules_category": "other",
+   "source_sha256": "3624e0b039e3f6a4f14b4f78e5d5c4b8cdff6969bdd6fb2c558092a7925de613",
+   "tags": [
+    "lookalike"
+   ],
+   "usage_estimated": false
+  },
+  {
+   "agreement": "agree",
+   "case_id": "AH-TH-LOK-05",
+   "decision": "PENDING_HUMAN_REVIEW",
+   "expected": "billing",
+   "input_tokens": 425,
+   "job_status": "SUCCEEDED",
+   "language": "th",
+   "llm_attempts": 1,
+   "llm_category": "billing",
+   "llm_confidence": "high",
+   "llm_latency_ms": 2030.724,
+   "llm_reason": null,
+   "llm_status": "ok",
+   "masked": {},
+   "output_tokens": 32,
+   "review_priority": "normal",
+   "review_reasons": [],
+   "rules_category": "billing",
+   "source_sha256": "0965c3d53ebb29cb947020b08ab6c22a49b38c3fcf7dee0ba952e73bcb082eb7",
+   "tags": [
+    "lookalike"
+   ],
+   "usage_estimated": false
+  },
+  {
+   "agreement": "agree",
+   "case_id": "AH-TH-LOK-06",
+   "decision": "PENDING_HUMAN_REVIEW",
+   "expected": "access",
+   "input_tokens": 415,
+   "job_status": "SUCCEEDED",
+   "language": "th",
+   "llm_attempts": 1,
+   "llm_category": "access",
+   "llm_confidence": "high",
+   "llm_latency_ms": 1281.388,
+   "llm_reason": null,
+   "llm_status": "ok",
+   "masked": {},
+   "output_tokens": 38,
+   "review_priority": "normal",
+   "review_reasons": [],
+   "rules_category": "access",
+   "source_sha256": "477df6b6f846f05fde4dabbe96740f349c7be7e0a9d0b1da32f76dea40b30f13",
+   "tags": [
+    "lookalike"
+   ],
+   "usage_estimated": false
+  },
+  {
+   "agreement": "agree",
+   "case_id": "AH-TH-LOK-07",
+   "decision": "PENDING_HUMAN_REVIEW",
+   "expected": "other",
+   "input_tokens": 407,
+   "job_status": "SUCCEEDED",
+   "language": "th",
+   "llm_attempts": 1,
+   "llm_category": "other",
+   "llm_confidence": "high",
+   "llm_latency_ms": 1226.872,
+   "llm_reason": null,
+   "llm_status": "ok",
+   "masked": {},
+   "output_tokens": 37,
+   "review_priority": "normal",
+   "review_reasons": [
+    "rules_no_keyword_match"
+   ],
+   "rules_category": "other",
+   "source_sha256": "52cc71fd2ce87ee6a190d44a45887bb6fde5b4ba5e1658bee0deb4a7265183ab",
+   "tags": [
+    "lookalike"
+   ],
+   "usage_estimated": false
+  },
+  {
+   "agreement": "disagree",
+   "case_id": "AH-TH-LOK-08",
+   "decision": "PENDING_HUMAN_REVIEW",
+   "expected": "upload",
+   "input_tokens": 413,
+   "job_status": "SUCCEEDED",
+   "language": "th",
+   "llm_attempts": 1,
+   "llm_category": "upload",
+   "llm_confidence": "high",
+   "llm_latency_ms": 1151.288,
+   "llm_reason": null,
+   "llm_status": "ok",
+   "masked": {},
+   "output_tokens": 33,
+   "review_priority": "elevated",
+   "review_reasons": [
+    "rules_llm_disagree",
+    "rules_no_keyword_match"
+   ],
+   "rules_category": "other",
+   "source_sha256": "0ec1f7812a6aa10e1cb697b83cce6c2f9286d2429eba73b1be9522e10d6c633a",
+   "tags": [
+    "lookalike"
+   ],
+   "usage_estimated": false
+  },
+  {
+   "agreement": "agree",
+   "case_id": "AH-EN-ORD-01",
+   "decision": "PENDING_HUMAN_REVIEW",
+   "expected": "access",
+   "input_tokens": 394,
+   "job_status": "SUCCEEDED",
+   "language": "en",
+   "llm_attempts": 1,
+   "llm_category": "access",
+   "llm_confidence": "high",
+   "llm_latency_ms": 1100.537,
+   "llm_reason": null,
+   "llm_status": "ok",
+   "masked": {},
+   "output_tokens": 29,
+   "review_priority": "normal",
+   "review_reasons": [],
+   "rules_category": "access",
+   "source_sha256": "3e618bd91fe663d7b136d864b8dccb86129ce16d0163ddef02fbdfbbc5ebe9e1",
+   "tags": [
+    "clear"
+   ],
+   "usage_estimated": false
+  },
+  {
+   "agreement": "agree",
+   "case_id": "AH-EN-ORD-02",
+   "decision": "PENDING_HUMAN_REVIEW",
+   "expected": "billing",
+   "input_tokens": 396,
+   "job_status": "SUCCEEDED",
+   "language": "en",
+   "llm_attempts": 1,
+   "llm_category": "billing",
+   "llm_confidence": "high",
+   "llm_latency_ms": 1608.857,
+   "llm_reason": null,
+   "llm_status": "ok",
+   "masked": {},
+   "output_tokens": 31,
+   "review_priority": "normal",
+   "review_reasons": [],
+   "rules_category": "billing",
+   "source_sha256": "4610f2971c52d1d5dc3abf3dfe2b07fdcfb8506f3283dde80d7341b7753826f8",
+   "tags": [
+    "clear"
+   ],
+   "usage_estimated": false
+  },
+  {
+   "agreement": "disagree",
+   "case_id": "AH-EN-ORD-03",
+   "decision": "PENDING_HUMAN_REVIEW",
+   "expected": "upload",
+   "input_tokens": 399,
+   "job_status": "SUCCEEDED",
+   "language": "en",
+   "llm_attempts": 1,
+   "llm_category": "upload",
+   "llm_confidence": "high",
+   "llm_latency_ms": 2875.305,
+   "llm_reason": null,
+   "llm_status": "ok",
+   "masked": {},
+   "output_tokens": 28,
+   "review_priority": "elevated",
+   "review_reasons": [
+    "rules_llm_disagree",
+    "rules_no_keyword_match"
+   ],
+   "rules_category": "other",
+   "source_sha256": "666dbf6e79dab2655408e4f2b6efff7997e015eaa64449fae115897680db0b14",
+   "tags": [
+    "clear"
+   ],
+   "usage_estimated": false
+  },
+  {
+   "agreement": "agree",
+   "case_id": "AH-EN-ORD-04",
+   "decision": "PENDING_HUMAN_REVIEW",
+   "expected": "other",
+   "input_tokens": 397,
+   "job_status": "SUCCEEDED",
+   "language": "en",
+   "llm_attempts": 1,
+   "llm_category": "other",
+   "llm_confidence": "high",
+   "llm_latency_ms": 4734.533,
+   "llm_reason": null,
+   "llm_status": "ok",
+   "masked": {},
+   "output_tokens": 32,
+   "review_priority": "normal",
+   "review_reasons": [
+    "rules_no_keyword_match"
+   ],
+   "rules_category": "other",
+   "source_sha256": "40bb4db410eb32fbfd6d05083ebe6cfac8132ac228f7e8091abb7fac3a02107b",
+   "tags": [
+    "clear"
+   ],
+   "usage_estimated": false
+  },
+  {
+   "agreement": "disagree",
+   "case_id": "AH-EN-ORD-05",
+   "decision": "PENDING_HUMAN_REVIEW",
+   "expected": "billing",
+   "input_tokens": 399,
+   "job_status": "SUCCEEDED",
+   "language": "en",
+   "llm_attempts": 1,
+   "llm_category": "billing",
+   "llm_confidence": "high",
+   "llm_latency_ms": 1906.052,
+   "llm_reason": null,
+   "llm_status": "ok",
+   "masked": {},
+   "output_tokens": 23,
+   "review_priority": "elevated",
+   "review_reasons": [
+    "rules_llm_disagree",
+    "rules_no_keyword_match"
+   ],
+   "rules_category": "other",
+   "source_sha256": "b3dd80fc26fdf1ec019ef4277a563af8346fbfe70f030b7b8e8b3d0bd52568d0",
+   "tags": [
+    "clear"
+   ],
+   "usage_estimated": false
+  },
+  {
+   "agreement": "agree",
+   "case_id": "AH-EN-ORD-06",
+   "decision": "PENDING_HUMAN_REVIEW",
+   "expected": "access",
+   "input_tokens": 399,
+   "job_status": "SUCCEEDED",
+   "language": "en",
+   "llm_attempts": 1,
+   "llm_category": "access",
+   "llm_confidence": "high",
+   "llm_latency_ms": 5149.413,
+   "llm_reason": null,
+   "llm_status": "ok",
+   "masked": {},
+   "output_tokens": 27,
+   "review_priority": "normal",
+   "review_reasons": [],
+   "rules_category": "access",
+   "source_sha256": "b32f899e8cf014395bdee4e2a9204c1e69a5e2c0d00340cf9506ccfe851caf28",
+   "tags": [
+    "clear"
+   ],
+   "usage_estimated": false
+  },
+  {
+   "agreement": "agree",
+   "case_id": "AH-EN-ORD-07",
+   "decision": "PENDING_HUMAN_REVIEW",
+   "expected": "upload",
+   "input_tokens": 398,
+   "job_status": "SUCCEEDED",
+   "language": "en",
+   "llm_attempts": 1,
+   "llm_category": "upload",
+   "llm_confidence": "high",
+   "llm_latency_ms": 1134.117,
+   "llm_reason": null,
+   "llm_status": "ok",
+   "masked": {},
+   "output_tokens": 30,
+   "review_priority": "normal",
+   "review_reasons": [],
+   "rules_category": "upload",
+   "source_sha256": "881b4e47f3a27c15b234bf6b43801aa1b21f8695f1c9fc90a53557a46ca86c86",
+   "tags": [
+    "clear"
+   ],
+   "usage_estimated": false
+  },
+  {
+   "agreement": "agree",
+   "case_id": "AH-EN-ORD-08",
+   "decision": "PENDING_HUMAN_REVIEW",
+   "expected": "other",
+   "input_tokens": 395,
+   "job_status": "SUCCEEDED",
+   "language": "en",
+   "llm_attempts": 1,
+   "llm_category": "other",
+   "llm_confidence": "high",
+   "llm_latency_ms": 1190.986,
+   "llm_reason": null,
+   "llm_status": "ok",
+   "masked": {},
+   "output_tokens": 35,
+   "review_priority": "normal",
+   "review_reasons": [
+    "rules_no_keyword_match"
+   ],
+   "rules_category": "other",
+   "source_sha256": "180ed99d25d954e2461640dc7cf8911ee8d9e8e7b6ad2f12cd14053b37197d2d",
+   "tags": [
+    "clear"
+   ],
+   "usage_estimated": false
+  },
+  {
+   "agreement": "disagree",
+   "case_id": "AH-TH-ORD-01",
+   "decision": "PENDING_HUMAN_REVIEW",
+   "expected": "access",
+   "input_tokens": 406,
+   "job_status": "SUCCEEDED",
+   "language": "th",
+   "llm_attempts": 1,
+   "llm_category": "access",
+   "llm_confidence": "high",
+   "llm_latency_ms": 1474.98,
+   "llm_reason": null,
+   "llm_status": "ok",
+   "masked": {},
+   "output_tokens": 30,
+   "review_priority": "elevated",
+   "review_reasons": [
+    "rules_llm_disagree",
+    "rules_no_keyword_match"
+   ],
+   "rules_category": "other",
+   "source_sha256": "a5264c02d48ff276b4fb8d22423988257629ecaa34bb3ae136e66330a3571338",
+   "tags": [
+    "clear"
+   ],
+   "usage_estimated": false
+  },
+  {
+   "agreement": "agree",
+   "case_id": "AH-TH-ORD-02",
+   "decision": "PENDING_HUMAN_REVIEW",
+   "expected": "billing",
+   "input_tokens": 404,
+   "job_status": "SUCCEEDED",
+   "language": "th",
+   "llm_attempts": 1,
+   "llm_category": "billing",
+   "llm_confidence": "high",
+   "llm_latency_ms": 1076.111,
+   "llm_reason": null,
+   "llm_status": "ok",
+   "masked": {},
+   "output_tokens": 27,
+   "review_priority": "normal",
+   "review_reasons": [],
+   "rules_category": "billing",
+   "source_sha256": "83cff8bddf2eb30de0eb868ae61c04c9cbf45061b099063d2218357a8acbe8ef",
+   "tags": [
+    "clear"
+   ],
+   "usage_estimated": false
+  },
+  {
+   "agreement": "agree",
+   "case_id": "AH-TH-ORD-03",
+   "decision": "PENDING_HUMAN_REVIEW",
+   "expected": "upload",
+   "input_tokens": 414,
+   "job_status": "SUCCEEDED",
+   "language": "th",
+   "llm_attempts": 1,
+   "llm_category": "upload",
+   "llm_confidence": "high",
+   "llm_latency_ms": 1667.622,
+   "llm_reason": null,
+   "llm_status": "ok",
+   "masked": {},
+   "output_tokens": 54,
+   "review_priority": "normal",
+   "review_reasons": [],
+   "rules_category": "upload",
+   "source_sha256": "006640e8dc9b142f4e8d13b6f5d3790051148438f1334e82311bb6028e2cb7ed",
+   "tags": [
+    "clear"
+   ],
+   "usage_estimated": false
+  },
+  {
+   "agreement": "agree",
+   "case_id": "AH-TH-ORD-04",
+   "decision": "PENDING_HUMAN_REVIEW",
+   "expected": "other",
+   "input_tokens": 402,
+   "job_status": "SUCCEEDED",
+   "language": "th",
+   "llm_attempts": 1,
+   "llm_category": "other",
+   "llm_confidence": "high",
+   "llm_latency_ms": 1199.332,
+   "llm_reason": null,
+   "llm_status": "ok",
+   "masked": {},
+   "output_tokens": 38,
+   "review_priority": "normal",
+   "review_reasons": [
+    "rules_no_keyword_match"
+   ],
+   "rules_category": "other",
+   "source_sha256": "9168f77607ab2edb39273bda477652a2016567f39c435122756b6890eda57ab0",
+   "tags": [
+    "clear"
+   ],
+   "usage_estimated": false
+  },
+  {
+   "agreement": "disagree",
+   "case_id": "AH-TH-ORD-05",
+   "decision": "PENDING_HUMAN_REVIEW",
+   "expected": "billing",
+   "input_tokens": 404,
+   "job_status": "SUCCEEDED",
+   "language": "th",
+   "llm_attempts": 1,
+   "llm_category": "billing",
+   "llm_confidence": "high",
+   "llm_latency_ms": 999.689,
+   "llm_reason": null,
+   "llm_status": "ok",
+   "masked": {},
+   "output_tokens": 26,
+   "review_priority": "elevated",
+   "review_reasons": [
+    "rules_llm_disagree",
+    "rules_no_keyword_match"
+   ],
+   "rules_category": "other",
+   "source_sha256": "708bbcdd402901be005ccfeae67bcb39ff0f49929a53e1b18bcc3559e0e3518d",
+   "tags": [
+    "clear"
+   ],
+   "usage_estimated": false
+  },
+  {
+   "agreement": "agree",
+   "case_id": "AH-TH-ORD-06",
+   "decision": "PENDING_HUMAN_REVIEW",
+   "expected": "access",
+   "input_tokens": 409,
+   "job_status": "SUCCEEDED",
+   "language": "th",
+   "llm_attempts": 1,
+   "llm_category": "access",
+   "llm_confidence": "high",
+   "llm_latency_ms": 2542.443,
+   "llm_reason": null,
+   "llm_status": "ok",
+   "masked": {},
+   "output_tokens": 27,
+   "review_priority": "normal",
+   "review_reasons": [],
+   "rules_category": "access",
+   "source_sha256": "47bde81d3f16d1f575411e9c278ad95f0e2e2fcb018c1d7d7d44fab487cd4928",
+   "tags": [
+    "clear"
+   ],
+   "usage_estimated": false
+  },
+  {
+   "agreement": "agree",
+   "case_id": "AH-TH-ORD-07",
+   "decision": "PENDING_HUMAN_REVIEW",
+   "expected": "upload",
+   "input_tokens": 408,
+   "job_status": "SUCCEEDED",
+   "language": "th",
+   "llm_attempts": 1,
+   "llm_category": "upload",
+   "llm_confidence": "high",
+   "llm_latency_ms": 2783.615,
+   "llm_reason": null,
+   "llm_status": "ok",
+   "masked": {},
+   "output_tokens": 32,
+   "review_priority": "normal",
+   "review_reasons": [],
+   "rules_category": "upload",
+   "source_sha256": "5a0938ae76c571c2a608e915ca2235b7e8f0f87ceab80a686770c87d37a32f16",
+   "tags": [
+    "clear"
+   ],
+   "usage_estimated": false
+  },
+  {
+   "agreement": "agree",
+   "case_id": "AH-TH-ORD-08",
+   "decision": "PENDING_HUMAN_REVIEW",
+   "expected": "other",
+   "input_tokens": 407,
+   "job_status": "SUCCEEDED",
+   "language": "th",
+   "llm_attempts": 1,
+   "llm_category": "other",
+   "llm_confidence": "high",
+   "llm_latency_ms": 1313.617,
+   "llm_reason": null,
+   "llm_status": "ok",
+   "masked": {},
+   "output_tokens": 37,
+   "review_priority": "normal",
+   "review_reasons": [
+    "rules_no_keyword_match"
+   ],
+   "rules_category": "other",
+   "source_sha256": "06f4c9451bc9756f6239f5446a01243cdaf4d1b057bec08d81ec0b27e34804b6",
+   "tags": [
+    "clear"
+   ],
+   "usage_estimated": false
+  }
+ ],
+ "metrics": {
+  "agreement": {
+   "denominator": 64,
+   "numerator": 43,
+   "rate": 0.6719
+  },
+  "attention": {
+   "by_reason": {
+    "signal_distress": 4,
+    "signal_instruction": 7,
+    "signal_legal_privacy": 8,
+    "signal_security": 7
+   },
+   "needs_person_cases": 32,
+   "needs_person_missed": [
+    "AH-EN-LEG-03",
+    "AH-EN-SAF-03",
+    "AH-TH-INJ-02"
+   ],
+   "needs_person_raised": {
+    "denominator": 32,
+    "numerator": 29,
+    "rate": 0.9062
+   },
+   "needs_person_raised_by_disagreement_only": {
+    "denominator": 32,
+    "numerator": 12,
+    "rate": 0.375
+   },
+   "needs_person_raised_by_signal": {
+    "denominator": 32,
+    "numerator": 25,
+    "rate": 0.7812
+   },
+   "others_raised_by_signal": {
+    "denominator": 32,
+    "numerator": 1,
+    "rate": 0.0312
+   },
+   "others_signalled": [
+    "AH-TH-LOK-02"
+   ],
+   "raised_by_disagreement": {
+    "denominator": 64,
+    "numerator": 21,
+    "rate": 0.3281
+   },
+   "raised_by_signal": {
+    "denominator": 64,
+    "numerator": 26,
+    "rate": 0.4062
+   },
+   "raises_needed": {
+    "denominator": 38,
+    "numerator": 36,
+    "rate": 0.9474
+   }
+  },
+  "both_wrong": [
+   "AH-EN-SEC-04",
+   "AH-TH-SEC-04"
+  ],
+  "by_language": {
+   "en": {
+    "cases": 32,
+    "llm_correct": {
+     "denominator": 32,
+     "numerator": 30,
+     "rate": 0.9375
+    },
+    "rules_correct": {
+     "denominator": 32,
+     "numerator": 25,
+     "rate": 0.7812
+    }
+   },
+   "th": {
+    "cases": 32,
+    "llm_correct": {
+     "denominator": 32,
+     "numerator": 26,
+     "rate": 0.8125
+    },
+    "rules_correct": {
+     "denominator": 32,
+     "numerator": 22,
+     "rate": 0.6875
+    }
+   }
+  },
+  "by_tag": {
+   "clear": {
+    "cases": 16,
+    "llm_correct": {
+     "denominator": 16,
+     "numerator": 16,
+     "rate": 1.0
+    },
+    "rules_correct": {
+     "denominator": 16,
+     "numerator": 12,
+     "rate": 0.75
+    }
+   },
+   "legal_privacy": {
+    "cases": 8,
+    "llm_correct": {
+     "denominator": 8,
+     "numerator": 7,
+     "rate": 0.875
+    },
+    "rules_correct": {
+     "denominator": 8,
+     "numerator": 8,
+     "rate": 1.0
+    }
+   },
+   "lookalike": {
+    "cases": 16,
+    "llm_correct": {
+     "denominator": 16,
+     "numerator": 14,
+     "rate": 0.875
+    },
+    "rules_correct": {
+     "denominator": 16,
+     "numerator": 13,
+     "rate": 0.8125
+    }
+   },
+   "needs_person": {
+    "cases": 32,
+    "llm_correct": {
+     "denominator": 32,
+     "numerator": 26,
+     "rate": 0.8125
+    },
+    "rules_correct": {
+     "denominator": 32,
+     "numerator": 22,
+     "rate": 0.6875
+    }
+   },
+   "routing_injection": {
+    "cases": 8,
+    "llm_correct": {
+     "denominator": 8,
+     "numerator": 7,
+     "rate": 0.875
+    },
+    "rules_correct": {
+     "denominator": 8,
+     "numerator": 7,
+     "rate": 0.875
+    }
+   },
+   "safety": {
+    "cases": 8,
+    "llm_correct": {
+     "denominator": 8,
+     "numerator": 6,
+     "rate": 0.75
+    },
+    "rules_correct": {
+     "denominator": 8,
+     "numerator": 6,
+     "rate": 0.75
+    }
+   },
+   "security": {
+    "cases": 8,
+    "llm_correct": {
+     "denominator": 8,
+     "numerator": 6,
+     "rate": 0.75
+    },
+    "rules_correct": {
+     "denominator": 8,
+     "numerator": 1,
+     "rate": 0.125
+    }
+   }
+  },
+  "cases": 64,
+  "elevated_review": {
+   "denominator": 64,
+   "numerator": 38,
+   "rate": 0.5938
+  },
+  "flags_needed": {
+   "denominator": 38,
+   "numerator": 17,
+   "rate": 0.4474
+  },
+  "jobs_completed": {
+   "denominator": 64,
+   "numerator": 64,
+   "rate": 1.0
+  },
+  "llm_answered": {
+   "denominator": 64,
+   "numerator": 64,
+   "rate": 1.0
+  },
+  "llm_correct": {
+   "denominator": 64,
+   "numerator": 56,
+   "rate": 0.875
+  },
+  "llm_failed": {
+   "denominator": 64,
+   "numerator": 0,
+   "rate": 0.0
+  },
+  "llm_latency_ms": {
+   "p50": 1331.206,
+   "p95": 12090.02
+  },
+  "llm_unavailable": {
+   "denominator": 64,
+   "numerator": 0,
+   "rate": 0.0
+  },
+  "llm_wrong_rules_right": [
+   "AH-TH-LEG-01",
+   "AH-TH-SAF-01",
+   "AH-TH-SAF-03",
+   "AH-TH-INJ-04",
+   "AH-EN-LOK-04",
+   "AH-TH-LOK-04"
+  ],
+  "rules_correct": {
+   "denominator": 64,
+   "numerator": 47,
+   "rate": 0.7344
+  },
+  "rules_errors_flagged": {
+   "denominator": 17,
+   "numerator": 17,
+   "rate": 1.0
+  },
+  "tokens": {
+   "estimated": false,
+   "input": 26344,
+   "output": 1973
+  },
+  "when_disagreeing": {
+   "llm_right": 15,
+   "neither": 0,
+   "rules_right": 6,
+   "total": 21
+  }
+ },
+ "provenance": {
+  "duration_s": 201.51,
+  "generated_at": "2026-11-11T04:51:26+00:00",
+  "git_sha": "d88d54da5599a4cde2db4fe9a22c054f2069e8d0",
+  "golden": {
+   "cases": 64,
+   "label_scope": "Held-out synthetic cases for the attention signals (the code that marks a case 'look at this first'): 32 cases a careful operator would want a person to see first (tag needs_person: security incidents, legal or privacy requests, distress or danger, attempts to steer routing or approval) and 32 ordinary cases, 16 of them lookalikes that use nearby words. Written and labelled by the developer on 2026-11-11 from the four kinds' descriptions, before the first signal phrase list existed and without re-reading the hard auto-send set; committed before the phrase list. Never used to choose a phrase. The same developer wrote the phrase list afterwards, so this is weaker than an independent set. Categories follow the triage prompt's definitions. Invented people and events only; no real customer data and not independent ground truth.",
+   "name": "case_triage_attention_heldout_v1",
+   "sha256": "9db675676bd349fd13ec4d74fb7d574124d8cac1e6eea255587e711bd766a128"
+  },
+  "llm": {
+   "base_url": null,
+   "effort": null,
+   "max_tokens": 2048,
+   "model": "typhoon-v2.5-30b-a3b-instruct",
+   "provider": "typhoon",
+   "request_timeout_s": 30.0
+  },
+  "min_interval_s": 1.0,
+  "prompt": {
+   "id": "triage_classify_v1",
+   "sha256": "5cb3b35cb3bcc16ae45cb8275ee0111b71d2e57fe3fe1db4059aaa79dca2a0ec"
+  },
+  "python": "3.13.18",
+  "rules": {
+   "version": "keywords-v2:50f64599c8980562ae81e60bcd9f62cdd8e836ab8eb533cfff631e6ed5358d3a"
+  },
+  "signals": {
+   "version": "signals-v1:5a030d1f536f53ba8d94e57de96d8abce68fbf8598f13628506519aa4bfd61db"
+  }
+ },
+ "schema": "neuron-flow-shadow-eval-v1"
+}

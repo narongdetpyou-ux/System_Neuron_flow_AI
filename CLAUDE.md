@@ -43,6 +43,12 @@ trusted agents in bounded child processes, retries, recovers after a crash and w
   (`case_triage_autosend_hard_v1`, 38 cases tagged `needs_person`) and on open benchmarks built at run time from
   pinned public files (`tests/open_benchmarks/`, roadmap 5.6: CLINC150, BANKING77, MASSIVE th/en pairs, BIPIA's
   injection attacks; nothing downloaded is committed).
+- attention signals (ADR-032, built on 2026-11-11 after the owner said to plan anew with one expectation, better
+  effectiveness): a fifth step in `case_triage.v2`, `screen`, is plain code that finds versioned phrases of four
+  kinds (distress or danger, a security incident, a legal or privacy request, text that tries to steer routing or
+  approval) and raises the case for the reviewer with a named reason. It never changes a category or a decision.
+  Phrase lists, not a safety classifier: measured gains and misses are in
+  [the evidence note](docs/evidence/2026-11-11-attention-signals.md).
 
 All data is synthetic. Milestones A, A2 and B are done.
 
@@ -144,6 +150,9 @@ Read in this order when you need depth:
    - Shadow triage rules use `triage.classify_rules` with the complete SHA-256 of `keywords_v2.json` in
      the agent version and frozen step params; a list change is a new rules version (E2). The original
      `case_triage.v1` demonstration keeps `triage.classify` and `keywords-v1`.
+   - The attention signals use `triage.screen_signals` with the complete SHA-256 of `signals_v1.json` in the
+     agent version and frozen step params; a phrase change is a new signals version (ADR-032). Never add a phrase
+     because of a held-out result.
    - Jobs caught mid-way by a change fail as `configuration_changed`.
 6. **Secrets come only from the environment, at call time** (ADR-013).
    - Never put a key in a spec, an output, a log, a fixture, a commit or a Sentry event.
@@ -171,7 +180,7 @@ If a task seems to need breaking a rule:
 ## 4. Checking your work
 
 ```bash
-python -m unittest discover -s tests -v        # all tests (477 on 2026-11-11); CI: Python 3.10 and 3.12
+python -m unittest discover -s tests -v        # all tests (503 on 2026-11-11); CI: Python 3.10 and 3.12
 python -m examples.case_triage_demo            # v1 rules, one synthetic case
 python -m examples.case_triage_shadow_demo     # v2 shadow mode with the offline mock AI
 python -m examples.study_guide_demo            # the study guide's answers to four synthetic requests
@@ -182,6 +191,9 @@ python -m tests.handoff_check                  # skill handoffs over all 217 tri
 python -m app.eval.triage_shadow_eval --golden app/eval/golden/case_triage_autosend_hard_v1.json --out hard.json \
     --compare-with tests/baselines/autosend_hard_mock.json   # the hard auto-send set and its gate
 python -m app.eval.autosend_sim --report hard.json --report shadow.json  # simulate the button on saved answers
+python -m app.eval.triage_shadow_eval --golden app/eval/golden/case_triage_attention_heldout_v1.json \
+    --compare-with tests/baselines/attention_heldout_mock.json   # the held-out attention set and its gate
+python -m app.eval.attention_replay --pair old-report.json cases.json  # the "look first" flag before/after signals
 python -I tests/open_benchmarks/build_sets.py --out open-sets --cache ~/open-bench-cache --check  # open sets (network)
 python -m examples.skill_handoff_demo          # one case step by step through the exchange
 NEURON_FLOW_ACCESS_KEY=$(python -c "import secrets; print(secrets.token_urlsafe(24))") python -m app.serve
@@ -199,6 +211,9 @@ GitHub Actions (the owner can open these; the first three run on every push and 
   Before the study guide's scorecard, the 128 hard auto-send cases run with the mock against
   `tests/baselines/autosend_hard_mock.json`, and the auto-approve simulation replays them with the 61 development
   cases (ADR-031); its Thai summary is on the run page and it fails only if a real job did not wait for a person.
+  Before the simulation, the 64 held-out attention cases run with the mock against
+  `tests/baselines/attention_heldout_mock.json` (ADR-032); the scorecard on the run page shows how many cases a
+  person should see first were raised, and names the misses.
 - *Service container* (`service-container.yml`):
   - checks `render.yaml` against Render's schema;
   - builds the same container as Render and submits cases over HTTP;
@@ -323,11 +338,11 @@ Notes for cloud sessions (claude.ai/code):
 | Path | What it is |
 |---|---|
 | `neuron_flow/` | Core (rule 1) |
-| `app/domains/case_triage/` | v1 rules, the input contract, the v2 shadow agents and workflow |
+| `app/domains/case_triage/` | v1 rules, the input contract, the v2 shadow agents and workflow, and the attention signals (`signals.py`, `signals_v1.json`, ADR-032) |
 | `app/domains/study_guide/` | the study guide: topic catalog and verified resource library (`catalog/*_v1.json`), their checks and hash (`library.py`), the link check (`link_check.py`), and the `study_guide.v1` workflow (`workflow.py`, `agents.py`, `planning.py`, `ai_prompts.py`, `mock_answers.py`); no `.md` files here, because the Render build filter ignores them |
 | `app/llm/` | AI gateway, prompt library (prompt + answer schema, one hash), personal-data masking, mock, Claude, Typhoon and local providers (`providers/openai_compat.py` serves OpenAI-format services, Typhoon and a server we run ourselves, and states the answer format in words for both, ADR-022, ADR-026; `providers/_http.py` refuses redirects for every real client) |
 | `app/exchange/` | the skill-handoff exchange (ADR-030): the common language (`common.py`, `vocabulary_v1.json`), translators (`translators/`, one module per skill, outside `app/domains/`), the route table (`routes.py`, `routes_v1.json`) and `exchange.py`, which checks the table at start and prepares each handoff for the queue store |
-| `app/eval/` | the two scorecards (triage: 61 labelled cases; study guide: 67 labelled requests), the eval gate's shared code and per-category scores (`common.py`), the rules v1/v2 replay (`rules_comparison.py`) and the auto-approve simulation (`autosend_sim.py`, ADR-031: a replay only, never imported by the service); `golden/` holds the case sets, among them the 128-case hard auto-send set |
+| `app/eval/` | the two scorecards (triage: 61 labelled cases; study guide: 67 labelled requests), the eval gate's shared code and per-category scores (`common.py`), the rules v1/v2 replay (`rules_comparison.py`) the auto-approve simulation (`autosend_sim.py`, ADR-031: a replay only, never imported by the service) and the attention replay (`attention_replay.py`, ADR-032: the flag before and after the signals on saved answers); `golden/` holds the case sets, among them the 128-case hard auto-send set and the 64-case held-out attention set |
 | `app/observability/sentry.py` | Sentry reporting: step failures, degraded AI, Runner recoveries |
 | `app/observability/tracing.py`, `job_spans.py` | tracing: the OTLP/JSON exporter with its attribute allow-list, and a finished job's spans (ADR-017) |
 | `app/persistence/queue_store.py` | the application queue in its own SQLite file (`<data>/app/queue.sqlite3`, schema 3): jobs, events, the Runner heartbeat, reviews and append-only decisions, skill handoffs, and the store id that shows when the queue started empty |
@@ -519,6 +534,15 @@ Notes for cloud sessions (claude.ai/code):
     (roadmap 0.4).
   - The rest of the roadmap is open.
 - **Next:** [docs/ROADMAP.md](docs/ROADMAP.md), the first item that is not ✅ and whose needs are met.
+  - **Attention signals are built in PR #67 (2026-11-11), pending merge** (ADR-032, roadmap 5.10). The owner said
+    to plan anew, not from the repository's plan, with one expectation: better effectiveness. The session chose
+    the weakest measured point: the "look first" flag raised 6 of the hard set's 38 `needs_person` cases. Now
+    38/38 there (saved Typhoon answers) and 29/32 on a held-out set committed before the phrase list (live
+    Typhoon; 12/32 without the signals), with 1 of 32 ordinary held-out cases raised needlessly. Recorded misses:
+    6 of 21 BANKING77 security-intent cases, 0 of BIPIA's 75 attacks
+    ([evidence](docs/evidence/2026-11-11-attention-signals.md)). It changes `app/`, so the merge redeploys Render
+    (queued cases are lost on the free plan). Next after it: signals v2 with a split of the open data made before
+    reading it (roadmap 5.10, "Next"); do not tune v1's phrases on anything already measured.
   - **The auto-approve limits are built in PR #66 (2026-11-11), pending merge** (ADR-031, roadmap 5.6, 5.9 and the
     first injection measurement of 5.7): the hard set, the open-benchmark builder, the simulation, the CI step with
     the mock, the manual workflow and the first Typhoon run. After the merge: the owner's run of *Auto-approve

@@ -22,25 +22,33 @@ still Milestone C (2.1). No Core (`neuron_flow/`) file was changed. Design princ
    - ถ้า AI ติดขัดชั่วคราว ระบบลองใหม่ 1 ครั้ง
    - ถ้ายังไม่ได้ หรือ AI ปฏิเสธที่จะตอบ ระบบเดินต่อโดยใช้ข้อเสนอของกฎ และแจ้งผู้รีวิวว่า "AI ใช้งานไม่ได้"
    - ถ้าตั้งค่าผิด (เช่น API key ผิด) ระบบหยุดเคสนั้นและแจ้งเตือนทาง Sentry/อีเมล
-4. ระบบ **เทียบ** สองความเห็น ถ้าไม่ตรงกัน เคสถูกยกเป็น "ต้องดูก่อน" (priority elevated) พร้อมเหตุผล
-5. ผู้รีวิวได้รับข้อเสนอที่ **รอคนตัดสินเสมอ** (PENDING_HUMAN_REVIEW) AI ไม่มีสิทธิ์ตัดสินหรือเปลี่ยนคิวเอง
-6. ทุกคำตอบของ AI ถูกบันทึกว่ามาจากรุ่นไหน ใช้ prompt ฉบับไหน ถ้าเปลี่ยน prompt หรือรุ่น AI งานเก่าจะไม่ถูกรันซ้ำด้วยค่าใหม่โดยไม่รู้ตัว
-7. **ด่านตรวจผลรายเคส (eval gate, ขั้น 5.2)** ทุกครั้งที่มีการส่งโค้ดขึ้น GitHub ระบบรันเคสทดสอบ 61 เคสด้วย AI จำลอง แล้วเทียบคำตอบของทุกเคสกับไฟล์ต้นแบบ (`tests/baselines/shadow_eval_mock.json`) ถ้ามีเคสไหนตอบต่างจากเดิม แม้แต่ช่องเดียว (หมวดของกฎ หมวดของ AI ความมั่นใจ การเห็นตรงกัน ความสำคัญ หรือเหตุผล) ช่องตรวจ *Core logic tests* จะเป็นสีแดง และหน้าผลรันจะบอกว่าเคสไหนเปลี่ยนอะไร ถ้าตั้งใจเปลี่ยน ต้องอัปเดตไฟล์ต้นแบบใน PR เดียวกันและเขียนเหตุผลไว้ ถ้าเปลี่ยน prompt หรือรุ่น AI ต้องแนบผลรันกับ AI จริงด้วย
-8. **ใช้ AI จริงได้ฟรีผ่าน Typhoon ของ SCB 10X (ADR-021)** ไม่ต้องมีบัตร ปุ่ม *Shadow eval with Typhoon (manual)* ใน Actions ใช้คีย์จาก secret `TYPHOON_API_KEY` ส่งเคสสมมุติทั้ง 61 เคสให้ Typhoon (ค่าเริ่มต้น `typhoon-v2.5-30b-a3b-instruct`) ก่อนเริ่มจะลองส่งประโยคทดสอบ 1 ประโยค และแสดงคำตอบดิบให้เห็นว่าการเชื่อมต่อใช้ได้ไหม ผลที่ได้เป็นของ Typhoon ไม่ใช่ของ Claude Typhoon เก็บข้อมูลการใช้งานไปปรับปรุงโมเดล จึงใช้ได้กับข้อมูลสมมุติเท่านั้น ถ้าตัวกรองของผู้ให้บริการบล็อกข้อความเคสไหน เคสนั้นนับเป็น "AI ไม่ตอบ" และไปถึงผู้รีวิวตามปกติ ไม่ทำให้งานล้ม (GitHub Models ที่ใช้ก่อนหน้านี้ปิดบริการไปแล้วตั้งแต่ 30 ก.ค. 2026)
-9. **รันกับ Typhoon จริงแล้วเมื่อ 6 พ.ย.** รอบแรก AI ตอบไม่ได้เลย 0 จาก 5 เคส เพราะ Typhoon ไม่ทำตามช่องตั้งค่ารูปแบบคำตอบ (response_format) ตอนนี้ระบบบอกรูปแบบคำตอบเป็นคำพูดด้วย (ADR-022) หลังแก้ AI ตอบได้ 61/61 และจัดหมวดถูก 60/61 ทั้ง 2 รอบ (กฎเดิมถูก 29/61 เคสภาษาไทย AI ถูก 26/26) เคสเป็นของสมมุติที่ผู้พัฒนาเขียนเอง จึงยังไม่ใช่ความแม่นยำจริง ([บันทึกหลักฐาน](evidence/2026-11-06-first-live-typhoon.md))
-10. **ลองกับโมเดลเปิดที่รันเองได้ (ADR-026, ขั้น 5.8)** ปุ่ม *Local open model eval* ใน Actions ให้เครื่องทดสอบของ GitHub เปิด Typhoon 2.5 รุ่น 4B (สัญญา Apache 2.0) ด้วย llama.cpp แล้วส่งเคสชุดเดิมให้ ไม่ต้องใช้คีย์ ข้อความไม่ออกไปบริษัท AI ใด แต่คิดด้วย CPU จึงช้ากว่า และผลเป็นของไฟล์โมเดลรุ่นนั้น ไม่ใช่ของ Typhoon ผ่าน API หรือ Claude รอบเต็มรอบแรก (8 พ.ย.): AI จัดหมวดถูก 58 จาก 61 เคส (Typhoon ผ่าน API 60) เคสที่กฎผิดถูกดันขึ้นคิวด่วนให้คนดูครบ 32 จาก 32 และช้ากว่า Typhoon ผ่าน API ราว 7 เท่า ([บันทึกหลักฐาน](evidence/2026-11-08-first-local-model-full.md))
+4. พร้อมกันนั้น **โค้ดธรรมดา (ไม่ใช่ AI) ตรวจหาสัญญาณ "ต้องให้คนดูก่อน"** 4 แบบในข้อความ (ADR-032 ตั้งแต่ 11 พ.ย.):
+   ผู้เขียนอาจกำลังลำบากหรือไม่ปลอดภัย เหตุด้านความปลอดภัยของบัญชีหรือการเงิน เรื่องกฎหมายหรือข้อมูลส่วนบุคคล และข้อความที่มีลักษณะสั่งระบบ
+   - สัญญาณไม่เปลี่ยนหมวดและไม่ตัดสินอะไร ทำได้อย่างเดียวคือยกเคสขึ้นให้คนดูก่อน พร้อมบอกเหตุผล
+   - เป็นรายการคำตัวอย่าง จึงพลาดเคสที่ใช้คำอื่น ผลวัดจริงอยู่ใน [บันทึกหลักฐาน](evidence/2026-11-11-attention-signals.md)
+5. ระบบ **เทียบ** สองความเห็น ถ้าไม่ตรงกัน หรือเจอสัญญาณ เคสถูกยกเป็น "ต้องดูก่อน" (priority elevated) พร้อมเหตุผล
+6. ผู้รีวิวได้รับข้อเสนอที่ **รอคนตัดสินเสมอ** (PENDING_HUMAN_REVIEW) AI ไม่มีสิทธิ์ตัดสินหรือเปลี่ยนคิวเอง
+7. ทุกคำตอบของ AI ถูกบันทึกว่ามาจากรุ่นไหน ใช้ prompt ฉบับไหน ถ้าเปลี่ยน prompt หรือรุ่น AI งานเก่าจะไม่ถูกรันซ้ำด้วยค่าใหม่โดยไม่รู้ตัว
+8. **ด่านตรวจผลรายเคส (eval gate, ขั้น 5.2)** ทุกครั้งที่มีการส่งโค้ดขึ้น GitHub ระบบรันเคสทดสอบ 61 เคสด้วย AI จำลอง แล้วเทียบคำตอบของทุกเคสกับไฟล์ต้นแบบ (`tests/baselines/shadow_eval_mock.json`) ถ้ามีเคสไหนตอบต่างจากเดิม แม้แต่ช่องเดียว (หมวดของกฎ หมวดของ AI ความมั่นใจ การเห็นตรงกัน ความสำคัญ หรือเหตุผล) ช่องตรวจ *Core logic tests* จะเป็นสีแดง และหน้าผลรันจะบอกว่าเคสไหนเปลี่ยนอะไร ถ้าตั้งใจเปลี่ยน ต้องอัปเดตไฟล์ต้นแบบใน PR เดียวกันและเขียนเหตุผลไว้ ถ้าเปลี่ยน prompt หรือรุ่น AI ต้องแนบผลรันกับ AI จริงด้วย
+9. **ใช้ AI จริงได้ฟรีผ่าน Typhoon ของ SCB 10X (ADR-021)** ไม่ต้องมีบัตร ปุ่ม *Shadow eval with Typhoon (manual)* ใน Actions ใช้คีย์จาก secret `TYPHOON_API_KEY` ส่งเคสสมมุติทั้ง 61 เคสให้ Typhoon (ค่าเริ่มต้น `typhoon-v2.5-30b-a3b-instruct`) ก่อนเริ่มจะลองส่งประโยคทดสอบ 1 ประโยค และแสดงคำตอบดิบให้เห็นว่าการเชื่อมต่อใช้ได้ไหม ผลที่ได้เป็นของ Typhoon ไม่ใช่ของ Claude Typhoon เก็บข้อมูลการใช้งานไปปรับปรุงโมเดล จึงใช้ได้กับข้อมูลสมมุติเท่านั้น ถ้าตัวกรองของผู้ให้บริการบล็อกข้อความเคสไหน เคสนั้นนับเป็น "AI ไม่ตอบ" และไปถึงผู้รีวิวตามปกติ ไม่ทำให้งานล้ม (GitHub Models ที่ใช้ก่อนหน้านี้ปิดบริการไปแล้วตั้งแต่ 30 ก.ค. 2026)
+10. **รันกับ Typhoon จริงแล้วเมื่อ 6 พ.ย.** รอบแรก AI ตอบไม่ได้เลย 0 จาก 5 เคส เพราะ Typhoon ไม่ทำตามช่องตั้งค่ารูปแบบคำตอบ (response_format) ตอนนี้ระบบบอกรูปแบบคำตอบเป็นคำพูดด้วย (ADR-022) หลังแก้ AI ตอบได้ 61/61 และจัดหมวดถูก 60/61 ทั้ง 2 รอบ (กฎเดิมถูก 29/61 เคสภาษาไทย AI ถูก 26/26) เคสเป็นของสมมุติที่ผู้พัฒนาเขียนเอง จึงยังไม่ใช่ความแม่นยำจริง ([บันทึกหลักฐาน](evidence/2026-11-06-first-live-typhoon.md))
+11. **ลองกับโมเดลเปิดที่รันเองได้ (ADR-026, ขั้น 5.8)** ปุ่ม *Local open model eval* ใน Actions ให้เครื่องทดสอบของ GitHub เปิด Typhoon 2.5 รุ่น 4B (สัญญา Apache 2.0) ด้วย llama.cpp แล้วส่งเคสชุดเดิมให้ ไม่ต้องใช้คีย์ ข้อความไม่ออกไปบริษัท AI ใด แต่คิดด้วย CPU จึงช้ากว่า และผลเป็นของไฟล์โมเดลรุ่นนั้น ไม่ใช่ของ Typhoon ผ่าน API หรือ Claude รอบเต็มรอบแรก (8 พ.ย.): AI จัดหมวดถูก 58 จาก 61 เคส (Typhoon ผ่าน API 60) เคสที่กฎผิดถูกดันขึ้นคิวด่วนให้คนดูครบ 32 จาก 32 และช้ากว่า Typhoon ผ่าน API ราว 7 เท่า ([บันทึกหลักฐาน](evidence/2026-11-08-first-local-model-full.md))
 
 ## How one case flows
 
 ```text
 case ──► classify_rules (v2 keywords) ──┐
-     └─► classify_llm   (AI)          ──┴─► compare ──► prepare ──► reviewer
+     ├─► classify_llm   (AI)          ──┼─► compare ──► prepare ──► reviewer
+     └─► screen (attention signals)   ──┘
 ```
 
 1. `build_shadow_workflow` checks the case with the same input rules as v1. It freezes
    the AI settings (provider, model, prompt id and SHA-256) and the rules list version and SHA-256 into the job.
-2. Core runs `classify_rules` and `classify_llm` **in parallel**. They are independent
-   branches, so a problem in the AI branch never stops the rules branch.
+2. Core runs `classify_rules`, `classify_llm` and `screen` **in parallel**. They are independent
+   branches, so a problem in the AI branch never stops the other two.
+   `screen` (`signals.py`, ADR-032) is plain code: it looks for versioned phrases of four kinds (distress or
+   danger, a security incident, a legal or privacy request, text that tries to steer routing or approval) and
+   reports the kinds it found, never the text. The phrase file's SHA-256 is frozen into the job like the rules'.
 3. `classify_llm` masks personal data in the case text (`app/llm/redaction.py`), then sends the
    versioned prompt, with the masked text wrapped as a JSON string. The provider's structured output limits the answer to
    `{category, confidence, rationale}` with fixed choices. Our code checks the answer again.
@@ -48,6 +56,9 @@ case ──► classify_rules (v2 keywords) ──┐
    - `agree`: normal priority.
    - `disagree`: **elevated** priority, with reason `rules_llm_disagree`.
    - `llm_unavailable`: normal priority, with reason `llm_unavailable`.
+   - Any attention signal: **elevated** priority, with one reason per kind (`signal_distress`,
+     `signal_security`, `signal_legal_privacy`, `signal_instruction`), whatever the agreement is, also when
+     the AI is unavailable. A signal never changes a category or a queue.
    - Extra reasons `llm_low_confidence` and `rules_no_keyword_match` add context.
 5. `prepare` builds the reviewer's proposal. The **official suggestion is always the
    rules result**, and the AI's view is shown as `second_opinion`. The decision is always
@@ -251,7 +262,9 @@ bare `OK` back, which the connection check above made visible.
 | `app/llm/providers/mock.py` | offline keyword simulation + failure scenarios for tests |
 | `app/domains/case_triage/rules.py` + `keywords_v2.json` | normalised, deterministic Thai/English rules with a frozen data hash |
 | `app/domains/case_triage/shadow_agents.py` | the AI, compare and prepare agents and their validators |
-| `app/domains/case_triage/shadow_workflow.py` | trusted registry and the four-step DAG |
+| `app/domains/case_triage/signals.py` + `signals_v1.json` | attention signals: versioned phrases of four kinds, matched by plain code (ADR-032) |
+| `app/domains/case_triage/shadow_workflow.py` | trusted registry and the five-step DAG |
+| `app/eval/attention_replay.py` | the flag before and after the signals, on saved answers (no model call) |
 | `app/eval/triage_shadow_eval.py` + `app/eval/golden/` | scorecard and 61 labelled synthetic cases (EN + TH) |
 | `tests/baselines/shadow_eval_mock.json` | every case's answer with the mock AI: the eval gate's baseline |
 | `examples/case_triage_shadow_demo.py` | three cases explained step by step |
@@ -269,5 +282,9 @@ bare `OK` back, which the connection check above made visible.
   No cost claims are made.
 - Typhoon's API is a free beta research showcase that collects usage data; synthetic data only.
 - Token counts cover answered calls only. No money estimate is made, because prices change.
+- The attention signals are demonstration phrases, not a safety classifier. Measured on 2026-11-11
+  ([evidence](evidence/2026-11-11-attention-signals.md)): they raise every `needs_person` case of the set they
+  were written against, fewer on held-out text, a minority of BANKING77's security intents and none of BIPIA's
+  75 attacks. A case without a signal is not thereby safe, and every case still waits for a person.
 - Shadow mode does not reduce reviewer work. It orders that work and explains it.
 - Core's single-machine limits still apply. Agent child processes are not a security sandbox.
