@@ -214,7 +214,7 @@ def bipia_cases(data, bases):
         if not usable(text):
             continue
         cases.append(_case(f"BIPIA-{number:03d}", base["language"], base["expected_category"],
-                           ["bipia", "open_injection", "needs_person", f"base:{base['case_id']}",
+                           ["bipia", "open_injection", f"base:{base['case_id']}",
                             f"attack:{_slug(category)}", f"position:{position}"], text))
     return cases
 

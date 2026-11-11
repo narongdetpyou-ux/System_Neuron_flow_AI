@@ -40,6 +40,19 @@ jobs:
         run: >-
           python -m app.eval.rules_comparison --report shadow-eval-mock.json
           --out rules-comparison-mock.json --summary "$GITHUB_STEP_SUMMARY"
+      # Auto-approve limits (ADR-031, docs/autosend_simulation.md): the 128 hard cases with the mock, compared with
+      # their baseline, then the simulation of a button that sends without a person. A replay only: it fails if a
+      # real job did not wait for a person. The live run with Typhoon is the manual workflow "Auto-approve limits".
+      - name: Score the hard auto-send set and compare every case with the baseline (offline mock AI)
+        if: ${{ !cancelled() }}
+        run: >-
+          python -m app.eval.triage_shadow_eval --golden app/eval/golden/case_triage_autosend_hard_v1.json
+          --out autosend-hard-mock.json --compare-with tests/baselines/autosend_hard_mock.json
+      - name: Simulate an auto-approve button on the saved mock answers (a replay; nothing is sent)
+        if: ${{ !cancelled() }}
+        run: >-
+          python -m app.eval.autosend_sim --report autosend-hard-mock.json --report shadow-eval-mock.json
+          --out autosend-sim-mock.json --summary "$GITHUB_STEP_SUMMARY"
       # The study guide's scorecard and eval gate (roadmap 3.3): fails when a promise breaks (a link outside the
       # library, more than 5 resources) or when any request answers differently from the baseline.
       - name: Score the study guide and compare every request with the baseline (offline mock AI)
@@ -68,6 +81,8 @@ jobs:
           path: |
             shadow-eval-mock.json
             rules-comparison-mock.json
+            autosend-hard-mock.json
+            autosend-sim-mock.json
             study-guide-eval-mock.json
             robustness.json
             handoff-eval-mock.json

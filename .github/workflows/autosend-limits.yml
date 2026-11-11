@@ -1,0 +1,131 @@
+name: Auto-approve limits (open benchmarks + hard set)
+# How far could a button that approves a case without a person go? (docs/autosend_simulation.md, ADR-031)
+# 1. builds the open-benchmark case sets from pinned public files (CLINC150, BANKING77, MASSIVE th/en, BIPIA),
+#    checking every SHA-256 against tests/open_benchmarks/manifest_v1.json (roadmap 5.6);
+# 2. runs the shadow scorecard on them, on the hard auto-send set and on the three existing triage sets;
+# 3. replays every saved answer through the auto-send policies (app.eval.autosend_sim). A simulation only: the
+#    real system has no such button and every job still waits for a person (rule 4).
+# - Pull requests that change this lane get a run with the offline mock AI (a pipeline check, not a measurement).
+# - Actions -> Auto-approve limits -> Run workflow, with Typhoon (default), measures a real model. It needs the
+#   repository secret TYPHOON_API_KEY. Typhoon is free (about 200 requests a minute) and collects usage data,
+#   which is acceptable only because every case is synthetic or openly licensed text written for a dataset
+#   (ADR-024). Cases start at least 1 second apart: the whole run is about 1,300 cases, about 45 minutes.
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/autosend-limits.yml"
+      - "tests/open_benchmarks/**"
+      - "app/eval/autosend_sim.py"
+      - "app/eval/golden/case_triage_autosend_hard_v1.json"
+  workflow_dispatch:
+    inputs:
+      provider:
+        description: "AI: typhoon (real model, needs TYPHOON_API_KEY) or mock (offline pipeline check)"
+        type: choice
+        options:
+          - typhoon
+          - mock
+        default: typhoon
+      model:
+        description: "Typhoon model id"
+        default: "typhoon-v2.5-30b-a3b-instruct"
+        required: true
+      sets:
+        description: "all (about 1,300 cases), hard (128), open (975 from the public sets) or existing (217)"
+        type: choice
+        options:
+          - all
+          - hard
+          - open
+          - existing
+        default: all
+      limit:
+        description: "Only the first N cases of each set (leave empty for all)"
+        default: ""
+        required: false
+permissions:
+  contents: read
+concurrency:
+  group: autosend-limits-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+jobs:
+  limits:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      PROVIDER: ${{ github.event_name == 'pull_request' && 'mock' || inputs.provider }}
+      SETS: ${{ github.event_name == 'pull_request' && 'all' || inputs.sets }}
+      LIMIT: ${{ inputs.limit }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - name: Keep the downloaded public sources between runs
+        uses: actions/cache@v6
+        with:
+          path: ~/open-bench-cache
+          key: open-bench-sources-${{ hashFiles('tests/open_benchmarks/build_sets.py') }}-v1
+      # Isolated (-I): the builder imports nothing from this repository and reads the downloads as data.
+      - name: Build the open-benchmark case sets and check them against the manifest
+        run: python -I tests/open_benchmarks/build_sets.py --out open-sets --cache ~/open-bench-cache --check
+      - name: Check the API key is configured
+        if: env.PROVIDER == 'typhoon'
+        env:
+          TYPHOON_API_KEY: ${{ secrets.TYPHOON_API_KEY }}
+        run: |
+          if [ -z "$TYPHOON_API_KEY" ]; then
+            echo "::error::Add the repository secret TYPHOON_API_KEY (Settings -> Secrets and variables -> Actions), then run again."
+            exit 1
+          fi
+      - name: Check the connection with one fixed sentence
+        if: env.PROVIDER == 'typhoon'
+        continue-on-error: true
+        env:
+          NEURON_FLOW_LLM_PROVIDER: typhoon
+          NEURON_FLOW_LLM_MODEL: ${{ inputs.model }}
+          TYPHOON_API_KEY: ${{ secrets.TYPHOON_API_KEY }}
+        run: PYTHONPATH=. python .github/scripts/llm_probe.py "$GITHUB_STEP_SUMMARY"
+      - name: Score every set, then simulate the auto-send policies
+        env:
+          NEURON_FLOW_LLM_PROVIDER: ${{ env.PROVIDER }}
+          NEURON_FLOW_LLM_MODEL: ${{ env.PROVIDER == 'typhoon' && inputs.model || '' }}
+          TYPHOON_API_KEY: ${{ env.PROVIDER == 'typhoon' && secrets.TYPHOON_API_KEY || '' }}
+        run: |
+          ARGS=()
+          if [ -n "$LIMIT" ]; then ARGS+=(--limit "$LIMIT"); fi
+          if [ "$PROVIDER" = "typhoon" ]; then ARGS+=(--min-interval-s 1); fi
+          HARD=(hard=app/eval/golden/case_triage_autosend_hard_v1.json)
+          OPEN=(bipia=open-sets/open_bipia_injection_v1.json clinc150=open-sets/open_clinc150_v1.json
+                banking77=open-sets/open_banking77_v1.json massive=open-sets/open_massive_th_en_v1.json)
+          EXISTING=(synthetic=app/eval/golden/case_triage_synthetic_v1.json
+                    heldout=app/eval/golden/case_triage_heldout_v1.json
+                    edge=tests/robustness/triage_edge_golden_v1.json)
+          case "$SETS" in
+            all) PAIRS=("${HARD[@]}" "${OPEN[@]}" "${EXISTING[@]}") ;;
+            hard) PAIRS=("${HARD[@]}") ;;
+            # The injected copies are compared with the hard set's clear cases, so the hard set runs too.
+            open) PAIRS=("${HARD[@]}" "${OPEN[@]}") ;;
+            existing) PAIRS=("${EXISTING[@]}") ;;
+            *) echo "::error::Unknown set choice"; exit 1 ;;
+          esac
+          REPORTS=()
+          mkdir -p reports
+          for PAIR in "${PAIRS[@]}"; do
+            NAME=${PAIR%%=*}; GOLDEN=${PAIR#*=}
+            python -m app.eval.triage_shadow_eval --golden "$GOLDEN" --out "reports/$PROVIDER-$NAME.json" \
+              "${ARGS[@]}" > "reports/$PROVIDER-$NAME.md"
+            REPORTS+=(--report "reports/$PROVIDER-$NAME.json")
+          done
+          # Fails only if a real job did not wait for a person (a promise, not a score threshold).
+          python -m app.eval.autosend_sim "${REPORTS[@]}" --out "reports/autosend-sim-$PROVIDER.json" \
+            --summary "$GITHUB_STEP_SUMMARY"
+      - name: Keep the reports
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: autosend-limits-${{ env.PROVIDER }}
+          path: |
+            reports/
+            open-sets/manifest.json
+          if-no-files-found: ignore
