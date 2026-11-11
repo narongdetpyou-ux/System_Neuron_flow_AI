@@ -43,11 +43,14 @@ trusted agents in bounded child processes, retries, recovers after a crash and w
   (`case_triage_autosend_hard_v1`, 38 cases tagged `needs_person`) and on open benchmarks built at run time from
   pinned public files (`tests/open_benchmarks/`, roadmap 5.6: CLINC150, BANKING77, MASSIVE th/en pairs, BIPIA's
   injection attacks; nothing downloaded is committed).
-- attention signals (ADR-032, built on 2026-11-11 after the owner said to plan anew with one expectation, better
-  effectiveness): a fifth step in `case_triage.v2`, `screen`, is plain code that finds versioned phrases of four
-  kinds (distress or danger, a security incident, a legal or privacy request, text that tries to steer routing or
-  approval) and raises the case for the reviewer with a named reason. It never changes a category or a decision.
-  Phrase lists, not a safety classifier: measured gains and misses are in
+- attention (ADR-032, ADR-033; built on 2026-11-11 after the owner said to plan anew with one expectation, better
+  effectiveness, and then asked for more capability): which cases a person should see first. Two sources, and
+  neither can change a category or decide anything:
+  - plain code: a fifth step in `case_triage.v2`, `screen`, finds versioned phrases of four kinds (distress or
+    danger, a security incident, a legal or privacy request, text that tries to steer routing or approval);
+  - the AI: the triage prompt (`triage_classify_v2`) also answers `attention` with one of those kinds or `none`.
+    The flag only adds; the mock AI always says `none`, so the live page gets it only with a real model.
+  Measured gains, misses and needless flags are in
   [the evidence note](docs/evidence/2026-11-11-attention-signals.md).
 
 All data is synthetic. Milestones A, A2 and B are done.
@@ -134,6 +137,8 @@ Read in this order when you need depth:
 4. **AI proposes, code validates, people decide.**
    - Every AI output passes schema, invariant and policy checks before Core stores it.
    - Nothing is decided automatically. The AI never chooses the queue or approves anything.
+   - The AI's `attention` answer (ADR-033) can only raise a case for the reviewer. It never lowers a priority
+     that code set, and it is never a reason to skip a person.
    - n8n and MCP clients never decide either.
    - Skills hand work to each other only through the exchange (`app/exchange/`, ADR-030): fixed, versioned routes;
      translators in plain code, never AI; a fact from AI is data and never routes anything; a route-only skill is
@@ -150,9 +155,11 @@ Read in this order when you need depth:
    - Shadow triage rules use `triage.classify_rules` with the complete SHA-256 of `keywords_v2.json` in
      the agent version and frozen step params; a list change is a new rules version (E2). The original
      `case_triage.v1` demonstration keeps `triage.classify` and `keywords-v1`.
-   - The attention signals use `triage.screen_signals` with the complete SHA-256 of `signals_v1.json` in the
-     agent version and frozen step params; a phrase change is a new signals version (ADR-032). Never add a phrase
-     because of a held-out result.
+   - The attention signals use `triage.screen_signals` with the complete SHA-256 of `signals_v2.json` in the
+     agent version and frozen step params; a phrase change is a new signals version (ADR-032). Write phrases only
+     from the hard set and the development half of the open data
+     (`tests/open_benchmarks/attention_open_check.py --part development --show`); never add a phrase or a prompt
+     line because of a held-out or sealed result, and never print the sealed half's text.
    - Jobs caught mid-way by a change fail as `configuration_changed`.
 6. **Secrets come only from the environment, at call time** (ADR-013).
    - Never put a key in a spec, an output, a log, a fixture, a commit or a Sentry event.
@@ -180,7 +187,7 @@ If a task seems to need breaking a rule:
 ## 4. Checking your work
 
 ```bash
-python -m unittest discover -s tests -v        # all tests (503 on 2026-11-11); CI: Python 3.10 and 3.12
+python -m unittest discover -s tests -v        # all tests (509 on 2026-11-11); CI: Python 3.10 and 3.12
 python -m examples.case_triage_demo            # v1 rules, one synthetic case
 python -m examples.case_triage_shadow_demo     # v2 shadow mode with the offline mock AI
 python -m examples.study_guide_demo            # the study guide's answers to four synthetic requests
@@ -194,6 +201,7 @@ python -m app.eval.autosend_sim --report hard.json --report shadow.json  # simul
 python -m app.eval.triage_shadow_eval --golden app/eval/golden/case_triage_attention_heldout_v1.json \
     --compare-with tests/baselines/attention_heldout_mock.json   # the held-out attention set and its gate
 python -m app.eval.attention_replay --pair old-report.json cases.json  # the "look first" flag before/after signals
+python -m tests.open_benchmarks.attention_open_check --cache ~/open-bench-cache --part sealed  # signals on open data (counts)
 python -I tests/open_benchmarks/build_sets.py --out open-sets --cache ~/open-bench-cache --check  # open sets (network)
 python -m examples.skill_handoff_demo          # one case step by step through the exchange
 NEURON_FLOW_ACCESS_KEY=$(python -c "import secrets; print(secrets.token_urlsafe(24))") python -m app.serve
@@ -338,7 +346,7 @@ Notes for cloud sessions (claude.ai/code):
 | Path | What it is |
 |---|---|
 | `neuron_flow/` | Core (rule 1) |
-| `app/domains/case_triage/` | v1 rules, the input contract, the v2 shadow agents and workflow, and the attention signals (`signals.py`, `signals_v1.json`, ADR-032) |
+| `app/domains/case_triage/` | v1 rules, the input contract, the v2 shadow agents and workflow, and the attention signals (`signals.py`, `signals_v2.json`, ADR-032) |
 | `app/domains/study_guide/` | the study guide: topic catalog and verified resource library (`catalog/*_v1.json`), their checks and hash (`library.py`), the link check (`link_check.py`), and the `study_guide.v1` workflow (`workflow.py`, `agents.py`, `planning.py`, `ai_prompts.py`, `mock_answers.py`); no `.md` files here, because the Render build filter ignores them |
 | `app/llm/` | AI gateway, prompt library (prompt + answer schema, one hash), personal-data masking, mock, Claude, Typhoon and local providers (`providers/openai_compat.py` serves OpenAI-format services, Typhoon and a server we run ourselves, and states the answer format in words for both, ADR-022, ADR-026; `providers/_http.py` refuses redirects for every real client) |
 | `app/exchange/` | the skill-handoff exchange (ADR-030): the common language (`common.py`, `vocabulary_v1.json`), translators (`translators/`, one module per skill, outside `app/domains/`), the route table (`routes.py`, `routes_v1.json`) and `exchange.py`, which checks the table at start and prepares each handoff for the queue store |
@@ -351,7 +359,7 @@ Notes for cloud sessions (claude.ai/code):
 | `app/boot.py` | the image's process 1: takes the data folder as root, switches to `neuron`, becomes tini |
 | `app/settings.py`, `app/serve.py` | settings from the environment; the launcher (API + supervised Runner) |
 | `Dockerfile`, `render.yaml`, `railway.json` | the container, the Render Blueprint, the Railway config kept for later |
-| `tests/open_benchmarks/` | stage 2 of the benchmarking plan (roadmap 5.6): `build_sets.py` builds the CLINC150, BANKING77, MASSIVE th/en and BIPIA case sets at run time from pinned sources (standard library, run with `python -I`; refuses any SHA-256 it does not expect), `manifest_v1.json` (the sources and every built file's SHA-256; `--check`), `NOTICE.md` (licences). Nothing downloaded is committed |
+| `tests/open_benchmarks/` | stage 2 of the benchmarking plan (roadmap 5.6): `build_sets.py` builds the CLINC150, BANKING77, MASSIVE th/en and BIPIA case sets at run time from pinned sources (standard library, run with `python -I`; refuses any SHA-256 it does not expect), `manifest_v1.json` (the sources and every built file's SHA-256; `--check`), `NOTICE.md` (licences), and `attention_open_check.py` (the development and sealed halves of the same sources for the attention signals; the sealed half prints counts only and can be written as a case file at run time). Nothing downloaded is committed |
 | `tests/robustness/` | the robustness benchmark (docs/benchmarking.md): the synthetic set, the pinned open extract with its licences (`NOTICE.md`), the runner `bench.py`, the extract builder (`build_open_extract.py verify` re-checks the upstream files) and the 116-case file for live runs |
 | `tests/`, `examples/`, `.github/` | tests (`tests/baselines/` holds the eval gate's baseline), demos and smoke tests, CI (`.github/scripts/` holds the `render.yaml` and trace checks and the image's bytecode-cache check, `.github/otel/` the tracing check's collector; `.github/gitleaks.toml` and `.github/.gitleaksignore` the secret scan's rules and reviewed findings) |
 | `.claude/` | the session-start hook for Claude Code cloud sessions |
