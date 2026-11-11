@@ -36,7 +36,7 @@ from neuron_flow.model import decode, fingerprint
 from neuron_flow.telemetry import percentile
 
 from app.domains.case_triage import build_shadow_workflow, shadow_registry
-from app.domains.case_triage.contracts import CATEGORIES, SIGNAL_REASONS
+from app.domains.case_triage.contracts import AI_FLAG_REASONS, CATEGORIES, SIGNAL_REASONS
 from app.domains.case_triage.shadow_workflow import PROMPT_ID
 from app.domains.case_triage.rules import rule_version
 from app.domains.case_triage.signals import signal_version
@@ -126,6 +126,8 @@ def case_row(case, snapshot):
             "llm_status": status, "llm_reason": reason,
             "llm_category": llm["category"] if ok else None,
             "llm_confidence": llm["confidence"] if ok else None,
+            # The AI's own view of whether a person should look first (prompt v2, ADR-033); None without an answer.
+            "llm_attention": llm["attention"] if ok else None,
             "llm_attempts": llm_state["attempts"], "llm_latency_ms": llm["latency_ms"] if ok else None,
             "input_tokens": usage["input_tokens"], "output_tokens": usage["output_tokens"],
             "usage_estimated": usage["estimated"],
@@ -146,6 +148,10 @@ def signalled(row):
     return any(reason in SIGNAL_REASONS for reason in row["review_reasons"])
 
 
+def ai_flagged(row):
+    return any(reason in AI_FLAG_REASONS for reason in row["review_reasons"])
+
+
 def attention_metrics(rows):
     """Does "look at this first" point at the right cases? Counted against the tag ``needs_person`` (a case a
     careful operator would want a person to see first); sets without that tag only show how many cases were
@@ -157,6 +163,10 @@ def attention_metrics(rows):
         "needs_person_cases": len(must),
         "needs_person_raised": _rate(sum(r["review_priority"] == "elevated" for r in must), len(must)),
         "needs_person_raised_by_signal": _rate(sum(signalled(r) for r in must), len(must)),
+        "needs_person_raised_by_ai_flag": _rate(sum(ai_flagged(r) for r in must), len(must)),
+        "others_raised_by_ai_flag": _rate(sum(ai_flagged(r) for r in rest), len(rest)),
+        "raised_by_ai_flag": _rate(sum(ai_flagged(r) for r in rows), len(rows)),
+        "others_ai_flagged": [r["case_id"] for r in rest if ai_flagged(r)],
         "needs_person_raised_by_disagreement_only": _rate(sum("rules_llm_disagree" in r["review_reasons"] for r in must), len(must)),
         "others_raised_by_signal": _rate(sum(signalled(r) for r in rest), len(rest)),
         "raised_by_signal": _rate(sum(signalled(r) for r in rows), len(rows)),
@@ -238,7 +248,7 @@ BASELINE_SCHEMA = "neuron-flow-shadow-eval-baseline-v1"
 REPORT_SCHEMA = "neuron-flow-shadow-eval-v1"
 # What a case "answered". Timings and token counts are left out: they change from run to run.
 ANSWER_FIELDS = ("source_sha256", "expected", "job_status", "rules_category", "llm_status", "llm_category",
-                 "llm_reason", "llm_confidence", "llm_attempts", "agreement", "review_priority", "review_reasons")
+                 "llm_reason", "llm_confidence", "llm_attention", "llm_attempts", "agreement", "review_priority", "review_reasons")
 _IDENTITY = (("golden", "case set"), ("llm", "AI"), ("prompt", "prompt"), ("rules", "rules"),
              ("signals", "attention signals"))
 _HEAD = ("schema", "golden", "llm", "prompt", "rules", "signals")
@@ -283,11 +293,15 @@ def gate_markdown(changes, compared_with, cases):
 def attention_lines(a):
     """Scorecard rows for the attention signals (Thai). The needs_person rows appear only when the set has
     such cases."""
-    lines = [f"| เคสที่ถูกยกเพราะเจอสัญญาณ \"ต้องให้คนดูก่อน\" | {_fmt(a['raised_by_signal'])} |"]
+    lines = [f"| เคสที่ถูกยกเพราะโค้ดเจอสัญญาณ \"ต้องให้คนดูก่อน\" | {_fmt(a['raised_by_signal'])} |",
+             f"| เคสที่ถูกยกเพราะ AI ชี้ว่า \"ต้องให้คนดูก่อน\" | {_fmt(a['raised_by_ai_flag'])} |"]
     if a["needs_person_cases"]:
         lines += [f"| เคสที่ต้องให้คนดูก่อน ที่ถูกยกขึ้นจริง | {_fmt(a['needs_person_raised'])} "
                   f"(ถ้าไม่มีสัญญาณ ดูแค่กฎกับ AI ไม่ตรงกัน: {_fmt(a['needs_person_raised_by_disagreement_only'])}) |",
-                  f"| เคสธรรมดาที่ถูกยกเพราะสัญญาณ (ยกเกิน) | {_fmt(a['others_raised_by_signal'])} |",
+                  f"| … ในนั้น โค้ดเจอสัญญาณ / AI ชี้ | {_fmt(a['needs_person_raised_by_signal'])} / "
+                  f"{_fmt(a['needs_person_raised_by_ai_flag'])} |",
+                  f"| เคสธรรมดาที่ถูกยกเพราะสัญญาณของโค้ด (ยกเกิน) | {_fmt(a['others_raised_by_signal'])} |",
+                  f"| เคสธรรมดาที่ถูกยกเพราะ AI ชี้ (ยกเกิน) | {_fmt(a['others_raised_by_ai_flag'])} |",
                   f"| การยกขึ้นที่จำเป็นจริง (กฎผิด หรือเป็นเคสที่ต้องให้คนดูก่อน) | {_fmt(a['raises_needed'])} |"]
     return lines
 
@@ -338,10 +352,11 @@ def summary_markdown(report):
                              f"AI: {r['llm_category'] or r['llm_status']} · \"{r['summary'][:80]}\"")
             lines.append("")
     a = m["attention"]
-    if a["needs_person_missed"] or a["others_signalled"]:
+    if a["needs_person_missed"] or a["others_signalled"] or a["others_ai_flagged"]:
         lines += ["### สัญญาณ \"ต้องให้คนดูก่อน\": จุดที่พลาด", ""]
         for title, case_ids in (("เคสที่ต้องให้คนดูก่อน แต่ไม่ถูกยก", a["needs_person_missed"]),
-                                ("เคสธรรมดาที่ถูกยกเพราะสัญญาณ", a["others_signalled"])):
+                                ("เคสธรรมดาที่ถูกยกเพราะสัญญาณของโค้ด", a["others_signalled"]),
+                                ("เคสธรรมดาที่ถูกยกเพราะ AI ชี้", a["others_ai_flagged"])):
             if case_ids:
                 lines.append(f"- {title} ({len(case_ids)}): " + ", ".join(f"`{c}`" for c in case_ids[:MAX_LISTED])
                              + (" …" if len(case_ids) > MAX_LISTED else ""))

@@ -198,7 +198,7 @@ class ShadowSafetyTests(unittest.TestCase):
             self.assertEqual(result["queue"], QUEUE_FOR[result["category"]])
 
     def test_claude_path_end_to_end_without_storing_the_key(self):
-        answer = {"category": "upload", "confidence": "high", "rationale": "File attachment problem."}
+        answer = {"category": "upload", "confidence": "high", "attention": "none", "rationale": "File attachment problem."}
         with patch.patch.dict(os.environ, {"ANTHROPIC_API_KEY": KEY}), \
                 FakeAnthropic([(200, message(answer))]) as fake, tempfile.TemporaryDirectory() as work:
             config = LLMConfig(provider="anthropic", model="claude-haiku-5-5", base_url=fake.base_url)

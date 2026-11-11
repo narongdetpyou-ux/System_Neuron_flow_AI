@@ -26,8 +26,8 @@ ROOT = Path(__file__).resolve().parent.parent
 WORKFLOW = ROOT / ".github" / "workflows" / "local-model-eval.yml"
 MODEL = "typhoon2.5-qwen3-4b-q4_k_m:0123456789ab"  # <name>:<first 12 hex digits of the file's SHA-256>
 KEY = "local-test-SECRET-456"
-PROMPT = load_prompt("triage_classify_v1")
-GOOD = {"category": "upload", "confidence": "high", "rationale": "The customer cannot attach a file."}
+PROMPT = load_prompt("triage_classify_v2")
+GOOD = {"category": "upload", "confidence": "high", "attention": "none", "rationale": "The customer cannot attach a file."}
 UPLOAD = "I cannot upload an attachment to my ticket"
 STUDY_TEXT = "อยากเรียนวิธีเขียนคำสั่งให้ AI ตอบดีขึ้น"
 NO_KEYS = {"NEURON_FLOW_LOCAL_API_KEY": "", "TYPHOON_API_KEY": "", "ANTHROPIC_API_KEY": ""}
@@ -95,7 +95,7 @@ class ConfigTests(unittest.TestCase):
                 LLMConfig(provider=provider, model="m-1").check_ready(NO_KEYS)
         self.assertEqual(LLMConfig.from_params(config.to_params()), config)
         tag = config.version_tag(PROMPT)
-        self.assertTrue(tag.startswith(f"llm=local/{MODEL};prompt=triage_classify_v1@sha256:"), tag)
+        self.assertTrue(tag.startswith(f"llm=local/{MODEL};prompt=triage_classify_v2@sha256:"), tag)
         self.assertTrue(tag.endswith(";format=json-instruction-v1"), tag)
         other_file = LLMConfig(provider="local", model="typhoon2.5-qwen3-4b-q4_k_m:ba9876543210")
         self.assertNotEqual(tag, other_file.version_tag(PROMPT))

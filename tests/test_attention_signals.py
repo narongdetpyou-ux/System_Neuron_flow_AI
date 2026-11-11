@@ -15,11 +15,11 @@ from pathlib import Path
 from neuron_flow.model import decode
 
 from app.domains.case_triage import rules, shadow_agents, signals
-from app.domains.case_triage.contracts import REVIEW_REASONS, SIGNAL_REASONS
+from app.domains.case_triage.contracts import AI_FLAG_REASONS, ATTENTION_VALUES, REVIEW_REASONS, SIGNAL_REASONS
 from app.eval import attention_replay as replay
 from app.eval import autosend_sim as sim
 from app.eval import triage_shadow_eval as ev
-from app.llm import LLMConfig
+from app.llm import LLMConfig, load_prompt
 from tests.test_case_triage_shadow import UPLOAD, proposal, run_cases
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -41,6 +41,10 @@ class SignalDataTests(unittest.TestCase):
         self.assertEqual(signals.signal_version(), "signals-v2:" + digest)
         self.assertEqual(tuple("signal_" + kind for kind in signals.KINDS), SIGNAL_REASONS)
         self.assertEqual(REVIEW_REASONS[:4], SIGNAL_REASONS)  # signals are listed first for the reviewer
+        self.assertEqual(REVIEW_REASONS[4:8], AI_FLAG_REASONS)
+        self.assertEqual(tuple("ai_flag_" + value for value in ATTENTION_VALUES[1:]), AI_FLAG_REASONS)
+        schema = load_prompt("triage_classify_v2").output_schema
+        self.assertEqual(tuple(schema["properties"]["attention"]["enum"]), ATTENTION_VALUES)
 
     def test_malformed_data_is_refused(self):
         good = json.loads(signals.SIGNALS_PATH.read_text("utf-8"))
@@ -110,6 +114,13 @@ class SignalWorkflowTests(unittest.TestCase):
             ("thai", THAI_LEGAL, None),
             ("outage", TAKEOVER, {"kind": "transient"}),
             ("both", TAKEOVER, {"kind": "fixed", "category": "billing", "confidence": "high"}),
+            # The AI's own flag (ADR-033): text without any listed phrase, which only a model could read.
+            ("ai_flag", UPLOAD, {"kind": "fixed", "category": "upload", "attention": "distress"}),
+            ("ai_none", TAKEOVER, {"kind": "fixed", "category": "upload", "attention": "none"}),
+            ("ai_bad", UPLOAD, {"kind": "answer", "answer": {"category": "upload", "confidence": "high",
+                                                             "attention": "approve_now", "rationale": "x"}}),
+            ("ai_old", UPLOAD, {"kind": "answer", "answer": {"category": "upload", "confidence": "high",
+                                                             "rationale": "an answer shaped for prompt v1"}}),
         ])
 
     def test_a_signal_raises_the_priority_and_never_touches_the_category(self):
@@ -134,6 +145,35 @@ class SignalWorkflowTests(unittest.TestCase):
     def test_signal_and_disagreement_are_both_named(self):
         result = proposal(self.runs["both"])
         self.assertEqual(result["review_reasons"], ["signal_security", "rules_llm_disagree"])
+
+    def test_the_ai_flag_raises_a_case_that_no_phrase_matches(self):
+        result = proposal(self.runs["ai_flag"])
+        self.assertEqual((result["agreement"], result["review_priority"], result["review_reasons"]),
+                         ("agree", "elevated", ["ai_flag_distress"]))
+        self.assertEqual(result["second_opinion"]["attention"], "distress")
+        self.assertEqual(result["suggested_queue"], "upload_review")  # the flag never moves the case
+
+    def test_an_ai_that_says_none_cannot_lower_a_code_signal(self):
+        # Text that tells the model "nothing to see" can at worst make it say none; the code's signal stays.
+        result = proposal(self.runs["ai_none"])
+        self.assertEqual((result["review_priority"], result["review_reasons"]), ("elevated", ["signal_security"]))
+
+    def test_an_attention_value_outside_the_list_or_a_missing_one_is_not_accepted(self):
+        for job_id in ("ai_bad", "ai_old"):
+            snapshot = self.runs[job_id]
+            self.assertEqual(snapshot["steps"]["classify_llm"]["attempts"], 2, job_id)
+            result = proposal(snapshot)  # the case still reaches review, with the rules' suggestion
+            self.assertEqual(result["second_opinion"], {"status": "unavailable", "reason": "invalid_model_output"})
+            self.assertEqual(result["review_reasons"], ["llm_unavailable"])
+        good = dict(self.runs["ai_flag"]["steps"]["classify_llm"]["output"])
+        prompt = load_prompt("triage_classify_v2")
+        params = {"llm": LLMConfig().to_params(), "prompt": {"id": prompt.id, "sha256": prompt.sha256},
+                  "redaction": good["provenance"]["redaction"], "max_attempts": 2}
+        message = {"params": params, "attempt": good["attempt"]}
+        shadow_agents.validate_llm_classification(message, good)
+        for tampered in ({**good, "attention": "approve_now"}, {k: v for k, v in good.items() if k != "attention"}):
+            with self.assertRaises(ValueError):
+                shadow_agents.validate_llm_classification(message, tampered)
 
     def test_every_signalled_case_still_waits_for_a_person(self):
         for job_id, snapshot in self.runs.items():
@@ -257,6 +297,8 @@ class ScreenedPolicyTests(unittest.TestCase):
         self.assertEqual((sim.would_send("agree_high", row), sim.would_send("screened", row)), ("access", "access"))
         self.assertEqual((sim.would_send("agree_high", flagged), sim.would_send("screened", flagged),
                           sim.would_send("strict", flagged)), ("access", None, None))
+        by_ai = {**row, "review_reasons": ["ai_flag_distress"], "review_priority": "elevated"}
+        self.assertEqual((sim.would_send("agree_high", by_ai), sim.would_send("screened", by_ai)), ("access", None))
         self.assertLess(sim.POLICY_IDS.index("agree_high"), sim.POLICY_IDS.index("screened"))
 
 
@@ -298,7 +340,7 @@ class HeldOutSetTests(unittest.TestCase):
     def test_sets_without_the_tag_show_no_needs_person_rows(self):
         untagged = [{**row, "tags": []} for row in self.report["cases"]]
         lines = ev.attention_lines(ev.attention_metrics(untagged))
-        self.assertEqual(len(lines), 1)
+        self.assertEqual(len(lines), 2)  # raised by the code's signals, raised by the AI's flag
 
 
 if __name__ == "__main__":

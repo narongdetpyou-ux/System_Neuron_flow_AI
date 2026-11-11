@@ -77,6 +77,41 @@ def rows(files):
     return out
 
 
+ORDINARY_PER_SOURCE = 100
+
+
+def sealed_case_file(items):
+    """A scorecard case file of the sealed half, so the whole workflow (signals and the AI's flag) can be
+    measured on it: every sealed security row, tagged ``needs_person`` by the dataset's own intent label, and
+    ``ORDINARY_PER_SOURCE`` sealed ordinary rows of each source, taken in the order of their text's SHA-256.
+    Built at run time; never committed and never read by a person."""
+    maps = {"banking77": build_sets.BANKING_MAP, "clinc150": build_sets.CLINC_MAP}
+    cases = []
+    for source in ("banking77", "clinc150"):
+        sealed = sorted((item for item in items if item["source"] == source and item["part"] == "sealed"),
+                        key=lambda item: hashlib.sha256(item["text"].encode("utf-8")).hexdigest())
+        seen = set()
+        chosen = [item for item in sealed if item["kind"] == "security"]
+        chosen += [item for item in sealed if item["kind"] == "ordinary"][:ORDINARY_PER_SOURCE]
+        for item in chosen:
+            if item["text"] in seen:
+                continue
+            seen.add(item["text"])
+            security = item["kind"] == "security"
+            cases.append({"case_id": f"OS-{source[:4]}-{len(cases) + 1:04d}", "language": "en",
+                          "expected_category": maps[source].get(item["label"], "other"),
+                          "tags": [source, "open_security" if security else "open_ordinary",
+                                   *(["needs_person"] if security else []), "intent:" + item["label"]],
+                          "summary": item["text"]})
+    return {"schema": "neuron-flow-golden-v1", "name": "open_attention_sealed_v1",
+            "label_scope": "The sealed half of the pinned open data (tests/open_benchmarks/attention_open_check.py): "
+                           "BANKING77 and CLINC150 requests whose own intent label is a security matter (tag "
+                           "needs_person here), and 100 ordinary requests from each. The intent labels are the "
+                           "datasets'; the triage category is the developer's mapping and other where none exists. "
+                           "Never read for phrases or prompts.",
+            "cases": cases}
+
+
 def measure(items, part):
     """Counts for one part: per source and kind, how many rows had a signal of the kind that matters."""
     result = {}
@@ -115,11 +150,17 @@ def main(argv=None):
     parser.add_argument("--show", action="store_true",
                         help="development only: list the misses and the needless flags, for writing phrases")
     parser.add_argument("--out", help="write the counts as JSON here (no text)")
+    parser.add_argument("--export-sealed", help="sealed part only: write it as a scorecard case file here")
     args = parser.parse_args(argv)
     if args.show and args.part != "development":
         parser.error("--show is for the development part only; the sealed part is never read")
+    if args.export_sealed and args.part != "sealed":
+        parser.error("--export-sealed goes with --part sealed")
     files = build_sets.fetch(args.cache)
     items = rows(files)
+    if args.export_sealed:
+        with open(args.export_sealed, "wb") as stream:
+            stream.write(build_sets.dump(sealed_case_file(items)))
     result = measure(items, args.part)
     print(report(result, args.part))
     if args.show:

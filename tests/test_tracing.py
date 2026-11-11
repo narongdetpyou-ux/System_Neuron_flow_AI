@@ -610,7 +610,7 @@ class TracedServiceTests(unittest.TestCase):
         versions = {name: attributes_of(items[0]).get("neuron_flow.agent.version")
                     for name, items in named.items() if name.startswith("step ")}
         self.assertEqual((versions["step classify_rules"], versions["step compare"], versions["step prepare"]),
-                         (rules.rule_version(), "shadow-2", "shadow-2"))
+                         (rules.rule_version(), "shadow-3", "shadow-3"))
         self.assertTrue(versions["step classify_llm"].startswith("llm=mock/mock-keyword-1;prompt="), versions)
         # Reading the job was a request of its own: its own trace, with the route template, not the path.
         reads = [item for spans in self.traces().values() for item in spans if item["name"] == "GET /v1/jobs/{job_id}"]

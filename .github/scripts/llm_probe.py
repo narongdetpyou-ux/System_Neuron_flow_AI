@@ -29,7 +29,7 @@ PREVIEW_CHARS = 600
 
 def raw_call(config, token):
     """The provider's own request, sent without its parsing, so the reply can be shown as it arrived."""
-    prompt = load_prompt("triage_classify_v1")
+    prompt = load_prompt("triage_classify_v2")
     body = json.dumps(openai_compat.build_request_body(config, prompt, SENTENCE), ensure_ascii=False).encode()
     request = urllib.request.Request(openai_compat.endpoint(config), data=body, method="POST",
                                      headers=openai_compat.request_headers(config, token))
@@ -81,7 +81,7 @@ def main(summary_path):
         status, headers, raw = raw_call(config, token)
         lines += describe(status, headers, raw)
         try:
-            answer, served = verdict(config, load_prompt("triage_classify_v1"), status, headers, raw)
+            answer, served = verdict(config, load_prompt("triage_classify_v2"), status, headers, raw)
             lines.append(f"- provider verdict: **answered** `{json.dumps(answer, ensure_ascii=False)}`, "
                          f"served model `{served}`")
         except Exception as exc:  # the class and our own message (status and codes only), never the reply

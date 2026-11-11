@@ -18,9 +18,9 @@ from app.llm.providers import mock
 from . import rules, shadow_agents, signals
 from .workflow import build_workflow
 
-PROMPT_ID = "triage_classify_v1"
+PROMPT_ID = "triage_classify_v2"  # v2 adds the attention field (ADR-033)
 LLM_MAX_ATTEMPTS = 2
-SHADOW_VERSION = "shadow-2"  # shadow-2: attention signals join the comparison
+SHADOW_VERSION = "shadow-3"  # shadow-2: attention signals join the comparison; shadow-3: the AI's attention flag
 
 
 def shadow_registry(llm_config=None):

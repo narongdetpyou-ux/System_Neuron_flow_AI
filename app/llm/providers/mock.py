@@ -42,10 +42,10 @@ def validate_scenario(scenario):
         raise SpecError(f"mock_scenario needs a kind from: {', '.join(SCENARIO_KINDS)}")
     allowed = {"kind", "attempts"}
     if scenario["kind"] == "fixed":
-        allowed |= {"category", "confidence", "rationale"}
+        allowed |= {"category", "confidence", "rationale", "attention"}
         if not isinstance(scenario.get("category"), str):
             raise SpecError("A fixed mock_scenario needs a category")
-        for key in ("confidence", "rationale"):
+        for key in ("confidence", "rationale", "attention"):
             if key in scenario and not isinstance(scenario[key], str):
                 raise SpecError(f"mock_scenario {key} must be text")
     elif scenario["kind"] == "answer":  # any prompt: the exact answer fields, as text
@@ -84,7 +84,16 @@ def keyword_answer(case_text):
             "rationale": "Keyword simulation (not an AI model): matched " + ", ".join(matched[category]) + "."}
 
 
-_SIMULATORS = {"triage_classify_v1": lambda prompt, text: keyword_answer(text)}
+def keyword_answer_v2(case_text):
+    """The v2 triage prompt also asks for ``attention``. The simulation cannot judge that, so it always says
+    ``none``: with the mock, only the plain-code signals raise a case."""
+    answer = keyword_answer(case_text)
+    return {"category": answer["category"], "confidence": answer["confidence"], "attention": "none",
+            "rationale": answer["rationale"]}
+
+
+_SIMULATORS = {"triage_classify_v1": lambda prompt, text: keyword_answer(text),
+               "triage_classify_v2": lambda prompt, text: keyword_answer_v2(text)}
 
 
 def register_simulator(prompt_id, simulate):
@@ -113,9 +122,11 @@ def complete(config, prompt, case_text, *, attempt=1, scenario=None):
         text = json.dumps({"category": "priority_override", "confidence": "high",
                            "rationale": "Simulated off-contract answer (mock)."})
     elif kind == "fixed":
-        text = json.dumps({"category": scenario["category"], "confidence": scenario.get("confidence", "high"),
-                           "rationale": scenario.get("rationale", "Fixed answer from a test scenario (mock).")},
-                          ensure_ascii=False)
+        answer = {"category": scenario["category"], "confidence": scenario.get("confidence", "high"),
+                  "rationale": scenario.get("rationale", "Fixed answer from a test scenario (mock).")}
+        if "attention" in prompt.output_schema["properties"]:  # prompts that ask for it (triage v2)
+            answer["attention"] = scenario.get("attention", "none")
+        text = json.dumps(answer, ensure_ascii=False)
     elif kind == "answer":
         text = json.dumps(scenario["answer"], ensure_ascii=False)
     else:

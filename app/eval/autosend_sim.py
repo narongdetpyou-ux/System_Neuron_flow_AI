@@ -32,7 +32,7 @@ from pathlib import Path
 
 from neuron_flow.model import decode
 
-from app.domains.case_triage.contracts import CATEGORIES, CONFIDENCE_LEVELS, SIGNAL_REASONS
+from app.domains.case_triage.contracts import AI_FLAG_REASONS, CATEGORIES, CONFIDENCE_LEVELS, SIGNAL_REASONS
 
 from .common import category_scores, fmt_rate, rate, to_json
 
@@ -52,8 +52,8 @@ POLICIES = (
      "en": "Rules and AI chose the same category: send there."},
     {"id": "agree_high", "th": "กฎกับ AI ตรงกัน และ AI มั่นใจสูง",
      "en": "Rules and AI agree, and the AI said high confidence."},
-    {"id": "screened", "th": "ตรงกัน + มั่นใจสูง + ไม่เจอสัญญาณ \"ต้องให้คนดูก่อน\" (ADR-032)",
-     "en": "Agree with high confidence, and the attention signals found nothing in the case text."},
+    {"id": "screened", "th": "ตรงกัน + มั่นใจสูง + โค้ดไม่เจอสัญญาณ และ AI ไม่ชี้ว่า \"ต้องให้คนดูก่อน\" (ADR-032, ADR-033)",
+     "en": "Agree with high confidence, the attention signals found nothing and the AI did not flag the case."},
     {"id": "strict", "th": "ตรงกัน + มั่นใจสูง + กฎเจอคำสำคัญ + ไม่มีข้อมูลส่วนตัวในเคส",
      "en": "Agree with high confidence, no review reason at all (so the rules matched a keyword), and no "
            "personal data was masked."},
@@ -65,9 +65,10 @@ _ROW_KEYS = ("case_id", "language", "tags", "expected", "job_status", "rules_cat
 
 
 def signalled(row):
-    """An attention signal was found in the case text (signals.py, ADR-032). Reports saved before the signals
+    """An attention signal was found in the case text (signals.py, ADR-032) or the AI flagged the case
+    (ADR-033). Reports saved before the signals
     existed have no such reason: replay them first with ``app.eval.attention_replay``."""
-    return any(reason in SIGNAL_REASONS for reason in row["review_reasons"])
+    return any(reason in SIGNAL_REASONS or reason in AI_FLAG_REASONS for reason in row["review_reasons"])
 
 
 def would_send(policy, row):
