@@ -9,8 +9,14 @@ CONFIDENCE_LEVELS = ("low", "medium", "high")
 SUMMARY_MIN_CHARS = 8
 SUMMARY_MAX_CHARS = 500
 
-# Why a case is flagged for the reviewer (shown in the proposal).
-REVIEW_REASONS = ("rules_llm_disagree", "llm_low_confidence", "llm_unavailable", "rules_no_keyword_match")
+# Why a case is flagged for the reviewer (shown in the proposal). The four ``signal_*`` reasons come from the
+# attention signals (signals.py): each one raises the review priority, like a disagreement does.
+SIGNAL_REASONS = ("signal_distress", "signal_security", "signal_legal_privacy", "signal_instruction")
+# What the AI may say about attention (prompt triage_classify_v2, ADR-033). Anything but "none" raises the review
+# priority with an ``ai_flag_*`` reason. The AI can only add a flag: no answer of its lowers a priority.
+ATTENTION_VALUES = ("none", "distress", "security", "legal_privacy", "instruction")
+AI_FLAG_REASONS = ("ai_flag_distress", "ai_flag_security", "ai_flag_legal_privacy", "ai_flag_instruction")
+REVIEW_REASONS = (*SIGNAL_REASONS, *AI_FLAG_REASONS, "rules_llm_disagree", "llm_low_confidence", "llm_unavailable", "rules_no_keyword_match")
 
 # Why the AI second opinion is missing.
 UNAVAILABLE_REASONS = ("provider_unavailable", "invalid_model_output", "model_declined")

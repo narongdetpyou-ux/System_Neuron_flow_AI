@@ -19,8 +19,8 @@ from app.llm.providers import anthropic, openai_compat
 from tests.fake_openai import FakeServer, api_error, completion
 
 TOKEN = "typhoon-test-SECRET-789"
-PROMPT = load_prompt("triage_classify_v1")
-GOOD = {"category": "upload", "confidence": "high", "rationale": "The customer cannot attach a file."}
+PROMPT = load_prompt("triage_classify_v2")
+GOOD = {"category": "upload", "confidence": "high", "attention": "none", "rationale": "The customer cannot attach a file."}
 UPLOAD = "I cannot upload an attachment to my ticket"
 STUDY_TEXT = "I want to learn how to write better prompts for AI chatbots"
 # What Typhoon really sent back on its first live run (2026-11-06, the connection check's fixed sentence): plain
@@ -75,7 +75,7 @@ class ConfigTests(unittest.TestCase):
             self.assertNotIn(TOKEN, json.dumps(config.to_params()))
         self.assertEqual(LLMConfig.from_params(config.to_params()), config)
         tag = config.version_tag(PROMPT)
-        self.assertTrue(tag.startswith("llm=typhoon/typhoon-v2.5-30b-a3b-instruct;prompt=triage_classify_v1@sha256:"), tag)
+        self.assertTrue(tag.startswith("llm=typhoon/typhoon-v2.5-30b-a3b-instruct;prompt=triage_classify_v2@sha256:"), tag)
         self.assertNotEqual(tag, LLMConfig(provider="typhoon", model="typhoon-v2.1-12b-instruct").version_tag(PROMPT))
         with patch.patch.dict(os.environ, {"TYPHOON_API_KEY": ""}):
             with self.assertRaisesRegex(LLMConfigError, "TYPHOON_API_KEY"):
@@ -108,7 +108,7 @@ class HttpTests(unittest.TestCase):
         body = sent["body"]
         self.assertEqual((body["model"], body["max_tokens"]), ("typhoon-v2.5-30b-a3b-instruct", 2048))
         self.assertEqual(body["response_format"], {"type": "json_schema", "json_schema": {
-            "name": "triage_classify_v1", "strict": True, "schema": PROMPT.output_schema}})
+            "name": "triage_classify_v2", "strict": True, "schema": PROMPT.output_schema}})
         for forbidden in ("temperature", "top_p", "seed", "tools", "tool_choice", "reasoning_effort", "stream"):
             self.assertNotIn(forbidden, body)
         self.assertEqual([m["role"] for m in body["messages"]], ["system", "user"])
@@ -293,7 +293,7 @@ class AnswerFormatTests(unittest.TestCase):
 
     def test_a_rationale_with_half_an_emoji_still_reaches_review(self):
         """Robustness benchmark (SYN-E2E-029): this reply used to fail the whole case (Core could not store it)."""
-        reply = completion('{"category": "upload", "confidence": "high", "rationale": "bad \\ud800 text"}')
+        reply = completion('{"category": "upload", "confidence": "high", "attention": "none", "rationale": "bad \\ud800 text"}')
         with FakeServer([(200, reply)]) as fake, tempfile.TemporaryDirectory() as work:
             config = typhoon(fake.base_url)
             with Runtime(work, agents=shadow_registry(config)) as rt:

@@ -26,7 +26,8 @@ def row(case_id, expected, rules, llm, *, language="en", priority=None, status="
             "cluster_id": case_id, "source_sha256": case_id * 4, "summary": f"summary {case_id}",
             "expected": expected, "job_status": "SUCCEEDED", "rules_category": rules,
             "llm_status": status, "llm_reason": None, "llm_category": llm if status == "ok" else None,
-            "llm_confidence": "high" if status == "ok" else None, "llm_attempts": 1,
+            "llm_confidence": "high" if status == "ok" else None,
+            "llm_attention": "none" if status == "ok" else None, "llm_attempts": 1,
             "llm_latency_ms": 10.0 if status == "ok" else None, "input_tokens": 100, "output_tokens": 10,
             "usage_estimated": False, "agreement": "disagree" if disagree else "agree",
             "review_priority": priority or ("elevated" if disagree else "normal"), "review_reasons": []}

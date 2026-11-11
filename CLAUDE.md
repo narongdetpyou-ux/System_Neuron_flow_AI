@@ -43,6 +43,15 @@ trusted agents in bounded child processes, retries, recovers after a crash and w
   (`case_triage_autosend_hard_v1`, 38 cases tagged `needs_person`) and on open benchmarks built at run time from
   pinned public files (`tests/open_benchmarks/`, roadmap 5.6: CLINC150, BANKING77, MASSIVE th/en pairs, BIPIA's
   injection attacks; nothing downloaded is committed).
+- attention (ADR-032, ADR-033; built on 2026-11-11 after the owner said to plan anew with one expectation, better
+  effectiveness, and then asked for more capability): which cases a person should see first. Two sources, and
+  neither can change a category or decide anything:
+  - plain code: a fifth step in `case_triage.v2`, `screen`, finds versioned phrases of four kinds (distress or
+    danger, a security incident, a legal or privacy request, text that tries to steer routing or approval);
+  - the AI: the triage prompt (`triage_classify_v2`) also answers `attention` with one of those kinds or `none`.
+    The flag only adds; the mock AI always says `none`, so the live page gets it only with a real model.
+  Measured gains, misses and needless flags are in
+  [the evidence note](docs/evidence/2026-11-11-attention-signals.md).
 
 All data is synthetic. Milestones A, A2 and B are done.
 
@@ -101,7 +110,9 @@ Read in this order when you need depth:
     cloud session, `docs/evidence/2026-11-10-effectiveness-baseline.md`), followed by one E2 three-set run
     (2026-11-11, 217 cases, `docs/evidence/2026-11-11-e2-rules-v2.md`) and one auto-approve limits run over the hard set,
     the open benchmarks and the three triage sets again (2026-11-11, `docs/evidence/2026-11-11-autosend-limits.md`;
-    the button is simulated, ADR-031), and the local 4B model's: a smoke run on the first 5
+    the button is simulated, ADR-031), then the attention runs the same day (signals v1 with prompt v1 on two
+    sets; prompt `triage_classify_v2` with signals v2 on ten sets, 1,780 cases, one run,
+    `docs/evidence/2026-11-11-attention-signals.md`), and the local 4B model's: a smoke run on the first 5
     items of each set, twice, and one full run of both sets (2026-11-08,
     `docs/evidence/2026-11-08-first-local-model-smoke.md`, `docs/evidence/2026-11-08-first-local-model-full.md`).
     There is none for Claude, and no security review or user study yet. A Typhoon or local result describes
@@ -128,6 +139,8 @@ Read in this order when you need depth:
 4. **AI proposes, code validates, people decide.**
    - Every AI output passes schema, invariant and policy checks before Core stores it.
    - Nothing is decided automatically. The AI never chooses the queue or approves anything.
+   - The AI's `attention` answer (ADR-033) can only raise a case for the reviewer. It never lowers a priority
+     that code set, and it is never a reason to skip a person.
    - n8n and MCP clients never decide either.
    - Skills hand work to each other only through the exchange (`app/exchange/`, ADR-030): fixed, versioned routes;
      translators in plain code, never AI; a fact from AI is data and never routes anything; a route-only skill is
@@ -144,6 +157,11 @@ Read in this order when you need depth:
    - Shadow triage rules use `triage.classify_rules` with the complete SHA-256 of `keywords_v2.json` in
      the agent version and frozen step params; a list change is a new rules version (E2). The original
      `case_triage.v1` demonstration keeps `triage.classify` and `keywords-v1`.
+   - The attention signals use `triage.screen_signals` with the complete SHA-256 of `signals_v2.json` in the
+     agent version and frozen step params; a phrase change is a new signals version (ADR-032). Write phrases only
+     from the hard set and the development half of the open data
+     (`tests/open_benchmarks/attention_open_check.py --part development --show`); never add a phrase or a prompt
+     line because of a held-out or sealed result, and never print the sealed half's text.
    - Jobs caught mid-way by a change fail as `configuration_changed`.
 6. **Secrets come only from the environment, at call time** (ADR-013).
    - Never put a key in a spec, an output, a log, a fixture, a commit or a Sentry event.
@@ -171,7 +189,7 @@ If a task seems to need breaking a rule:
 ## 4. Checking your work
 
 ```bash
-python -m unittest discover -s tests -v        # all tests (477 on 2026-11-11); CI: Python 3.10 and 3.12
+python -m unittest discover -s tests -v        # all tests (509 on 2026-11-11); CI: Python 3.10 and 3.12
 python -m examples.case_triage_demo            # v1 rules, one synthetic case
 python -m examples.case_triage_shadow_demo     # v2 shadow mode with the offline mock AI
 python -m examples.study_guide_demo            # the study guide's answers to four synthetic requests
@@ -182,6 +200,10 @@ python -m tests.handoff_check                  # skill handoffs over all 217 tri
 python -m app.eval.triage_shadow_eval --golden app/eval/golden/case_triage_autosend_hard_v1.json --out hard.json \
     --compare-with tests/baselines/autosend_hard_mock.json   # the hard auto-send set and its gate
 python -m app.eval.autosend_sim --report hard.json --report shadow.json  # simulate the button on saved answers
+python -m app.eval.triage_shadow_eval --golden app/eval/golden/case_triage_attention_heldout_v1.json \
+    --compare-with tests/baselines/attention_heldout_mock.json   # the held-out attention set and its gate
+python -m app.eval.attention_replay --pair old-report.json cases.json  # the "look first" flag before/after signals
+python -m tests.open_benchmarks.attention_open_check --cache ~/open-bench-cache --part sealed  # signals on open data (counts)
 python -I tests/open_benchmarks/build_sets.py --out open-sets --cache ~/open-bench-cache --check  # open sets (network)
 python -m examples.skill_handoff_demo          # one case step by step through the exchange
 NEURON_FLOW_ACCESS_KEY=$(python -c "import secrets; print(secrets.token_urlsafe(24))") python -m app.serve
@@ -199,6 +221,10 @@ GitHub Actions (the owner can open these; the first three run on every push and 
   Before the study guide's scorecard, the 128 hard auto-send cases run with the mock against
   `tests/baselines/autosend_hard_mock.json`, and the auto-approve simulation replays them with the 61 development
   cases (ADR-031); its Thai summary is on the run page and it fails only if a real job did not wait for a person.
+  Before the simulation, the 64 held-out attention cases run with the mock against
+  `tests/baselines/attention_heldout_mock.json` (ADR-032); the scorecard on the run page shows how many cases a
+  person should see first were raised, and names the misses. The mock AI's `attention` is always `none`, so
+  these CI figures are the code's signals alone (ADR-033).
 - *Service container* (`service-container.yml`):
   - checks `render.yaml` against Render's schema;
   - builds the same container as Render and submits cases over HTTP;
@@ -241,8 +267,8 @@ GitHub Actions (the owner can open these; the first three run on every push and 
   the open-benchmark sets from their pinned sources (checked against `tests/open_benchmarks/manifest_v1.json`),
   runs the shadow scorecard on them, the hard auto-send set and the three existing sets (`sets`: `all`, `hard`,
   `open` or `existing`), then the auto-approve simulation on every saved answer. *Run workflow* uses Typhoon by
-  default (`TYPHOON_API_KEY`, cases 1 s apart; about 1,300 cases); pull requests that change this lane get a run
-  with the mock. This session can build the sets itself: `raw.githubusercontent.com` and MASSIVE's S3 archive
+  default (`TYPHOON_API_KEY`, cases 1 s apart; about 1,800 cases with the held-out attention set and the sealed
+  half of the open data, ADR-032); pull requests that change this lane get a run with the mock. This session can build the sets itself: `raw.githubusercontent.com` and MASSIVE's S3 archive
   are reachable from its network, Hugging Face is not.
 - *Local open model eval* (`local-model-eval.yml`, ADR-026, roadmap 5.8) runs both scorecards against an
   open-weight model that the job runs itself: llama.cpp's server built from a pinned commit (cached), serving
@@ -323,11 +349,11 @@ Notes for cloud sessions (claude.ai/code):
 | Path | What it is |
 |---|---|
 | `neuron_flow/` | Core (rule 1) |
-| `app/domains/case_triage/` | v1 rules, the input contract, the v2 shadow agents and workflow |
+| `app/domains/case_triage/` | v1 rules, the input contract, the v2 shadow agents and workflow, and the attention signals (`signals.py`, `signals_v2.json`, ADR-032) |
 | `app/domains/study_guide/` | the study guide: topic catalog and verified resource library (`catalog/*_v1.json`), their checks and hash (`library.py`), the link check (`link_check.py`), and the `study_guide.v1` workflow (`workflow.py`, `agents.py`, `planning.py`, `ai_prompts.py`, `mock_answers.py`); no `.md` files here, because the Render build filter ignores them |
 | `app/llm/` | AI gateway, prompt library (prompt + answer schema, one hash), personal-data masking, mock, Claude, Typhoon and local providers (`providers/openai_compat.py` serves OpenAI-format services, Typhoon and a server we run ourselves, and states the answer format in words for both, ADR-022, ADR-026; `providers/_http.py` refuses redirects for every real client) |
 | `app/exchange/` | the skill-handoff exchange (ADR-030): the common language (`common.py`, `vocabulary_v1.json`), translators (`translators/`, one module per skill, outside `app/domains/`), the route table (`routes.py`, `routes_v1.json`) and `exchange.py`, which checks the table at start and prepares each handoff for the queue store |
-| `app/eval/` | the two scorecards (triage: 61 labelled cases; study guide: 67 labelled requests), the eval gate's shared code and per-category scores (`common.py`), the rules v1/v2 replay (`rules_comparison.py`) and the auto-approve simulation (`autosend_sim.py`, ADR-031: a replay only, never imported by the service); `golden/` holds the case sets, among them the 128-case hard auto-send set |
+| `app/eval/` | the two scorecards (triage: 61 labelled cases; study guide: 67 labelled requests), the eval gate's shared code and per-category scores (`common.py`), the rules v1/v2 replay (`rules_comparison.py`) the auto-approve simulation (`autosend_sim.py`, ADR-031: a replay only, never imported by the service) and the attention replay (`attention_replay.py`, ADR-032: the flag before and after the signals on saved answers); `golden/` holds the case sets, among them the 128-case hard auto-send set and the 64-case held-out attention set |
 | `app/observability/sentry.py` | Sentry reporting: step failures, degraded AI, Runner recoveries |
 | `app/observability/tracing.py`, `job_spans.py` | tracing: the OTLP/JSON exporter with its attribute allow-list, and a finished job's spans (ADR-017) |
 | `app/persistence/queue_store.py` | the application queue in its own SQLite file (`<data>/app/queue.sqlite3`, schema 3): jobs, events, the Runner heartbeat, reviews and append-only decisions, skill handoffs, and the store id that shows when the queue started empty |
@@ -336,7 +362,7 @@ Notes for cloud sessions (claude.ai/code):
 | `app/boot.py` | the image's process 1: takes the data folder as root, switches to `neuron`, becomes tini |
 | `app/settings.py`, `app/serve.py` | settings from the environment; the launcher (API + supervised Runner) |
 | `Dockerfile`, `render.yaml`, `railway.json` | the container, the Render Blueprint, the Railway config kept for later |
-| `tests/open_benchmarks/` | stage 2 of the benchmarking plan (roadmap 5.6): `build_sets.py` builds the CLINC150, BANKING77, MASSIVE th/en and BIPIA case sets at run time from pinned sources (standard library, run with `python -I`; refuses any SHA-256 it does not expect), `manifest_v1.json` (the sources and every built file's SHA-256; `--check`), `NOTICE.md` (licences). Nothing downloaded is committed |
+| `tests/open_benchmarks/` | stage 2 of the benchmarking plan (roadmap 5.6): `build_sets.py` builds the CLINC150, BANKING77, MASSIVE th/en and BIPIA case sets at run time from pinned sources (standard library, run with `python -I`; refuses any SHA-256 it does not expect), `manifest_v1.json` (the sources and every built file's SHA-256; `--check`), `NOTICE.md` (licences), and `attention_open_check.py` (the development and sealed halves of the same sources for the attention signals; the sealed half prints counts only and can be written as a case file at run time). Nothing downloaded is committed |
 | `tests/robustness/` | the robustness benchmark (docs/benchmarking.md): the synthetic set, the pinned open extract with its licences (`NOTICE.md`), the runner `bench.py`, the extract builder (`build_open_extract.py verify` re-checks the upstream files) and the 116-case file for live runs |
 | `tests/`, `examples/`, `.github/` | tests (`tests/baselines/` holds the eval gate's baseline), demos and smoke tests, CI (`.github/scripts/` holds the `render.yaml` and trace checks and the image's bytecode-cache check, `.github/otel/` the tracing check's collector; `.github/gitleaks.toml` and `.github/.gitleaksignore` the secret scan's rules and reviewed findings) |
 | `.claude/` | the session-start hook for Claude Code cloud sessions |
@@ -519,6 +545,21 @@ Notes for cloud sessions (claude.ai/code):
     (roadmap 0.4).
   - The rest of the roadmap is open.
 - **Next:** [docs/ROADMAP.md](docs/ROADMAP.md), the first item that is not ✅ and whose needs are met.
+  - **Attention is built and measured in PR #67 (2026-11-11), pending merge** (ADR-032, ADR-033, roadmap 5.10).
+    The owner said to plan anew, not from the repository's plan, with one expectation: better effectiveness; after
+    the first version (signals v1) the owner said it was not enough and asked for more capability. Now in the PR:
+    signals v2 (wording from the development half of the open data, measured once on the sealed half) and the
+    AI's `attention` flag (prompt `triage_classify_v2`, `shadow-3`). One live Typhoon run of ten sets, 1,780 cases
+    from commit `1e5d13c`, every case waiting for a person: `needs_person` raised 38/38 on the hard set (6/38
+    before), 32/32 on the developer's held-out set (12/32 before), 183/196 on sealed open security requests
+    (labels by the datasets); BIPIA 51/75 (0/75 before; sealed half 14/30). Costs, all recorded: raised cases
+    234 → 379 of 1,320, about twice the input tokens, the AI's category right 1,157 → 1,147 of 1,513 (one run
+    each), AI flags on 12 of 200 ordinary sealed requests
+    ([evidence](docs/evidence/2026-11-11-attention-signals.md)). The first live runs found two prompt defects (an
+    attention value written as the category; a worse category on injected instructions), fixed from development
+    cases only. It changes `app/`, so the merge redeploys Render (queued cases are lost on the free plan). The
+    page's mock AI always answers `none`: the page gets the AI's flag only with a real model (0.4, the owner's
+    choice). Next after it: roadmap 5.10, "Next"; measure a prompt wording several times before changing it.
   - **The auto-approve limits are built in PR #66 (2026-11-11), pending merge** (ADR-031, roadmap 5.6, 5.9 and the
     first injection measurement of 5.7): the hard set, the open-benchmark builder, the simulation, the CI step with
     the mock, the manual workflow and the first Typhoon run. After the merge: the owner's run of *Auto-approve

@@ -8,9 +8,15 @@ Flow of one case:
    * still failing on the last attempt, or the model declines -> ``unavailable``,
      so the case still reaches a reviewer with the rules suggestion;
    * setup problem (bad key, unknown model) -> the step fails loudly (and Sentry reports it).
-3. ``compare`` lines the two up and explains disagreements as review reasons.
-4. ``prepare`` builds the reviewer's proposal: always PENDING_HUMAN_REVIEW,
-   ``elevated`` priority when rules and AI disagree.
+3. ``screen`` (signals.py), also in parallel, looks for attention signals in plain code: distress or danger,
+   a security incident, a legal or privacy request, text that tries to steer routing or approval.
+   The AI's answer also carries ``attention`` (prompt v2, ADR-033): its own view of the same four kinds, or
+   ``none``. It reads sentences the phrase lists cannot, and it can be fooled, so it only ever adds a flag.
+4. ``compare`` lines the two categories up and explains disagreements, signals and the AI's flag as review
+   reasons.
+5. ``prepare`` builds the reviewer's proposal: always PENDING_HUMAN_REVIEW,
+   ``elevated`` priority when rules and AI disagree, a signal was found or the AI flagged the case. Neither a
+   signal nor a flag changes a category.
 
 Each agent has a validator that Core runs on its output before saving it:
 schema (fields and types), invariants (queue matches category, provenance
@@ -24,10 +30,11 @@ from app.llm import (REDACTION_VERSION, InvalidModelOutput, LLMConfig, LLMConfig
 from app.llm.gateway import TEXT_LIMIT
 from app.llm.redaction import KINDS as MASKED_KINDS
 
-from .contracts import (CATEGORIES, CONFIDENCE_LEVELS, FINAL_ATTEMPT_REASONS, QUEUE_FOR, REVIEW_REASONS,
+from .contracts import (ATTENTION_VALUES, CATEGORIES, CONFIDENCE_LEVELS, FINAL_ATTEMPT_REASONS, QUEUE_FOR, REVIEW_REASONS,
                         UNAVAILABLE_REASONS)
+from .signals import REASON_FOR
 
-_OK_KEYS = {"status", "category", "queue", "confidence", "rationale", "provenance", "usage",
+_OK_KEYS = {"status", "category", "queue", "confidence", "attention", "rationale", "provenance", "usage",
             "latency_ms", "served_model", "attempt", "masked"}
 _UNAVAILABLE_KEYS = {"status", "reason", "error_type", "provenance", "attempt", "masked"}
 
@@ -65,7 +72,8 @@ def classify_llm(message):
     answer = result["answer"]
     category = answer["category"]
     return {"status": "ok", "category": category, "queue": QUEUE_FOR[category],
-            "confidence": answer["confidence"], "rationale": answer["rationale"],
+            "confidence": answer["confidence"], "attention": answer["attention"],
+            "rationale": answer["rationale"],
             "provenance": _provenance(params), "usage": result["usage"],
             "latency_ms": result["latency_ms"], "served_model": result["served_model"], "attempt": attempt,
             "masked": masked.counts}
@@ -89,6 +97,7 @@ def validate_llm_classification(message, output):
         _require(output["category"] in CATEGORIES, "unknown category")
         _require(output["queue"] == QUEUE_FOR[output["category"]], "queue does not match category")
         _require(output["confidence"] in CONFIDENCE_LEVELS, "unknown confidence level")
+        _require(output["attention"] in ATTENTION_VALUES, "unknown attention value")
         rationale = output["rationale"]
         _require(isinstance(rationale, str) and len(rationale) <= TEXT_LIMIT, "rationale too long")
         usage = output["usage"]
@@ -119,12 +128,17 @@ def validate_llm_classification(message, output):
 def compare(message):
     rules = message["dependencies"]["classify_rules"]
     llm = message["dependencies"]["classify_llm"]
-    reasons = []
+    reasons = [REASON_FOR[kind] for kind in message["dependencies"]["screen"]["signals"]]
+    signalled = bool(reasons)
     if rules["category"] == "other":
         reasons.append("rules_no_keyword_match")
     if llm["status"] == "ok":
         second = {"status": "ok", "category": llm["category"], "queue": llm["queue"],
-                  "confidence": llm["confidence"], "rationale": llm["rationale"]}
+                  "confidence": llm["confidence"], "attention": llm["attention"], "rationale": llm["rationale"]}
+        if llm["attention"] != "none":
+            # The AI's flag can only add a reason and raise the priority (ADR-033); "none" lowers nothing.
+            reasons.append("ai_flag_" + llm["attention"])
+            signalled = True
         agreement = "agree" if llm["category"] == rules["category"] else "disagree"
         if agreement == "disagree":
             reasons.append("rules_llm_disagree")
@@ -137,13 +151,13 @@ def compare(message):
     return {"official": {"category": rules["category"], "queue": rules["queue"],
                          "source": f"rules:{rules['rule_version']}"},
             "second_opinion": second, "agreement": agreement,
-            "review_priority": "elevated" if agreement == "disagree" else "normal",
+            "review_priority": "elevated" if agreement == "disagree" or signalled else "normal",
             "review_reasons": sorted(reasons, key=REVIEW_REASONS.index)}
 
 
 def validate_comparison(message, output):
     if output != compare(message):
-        raise ValueError("compare output does not follow the shadow-1 comparison contract")
+        raise ValueError("compare output does not follow the shadow-3 comparison contract")
 
 
 def prepare(message):
@@ -167,4 +181,4 @@ def validate_preparation(message, output):
             or output.get("review_required") is not True or output.get("mode") != "shadow":
         raise ValueError("Shadow mode proposals must stay PENDING_HUMAN_REVIEW with review_required")
     if output != prepare(message):
-        raise ValueError("prepare output does not follow the shadow-1 proposal contract")
+        raise ValueError("prepare output does not follow the shadow-3 proposal contract")

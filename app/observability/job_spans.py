@@ -19,6 +19,7 @@ The shape of one trace::
             ├── step classify_rules     one span per attempt
             ├── step classify_llm
             │   └── chat <model>        the AI call
+            ├── step screen             attention signals (plain code)
             ├── step compare
             └── step prepare
 

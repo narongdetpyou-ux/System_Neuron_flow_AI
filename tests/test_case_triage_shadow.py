@@ -85,7 +85,9 @@ class ShadowFlowTests(unittest.TestCase):
         injected = proposal(self.runs["inject"])
         self.assertEqual(injected["decision"], "PENDING_HUMAN_REVIEW")
         self.assertNotIn("priority_override", str(injected))
-        self.assertEqual((injected["suggested_queue"], injected["review_priority"]), ("access_review", "normal"))
+        # The attention signals see the instruction-like text and raise the case; the category stays the rules'.
+        self.assertEqual((injected["suggested_queue"], injected["review_priority"], injected["review_reasons"]),
+                         ("access_review", "elevated", ["signal_instruction", "llm_low_confidence"]))
         obeyed = self.runs["obeyed_injection"]
         self.assertEqual(obeyed["steps"]["classify_llm"]["attempts"], 2)
         self.assertEqual(proposal(obeyed)["second_opinion"], {"status": "unavailable",
@@ -160,7 +162,8 @@ class ShadowSafetyTests(unittest.TestCase):
 
         rules = agents.classify({"input": spec["input"]})
         cmp_msg = {"input": spec["input"], "params": {}, "dependencies": {"classify_rules": rules,
-                                                                         "classify_llm": {**good, "category": "billing", "queue": "billing_review"}}}
+                                                                         "classify_llm": {**good, "category": "billing", "queue": "billing_review"},
+                                                                         "screen": {"signals": [], "signal_version": "x"}}}
         compared = shadow_agents.compare(cmp_msg)
         self.assertEqual(compared["review_priority"], "elevated")
         with self.assertRaises(ValueError):
@@ -195,7 +198,7 @@ class ShadowSafetyTests(unittest.TestCase):
             self.assertEqual(result["queue"], QUEUE_FOR[result["category"]])
 
     def test_claude_path_end_to_end_without_storing_the_key(self):
-        answer = {"category": "upload", "confidence": "high", "rationale": "File attachment problem."}
+        answer = {"category": "upload", "confidence": "high", "attention": "none", "rationale": "File attachment problem."}
         with patch.patch.dict(os.environ, {"ANTHROPIC_API_KEY": KEY}), \
                 FakeAnthropic([(200, message(answer))]) as fake, tempfile.TemporaryDirectory() as work:
             config = LLMConfig(provider="anthropic", model="claude-haiku-5-5", base_url=fake.base_url)

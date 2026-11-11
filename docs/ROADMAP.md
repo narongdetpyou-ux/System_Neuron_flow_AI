@@ -18,10 +18,12 @@ differs, this file and architecture.md win.
 - ตัวรันงานหยิบเคสไปทำทีละเคส:
   - กฎคำสำคัญเสนอหมวด
   - AI ให้ความเห็นที่สอง
-  - ถ้าสองฝ่ายเห็นไม่ตรงกัน เคสจะถูกยกให้คนดูก่อน
+  - โค้ดธรรมดาตรวจหาสัญญาณ "ต้องให้คนดูก่อน" 4 แบบ (คนกำลังลำบากหรือไม่ปลอดภัย บัญชีหรือเงินถูกคนอื่นใช้ เรื่องกฎหมายหรือข้อมูลส่วนบุคคล ข้อความที่พยายามสั่งระบบ)
+    และ AI จริงช่วยชี้เรื่องเดียวกันได้ด้วย (AI เพิ่มป้ายได้อย่างเดียว ส่วน AI จำลองบนหน้าเว็บไม่ชี้)
+  - ถ้าสองฝ่ายเห็นไม่ตรงกัน โค้ดเจอสัญญาณ หรือ AI ชี้ เคสจะถูกยกให้คนดูก่อน พร้อมบอกเหตุผล (ขั้น 5.10)
 - ถ้าเครื่องดับกลางทาง ระบบทำต่อได้ ส่งซ้ำก็ไม่เกิดงานซ้ำ
 - ยกเลิกเคสที่ยังรอคิวได้ และทุกคำขอมีรหัสคำขอ (request id) ไว้ไล่ดูใน log (ขั้น 1.2, 1.3)
-- ผ่านชุดทดสอบอัตโนมัติ 477 ข้อ และเปิดใช้ออนไลน์บน Render แล้ว ระบบปิดตัวอย่างเรียบร้อย และการแก้แค่เอกสารไม่ทำให้ Render ขึ้นเวอร์ชันใหม่ (ขั้น 0.1, 0.5)
+- ผ่านชุดทดสอบอัตโนมัติ 509 ข้อ และเปิดใช้ออนไลน์บน Render แล้ว ระบบปิดตัวอย่างเรียบร้อย และการแก้แค่เอกสารไม่ทำให้ Render ขึ้นเวอร์ชันใหม่ (ขั้น 0.1, 0.5)
 - หน้าเว็บเป็นแบบแชท: พิมพ์เคส ดูขั้นตอนก่อนส่ง กดยืนยัน แล้วติดตามใน Flow และประวัติเหตุการณ์ (ขั้น 1.6)
 - หน้าเว็บบอกว่ามีเคสรอกี่เคส เคสที่รอนานสุดรอมานานเท่าไร ปกติแต่ละเคสใช้เวลาเท่าไร และเคสที่ไม่สำเร็จล้มเพราะอะไร (ขั้น 5.3)
 - ถ้ามีคนแก้กฎหรือ prompt แล้วคำตอบของเคสทดสอบเคสไหนเปลี่ยน ช่องตรวจบน GitHub จะเป็นสีแดงและบอกว่าเคสไหนเปลี่ยนอะไร (ขั้น 5.2)
@@ -142,6 +144,7 @@ owner.
 | 5.6 | Stage 2: open benchmarks (CLINC150, BANKING77, MASSIVE th-TH/en-US) with Typhoon | ✅ built in PR #66 (2026-11-11): the sets are built at run time from pinned sources (`tests/open_benchmarks/`, SHA-256 checked, nothing downloaded committed), the mock run is a PR check of *Auto-approve limits*, and the first Typhoon run is in the [evidence note](evidence/2026-11-11-autosend-limits.md); the study guide's part waits while it is paused | 5.4 |
 | 5.7 | Stage 3: prompt injection, personal data, load and restarts, weekly live drift | 🟡 the first injection measurement in PR #66 (BIPIA's 75 attacks and 16 steering or approval attempts, [evidence](evidence/2026-11-11-autosend-limits.md)); personal data, load, restarts and drift not built | 5.4; drift schedule is the owner's choice |
 | 5.9 | Auto-approve limits: a simulated "send it myself" button on the open benchmarks and a hard set (ADR-031, [design](autosend_simulation.md)) | ✅ PR #66 (2026-11-11), asked for by the owner: a replay of saved answers, never wired into the service; on the 128-case hard set Typhoon said `high` on 122 and was wrong on 13, 12 of them `high`; every policy lets cases that must see a person through ([evidence](evidence/2026-11-11-autosend-limits.md)) | 5.6 |
+| 5.10 | Attention: raise the cases a person should see first, by code signals and the AI's flag (ADR-032, ADR-033) | ✅ built and measured in PR #67 (2026-11-11), the session's own plan after the owner said to plan anew with one expectation, better effectiveness, and then asked for more capability. Built: the `screen` step and signals v1 then v2 (v2 from the development half of the open data, measured on a sealed half), the prompt `triage_classify_v2` with an `attention` answer that can only add a flag, scorecard figures, a replay, the `screened` policy, CI steps. Live with Typhoon, 1,780 cases, all waiting for a person: `needs_person` raised 38/38 (development) and 32/32 (the developer's held-out set; 12/32 before); sealed open security requests 183/196; BIPIA 51/75 (sealed half 14/30; 0/75 before). Costs: raised cases 234 → 379 of 1,320, about twice the input tokens, the AI's category right 1,157 → 1,147 of 1,513 ([evidence](evidence/2026-11-11-attention-signals.md)). The page's mock AI never flags. Merging redeploys Render | 5.9 |
 | 5.8 | Local open-model lane: llama.cpp and Typhoon 2.5 4B on the GitHub runner (ADR-026) | ✅ built in PR #46, with two smoke runs ([evidence note](evidence/2026-11-08-first-local-model-smoke.md)); first full run on `main` on 2026-11-08: rule mistakes raised 32/32 (Typhoon 32/32), triage AI correct 58/61 (Typhoon 60/61), topic correct 44/48 (Typhoon 46/48), 0 of 142 links outside the library, about 7 times Typhoon's latency ([evidence note](evidence/2026-11-08-first-local-model-full.md)); next, the owner chooses a branch (5.8, "After the first full run", step 2) | — |
 | 6.1 | Pattern A: bounded read-only tool loop | ⬜ | 3.2 |
 | 6.2 | Pattern B: planner → checked plan → linked job | ⬜ | 2.2, 4.2 |
@@ -308,7 +311,8 @@ decisions would vanish on every sleep. Since 2026-11-10 the API and the page say
   `NEURON_FLOW_LLM_PROVIDER=typhoon` and `TYPHOON_API_KEY` as new rows in the Environment tab, then the
   same checks. Case triage and the study guide then both use it; a study question makes one or two calls.
   Typhoon collects usage data, so synthetic data only. The settings tab of the page lists these steps, and
-  how to go back to the mock.
+  how to go back to the mock. A step-by-step Thai guide for the owner, with how to switch back and what to
+  check: [switch_ai_guide_th.md](switch_ai_guide_th.md) (2026-11-11).
 - **Changing the model or prompt later** is a new agent version. Jobs caught mid-way then fail as
   `configuration_changed`, by design.
 
@@ -475,7 +479,7 @@ decisions would vanish on every sleep. Since 2026-11-10 the API and the page say
   2. กดตัวอย่าง "ถูกหักเงินซ้ำ" แล้วกด Enter ต้องขึ้นการ์ด "รอยืนยัน" ที่มี 4 ขั้นตอน และยังไม่มีเคสใหม่ในรายการซ้าย
   3. กด "ยืนยันและส่ง" ภายในไม่กี่วินาที ทุกขั้นต้องขึ้น ✓ และผลเป็น "รอคนตรวจ" พร้อมป้าย "ยกให้ดูก่อน"
   4. กด "ส่งซ้ำ (ทดสอบว่าไม่เกิดงานซ้ำ)" ต้องขึ้นข้อความว่าระบบรู้ว่าเป็นเคสเดิม และรายการซ้ายต้องไม่มีเคสเพิ่ม
-  5. กดแท็บ "ตั้งค่า" ต้องเห็นตาราง 4 ขั้นตอน AI ที่ใช้อยู่ และกติกา "คนตัดสินทุกเคส" โดยไม่มีช่องให้พิมพ์อะไร
+  5. กดแท็บ "ตั้งค่า" ต้องเห็นตาราง 5 ขั้นตอน AI ที่ใช้อยู่ และกติกา "คนตัดสินทุกเคส" โดยไม่มีช่องให้พิมพ์อะไร
   6. เปิดบนมือถือ กด ☰ ต้องเห็นรายการเคส กดแถบขั้นตอนใต้หัว ต้องเห็น Flow เลื่อนขึ้นมาจากด้านล่าง
 
 ---
@@ -1261,6 +1265,46 @@ workflow types.
   plain-code check that holds text that talks to the system, reviewer labels (2.8), and a new ADR that changes
   rule 4 for one narrow, undoable action.
 
+### 5.10 Attention: raise the cases a person should see first (the session's plan, 2026-11-11)
+
+- **Why:** the owner said to plan anew, with one expectation: effectiveness must improve. The weakest measured
+  point was in the limits run (5.9): nothing in the workflow knew which cases a person should see first. The
+  only flag, "rules and AI disagree", raised 6 of the hard set's 38 `needs_person` cases and 1 of 91 cases with
+  an injected instruction. After the first version the owner said it was not enough and asked for more
+  capability; its own evidence named the gaps (BIPIA 0/75, BANKING77's security intents 6/21).
+- **Built (PR #67, ADR-032 and ADR-033), in this order:**
+  1. a held-out set of 64 cases (32 `needs_person`), committed before any phrase existed (`f2a00f9`);
+  2. signals v1, written against the hard set only (`0e267a2`); the `screen` step in `case_triage.v2`, reasons
+     `signal_*`, priority `elevated`; the scorecard's attention figures, `attention_replay.py`, the `screened`
+     policy, the page's Thai labels (`d88d54d`);
+  3. the open data split into a development and a sealed half by rules fixed before reading
+     (`attention_open_check.py`, `a2ec9a3`), then signals v2 from the development half (`fe7ec38`), measured once
+     on the sealed half;
+  4. the AI's flag: prompt `triage_classify_v2` with an `attention` answer; `compare` as `shadow-3` adds
+     `ai_flag_*` reasons. The flag only adds. Three wordings were tried live; the last (`1e5d13c`) is the measured
+     one. The mock always answers `none`.
+- **Measured** ([evidence](evidence/2026-11-11-attention-signals.md)): see the status table. Categories and decisions are untouched; every
+  one of the 1,780 live cases waited for a person.
+- **Done when:** the owner sees the held-out scorecard on the run page and a signalled case raised on the live
+  page (owner test in the PR). To see the AI's flag on the page, a real model must be switched on (roadmap 0.4,
+  the owner's choice); until then the page has the code's signals only.
+- **Next, in the order the measurements point to (not built):**
+  1. **fewer needless AI flags and a steadier category** (with E5): the longer prompt flags ordinary requests
+     (12 of 200 sealed ones; voice-assistant commands read as instructions) and its category was right 10 times
+     fewer in 1,513. Measure each wording several times, so the prompt's effect can be told from run-to-run
+     variation, before changing it again.
+  2. **order inside the "look first" list:** 379 of 1,320 cases are raised now, so a distress flag should come
+     before a legal one before a disagreement. Needs a third priority value, a queue schema change
+     (`reviews.priority`), so its own PR.
+  3. **reviewer labels (2.8):** `needs_person` on the project's sets is the developer's judgement; the owner's
+     decisions on the page are the first independent ones.
+  4. **injected instructions:** the sealed half of BIPIA is raised 14 of 30. Phrases will not close that; a
+     structural check (text that addresses the reader of the case rather than describing a problem) is the idea
+     to test, on a fresh split.
+- **Do not:** treat a case that nothing raised as safe; let a signal or the AI's flag change a category, skip
+  review or send anything; let the AI's `none` lower a priority; add a phrase or a prompt line because of a
+  held-out or sealed result (a change is a new version, measured again); print the sealed half's text.
+
 ## Phase 6 — Milestone E: agent patterns and MCP
 
 ### 6.1 Pattern A: a bounded read-only tool loop inside one step
@@ -1698,3 +1742,14 @@ of H5 were built ([evidence](evidence/2026-11-11-skill-handoff.md)).
   as 5.7's first injection data, because `deepset` is only on Hugging Face), a 128-case hard set committed before
   any model saw it, and owner decision D9. Measured once with Typhoon; the session paused for the owner's credits
   after the first six sets, and BANKING77, which the pause interrupted, was run again in full.
+- 2026-11-11: the owner said to plan anew, not from the plan in the repository, with one expectation: better
+  effectiveness. The session chose the weakest measured point (5.9: the "look first" flag raised 6 of 38 cases
+  a person should see first) and built 5.10 and ADR-032 in PR #67: attention signals in plain code, a held-out
+  set committed before the phrase list, a replay on the saved Typhoon answers and a live Typhoon run. Recorded
+  with it: what the signals miss (BANKING77's security intents 6/21, BIPIA 0/75) and the next step's protocol.
+- 2026-11-11 (later): the owner said the first version was not enough and asked for more capability. Added to PR
+  #67: signals v2 under a development/sealed split of the open data, and ADR-033, the AI's attention flag (prompt
+  `triage_classify_v2`). The live measurement found two prompt defects (an attention value written as the
+  category; a worse category on injected instructions), both fixed from development cases before the full run.
+  Typhoon was unavailable for about an hour and the owner paused the work once for credits; the final run of
+  1,780 cases is from one commit, in two parts.

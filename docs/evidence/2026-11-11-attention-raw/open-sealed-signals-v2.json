@@ -1,0 +1,1206 @@
+{
+ "counts": [
+  {
+   "any_signal": 6,
+   "by_label": {
+    "Refund_not_showing_up": {
+     "found": 0,
+     "rows": 22
+    },
+    "activate_my_card": {
+     "found": 0,
+     "rows": 20
+    },
+    "age_limit": {
+     "found": 0,
+     "rows": 13
+    },
+    "apple_pay_or_google_pay": {
+     "found": 0,
+     "rows": 15
+    },
+    "atm_support": {
+     "found": 0,
+     "rows": 13
+    },
+    "automatic_top_up": {
+     "found": 0,
+     "rows": 22
+    },
+    "balance_not_updated_after_bank_transfer": {
+     "found": 0,
+     "rows": 17
+    },
+    "balance_not_updated_after_cheque_or_cash_deposit": {
+     "found": 0,
+     "rows": 19
+    },
+    "beneficiary_not_allowed": {
+     "found": 0,
+     "rows": 17
+    },
+    "cancel_transfer": {
+     "found": 0,
+     "rows": 23
+    },
+    "card_about_to_expire": {
+     "found": 0,
+     "rows": 9
+    },
+    "card_acceptance": {
+     "found": 0,
+     "rows": 19
+    },
+    "card_arrival": {
+     "found": 0,
+     "rows": 14
+    },
+    "card_delivery_estimate": {
+     "found": 0,
+     "rows": 19
+    },
+    "card_linking": {
+     "found": 2,
+     "rows": 22
+    },
+    "card_not_working": {
+     "found": 0,
+     "rows": 22
+    },
+    "card_payment_fee_charged": {
+     "found": 1,
+     "rows": 17
+    },
+    "card_payment_wrong_exchange_rate": {
+     "found": 0,
+     "rows": 19
+    },
+    "card_swallowed": {
+     "found": 1,
+     "rows": 16
+    },
+    "cash_withdrawal_charge": {
+     "found": 0,
+     "rows": 15
+    },
+    "change_pin": {
+     "found": 0,
+     "rows": 18
+    },
+    "contactless_not_working": {
+     "found": 0,
+     "rows": 27
+    },
+    "country_support": {
+     "found": 0,
+     "rows": 20
+    },
+    "declined_card_payment": {
+     "found": 0,
+     "rows": 11
+    },
+    "declined_cash_withdrawal": {
+     "found": 0,
+     "rows": 17
+    },
+    "declined_transfer": {
+     "found": 0,
+     "rows": 14
+    },
+    "disposable_card_limits": {
+     "found": 0,
+     "rows": 16
+    },
+    "edit_personal_details": {
+     "found": 1,
+     "rows": 19
+    },
+    "exchange_charge": {
+     "found": 0,
+     "rows": 12
+    },
+    "exchange_rate": {
+     "found": 0,
+     "rows": 19
+    },
+    "exchange_via_app": {
+     "found": 0,
+     "rows": 16
+    },
+    "extra_charge_on_statement": {
+     "found": 1,
+     "rows": 22
+    },
+    "failed_transfer": {
+     "found": 0,
+     "rows": 21
+    },
+    "fiat_currency_support": {
+     "found": 0,
+     "rows": 16
+    },
+    "get_disposable_virtual_card": {
+     "found": 0,
+     "rows": 20
+    },
+    "get_physical_card": {
+     "found": 0,
+     "rows": 15
+    },
+    "getting_spare_card": {
+     "found": 0,
+     "rows": 15
+    },
+    "getting_virtual_card": {
+     "found": 0,
+     "rows": 14
+    },
+    "order_physical_card": {
+     "found": 0,
+     "rows": 18
+    },
+    "passcode_forgotten": {
+     "found": 0,
+     "rows": 16
+    },
+    "pending_card_payment": {
+     "found": 0,
+     "rows": 15
+    },
+    "pending_cash_withdrawal": {
+     "found": 0,
+     "rows": 20
+    },
+    "pending_top_up": {
+     "found": 0,
+     "rows": 20
+    },
+    "pending_transfer": {
+     "found": 0,
+     "rows": 15
+    },
+    "pin_blocked": {
+     "found": 0,
+     "rows": 15
+    },
+    "receiving_money": {
+     "found": 0,
+     "rows": 27
+    },
+    "request_refund": {
+     "found": 0,
+     "rows": 14
+    },
+    "reverted_card_payment?": {
+     "found": 0,
+     "rows": 18
+    },
+    "supported_cards_and_currencies": {
+     "found": 0,
+     "rows": 15
+    },
+    "terminate_account": {
+     "found": 0,
+     "rows": 15
+    },
+    "top_up_by_bank_transfer_charge": {
+     "found": 0,
+     "rows": 19
+    },
+    "top_up_by_card_charge": {
+     "found": 0,
+     "rows": 11
+    },
+    "top_up_by_cash_or_cheque": {
+     "found": 0,
+     "rows": 24
+    },
+    "top_up_failed": {
+     "found": 0,
+     "rows": 20
+    },
+    "top_up_limits": {
+     "found": 0,
+     "rows": 19
+    },
+    "top_up_reverted": {
+     "found": 0,
+     "rows": 20
+    },
+    "topping_up_by_card": {
+     "found": 0,
+     "rows": 18
+    },
+    "transaction_charged_twice": {
+     "found": 0,
+     "rows": 20
+    },
+    "transfer_fee_charged": {
+     "found": 0,
+     "rows": 17
+    },
+    "transfer_into_account": {
+     "found": 0,
+     "rows": 23
+    },
+    "transfer_not_received_by_recipient": {
+     "found": 0,
+     "rows": 20
+    },
+    "transfer_timing": {
+     "found": 0,
+     "rows": 16
+    },
+    "unable_to_verify_identity": {
+     "found": 0,
+     "rows": 17
+    },
+    "verify_my_identity": {
+     "found": 0,
+     "rows": 24
+    },
+    "verify_source_of_funds": {
+     "found": 0,
+     "rows": 18
+    },
+    "verify_top_up": {
+     "found": 0,
+     "rows": 20
+    },
+    "virtual_card_not_working": {
+     "found": 0,
+     "rows": 16
+    },
+    "visa_or_mastercard": {
+     "found": 0,
+     "rows": 15
+    },
+    "why_verify_identity": {
+     "found": 0,
+     "rows": 26
+    },
+    "wrong_amount_of_cash_received": {
+     "found": 0,
+     "rows": 20
+    },
+    "wrong_exchange_rate_for_cash_withdrawal": {
+     "found": 0,
+     "rows": 17
+    }
+   },
+   "kind": "ordinary",
+   "rows": 1273,
+   "source": "banking77",
+   "wanted_signal": 5
+  },
+  {
+   "any_signal": 0,
+   "by_label": {
+    "Refund_not_showing_up": {
+     "found": 0,
+     "rows": 3
+    },
+    "activate_my_card": {
+     "found": 0,
+     "rows": 5
+    },
+    "age_limit": {
+     "found": 0,
+     "rows": 5
+    },
+    "apple_pay_or_google_pay": {
+     "found": 0,
+     "rows": 4
+    },
+    "atm_support": {
+     "found": 0,
+     "rows": 4
+    },
+    "card_about_to_expire": {
+     "found": 0,
+     "rows": 5
+    },
+    "card_arrival": {
+     "found": 0,
+     "rows": 2
+    },
+    "card_delivery_estimate": {
+     "found": 0,
+     "rows": 3
+    },
+    "card_payment_fee_charged": {
+     "found": 0,
+     "rows": 3
+    },
+    "card_swallowed": {
+     "found": 0,
+     "rows": 2
+    },
+    "change_pin": {
+     "found": 0,
+     "rows": 4
+    },
+    "country_support": {
+     "found": 0,
+     "rows": 2
+    },
+    "declined_card_payment": {
+     "found": 0,
+     "rows": 3
+    },
+    "disposable_card_limits": {
+     "found": 0,
+     "rows": 3
+    },
+    "edit_personal_details": {
+     "found": 0,
+     "rows": 4
+    },
+    "exchange_charge": {
+     "found": 0,
+     "rows": 4
+    },
+    "exchange_rate": {
+     "found": 0,
+     "rows": 5
+    },
+    "exchange_via_app": {
+     "found": 0,
+     "rows": 5
+    },
+    "extra_charge_on_statement": {
+     "found": 0,
+     "rows": 3
+    },
+    "fiat_currency_support": {
+     "found": 0,
+     "rows": 2
+    },
+    "get_disposable_virtual_card": {
+     "found": 0,
+     "rows": 6
+    },
+    "get_physical_card": {
+     "found": 0,
+     "rows": 4
+    },
+    "getting_spare_card": {
+     "found": 0,
+     "rows": 1
+    },
+    "getting_virtual_card": {
+     "found": 0,
+     "rows": 3
+    },
+    "order_physical_card": {
+     "found": 0,
+     "rows": 5
+    },
+    "passcode_forgotten": {
+     "found": 0,
+     "rows": 2
+    },
+    "pending_card_payment": {
+     "found": 0,
+     "rows": 2
+    },
+    "pin_blocked": {
+     "found": 0,
+     "rows": 6
+    },
+    "request_refund": {
+     "found": 0,
+     "rows": 5
+    },
+    "reverted_card_payment?": {
+     "found": 0,
+     "rows": 3
+    },
+    "supported_cards_and_currencies": {
+     "found": 0,
+     "rows": 3
+    },
+    "terminate_account": {
+     "found": 0,
+     "rows": 3
+    },
+    "top_up_by_bank_transfer_charge": {
+     "found": 0,
+     "rows": 4
+    },
+    "top_up_by_card_charge": {
+     "found": 0,
+     "rows": 4
+    },
+    "transaction_charged_twice": {
+     "found": 0,
+     "rows": 1
+    },
+    "transfer_fee_charged": {
+     "found": 0,
+     "rows": 4
+    },
+    "unable_to_verify_identity": {
+     "found": 0,
+     "rows": 5
+    },
+    "visa_or_mastercard": {
+     "found": 0,
+     "rows": 4
+    }
+   },
+   "kind": "sampled_ordinary",
+   "rows": 136,
+   "source": "banking77",
+   "wanted_signal": 0
+  },
+  {
+   "any_signal": 3,
+   "by_label": {
+    "card_payment_not_recognised": {
+     "found": 3,
+     "rows": 5
+    },
+    "direct_debit_payment_not_recognised": {
+     "found": 0,
+     "rows": 3
+    },
+    "lost_or_stolen_phone": {
+     "found": 0,
+     "rows": 2
+    }
+   },
+   "kind": "sampled_security",
+   "rows": 10,
+   "source": "banking77",
+   "wanted_signal": 3
+  },
+  {
+   "any_signal": 74,
+   "by_label": {
+    "card_payment_not_recognised": {
+     "found": 11,
+     "rows": 14
+    },
+    "cash_withdrawal_not_recognised": {
+     "found": 11,
+     "rows": 19
+    },
+    "compromised_card": {
+     "found": 14,
+     "rows": 21
+    },
+    "direct_debit_payment_not_recognised": {
+     "found": 12,
+     "rows": 17
+    },
+    "lost_or_stolen_card": {
+     "found": 14,
+     "rows": 17
+    },
+    "lost_or_stolen_phone": {
+     "found": 11,
+     "rows": 18
+    }
+   },
+   "kind": "security",
+   "rows": 106,
+   "source": "banking77",
+   "wanted_signal": 73
+  },
+  {
+   "any_signal": 11,
+   "by_label": {
+    "Base Encoding": {
+     "found": 1,
+     "rows": 2
+    },
+    "Business Intelligence": {
+     "found": 0,
+     "rows": 2
+    },
+    "Conversational Agent": {
+     "found": 0,
+     "rows": 2
+    },
+    "Emoji Substitution": {
+     "found": 1,
+     "rows": 2
+    },
+    "Entertainment": {
+     "found": 2,
+     "rows": 2
+    },
+    "Information Dissemination": {
+     "found": 2,
+     "rows": 2
+    },
+    "Language Translation": {
+     "found": 1,
+     "rows": 2
+    },
+    "Marketing & Advertising": {
+     "found": 1,
+     "rows": 2
+    },
+    "Misinformation & Propaganda": {
+     "found": 2,
+     "rows": 2
+    },
+    "Research Assistance": {
+     "found": 0,
+     "rows": 2
+    },
+    "Reverse Text": {
+     "found": 0,
+     "rows": 2
+    },
+    "Scams & Fraud": {
+     "found": 1,
+     "rows": 2
+    },
+    "Sentiment Analysis": {
+     "found": 0,
+     "rows": 2
+    },
+    "Substitution Ciphers": {
+     "found": 0,
+     "rows": 2
+    },
+    "Task Automation": {
+     "found": 0,
+     "rows": 2
+    }
+   },
+   "kind": "injection",
+   "rows": 30,
+   "source": "bipia",
+   "wanted_signal": 11
+  },
+  {
+   "any_signal": 27,
+   "by_label": {
+    "accept_reservations": {
+     "found": 0,
+     "rows": 30
+    },
+    "account_blocked": {
+     "found": 3,
+     "rows": 30
+    },
+    "alarm": {
+     "found": 0,
+     "rows": 30
+    },
+    "application_status": {
+     "found": 0,
+     "rows": 30
+    },
+    "apr": {
+     "found": 0,
+     "rows": 30
+    },
+    "are_you_a_bot": {
+     "found": 0,
+     "rows": 30
+    },
+    "balance": {
+     "found": 0,
+     "rows": 30
+    },
+    "bill_balance": {
+     "found": 0,
+     "rows": 30
+    },
+    "bill_due": {
+     "found": 0,
+     "rows": 30
+    },
+    "book_flight": {
+     "found": 0,
+     "rows": 30
+    },
+    "book_hotel": {
+     "found": 0,
+     "rows": 30
+    },
+    "calculator": {
+     "found": 0,
+     "rows": 30
+    },
+    "calendar": {
+     "found": 0,
+     "rows": 30
+    },
+    "calendar_update": {
+     "found": 0,
+     "rows": 30
+    },
+    "calories": {
+     "found": 0,
+     "rows": 30
+    },
+    "cancel": {
+     "found": 0,
+     "rows": 29
+    },
+    "cancel_reservation": {
+     "found": 0,
+     "rows": 30
+    },
+    "car_rental": {
+     "found": 0,
+     "rows": 30
+    },
+    "card_declined": {
+     "found": 0,
+     "rows": 30
+    },
+    "carry_on": {
+     "found": 0,
+     "rows": 30
+    },
+    "change_accent": {
+     "found": 0,
+     "rows": 30
+    },
+    "change_ai_name": {
+     "found": 0,
+     "rows": 30
+    },
+    "change_language": {
+     "found": 0,
+     "rows": 30
+    },
+    "change_speed": {
+     "found": 0,
+     "rows": 30
+    },
+    "change_user_name": {
+     "found": 0,
+     "rows": 30
+    },
+    "change_volume": {
+     "found": 0,
+     "rows": 30
+    },
+    "confirm_reservation": {
+     "found": 0,
+     "rows": 30
+    },
+    "cook_time": {
+     "found": 0,
+     "rows": 30
+    },
+    "credit_limit": {
+     "found": 0,
+     "rows": 30
+    },
+    "credit_limit_change": {
+     "found": 0,
+     "rows": 30
+    },
+    "credit_score": {
+     "found": 0,
+     "rows": 30
+    },
+    "current_location": {
+     "found": 0,
+     "rows": 30
+    },
+    "damaged_card": {
+     "found": 0,
+     "rows": 30
+    },
+    "date": {
+     "found": 0,
+     "rows": 30
+    },
+    "definition": {
+     "found": 0,
+     "rows": 30
+    },
+    "direct_deposit": {
+     "found": 0,
+     "rows": 30
+    },
+    "directions": {
+     "found": 0,
+     "rows": 30
+    },
+    "distance": {
+     "found": 0,
+     "rows": 30
+    },
+    "do_you_have_pets": {
+     "found": 0,
+     "rows": 30
+    },
+    "exchange_rate": {
+     "found": 0,
+     "rows": 30
+    },
+    "expiration_date": {
+     "found": 0,
+     "rows": 30
+    },
+    "find_phone": {
+     "found": 4,
+     "rows": 30
+    },
+    "flight_status": {
+     "found": 0,
+     "rows": 30
+    },
+    "flip_coin": {
+     "found": 0,
+     "rows": 30
+    },
+    "food_last": {
+     "found": 0,
+     "rows": 30
+    },
+    "fun_fact": {
+     "found": 0,
+     "rows": 30
+    },
+    "gas": {
+     "found": 0,
+     "rows": 30
+    },
+    "gas_type": {
+     "found": 0,
+     "rows": 30
+    },
+    "goodbye": {
+     "found": 0,
+     "rows": 26
+    },
+    "greeting": {
+     "found": 0,
+     "rows": 29
+    },
+    "how_busy": {
+     "found": 0,
+     "rows": 30
+    },
+    "how_old_are_you": {
+     "found": 0,
+     "rows": 29
+    },
+    "improve_credit_score": {
+     "found": 0,
+     "rows": 30
+    },
+    "income": {
+     "found": 0,
+     "rows": 30
+    },
+    "ingredient_substitution": {
+     "found": 0,
+     "rows": 30
+    },
+    "ingredients_list": {
+     "found": 0,
+     "rows": 30
+    },
+    "insurance": {
+     "found": 0,
+     "rows": 30
+    },
+    "insurance_change": {
+     "found": 0,
+     "rows": 30
+    },
+    "interest_rate": {
+     "found": 0,
+     "rows": 30
+    },
+    "international_fees": {
+     "found": 0,
+     "rows": 30
+    },
+    "international_visa": {
+     "found": 0,
+     "rows": 30
+    },
+    "jump_start": {
+     "found": 0,
+     "rows": 30
+    },
+    "last_maintenance": {
+     "found": 0,
+     "rows": 30
+    },
+    "lost_luggage": {
+     "found": 0,
+     "rows": 30
+    },
+    "make_call": {
+     "found": 0,
+     "rows": 30
+    },
+    "maybe": {
+     "found": 0,
+     "rows": 28
+    },
+    "meal_suggestion": {
+     "found": 0,
+     "rows": 30
+    },
+    "meaning_of_life": {
+     "found": 0,
+     "rows": 30
+    },
+    "measurement_conversion": {
+     "found": 0,
+     "rows": 30
+    },
+    "meeting_schedule": {
+     "found": 0,
+     "rows": 30
+    },
+    "min_payment": {
+     "found": 0,
+     "rows": 30
+    },
+    "mpg": {
+     "found": 0,
+     "rows": 30
+    },
+    "new_card": {
+     "found": 0,
+     "rows": 30
+    },
+    "next_holiday": {
+     "found": 0,
+     "rows": 30
+    },
+    "next_song": {
+     "found": 0,
+     "rows": 30
+    },
+    "no": {
+     "found": 0,
+     "rows": 29
+    },
+    "nutrition_info": {
+     "found": 0,
+     "rows": 30
+    },
+    "oil_change_how": {
+     "found": 0,
+     "rows": 30
+    },
+    "oil_change_when": {
+     "found": 0,
+     "rows": 30
+    },
+    "order": {
+     "found": 0,
+     "rows": 30
+    },
+    "order_checks": {
+     "found": 0,
+     "rows": 30
+    },
+    "order_status": {
+     "found": 0,
+     "rows": 30
+    },
+    "out_of_scope": {
+     "found": 14,
+     "rows": 999
+    },
+    "pay_bill": {
+     "found": 0,
+     "rows": 30
+    },
+    "payday": {
+     "found": 0,
+     "rows": 30
+    },
+    "pin_change": {
+     "found": 0,
+     "rows": 30
+    },
+    "play_music": {
+     "found": 0,
+     "rows": 30
+    },
+    "plug_type": {
+     "found": 0,
+     "rows": 30
+    },
+    "pto_balance": {
+     "found": 0,
+     "rows": 30
+    },
+    "pto_request": {
+     "found": 0,
+     "rows": 30
+    },
+    "pto_request_status": {
+     "found": 0,
+     "rows": 30
+    },
+    "pto_used": {
+     "found": 0,
+     "rows": 30
+    },
+    "recipe": {
+     "found": 0,
+     "rows": 30
+    },
+    "redeem_rewards": {
+     "found": 0,
+     "rows": 30
+    },
+    "reminder": {
+     "found": 0,
+     "rows": 30
+    },
+    "reminder_update": {
+     "found": 0,
+     "rows": 30
+    },
+    "repeat": {
+     "found": 0,
+     "rows": 30
+    },
+    "replacement_card_duration": {
+     "found": 3,
+     "rows": 30
+    },
+    "reset_settings": {
+     "found": 0,
+     "rows": 30
+    },
+    "restaurant_reservation": {
+     "found": 0,
+     "rows": 30
+    },
+    "restaurant_reviews": {
+     "found": 0,
+     "rows": 30
+    },
+    "restaurant_suggestion": {
+     "found": 0,
+     "rows": 30
+    },
+    "rewards_balance": {
+     "found": 0,
+     "rows": 30
+    },
+    "roll_dice": {
+     "found": 0,
+     "rows": 30
+    },
+    "rollover_401k": {
+     "found": 0,
+     "rows": 30
+    },
+    "routing": {
+     "found": 0,
+     "rows": 30
+    },
+    "schedule_maintenance": {
+     "found": 0,
+     "rows": 30
+    },
+    "schedule_meeting": {
+     "found": 0,
+     "rows": 30
+    },
+    "share_location": {
+     "found": 0,
+     "rows": 30
+    },
+    "shopping_list": {
+     "found": 0,
+     "rows": 30
+    },
+    "shopping_list_update": {
+     "found": 0,
+     "rows": 30
+    },
+    "smart_home": {
+     "found": 0,
+     "rows": 30
+    },
+    "spelling": {
+     "found": 1,
+     "rows": 30
+    },
+    "spending_history": {
+     "found": 0,
+     "rows": 30
+    },
+    "sync_device": {
+     "found": 0,
+     "rows": 30
+    },
+    "taxes": {
+     "found": 0,
+     "rows": 30
+    },
+    "tell_joke": {
+     "found": 1,
+     "rows": 30
+    },
+    "text": {
+     "found": 0,
+     "rows": 30
+    },
+    "thank_you": {
+     "found": 0,
+     "rows": 30
+    },
+    "time": {
+     "found": 0,
+     "rows": 30
+    },
+    "timer": {
+     "found": 0,
+     "rows": 30
+    },
+    "timezone": {
+     "found": 0,
+     "rows": 30
+    },
+    "tire_change": {
+     "found": 0,
+     "rows": 30
+    },
+    "tire_pressure": {
+     "found": 0,
+     "rows": 30
+    },
+    "todo_list": {
+     "found": 0,
+     "rows": 30
+    },
+    "todo_list_update": {
+     "found": 0,
+     "rows": 30
+    },
+    "traffic": {
+     "found": 0,
+     "rows": 30
+    },
+    "transactions": {
+     "found": 0,
+     "rows": 30
+    },
+    "transfer": {
+     "found": 0,
+     "rows": 30
+    },
+    "translate": {
+     "found": 0,
+     "rows": 30
+    },
+    "travel_alert": {
+     "found": 0,
+     "rows": 30
+    },
+    "travel_notification": {
+     "found": 1,
+     "rows": 30
+    },
+    "travel_suggestion": {
+     "found": 0,
+     "rows": 30
+    },
+    "uber": {
+     "found": 0,
+     "rows": 30
+    },
+    "update_playlist": {
+     "found": 0,
+     "rows": 30
+    },
+    "user_name": {
+     "found": 0,
+     "rows": 29
+    },
+    "vaccines": {
+     "found": 0,
+     "rows": 30
+    },
+    "w2": {
+     "found": 0,
+     "rows": 30
+    },
+    "weather": {
+     "found": 0,
+     "rows": 30
+    },
+    "what_are_your_hobbies": {
+     "found": 0,
+     "rows": 30
+    },
+    "what_can_i_ask_you": {
+     "found": 0,
+     "rows": 30
+    },
+    "what_is_your_name": {
+     "found": 0,
+     "rows": 30
+    },
+    "what_song": {
+     "found": 0,
+     "rows": 30
+    },
+    "where_are_you_from": {
+     "found": 0,
+     "rows": 30
+    },
+    "whisper_mode": {
+     "found": 0,
+     "rows": 30
+    },
+    "who_do_you_work_for": {
+     "found": 0,
+     "rows": 30
+    },
+    "who_made_you": {
+     "found": 0,
+     "rows": 30
+    },
+    "yes": {
+     "found": 0,
+     "rows": 23
+    }
+   },
+   "kind": "ordinary",
+   "rows": 5391,
+   "source": "clinc150",
+   "wanted_signal": 11
+  },
+  {
+   "any_signal": 43,
+   "by_label": {
+    "freeze_account": {
+     "found": 8,
+     "rows": 30
+    },
+    "report_fraud": {
+     "found": 17,
+     "rows": 30
+    },
+    "report_lost_card": {
+     "found": 18,
+     "rows": 30
+    }
+   },
+   "kind": "security",
+   "rows": 90,
+   "source": "clinc150",
+   "wanted_signal": 43
+  }
+ ],
+ "part": "sealed",
+ "schema": "neuron-flow-attention-open-check-v1",
+ "signals": "signals-v2:cc8a905167ccb7382c40c40ecb9738c623d712ef3bdb57bad43102446e2d2315"
+}

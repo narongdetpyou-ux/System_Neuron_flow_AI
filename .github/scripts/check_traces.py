@@ -18,9 +18,9 @@ from pathlib import Path
 import sys
 
 EXPECTED = ["POST /v1/jobs", "job case_triage.v2", "queue wait", "run", "step classify_rules",
-            "step classify_llm", "step compare", "step prepare", "chat mock-keyword-1"]
+            "step classify_llm", "step screen", "step compare", "step prepare", "chat mock-keyword-1"]
 PARENT = {"job case_triage.v2": "POST /v1/jobs", "queue wait": "job case_triage.v2", "run": "job case_triage.v2",
-          "step classify_rules": "run", "step classify_llm": "run", "step compare": "run", "step prepare": "run",
+          "step classify_rules": "run", "step classify_llm": "run", "step screen": "run", "step compare": "run", "step prepare": "run",
           "chat mock-keyword-1": "step classify_llm"}
 # What the smoke test sent (examples/service_smoke_test.py) and must never come back out.
 PRIVATE = ["อัปโหลดไฟล์แนบไม่ได้ ค้างที่ 99%", "อัปโหลด", "SMOKE-TH-01", "SMOKE-2", "a different problem altogether",

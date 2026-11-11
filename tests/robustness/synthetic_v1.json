@@ -5022,7 +5022,7 @@
     "replies": [
      {
       "status": 200,
-      "content": "{\"category\": \"upload\", \"confidence\": \"high\", \"rationale\": \"ok\"}"
+      "content": "{\"category\": \"upload\", \"confidence\": \"high\", \"attention\": \"none\", \"rationale\": \"ok\"}"
      }
     ]
    },
@@ -5048,7 +5048,7 @@
     "replies": [
      {
       "status": 200,
-      "content": "```json\n{\"category\": \"upload\", \"confidence\": \"high\", \"rationale\": \"ok\"}\n```"
+      "content": "```json\n{\"category\": \"upload\", \"confidence\": \"high\", \"attention\": \"none\", \"rationale\": \"ok\"}\n```"
      }
     ]
    },
@@ -5273,7 +5273,7 @@
     "replies": [
      {
       "status": 200,
-      "content": "{\"category\":\"upload\",\"confidence\":\"high\",\"rationale\":\"bad \\ud800 text\"}"
+      "content": "{\"category\":\"upload\",\"confidence\":\"high\",\"attention\":\"none\",\"rationale\":\"bad \\ud800 text\"}"
      }
     ]
    },
@@ -5302,7 +5302,7 @@
     "replies": [
      {
       "status": 200,
-      "content": "{\"category\": \"upload\", \"confidence\": \"high\", \"rationale\": \"\\u202edevorppa\\u202c ok\"}"
+      "content": "{\"category\": \"upload\", \"confidence\": \"high\", \"attention\": \"none\", \"rationale\": \"\\u202edevorppa\\u202c ok\"}"
      }
     ]
    },
@@ -5358,7 +5358,7 @@
     "replies": [
      {
       "status": 200,
-      "content": "{\"category\": \"priority_override\", \"confidence\": \"high\", \"rationale\": \"ok\"}"
+      "content": "{\"category\": \"priority_override\", \"confidence\": \"high\", \"attention\": \"none\", \"rationale\": \"ok\"}"
      }
     ]
    },
@@ -5385,7 +5385,7 @@
     "replies": [
      {
       "status": 200,
-      "content": "{\"category\":\"upload\",\"confidence\":\"high\",\"rationale\":\"ok\",\"decision\":\"APPROVED\"}"
+      "content": "{\"category\":\"upload\",\"confidence\":\"high\",\"attention\":\"none\",\"rationale\":\"ok\",\"decision\":\"APPROVED\"}"
      }
     ]
    },

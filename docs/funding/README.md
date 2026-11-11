@@ -8,7 +8,7 @@ project.
 
 - **Core runtime** (`neuron_flow/`). Since its extraction on 2026-10-31 it has changed twice: the planned telemetry fix (PR #21) and `decode()`'s error contract (ADR-025, PR #42).
 - **Two domains on the same Core:** synthetic case triage (v1 rules, v2 AI second opinion in shadow mode) and the study guide (`study_guide.v1`, roadmap 3.1–3.4: at most 5 resources per answer from a verified library of 17 links, on the web page since PR #39). Neither needed a Core change.
-- **477 automated tests**; Python 3.10 and 3.12 verification is recorded in the
+- **509 automated tests**; Python 3.10 and 3.12 verification is recorded in the
   [E2 evidence note](../evidence/2026-11-11-e2-rules-v2.md)
   (3.11 was last checked on 2026-11-01, at 53 tests).
   - Last pinned green run on `main` (`cf06f4d`, 276 tests): https://github.com/narongdetpyou-ux/System_Neuron_flow_AI/actions/runs/42372717144
