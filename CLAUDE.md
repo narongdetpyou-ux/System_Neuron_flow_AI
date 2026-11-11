@@ -110,7 +110,9 @@ Read in this order when you need depth:
     cloud session, `docs/evidence/2026-11-10-effectiveness-baseline.md`), followed by one E2 three-set run
     (2026-11-11, 217 cases, `docs/evidence/2026-11-11-e2-rules-v2.md`) and one auto-approve limits run over the hard set,
     the open benchmarks and the three triage sets again (2026-11-11, `docs/evidence/2026-11-11-autosend-limits.md`;
-    the button is simulated, ADR-031), and the local 4B model's: a smoke run on the first 5
+    the button is simulated, ADR-031), then the attention runs the same day (signals v1 with prompt v1 on two
+    sets; prompt `triage_classify_v2` with signals v2 on ten sets, 1,780 cases, one run,
+    `docs/evidence/2026-11-11-attention-signals.md`), and the local 4B model's: a smoke run on the first 5
     items of each set, twice, and one full run of both sets (2026-11-08,
     `docs/evidence/2026-11-08-first-local-model-smoke.md`, `docs/evidence/2026-11-08-first-local-model-full.md`).
     There is none for Claude, and no security review or user study yet. A Typhoon or local result describes
@@ -221,7 +223,8 @@ GitHub Actions (the owner can open these; the first three run on every push and 
   cases (ADR-031); its Thai summary is on the run page and it fails only if a real job did not wait for a person.
   Before the simulation, the 64 held-out attention cases run with the mock against
   `tests/baselines/attention_heldout_mock.json` (ADR-032); the scorecard on the run page shows how many cases a
-  person should see first were raised, and names the misses.
+  person should see first were raised, and names the misses. The mock AI's `attention` is always `none`, so
+  these CI figures are the code's signals alone (ADR-033).
 - *Service container* (`service-container.yml`):
   - checks `render.yaml` against Render's schema;
   - builds the same container as Render and submits cases over HTTP;
@@ -264,8 +267,8 @@ GitHub Actions (the owner can open these; the first three run on every push and 
   the open-benchmark sets from their pinned sources (checked against `tests/open_benchmarks/manifest_v1.json`),
   runs the shadow scorecard on them, the hard auto-send set and the three existing sets (`sets`: `all`, `hard`,
   `open` or `existing`), then the auto-approve simulation on every saved answer. *Run workflow* uses Typhoon by
-  default (`TYPHOON_API_KEY`, cases 1 s apart; about 1,300 cases); pull requests that change this lane get a run
-  with the mock. This session can build the sets itself: `raw.githubusercontent.com` and MASSIVE's S3 archive
+  default (`TYPHOON_API_KEY`, cases 1 s apart; about 1,800 cases with the held-out attention set and the sealed
+  half of the open data, ADR-032); pull requests that change this lane get a run with the mock. This session can build the sets itself: `raw.githubusercontent.com` and MASSIVE's S3 archive
   are reachable from its network, Hugging Face is not.
 - *Local open model eval* (`local-model-eval.yml`, ADR-026, roadmap 5.8) runs both scorecards against an
   open-weight model that the job runs itself: llama.cpp's server built from a pinned commit (cached), serving
@@ -542,15 +545,21 @@ Notes for cloud sessions (claude.ai/code):
     (roadmap 0.4).
   - The rest of the roadmap is open.
 - **Next:** [docs/ROADMAP.md](docs/ROADMAP.md), the first item that is not ✅ and whose needs are met.
-  - **Attention signals are built in PR #67 (2026-11-11), pending merge** (ADR-032, roadmap 5.10). The owner said
-    to plan anew, not from the repository's plan, with one expectation: better effectiveness. The session chose
-    the weakest measured point: the "look first" flag raised 6 of the hard set's 38 `needs_person` cases. Now
-    38/38 there (saved Typhoon answers) and 29/32 on a held-out set committed before the phrase list (live
-    Typhoon; 12/32 without the signals), with 1 of 32 ordinary held-out cases raised needlessly. Recorded misses:
-    6 of 21 BANKING77 security-intent cases, 0 of BIPIA's 75 attacks
-    ([evidence](docs/evidence/2026-11-11-attention-signals.md)). It changes `app/`, so the merge redeploys Render
-    (queued cases are lost on the free plan). Next after it: signals v2 with a split of the open data made before
-    reading it (roadmap 5.10, "Next"); do not tune v1's phrases on anything already measured.
+  - **Attention is built and measured in PR #67 (2026-11-11), pending merge** (ADR-032, ADR-033, roadmap 5.10).
+    The owner said to plan anew, not from the repository's plan, with one expectation: better effectiveness; after
+    the first version (signals v1) the owner said it was not enough and asked for more capability. Now in the PR:
+    signals v2 (wording from the development half of the open data, measured once on the sealed half) and the
+    AI's `attention` flag (prompt `triage_classify_v2`, `shadow-3`). One live Typhoon run of ten sets, 1,780 cases
+    from commit `1e5d13c`, every case waiting for a person: `needs_person` raised 38/38 on the hard set (6/38
+    before), 32/32 on the developer's held-out set (12/32 before), 183/196 on sealed open security requests
+    (labels by the datasets); BIPIA 51/75 (0/75 before; sealed half 14/30). Costs, all recorded: raised cases
+    234 → 379 of 1,320, about twice the input tokens, the AI's category right 1,157 → 1,147 of 1,513 (one run
+    each), AI flags on 12 of 200 ordinary sealed requests
+    ([evidence](docs/evidence/2026-11-11-attention-signals.md)). The first live runs found two prompt defects (an
+    attention value written as the category; a worse category on injected instructions), fixed from development
+    cases only. It changes `app/`, so the merge redeploys Render (queued cases are lost on the free plan). The
+    page's mock AI always answers `none`: the page gets the AI's flag only with a real model (0.4, the owner's
+    choice). Next after it: roadmap 5.10, "Next"; measure a prompt wording several times before changing it.
   - **The auto-approve limits are built in PR #66 (2026-11-11), pending merge** (ADR-031, roadmap 5.6, 5.9 and the
     first injection measurement of 5.7): the hard set, the open-benchmark builder, the simulation, the CI step with
     the mock, the manual workflow and the first Typhoon run. After the merge: the owner's run of *Auto-approve

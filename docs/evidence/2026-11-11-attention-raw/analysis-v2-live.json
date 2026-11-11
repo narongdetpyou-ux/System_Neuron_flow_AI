@@ -1,0 +1,538 @@
+{
+ "attention": {
+  "ai_correct": "55/62",
+  "ai_values": {
+   "distress": 6,
+   "instruction": 9,
+   "legal_privacy": 7,
+   "none": 32,
+   "null": 2,
+   "security": 8
+  },
+  "answered": "62/64",
+  "at": "2026-11-11T11:57:35+00:00",
+  "done": "64/64",
+  "git": "1e5d13c",
+  "inj": "raised 8/8 sig 7 ai 8",
+  "lat": {
+   "p50": 2530.394,
+   "p95": 19339.143
+  },
+  "missed": [],
+  "n": 64,
+  "np": "32/32",
+  "np_ai": "30/32",
+  "np_dis": "11/32",
+  "np_sig": "25/32",
+  "np_sig_or_ai": 30,
+  "others_ai": "0/32",
+  "others_sig": "1/32",
+  "raised": "40/64",
+  "raises_needed": "38/40",
+  "rules_correct": "47/64",
+  "s": 561.37,
+  "second_attempt": 4,
+  "tokens": {
+   "estimated": false,
+   "input": 51206,
+   "output": 2275
+  },
+  "unanswered": {
+   "provider_unavailable": 2
+  },
+  "waiting": 64
+ },
+ "banking": {
+  "ai_correct": "189/299",
+  "ai_values": {
+   "distress": 2,
+   "instruction": 2,
+   "none": 275,
+   "null": 1,
+   "security": 20
+  },
+  "answered": "299/300",
+  "at": "2026-11-11T17:34:47+00:00",
+  "done": "300/300",
+  "git": "1e5d13c",
+  "lat": {
+   "p50": 1377.992,
+   "p95": 8467.689
+  },
+  "missed": [],
+  "n": 300,
+  "np": "–",
+  "np_ai": "–",
+  "np_dis": "–",
+  "np_sig": "–",
+  "np_sig_or_ai": 0,
+  "others_ai": "24/300",
+  "others_sig": "13/300",
+  "raised": "139/300",
+  "raised_v1": 117,
+  "raises_needed": "30/139",
+  "rules_correct": "259/300",
+  "s": 776.41,
+  "second_attempt": 1,
+  "tokens": {
+   "estimated": false,
+   "input": 242694,
+   "output": 9832
+  },
+  "unanswered": {
+   "provider_unavailable": 1
+  },
+  "v1_vs_v2": {
+   "both": 297,
+   "changed": 30,
+   "from_right": 17,
+   "to_right": 9,
+   "v1_correct": 196,
+   "v2_correct": 188
+  },
+  "waiting": 300
+ },
+ "bipia": {
+  "ai_correct": "69/73",
+  "ai_values": {
+   "instruction": 22,
+   "none": 51,
+   "null": 2
+  },
+  "answered": "73/75",
+  "at": "2026-11-11T11:57:58+00:00",
+  "bipia_development": "n 45 raised 37 sig 37 ai 17 either 37",
+  "bipia_sealed": "n 30 raised 14 sig 11 ai 5 either 13",
+  "done": "75/75",
+  "git": "1e5d13c",
+  "inj": "raised 51/75 sig 48 ai 22",
+  "lat": {
+   "p50": 2189.793,
+   "p95": 22482.02
+  },
+  "missed": [],
+  "n": 75,
+  "np": "–",
+  "np_ai": "–",
+  "np_dis": "–",
+  "np_sig": "–",
+  "np_sig_or_ai": 0,
+  "others_ai": "22/75",
+  "others_sig": "48/75",
+  "raised": "51/75",
+  "raised_v1": 0,
+  "raises_needed": "0/51",
+  "rules_correct": "75/75",
+  "s": 584.62,
+  "second_attempt": 3,
+  "tokens": {
+   "estimated": false,
+   "input": 60785,
+   "output": 2535
+  },
+  "unanswered": {
+   "provider_unavailable": 2
+  },
+  "v1_vs_v2": {
+   "both": 73,
+   "changed": 4,
+   "from_right": 4,
+   "to_right": 0,
+   "v1_correct": 73,
+   "v2_correct": 69
+  },
+  "waiting": 75
+ },
+ "clinc": {
+  "ai_correct": "276/299",
+  "ai_values": {
+   "instruction": 13,
+   "none": 280,
+   "null": 1,
+   "security": 6
+  },
+  "answered": "299/300",
+  "at": "2026-11-11T17:35:38+00:00",
+  "done": "300/300",
+  "git": "1e5d13c",
+  "lat": {
+   "p50": 1417.441,
+   "p95": 7322.179
+  },
+  "missed": [],
+  "n": 300,
+  "np": "–",
+  "np_ai": "–",
+  "np_dis": "–",
+  "np_sig": "–",
+  "np_sig_or_ai": 0,
+  "others_ai": "19/300",
+  "others_sig": "4/300",
+  "raised": "52/300",
+  "raised_v1": 38,
+  "raises_needed": "26/52",
+  "rules_correct": "269/300",
+  "s": 772.28,
+  "second_attempt": 1,
+  "tokens": {
+   "estimated": false,
+   "input": 241962,
+   "output": 10289
+  },
+  "unanswered": {
+   "provider_unavailable": 1
+  },
+  "v1_vs_v2": {
+   "both": 299,
+   "changed": 8,
+   "from_right": 4,
+   "to_right": 3,
+   "v1_correct": 277,
+   "v2_correct": 276
+  },
+  "waiting": 300
+ },
+ "edge": {
+  "ai_correct": "103/116",
+  "ai_values": {
+   "instruction": 4,
+   "none": 105,
+   "security": 7
+  },
+  "answered": "116/116",
+  "at": "2026-11-11T17:22:45+00:00",
+  "done": "116/116",
+  "git": "1e5d13c",
+  "lat": {
+   "p50": 1389.85,
+   "p95": 3524.636
+  },
+  "missed": [],
+  "n": 116,
+  "np": "–",
+  "np_ai": "–",
+  "np_dis": "–",
+  "np_sig": "–",
+  "np_sig_or_ai": 0,
+  "others_ai": "11/116",
+  "others_sig": "7/116",
+  "raised": "19/116",
+  "raised_v1": 8,
+  "raises_needed": "4/19",
+  "rules_correct": "105/116",
+  "s": 199.02,
+  "second_attempt": 0,
+  "tokens": {
+   "estimated": false,
+   "input": 94215,
+   "output": 3931
+  },
+  "unanswered": {},
+  "v1_vs_v2": {
+   "both": 116,
+   "changed": 8,
+   "from_right": 4,
+   "to_right": 4,
+   "v1_correct": 103,
+   "v2_correct": 103
+  },
+  "waiting": 116
+ },
+ "hard": {
+  "ai_correct": "115/128",
+  "ai_values": {
+   "distress": 3,
+   "instruction": 13,
+   "legal_privacy": 6,
+   "none": 95,
+   "security": 11
+  },
+  "answered": "128/128",
+  "at": "2026-11-11T17:21:51+00:00",
+  "done": "128/128",
+  "git": "1e5d13c",
+  "inj": "raised 16/16 sig 16 ai 12",
+  "lat": {
+   "p50": 1587.552,
+   "p95": 3254.921
+  },
+  "missed": [],
+  "n": 128,
+  "np": "38/38",
+  "np_ai": "31/38",
+  "np_dis": "7/38",
+  "np_sig": "38/38",
+  "np_sig_or_ai": 38,
+  "others_ai": "2/90",
+  "others_sig": "0/90",
+  "raised": "78/128",
+  "raised_v1": 47,
+  "raises_needed": "77/78",
+  "rules_correct": "73/128",
+  "s": 237.64,
+  "second_attempt": 0,
+  "tokens": {
+   "estimated": false,
+   "input": 105716,
+   "output": 4823
+  },
+  "unanswered": {},
+  "v1_vs_v2": {
+   "both": 128,
+   "changed": 4,
+   "from_right": 2,
+   "to_right": 2,
+   "v1_correct": 115,
+   "v2_correct": 115
+  },
+  "waiting": 128
+ },
+ "heldout": {
+  "ai_correct": "40/40",
+  "ai_values": {
+   "none": 40
+  },
+  "answered": "40/40",
+  "at": "2026-11-11T17:19:26+00:00",
+  "done": "40/40",
+  "git": "1e5d13c",
+  "lat": {
+   "p50": 1997.888,
+   "p95": 4391.661
+  },
+  "missed": [],
+  "n": 40,
+  "np": "–",
+  "np_ai": "–",
+  "np_dis": "–",
+  "np_sig": "–",
+  "np_sig_or_ai": 0,
+  "others_ai": "0/40",
+  "others_sig": "0/40",
+  "raised": "18/40",
+  "raised_v1": 18,
+  "raises_needed": "18/18",
+  "rules_correct": "22/40",
+  "s": 93.11,
+  "second_attempt": 0,
+  "tokens": {
+   "estimated": false,
+   "input": 32683,
+   "output": 1665
+  },
+  "unanswered": {},
+  "v1_vs_v2": {
+   "both": 40,
+   "changed": 0,
+   "from_right": 0,
+   "to_right": 0,
+   "v1_correct": 40,
+   "v2_correct": 40
+  },
+  "waiting": 40
+ },
+ "massive": {
+  "ai_correct": "297/300",
+  "ai_values": {
+   "distress": 3,
+   "instruction": 11,
+   "none": 286
+  },
+  "answered": "300/300",
+  "at": "2026-11-11T17:29:48+00:00",
+  "done": "300/300",
+  "git": "1e5d13c",
+  "lat": {
+   "p50": 1571.606,
+   "p95": 5500.439
+  },
+  "missed": [],
+  "n": 300,
+  "np": "–",
+  "np_ai": "–",
+  "np_dis": "–",
+  "np_sig": "–",
+  "np_sig_or_ai": 0,
+  "others_ai": "14/300",
+  "others_sig": "2/300",
+  "raised": "17/300",
+  "raised_v1": 5,
+  "raises_needed": "0/17",
+  "rules_correct": "299/300",
+  "s": 715.19,
+  "second_attempt": 1,
+  "tokens": {
+   "estimated": false,
+   "input": 243941,
+   "output": 11786
+  },
+  "unanswered": {},
+  "v1_vs_v2": {
+   "both": 300,
+   "changed": 5,
+   "from_right": 1,
+   "to_right": 4,
+   "v1_correct": 294,
+   "v2_correct": 297
+  },
+  "waiting": 300
+ },
+ "sealed": {
+  "ai_correct": "179/395",
+  "ai_values": {
+   "distress": 2,
+   "instruction": 8,
+   "none": 228,
+   "null": 1,
+   "security": 157
+  },
+  "answered": "395/396",
+  "at": "2026-11-11T17:33:33+00:00",
+  "banking77": {
+   "by_ai": 94,
+   "by_disagreement_only": 60,
+   "by_either": 96,
+   "by_intent(rows,signal,ai)": {
+    "card_payment_not_recognised": [
+     14,
+     11,
+     12
+    ],
+    "cash_withdrawal_not_recognised": [
+     19,
+     11,
+     17
+    ],
+    "compromised_card": [
+     21,
+     14,
+     20
+    ],
+    "direct_debit_payment_not_recognised": [
+     17,
+     12,
+     14
+    ],
+    "lost_or_stolen_card": [
+     17,
+     15,
+     16
+    ],
+    "lost_or_stolen_phone": [
+     18,
+     11,
+     15
+    ]
+   },
+   "by_signal": 74,
+   "ordinary_ai": "4/100",
+   "ordinary_raised": 56,
+   "ordinary_signal": "0/100",
+   "security_raised": "100/106"
+  },
+  "clinc150": {
+   "by_ai": 61,
+   "by_disagreement_only": 73,
+   "by_either": 68,
+   "by_intent(rows,signal,ai)": {
+    "freeze_account": [
+     30,
+     8,
+     25
+    ],
+    "report_fraud": [
+     30,
+     17,
+     20
+    ],
+    "report_lost_card": [
+     30,
+     18,
+     16
+    ]
+   },
+   "by_signal": 43,
+   "ordinary_ai": "8/100",
+   "ordinary_raised": 18,
+   "ordinary_signal": "0/100",
+   "security_raised": "83/90"
+  },
+  "done": "396/396",
+  "git": "1e5d13c",
+  "lat": {
+   "p50": 1412.514,
+   "p95": 5800.63
+  },
+  "missed": 13,
+  "n": 396,
+  "np": "183/196",
+  "np_ai": "155/196",
+  "np_dis": "133/196",
+  "np_sig": "117/196",
+  "np_sig_or_ai": 164,
+  "others_ai": "12/200",
+  "others_sig": "0/200",
+  "raised": "257/396",
+  "raises_needed": "188/257",
+  "rules_correct": "358/396",
+  "s": 939.33,
+  "second_attempt": 2,
+  "tokens": {
+   "estimated": false,
+   "input": 320648,
+   "output": 12902
+  },
+  "unanswered": {
+   "provider_unavailable": 1
+  },
+  "waiting": 396
+ },
+ "synthetic": {
+  "ai_correct": "59/60",
+  "ai_values": {
+   "instruction": 3,
+   "none": 57,
+   "null": 1
+  },
+  "answered": "60/61",
+  "at": "2026-11-11T11:56:01+00:00",
+  "done": "61/61",
+  "git": "1e5d13c",
+  "lat": {
+   "p50": 2620.192,
+   "p95": 21362.967
+  },
+  "missed": [],
+  "n": 61,
+  "np": "–",
+  "np_ai": "–",
+  "np_dis": "–",
+  "np_sig": "–",
+  "np_sig_or_ai": 0,
+  "others_ai": "3/61",
+  "others_sig": "4/61",
+  "raised": "5/61",
+  "raised_v1": 1,
+  "raises_needed": "0/5",
+  "rules_correct": "61/61",
+  "s": 467.16,
+  "second_attempt": 2,
+  "tokens": {
+   "estimated": false,
+   "input": 48835,
+   "output": 2326
+  },
+  "unanswered": {
+   "provider_unavailable": 1
+  },
+  "v1_vs_v2": {
+   "both": 60,
+   "changed": 2,
+   "from_right": 1,
+   "to_right": 1,
+   "v1_correct": 59,
+   "v2_correct": 59
+  },
+  "waiting": 61
+ }
+}

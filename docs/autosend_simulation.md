@@ -149,11 +149,11 @@ Not planned, and not to be built without the owner. In the order the measurement
 2. **A signal for text that addresses the system.** The rules and the AI agreed on cases whose text both
    contained an attack and named a category; agreement is not independence when the attacker writes the
    keyword. A plain-code check (never AI) could hold any case that talks to the system.
-   **First version built on 2026-11-11 (ADR-032, attention signals):** in the real workflow it only raises a
-   case for the reviewer; here it is the `screened` policy. On the saved Typhoon answers `screened` would have
-   sent 0 of the hard set's 38 `needs_person` cases (`agree_high`: 32) and none of its 16 steering attempts, but
-   all 75 of BIPIA's attacks, which the phrases do not recognise
-   ([evidence](evidence/2026-11-11-attention-signals.md)). Still not enough for a button.
+   **Built on 2026-11-11 (ADR-032 code signals, ADR-033 the AI's flag):** in the real workflow both only raise
+   a case for the reviewer; here they are the `screened` policy. On a live Typhoon run of ten sets (1,780 cases)
+   `screened` would have sent 11 of 266 `needs_person` cases (`agree_high`: 113) and 23 of 99 cases with an
+   injected instruction (`agree_high`: 89), and 48 cases to the wrong team
+   ([evidence](evidence/2026-11-11-attention-signals.md)). Better, and still not enough for a button.
 3. **Independent labels.** Every label here is the developer's (and the open sets' are a mapping). Reviewer
    labels from 2.8, or the owner's in E5, would come first.
 4. **An ADR that changes rule 4**, scoped to one category or one low-risk action, with a person able to undo
