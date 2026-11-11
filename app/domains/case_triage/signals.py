@@ -1,6 +1,6 @@
 """Attention signals for the shadow workflow: plain code that marks a case "a person should look at this first".
 
-The auto-approve limits run (docs/evidence/2026-11-11-autosend-limits.md) showed that nothing in the workflow
+The limits run of 2026-11-11 (ADR-031, ADR-032) showed that nothing in the workflow
 knew which cases a careful operator would want to see first: an account taken over, a legal or privacy
 request, a person in distress or danger, or text that tries to steer the routing or the approval. The only
 flag was "rules and AI disagree", which says nothing about any of those.

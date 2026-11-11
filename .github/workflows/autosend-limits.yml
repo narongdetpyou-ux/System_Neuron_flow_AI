@@ -17,6 +17,8 @@ on:
       - "tests/open_benchmarks/**"
       - "app/eval/autosend_sim.py"
       - "app/eval/golden/case_triage_autosend_hard_v1.json"
+      - "app/eval/golden/case_triage_attention_heldout_v1.json"
+      - "app/domains/case_triage/signals*"
   workflow_dispatch:
     inputs:
       provider:
@@ -95,7 +97,9 @@ jobs:
           ARGS=()
           if [ -n "$LIMIT" ]; then ARGS+=(--limit "$LIMIT"); fi
           if [ "$PROVIDER" = "typhoon" ]; then ARGS+=(--min-interval-s 1); fi
-          HARD=(hard=app/eval/golden/case_triage_autosend_hard_v1.json)
+          # The held-out attention set (ADR-032) runs with the hard set: 64 more cases.
+          HARD=(hard=app/eval/golden/case_triage_autosend_hard_v1.json
+                attention=app/eval/golden/case_triage_attention_heldout_v1.json)
           OPEN=(bipia=open-sets/open_bipia_injection_v1.json clinc150=open-sets/open_clinc150_v1.json
                 banking77=open-sets/open_banking77_v1.json massive=open-sets/open_massive_th_en_v1.json)
           EXISTING=(synthetic=app/eval/golden/case_triage_synthetic_v1.json
@@ -117,6 +121,8 @@ jobs:
               "${ARGS[@]}" > "reports/$PROVIDER-$NAME.md"
             REPORTS+=(--report "reports/$PROVIDER-$NAME.json")
           done
+          # The held-out attention scorecard goes on the run page: which cases were raised for a person first.
+          if [ -f "reports/$PROVIDER-attention.md" ]; then cat "reports/$PROVIDER-attention.md" >> "$GITHUB_STEP_SUMMARY"; fi
           # Fails only if a real job did not wait for a person (a promise, not a score threshold).
           python -m app.eval.autosend_sim "${REPORTS[@]}" --out "reports/autosend-sim-$PROVIDER.json" \
             --summary "$GITHUB_STEP_SUMMARY"

@@ -277,7 +277,7 @@ class ReadRouteTests(ApiTestCase):
                 break
         self.assertEqual(kinds[:2], ["job.queued", "job.claimed"])
         self.assertEqual(kinds[-1], "job.review_required")
-        self.assertEqual(kinds.count("step.succeeded"), 4)
+        self.assertEqual(kinds.count("step.succeeded"), 5)
         for bad in ({"limit": ["0"]}, {"limit": ["101"]}, {"after": ["-1"]}, {"limit": ["ten"]}):
             self.assertEqual(get(self.app, f"/v1/jobs/{job['job_id']}/events", bad).status, 400, bad)
 
@@ -306,10 +306,10 @@ class ReadRouteTests(ApiTestCase):
     def test_status_describes_each_workflows_steps_without_params(self):
         plans = {w["name"]: w["steps"] for w in body_of(get(self.app, "/v1/status"))["workflows"]}
         v2 = plans["case_triage.v2"]
-        self.assertEqual([step["id"] for step in v2], ["classify_rules", "classify_llm", "compare", "prepare"])
+        self.assertEqual([step["id"] for step in v2], ["classify_rules", "classify_llm", "screen", "compare", "prepare"])
         self.assertEqual([step["depends_on"] for step in v2],
-                         [[], [], ["classify_rules", "classify_llm"], ["compare"]])
-        self.assertEqual([step["max_attempts"] for step in v2], [1, 2, 1, 1])
+                         [[], [], [], ["classify_rules", "classify_llm", "screen"], ["compare"]])
+        self.assertEqual([step["max_attempts"] for step in v2], [1, 2, 1, 1, 1])
         self.assertEqual(v2[0]["timeout_s"], 5)  # Core's default when a step names none
         self.assertGreater(v2[1]["timeout_s"], 5)  # the AI step waits longer than its HTTP timeout
         self.assertEqual([(step["id"], step["agent"]) for step in plans["case_triage.v1"]],
@@ -345,7 +345,7 @@ class ReadRouteTests(ApiTestCase):
         self.assertEqual(response.status, 200)
         plans = {w["name"]: w["steps"] for w in body_of(response)["workflows"]}
         self.assertIsNone(plans["broken.v1"])
-        self.assertEqual(len(plans["case_triage.v2"]), 4)
+        self.assertEqual(len(plans["case_triage.v2"]), 5)
 
     def test_page_and_assets_carry_security_headers(self):
         page = get(self.app, "/", headers={})

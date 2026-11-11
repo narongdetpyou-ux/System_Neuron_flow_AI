@@ -60,6 +60,7 @@ class DecideTests(unittest.TestCase):
         expected = {"ai_high": ["access", "billing", None, "other", "billing", None],
                     "agree": ["access", None, "upload", "other", "billing", None],
                     "agree_high": ["access", None, None, "other", "billing", None],
+                    "screened": ["access", None, None, "other", "billing", None],  # no row has a signal
                     # strict: no review reason at all, so "other" by rules (no keyword) and masked data hold.
                     "strict": ["access", None, None, None, None, None]}
         for policy, decisions in expected.items():

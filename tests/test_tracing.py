@@ -592,7 +592,7 @@ class TracedServiceTests(unittest.TestCase):
             named.setdefault(item["name"], []).append(item)
         self.assertEqual(sorted(named), ["POST /v1/jobs", "chat mock-keyword-1", "job case_triage.v2", "queue wait",
                                          "run", "step classify_llm", "step classify_rules", "step compare",
-                                         "step prepare"])
+                                         "step prepare", "step screen"])
         (request,), (job_span,), (run,), (chat,) = (named["POST /v1/jobs"], named["job case_triage.v2"], named["run"],
                                                   named["chat mock-keyword-1"])
         self.assertNotIn("parentSpanId", request)  # the request is the root of the job's trace
@@ -610,7 +610,7 @@ class TracedServiceTests(unittest.TestCase):
         versions = {name: attributes_of(items[0]).get("neuron_flow.agent.version")
                     for name, items in named.items() if name.startswith("step ")}
         self.assertEqual((versions["step classify_rules"], versions["step compare"], versions["step prepare"]),
-                         (rules.rule_version(), "shadow-1", "shadow-1"))
+                         (rules.rule_version(), "shadow-2", "shadow-2"))
         self.assertTrue(versions["step classify_llm"].startswith("llm=mock/mock-keyword-1;prompt="), versions)
         # Reading the job was a request of its own: its own trace, with the route template, not the path.
         reads = [item for spans in self.traces().values() for item in spans if item["name"] == "GET /v1/jobs/{job_id}"]
@@ -674,7 +674,7 @@ class TracedServiceTests(unittest.TestCase):
         _status, view = self.call(service, "GET", f"/v1/jobs/{job['job_id']}")
         _status, events = self.call(service, "GET", f"/v1/jobs/{job['job_id']}/events?limit=100")
         self.flush(service)
-        self.assertEqual(len(self.traces()[view["trace_id"]]), 9)  # the scan below has the whole trace to read
+        self.assertEqual(len(self.traces()[view["trace_id"]]), 10)  # the scan below has the whole trace to read
         sent = b"".join(self.receiver.bodies()).decode("ascii")  # the encoder only ever writes ASCII
         second = view["result"]["review"]["second_opinion"]
         private = [*SENTINELS, SECRET_SUMMARY, "CASE-SENTINEL-42", second["rationale"],

@@ -48,10 +48,19 @@ jobs:
         run: >-
           python -m app.eval.triage_shadow_eval --golden app/eval/golden/case_triage_autosend_hard_v1.json
           --out autosend-hard-mock.json --compare-with tests/baselines/autosend_hard_mock.json
+      # Attention signals (ADR-032): the 64 held-out cases with the mock, every answer against its baseline. The
+      # scorecard on the run page shows how many cases a person should see first were raised, and the misses.
+      - name: Score the held-out attention set and compare every case with the baseline (offline mock AI)
+        if: ${{ !cancelled() }}
+        run: >-
+          python -m app.eval.triage_shadow_eval --golden app/eval/golden/case_triage_attention_heldout_v1.json
+          --out attention-heldout-mock.json --summary "$GITHUB_STEP_SUMMARY"
+          --compare-with tests/baselines/attention_heldout_mock.json
       - name: Simulate an auto-approve button on the saved mock answers (a replay; nothing is sent)
         if: ${{ !cancelled() }}
         run: >-
           python -m app.eval.autosend_sim --report autosend-hard-mock.json --report shadow-eval-mock.json
+          --report attention-heldout-mock.json
           --out autosend-sim-mock.json --summary "$GITHUB_STEP_SUMMARY"
       # The study guide's scorecard and eval gate (roadmap 3.3): fails when a promise breaks (a link outside the
       # library, more than 5 resources) or when any request answers differently from the baseline.

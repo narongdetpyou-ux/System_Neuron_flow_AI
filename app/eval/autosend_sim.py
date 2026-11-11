@@ -32,7 +32,7 @@ from pathlib import Path
 
 from neuron_flow.model import decode
 
-from app.domains.case_triage.contracts import CATEGORIES, CONFIDENCE_LEVELS
+from app.domains.case_triage.contracts import CATEGORIES, CONFIDENCE_LEVELS, SIGNAL_REASONS
 
 from .common import category_scores, fmt_rate, rate, to_json
 
@@ -52,6 +52,8 @@ POLICIES = (
      "en": "Rules and AI chose the same category: send there."},
     {"id": "agree_high", "th": "กฎกับ AI ตรงกัน และ AI มั่นใจสูง",
      "en": "Rules and AI agree, and the AI said high confidence."},
+    {"id": "screened", "th": "ตรงกัน + มั่นใจสูง + ไม่เจอสัญญาณ \"ต้องให้คนดูก่อน\" (ADR-032)",
+     "en": "Agree with high confidence, and the attention signals found nothing in the case text."},
     {"id": "strict", "th": "ตรงกัน + มั่นใจสูง + กฎเจอคำสำคัญ + ไม่มีข้อมูลส่วนตัวในเคส",
      "en": "Agree with high confidence, no review reason at all (so the rules matched a keyword), and no "
            "personal data was masked."},
@@ -60,6 +62,12 @@ POLICY_IDS = tuple(p["id"] for p in POLICIES)
 # The case text is not needed (the evidence keeps reports without it, joined to the case files by source_sha256).
 _ROW_KEYS = ("case_id", "language", "tags", "expected", "job_status", "rules_category", "llm_status",
              "llm_category", "llm_confidence", "agreement", "review_reasons", "masked", "decision")
+
+
+def signalled(row):
+    """An attention signal was found in the case text (signals.py, ADR-032). Reports saved before the signals
+    existed have no such reason: replay them first with ``app.eval.attention_replay``."""
+    return any(reason in SIGNAL_REASONS for reason in row["review_reasons"])
 
 
 def would_send(policy, row):
@@ -74,6 +82,8 @@ def would_send(policy, row):
         return row["rules_category"] if agree else None
     if policy == "agree_high":
         return row["rules_category"] if agree and high else None
+    if policy == "screened":
+        return row["rules_category"] if agree and high and not signalled(row) else None
     if policy == "strict":
         return row["rules_category"] if agree and high and not row["review_reasons"] and not row["masked"] else None
     raise ValueError(f"Unknown policy {policy!r}")

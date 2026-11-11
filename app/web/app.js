@@ -49,10 +49,14 @@
     number: "ตัวเลขยาว (เช่น เลขบัญชี)", name: "ชื่อ",
   };
   const REASON = {
+    signal_distress: "ต้องดูก่อน: ผู้เขียนอาจกำลังลำบากหรือไม่ปลอดภัย",
+    signal_security: "ต้องดูก่อน: อาจเป็นเหตุด้านความปลอดภัยของบัญชีหรือการเงิน",
+    signal_legal_privacy: "ต้องดูก่อน: เกี่ยวกับกฎหมายหรือข้อมูลส่วนบุคคล",
+    signal_instruction: "ต้องดูก่อน: ข้อความมีลักษณะสั่งระบบ (ระบบไม่ทำตาม)",
     rules_llm_disagree: "กฎกับ AI เห็นไม่ตรงกัน",
     llm_low_confidence: "AI ไม่ค่อยมั่นใจ",
     llm_unavailable: "AI ใช้งานไม่ได้ตอนนั้น จึงใช้ข้อเสนอของกฎอย่างเดียว",
-    rules_no_keyword_match: "กฎไม่เจอคำสำคัญ (กฎรู้จักแค่คำภาษาอังกฤษบางคำ)",
+    rules_no_keyword_match: "กฎไม่เจอคำสำคัญ",
   };
   const UNAVAILABLE = {
     provider_unavailable: "ผู้ให้บริการ AI ไม่ตอบ (ลองแล้ว 2 ครั้ง)",
@@ -74,21 +78,22 @@
     unknown: "ไม่ได้บันทึกสาเหตุ",
   };
   const STEP = {
-    classify_rules: "กฎเดิมจัดหมวด", classify_llm: "AI ให้ความเห็นที่สอง", compare: "เทียบสองความเห็น",
+    classify_rules: "กฎเดิมจัดหมวด", classify_llm: "AI ให้ความเห็นที่สอง", screen: "ตรวจหาสัญญาณที่ต้องให้คนดูก่อน",
+    compare: "เทียบสองความเห็น",
     prepare: "เตรียมข้อเสนอให้คนตรวจ", classify: "กฎจัดหมวด",
     detect_topic: "AI ถอดความว่าอยากเรียนเรื่องอะไร", pick_resources: "กฎเลือกแหล่งเรียน (ไม่เกิน 5)",
     build_path: "กฎเรียงลำดับการเรียน", explain: "AI อธิบายเป็นภาษาธรรมดา", answer: "เตรียมคำตอบเป็นชั้น",
     record_routing: "บันทึกว่าเคสไปคิวไหน และใครอนุมัติ",
   };
   const STEP_SHORT = {
-    classify_rules: "กฎเดิม", classify_llm: "AI", compare: "เทียบ", prepare: "เตรียม", classify: "กฎ",
+    classify_rules: "กฎเดิม", classify_llm: "AI", screen: "สัญญาณ", compare: "เทียบ", prepare: "เตรียม", classify: "กฎ",
     detect_topic: "ถอดความ", pick_resources: "เลือกแหล่ง", build_path: "เรียงลำดับ", explain: "อธิบาย", answer: "คำตอบ",
     record_routing: "บันทึกผล",
   };
   const AI_STEPS = new Set(["classify_llm", "detect_topic", "explain"]);
   const ROLE = {
     classify_rules: "ข้อเสนอหลัก (กฎ)", classify: "ข้อเสนอหลัก (กฎ)", classify_llm: "ความเห็นที่สอง (AI · shadow)",
-    compare: "เทียบสองความเห็น", prepare: "เตรียมให้คนตรวจ",
+    screen: "กฎ: จับเรื่องที่ต้องให้คนดูก่อน (ไม่เปลี่ยนหมวด)", compare: "เทียบสองความเห็น", prepare: "เตรียมให้คนตรวจ",
     detect_topic: "AI เสนอหัวข้อจากสมุดหัวข้อ", pick_resources: "กฎ: เฉพาะแหล่งในคลังที่ตรวจแล้ว",
     build_path: "กฎ: พื้นฐานก่อน ง่ายไปยาก", explain: "AI อธิบาย (ไม่เขียนลิงก์เอง)", answer: "คำตอบ ไม่ต้องรอคนตรวจ",
     record_routing: "กฎ: บันทึกตามที่คนอนุมัติ ไม่ส่งอะไรออกนอกระบบ",
@@ -790,6 +795,10 @@
         ? `AI: ${CATEGORY[second.category] || second.category} · มั่นใจ${CONFIDENCE[second.confidence] || second.confidence}`
         : "AI ใช้งานไม่ได้ จึงใช้กฎอย่างเดียว";
     }
+    if (stepId === "screen") {
+      const signals = (review.review_reasons || []).filter((code) => code.startsWith("signal_"));
+      return signals.length ? `เจอ ${signals.length} สัญญาณ → ยกให้ดูก่อน` : "ไม่เจอสัญญาณ";
+    }
     if (stepId === "compare") {
       return { agree: "ตรงกัน", disagree: "ไม่ตรงกัน → ยกให้ดูก่อน", llm_unavailable: "เทียบไม่ได้ (AI ใช้งานไม่ได้)" }[review.agreement] || null;
     }
@@ -1145,7 +1154,7 @@
     const masked = (result.ai || {}).masked;
     if (masked && typeof masked === "object") rows.push(["ปิดข้อมูลส่วนตัวก่อนส่งให้ AI", maskedText(masked)]);
     const agreement = {
-      agree: "ตรงกัน ความสำคัญปกติ",
+      agree: "ตรงกัน",
       disagree: "ไม่ตรงกัน ระบบจึงยกให้คนดูก่อน (ข้อเสนอหลักยังเป็นของกฎ)",
       llm_unavailable: "เทียบไม่ได้ เพราะ AI ใช้งานไม่ได้ จึงใช้ข้อเสนอของกฎ",
     }[review.agreement];

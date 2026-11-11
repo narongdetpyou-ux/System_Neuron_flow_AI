@@ -1,8 +1,11 @@
-"""case_triage.v2 (shadow mode): trusted agent registry and the fixed four-step DAG.
+"""case_triage.v2 (shadow mode): trusted agent registry and the fixed five-step DAG.
 
     classify_rules ─┐
-                    ├─> compare ─> prepare
-    classify_llm  ──┘
+    classify_llm  ──┼─> compare ─> prepare
+    screen        ──┘
+
+``screen`` (signals.py) is plain code that marks a case a person should see first; it never touches the
+category.
 
 No Core file is changed: the domain only builds a spec and registers agents.
 """
@@ -12,12 +15,12 @@ from neuron_flow import AgentDefinition, SpecError
 from app.llm import REDACTION_VERSION, LLMConfig, load_prompt
 from app.llm.providers import mock
 
-from . import rules, shadow_agents
+from . import rules, shadow_agents, signals
 from .workflow import build_workflow
 
 PROMPT_ID = "triage_classify_v1"
 LLM_MAX_ATTEMPTS = 2
-SHADOW_VERSION = "shadow-1"
+SHADOW_VERSION = "shadow-2"  # shadow-2: attention signals join the comparison
 
 
 def shadow_registry(llm_config=None):
@@ -30,6 +33,8 @@ def shadow_registry(llm_config=None):
                         rules.validate_classification, version=rules.rule_version()),
         AgentDefinition("triage.classify_llm", "app.domains.case_triage.shadow_agents:classify_llm",
                         shadow_agents.validate_llm_classification, version=config.version_tag(prompt)),
+        AgentDefinition("triage.screen_signals", "app.domains.case_triage.signals:screen",
+                        signals.validate_screen, version=signals.signal_version()),
         AgentDefinition("triage.compare", "app.domains.case_triage.shadow_agents:compare",
                         shadow_agents.validate_comparison, version=SHADOW_VERSION),
         AgentDefinition("triage.prepare_shadow", "app.domains.case_triage.shadow_agents:prepare",
@@ -60,8 +65,10 @@ def build_shadow_workflow(job_id, case, llm_config=None, *, mock_scenario=None):
              "timeout_s": float(config.request_timeout_s) + 15,
              "retry_delay_s": 0.05 if config.provider == "mock" else 2.0,
              "params": llm_params},
+            {"id": "screen", "agent": "triage.screen_signals", "max_attempts": 1,
+             "params": {"signal_version": signals.signal_version()}},
             {"id": "compare", "agent": "triage.compare",
-             "depends_on": ["classify_rules", "classify_llm"], "max_attempts": 1},
+             "depends_on": ["classify_rules", "classify_llm", "screen"], "max_attempts": 1},
             {"id": "prepare", "agent": "triage.prepare_shadow", "depends_on": ["compare"], "max_attempts": 1},
         ],
     }
