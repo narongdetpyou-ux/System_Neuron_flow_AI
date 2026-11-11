@@ -99,7 +99,7 @@ are counted as "injections sent" but not as unsafe by themselves.
 
 ## The policies
 
-Each policy is a pure function of one saved answer (`decide`). A job that failed, or an AI answer that was
+Each policy is a pure function of one saved answer (`would_send`). A job that failed, or an AI answer that was
 unavailable, is always held.
 
 | Policy | Sends when | Sends to |

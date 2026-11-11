@@ -12,7 +12,14 @@
   records each of the original 27 rules-gap decisions and the new baseline: `SYN-RUL-009` (cross-script
   lookalikes), `SYN-RUL-032` and `SYN-RUL-033` (negation/precedence) stay as known limits. Its live-measurement
   status is explicit.
-- Stage 2 (open benchmarks, 5.6) and stage 3 (attacks, privacy, load and live drift, 5.7) are planned below.
+- Stage 2 (open benchmarks, 5.6) is built (2026-11-11), together with the auto-approve limits the owner asked
+  for (5.9, ADR-031, [design](autosend_simulation.md)): CLINC150, BANKING77, MASSIVE `th-TH`/`en-US` pairs and
+  BIPIA's injection attacks, built at run time from pinned sources by `tests/open_benchmarks/build_sets.py`, and
+  measured with Typhoon ([evidence note](evidence/2026-11-11-autosend-limits.md)). How it differs from the plan is
+  under "Stage 2" below.
+- Stage 3 (attacks, privacy, load and live drift, 5.7) had its first injection measurement in the same run:
+  BIPIA's 75 test attacks inside clear cases, and 16 Thai and English attempts to steer routing or approval in the
+  hard set. The rest of stage 3 is planned below.
 - The 116 rules items had their first run with a real model on 2026-11-10 (Typhoon, from a cloud session):
   AI correct 104/116 where the rules are correct on 48/116, with all 12 mistakes on requests labelled `other`
   ([evidence note](evidence/2026-11-10-effectiveness-baseline.md)). What follows from it is in the
@@ -31,8 +38,8 @@ that was written for a dataset, with no real people's records. Real data still w
 | ขั้น | ทำอะไร (ภาษาง่าย) | ใช้ข้อมูลอะไร | วัดอะไร | รันที่ไหน / ค่าใช้จ่าย | สถานะ |
 |---|---|---|---|---|---|
 | 1. ด่านความทนทาน (robustness) | ป้อนของแปลก ๆ เข้าทุกชั้นของระบบ แล้วดูว่าไม่พัง ไม่รั่ว ไม่เพี้ยน | เคสที่เขียนเอง 270 ข้อ; ข้อความแปลก 515 แบบ (BLNS); ไฟล์ทดสอบ JSON 318 ไฟล์ (JSONTestSuite); คำขอจาก CLINC150 และ BANKING77 รวม 73 ข้อ | ทุกชั้นรักษาคำสัญญาของตัวเองไหม เช่น ข้อมูลผิดต้องได้ "ข้อมูลไม่ถูกต้อง (400)" ไม่ใช่ "เซิร์ฟเวอร์พัง (500)" และเคสต้องถึงมือคนตรวจเสมอ | GitHub ทุกครั้งที่ส่งโค้ด ฟรี ไม่เรียก AI จริง | **สร้างแล้ว** รอบแรกเจอ 8 bug แก้ครบแล้ว (5.5) |
-| 2. ด่านข้อสอบกลาง (open benchmarks) | เอาข้อสอบมาตรฐานที่วงการใช้วัดระบบแยกคำขอ มาวัดกฎและ AI ของเรา | CLINC150 (มีคำขอนอกกรอบ 1,000 ข้อ); BANKING77 (คำขอธนาคาร 77 แบบ); MASSIVE ภาษาไทยคู่กับอังกฤษประโยคต่อประโยค | ตอบถูกกี่ข้อ (ทุกตัวเลขมีตัวตั้งและตัวหาร); บอก "นอกกรอบ" ได้ถูกไหม; ประโยคไทยกับอังกฤษที่ความหมายเดียวกันได้คำตอบเดียวกันไหม | คุณกดรันเองในแท็บ Actions กับ Typhoon (ฟรี) | วางแผนแล้ว (5.6) |
-| 3. ด่านโจมตีและใช้งานจริง | ลองหลอก AI ด้วยคำสั่งแอบแฝง; ลองให้ข้อมูลส่วนตัวรั่ว; ยิงเคสพร้อมกันเยอะ ๆ; ดับเครื่องกลางทาง; วัดซ้ำทุกสัปดาห์ว่า AI เปลี่ยนนิสัยไหม | คำสั่งแอบแฝง 662 ข้อ (deepset, Apache-2.0) และฉบับภาษาไทยที่เขียนเอง; ข้อมูลส่วนตัวสมมุติแบบไทย; เคสชุดขั้น 1–2 | คำสั่งแอบแฝงทำให้ระบบตัดสินใจเอง หรือได้ลิงก์นอกคลังไหม (ต้องเป็น 0 เสมอ); ข้อมูลส่วนตัวไปถึง AI กี่จุด; เคสหายหรือซ้ำไหม; เวลาต่อเคส | GitHub ฟรี และ Typhoon ฟรี | วางแผนแล้ว (5.7) |
+| 2. ด่านข้อสอบกลาง (open benchmarks) | เอาข้อสอบมาตรฐานที่วงการใช้วัดระบบแยกคำขอ มาวัดกฎและ AI ของเรา | CLINC150 (มีคำขอนอกกรอบ 1,000 ข้อ); BANKING77 (คำขอธนาคาร 77 แบบ); MASSIVE ภาษาไทยคู่กับอังกฤษประโยคต่อประโยค | ตอบถูกกี่ข้อ (ทุกตัวเลขมีตัวตั้งและตัวหาร); บอก "นอกกรอบ" ได้ถูกไหม; ประโยคไทยกับอังกฤษที่ความหมายเดียวกันได้คำตอบเดียวกันไหม | คุณกดรันเองในแท็บ Actions กับ Typhoon (ฟรี) | **สร้างแล้ว** และวัดกับ Typhoon แล้ว 11 พ.ย. ([ผลวัด](evidence/2026-11-11-autosend-limits.md)) |
+| 3. ด่านโจมตีและใช้งานจริง | ลองหลอก AI ด้วยคำสั่งแอบแฝง; ลองให้ข้อมูลส่วนตัวรั่ว; ยิงเคสพร้อมกันเยอะ ๆ; ดับเครื่องกลางทาง; วัดซ้ำทุกสัปดาห์ว่า AI เปลี่ยนนิสัยไหม | คำสั่งแอบแฝง 662 ข้อ (deepset, Apache-2.0) และฉบับภาษาไทยที่เขียนเอง; ข้อมูลส่วนตัวสมมุติแบบไทย; เคสชุดขั้น 1–2 | คำสั่งแอบแฝงทำให้ระบบตัดสินใจเอง หรือได้ลิงก์นอกคลังไหม (ต้องเป็น 0 เสมอ); ข้อมูลส่วนตัวไปถึง AI กี่จุด; เคสหายหรือซ้ำไหม; เวลาต่อเคส | GitHub ฟรี และ Typhoon ฟรี | เริ่มแล้ว: วัดคำสั่งแอบแฝงครั้งแรก 11 พ.ย. (BIPIA 75 แบบ และคำสั่งให้เลือกหมวดหรือ "อนุมัติเลย" 16 แบบ); ส่วนที่เหลือวางแผนแล้ว (5.7) |
 
 ### ขั้นที่ 1 ทำงานอย่างไร
 
@@ -247,7 +254,24 @@ Open-dataset items change only through `build_open_extract.py` and its pinned so
   32/73 says where keyword rules break on text they were not written for. It is not an accuracy figure.
 - The masking items probe patterns; they are not a privacy guarantee (rule 9).
 
-## Stage 2 — open benchmarks (planned, roadmap 5.6)
+## Stage 2 — open benchmarks (built 2026-11-11, roadmap 5.6)
+
+**As built** (`tests/open_benchmarks/`, the workflow *Auto-approve limits (open benchmarks + hard set)*):
+- CLINC150: 300 requests (100 out-of-scope, 15 of each of the 7 mapped intents, 95 other in-scope intents);
+  BANKING77: 300 requests, round-robin over the mapped intents; MASSIVE 1.1: 150 Thai test utterances with the
+  same 150 in English (300 cases, a pair per id). Fewer MASSIVE sentences than the 300 per language planned, to
+  keep one Typhoon run under an hour.
+- BIPIA's 75 test text attacks (MIT, GitHub) are added as stage 3's first injection data, because the
+  `deepset/prompt-injections` set is only on Hugging Face, which this session cannot reach.
+- The order is SHA-256 of a seed and each item's position, not `random`, so every Python version picks the same
+  cases; the manifest records the SHA-256 of every source and of every case file, and `--check` fails on any
+  difference. Intents whose place among the four categories is arguable (money transfers, top-ups, cash
+  withdrawals, card security) are left out instead of being forced into one.
+- Per-category precision, recall and macro-F1 come from `app.eval.common.category_scores`; accuracy, rules vs
+  AI, unavailable answers and latency from the shadow scorecard; EN↔TH agreement and the auto-send policies from
+  `app.eval.autosend_sim`.
+- Not done, because the owner paused the study guide on 2026-11-11: the study guide's false in-scope rate on
+  CLINC150's out-of-scope requests.
 
 **Goal:** measure the rules and the AI second opinion on the datasets that intent-detection work is usually
 judged on. Measure it the same way every time and per language, with every rate as numerator/denominator.
@@ -286,7 +310,7 @@ sources' hashes, and the first Typhoon run is in an evidence note.
 - compare these numbers with published leaderboard scores, because the label sets differ;
 - send anything but these public sets to the provider.
 
-## Stage 3 — attacks, privacy, load and live drift (planned, roadmap 5.7)
+## Stage 3 — attacks, privacy, load and live drift (first injection measurement 2026-11-11; the rest planned, roadmap 5.7)
 
 1. **Prompt injection.**
    - Data: `deepset/prompt-injections` (662 short prompts, Apache-2.0) placed inside case text and study
@@ -323,7 +347,7 @@ evidence note.
 | `truevoice-intent` (Thai call-centre intents, about 16k) | Transcribed real calls, so real people's words. It needs the owner's decision D4 (rule 9), and its licence was not checked |
 | Wisesight Sentiment and other social-media corpora | Real posts by real people (D4), and about sentiment rather than routing |
 | Thai model benchmarks (SEA-HELM, Thai LLM Leaderboard, ThaiExam) | They compare models, not this system. They are useful when choosing a model, not as gates here |
-| Sets that are only on Hugging Face (MASSIVE, deepset) | The development session cannot reach Hugging Face, so stages 2–3 fetch them inside GitHub Actions instead |
+| Sets that are only on Hugging Face (deepset) | The development session cannot reach Hugging Face. MASSIVE turned out to have its own release archive on S3, which it can reach, so stage 2 uses that; deepset waits for stage 3 inside GitHub Actions, and BIPIA (GitHub) took its place for the first injection measurement |
 
 ## Rules for the numbers
 

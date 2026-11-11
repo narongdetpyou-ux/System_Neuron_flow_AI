@@ -97,6 +97,7 @@ guide** (`study_guide.v1`, the owner's first-response rule):
 | Error monitoring and tracing | `app/observability/` | Sentry errors, degraded-AI warnings and Runner recoveries; traces to Honeycomb (OTLP), off until a key is set; on for the Render service, first trace seen 2026-11-03 |
 | Scorecards: 61 development triage cases, 116 robustness triage cases, 40 held-out triage cases, and 67 study-guide requests (EN + TH, metaphors, out of scope, injection) | `app/eval/` | The 61 triage and 67 study-guide cases are CI eval gates; the robustness gate covers the 116 edge cases. Held-out measurement and the three-set live comparison are manual. Mock scores test the pipeline, not AI accuracy |
 | Robustness benchmark, stage 1: 270 hard synthetic edge cases (EN + TH) and four pinned open datasets (BLNS, JSONTestSuite, CLINC150, BANKING77) through every layer, offline | `tests/robustness/` | Runs in CI as a gate on every outcome; the first run found 8 bugs, all fixed in roadmap 5.5 (now 0 bugs, 239/270 own items pass after E2). Plan for stages 2–3: [benchmarking.md](docs/benchmarking.md) |
+| Open benchmarks (stage 2) and auto-approve limits: CLINC150, BANKING77, MASSIVE Thai/English pairs and BIPIA's injection attacks built at run time from pinned public files, a 128-case hard set, and a **simulated** button that would send a case without a person when the system is confident | `tests/open_benchmarks/`, `app/eval/autosend_sim.py` | Built and measured with Typhoon on 2026-11-11 (roadmap 5.6, 5.9; ADR-031; [design](docs/autosend_simulation.md), [evidence](docs/evidence/2026-11-11-autosend-limits.md)). A replay only: the service never sends without a person |
 | Intake API, durable job queue, single Runner with crash recovery, Thai web page | `app/api/`, `app/persistence/`, `app/services/`, `app/web/`, `app/serve.py` | Working (round 2), tested offline and as a container in CI; live on Render's free plan since 2026-11-01 |
 | Study guide (`study_guide.v1`): versioned topic catalog (11 topics, Thai and English), verified resource library (17 links) with a weekly link check, and the five-step workflow | `app/domains/study_guide/` | Working through the API and on the web page (roadmap 3.1–3.4); mock AI in CI; **first live run with Typhoon** on 2026-11-06 (synthetic set). New work paused by the owner on 2026-11-11; its checks keep running |
 | Human-review decisions: a ledger, a decisions API and a decision card with a "รอรีวิว" list on the page | `app/services/reviews.py`, `app/persistence/queue_store.py`, `app/web/` | Working since 2026-11-10 (roadmap 2.2, 2.4), with the owner's shared key as the only reviewer (ADR-027) |
@@ -120,9 +121,14 @@ so; a paid plan with a disk keeps them.
   fails when an answer has a link outside the library or more than 5 resources. Then the robustness benchmark sends
   the edge cases and open datasets through every layer and compares every outcome with
   `tests/baselines/robustness_v1.json` (docs/benchmarking.md). Its summary, in Thai, is on the run page too.
-  Last, one case goes step by step through the skill-handoff exchange, and every case of the three triage sets
-  goes end to end through a decision and the follow-up job it starts (`tests/handoff_check.py`); both are on the
-  run page.
+  The 128 hard auto-send cases are compared with `tests/baselines/autosend_hard_mock.json` too, and the
+  auto-approve simulation replays them (a table on the run page; it fails only if a real job did not wait for
+  a person). Last, one case goes step by step through the skill-handoff exchange, and every case of the three
+  triage sets goes end to end through a decision and the follow-up job it starts (`tests/handoff_check.py`);
+  both are on the run page.
+- *Actions → Auto-approve limits (open benchmarks + hard set)* builds the open-benchmark sets from pinned public
+  files, scores them with Typhoon (or the mock) with the hard set and the existing sets, and simulates the
+  auto-approve button on every answer ([docs/autosend_simulation.md](docs/autosend_simulation.md)).
 - *Actions → Service container* checks `render.yaml`, builds the same container as Render, submits cases
   over HTTP, approves one and checks the follow-up job it hands on to, restarts it and checks that nothing was
   lost. It also fails when the image lacks a bytecode
@@ -149,7 +155,7 @@ so; a paid plan with a disk keeps them.
 
 **Locally (Python 3.10+):**
 ```bash
-python -m unittest discover -s tests -v        # 448 tests
+python -m unittest discover -s tests -v        # 477 tests
 python -m examples.case_triage_demo            # v1 rules, one synthetic case
 python -m examples.case_triage_shadow_demo     # v2 shadow mode, three synthetic cases (offline mock AI)
 python -m app.eval.triage_shadow_eval          # scorecard on 61 synthetic cases
@@ -189,7 +195,8 @@ most 1 MiB. The agent `version` is frozen into each job, so an old job refuses t
 | [Study guide](docs/study_guide.md) | `study_guide.v1`: the workflow and its answer, failure handling, the mock's limits; the scorecard; the box and layered answer on the web page; the topic catalog and verified library, the weekly link check |
 | [Effectiveness plan](docs/effectiveness_plan.md) | What "effective" means here, as eleven measures with today's values, and six planned work packages (E1 to E6) that move them: a faster first case, rules that read Thai, a real model behind the page, recorded feedback, the edge of `other`, more Thai study resources |
 | [Skill handoff](docs/skill_handoff.md) | How separate skills pass work to each other: one exchange, fixed versioned routes, a common language with a translator on each side; what is recorded and shown, every refusal, and how it is tested |
-| [Benchmarking plan](docs/benchmarking.md) | Three stages of testing beyond our own cases: the robustness gate (built), open benchmarks and attacks, privacy, load and live drift (planned); the datasets, their licences and the ones left out |
+| [Benchmarking plan](docs/benchmarking.md) | Three stages of testing beyond our own cases: the robustness gate (built), open benchmarks (built), attacks, privacy, load and live drift (first injection measurement done; the rest planned); the datasets, their licences and the ones left out |
+| [Auto-approve limits](docs/autosend_simulation.md) | What a button that sends a case without a person would do, simulated on saved answers: the hard set, the open benchmarks, the four policies, what is measured, and what a real button would need (ADR-031) |
 | [Funding readiness pack](docs/funding/README.md) | Internal evidence register; not a submitted application |
 | [Evidence notes](docs/evidence/2026-11-03-render-operations.md) | Dated measurements; the first one covers Render operations (graceful stops, deploy filter, cold start), and [the first live AI runs](docs/evidence/2026-11-06-first-live-typhoon.md) are Typhoon's (2026-11-06); [the first robustness run](docs/evidence/2026-11-07-robustness-stage1.md) is from 2026-11-07, and [the local open model's first smoke run](docs/evidence/2026-11-08-first-local-model-smoke.md) and [first full run](docs/evidence/2026-11-08-first-local-model-full.md) from 2026-11-08; [the effectiveness baseline](docs/evidence/2026-11-10-effectiveness-baseline.md) (the 116 edge cases with Typhoon, and the first job after a start) is from 2026-11-10, and so is [the image's bytecode cache, before and after](docs/evidence/2026-11-10-e1-bytecode-cache.md) (measured in CI, not yet on Render), and [the answer to the first independent review](docs/evidence/2026-11-10-independent-review-response.md) |
 
@@ -204,11 +211,16 @@ most 1 MiB. The agent `version` is frozen into each job, so an old job refuses t
 - Agent child processes isolate failures; they are **not** a security sandbox.
 - All test data is synthetic. The open datasets in the robustness benchmark were written for those datasets and hold no real people's records (ADR-024). Mock AI scores are not evidence of AI accuracy: the triage mock scores high because its keywords were written with its cases, and the study guide mock scores low (topic correct 2/48).
 - Masking personal data before AI calls is pattern-based; it lowers the risk but does not make real data safe.
-- The only real-model runs are on the synthetic sets, with two free models by SCB 10X:
+- The only real-model runs are on synthetic sets and openly licensed text written for datasets, with two free
+  models by SCB 10X:
   - Typhoon's 30B model through its API (2026-11-06, [evidence](docs/evidence/2026-11-06-first-live-typhoon.md)):
     triage AI correct 60/61 in two runs (the rules 29/61), study guide topic correct 46/48 with no link
     outside the library; and on the 116 robustness edge cases (2026-11-10,
     [evidence](docs/evidence/2026-11-10-effectiveness-baseline.md)) AI correct 104/116 (the rules 48/116);
+    and once on 1,320 cases for the auto-approve limits (2026-11-11,
+    [evidence](docs/evidence/2026-11-11-autosend-limits.md)): it said `high` on 1,288 of 1,318 answers, 149 of
+    its 156 mistakes among them, and a simulated button that sends when rules and AI agree would have let 32
+    of the hard set's 38 cases that need a person through;
   - the local open model, Typhoon 2.5 4B run on the GitHub runner (ADR-026; 2026-11-08, two smoke runs and
     [one full run](docs/evidence/2026-11-08-first-local-model-full.md)): triage AI correct 58/61 with all 32
     of the rules' mistakes raised for review, study guide topic correct 44/48 with no link outside the

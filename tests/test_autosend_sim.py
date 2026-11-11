@@ -6,6 +6,8 @@ it: the button exists on paper only (rule 4).
 """
 
 import ast
+import contextlib
+import io
 import json
 import re
 import tempfile
@@ -61,16 +63,16 @@ class DecideTests(unittest.TestCase):
                     # strict: no review reason at all, so "other" by rules (no keyword) and masked data hold.
                     "strict": ["access", None, None, None, None, None]}
         for policy, decisions in expected.items():
-            self.assertEqual([sim.decide(policy, r) for r in (agree_high, ai_only, agree_medium, agree_other,
+            self.assertEqual([sim.would_send(policy, r) for r in (agree_high, ai_only, agree_medium, agree_other,
                                                              with_pii, unavailable)], decisions, policy)
 
     def test_a_failed_job_is_never_sent(self):
         failed = row("A", "access", "access", "access", job_status="FAILED", decision=None)
-        self.assertEqual({sim.decide(p, failed) for p in sim.POLICY_IDS}, {None})
+        self.assertEqual({sim.would_send(p, failed) for p in sim.POLICY_IDS}, {None})
 
     def test_unknown_policy(self):
         with self.assertRaises(ValueError):
-            sim.decide("everything", row("A", "access", "access", "access"))
+            sim.would_send("everything", row("A", "access", "access", "access"))
 
 
 class ArithmeticTests(unittest.TestCase):
@@ -80,6 +82,19 @@ class ArithmeticTests(unittest.TestCase):
         self.assertAlmostEqual(sim.wilson_upper(0, 100), 0.037, places=3)  # "no mistake in 100" is not 0%
         self.assertEqual(sim.wilson_upper(5, 5), 1.0)
         self.assertGreater(sim.wilson_upper(1, 20), 1 / 20)
+
+    def test_category_scores_keep_counts_and_treat_no_answer_as_a_miss(self):
+        from app.eval.common import category_scores
+        rows = [{"expected": "access", "p": "access"}, {"expected": "access", "p": "billing"},
+                {"expected": "billing", "p": "billing"}, {"expected": "other", "p": None}]
+        scores = category_scores(rows, "p", ("access", "upload", "billing", "other"))
+        self.assertEqual(scores["per_category"]["access"],
+                         {"support": 2, "predicted": 1, "correct": 1, "precision": 1.0, "recall": 0.5, "f1": 0.6667})
+        self.assertEqual(scores["per_category"]["billing"]["precision"], 0.5)
+        self.assertEqual(scores["per_category"]["other"]["f1"], 0.0)  # never answered: recall 0
+        self.assertIsNone(scores["per_category"]["upload"]["f1"])  # absent and never predicted: left out
+        self.assertEqual(scores["categories_in_macro"], 3)
+        self.assertAlmostEqual(scores["macro_f1"], (0.6667 + 0.6667 + 0.0) / 3, places=3)
 
     def test_policy_metrics_count_wrong_unsafe_needs_person_and_injection(self):
         rows = [row("OK", "access", "access", "access"),
@@ -133,7 +148,7 @@ class ReportTests(unittest.TestCase):
             sim.check_report(duplicate)
 
     def test_main_fails_when_a_real_job_did_not_wait_for_a_person(self):
-        with tempfile.TemporaryDirectory() as folder:
+        with tempfile.TemporaryDirectory() as folder, contextlib.redirect_stdout(io.StringIO()):
             path = Path(folder) / "r.json"
             path.write_text(json.dumps(report([row("A", "access", "access", "access")])), encoding="utf-8")
             self.assertEqual(sim.main(["--report", str(path), "--out", str(Path(folder) / "o.json")]), 0)
