@@ -99,6 +99,19 @@ What these figures say about speed, on this machine with these settings (one run
   2 slots and llama.cpp's buffers; this run does not break it down. A machine for the page (D7) needs room for it, or
   smaller settings, measured again.
 
+### An earlier run of the same file and prompt, for reference
+
+The owner ran the previous version of *Local open model eval* on `main` on 2026-11-12
+([43261009269](https://github.com/narongdetpyou-ux/System_Neuron_flow_AI/actions/runs/43261009269), `45f27f4`),
+triage only, `robustness_edge_v1`: the same file (`b36530292268`), prompt `triage_classify_v2` (`ad9f35e52ff5`),
+rules `keywords-v2:50f64599…` and signals `signals-v2:cc8a9051…`. From its job log: jobs 116/116, AI answered 116/116,
+AI right 98/116 (Thai 12/13, English 86/103), rules 105/116, agreement 103/116, raised 23/116, rule mistakes raised
+3/11, AI flags 13/116, tokens 94,215 in and 4,925 out, AI latency p50 4,058.7 ms and p95 4,852.0 ms. That runner
+answered about twice as fast as this PR's (8,464.0 ms p50 on 5 development cases), which is why the lane compares
+latencies only between files run on the same runner (`model: both`). The full run of this branch
+([43423749547](https://github.com/narongdetpyou-ux/System_Neuron_flow_AI/actions/runs/43423749547)) repeats the edge
+set with the same file and settings, so its per-case answers can be compared with this one.
+
 ## 6. Not done yet
 
 1. The owner's file: add `NF_MODEL_URL`, then *Local open model eval* with `model: both`, `triage_sets: all`,
