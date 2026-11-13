@@ -526,10 +526,13 @@ def profile_summary_lines(entry, result):
             f"| ขอบเขต | {entry['scope']} |", ""]
 
 
-def _github_mask(value):
-    """GitHub Actions hides a masked value wherever it would appear in the log; the command line itself is not shown."""
-    if os.environ.get("GITHUB_ACTIONS") == "true" and value and "\n" not in value:
-        print(f"::add-mask::{value}", flush=True)
+def _github_masker(environ):
+    """In GitHub Actions, ``::add-mask::`` hides a value wherever it would appear later in the log; the runner does not
+    show the command line itself (workflow commands are not echoed unless a workflow turns echoing on)."""
+    def mask(value):
+        if environ.get("GITHUB_ACTIONS") == "true" and value and "\n" not in value:
+            print(f"::add-mask::{value}", flush=True)
+    return mask
 
 
 def _write_outputs(path, values):
@@ -569,7 +572,7 @@ def main(argv=None, environ=None):
                 print(json.dumps(describe(entry), indent=1))
                 return 0
             result = fetch_profile(entry, args.dest.expanduser(), environ, base_url=check_base(args.base_url),
-                                   drive_url=args.drive_url, mask=_github_mask)
+                                   drive_url=args.drive_url, mask=_github_masker(environ))
             text = "\n".join(profile_summary_lines(entry, result)) + "\n"
             outputs = {"path": result["path"], "file": result["file"], "sha256": result["sha256"],
                        "size": result["size"], **{k: v for k, v in describe(entry).items()

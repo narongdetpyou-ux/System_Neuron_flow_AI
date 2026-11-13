@@ -23,7 +23,7 @@ differs, this file and architecture.md win.
   - ถ้าสองฝ่ายเห็นไม่ตรงกัน โค้ดเจอสัญญาณ หรือ AI ชี้ เคสจะถูกยกให้คนดูก่อน พร้อมบอกเหตุผล (ขั้น 5.10)
 - ถ้าเครื่องดับกลางทาง ระบบทำต่อได้ ส่งซ้ำก็ไม่เกิดงานซ้ำ
 - ยกเลิกเคสที่ยังรอคิวได้ และทุกคำขอมีรหัสคำขอ (request id) ไว้ไล่ดูใน log (ขั้น 1.2, 1.3)
-- ผ่านชุดทดสอบอัตโนมัติ 533 ข้อ และเปิดใช้ออนไลน์บน Render แล้ว ระบบปิดตัวอย่างเรียบร้อย และการแก้แค่เอกสารไม่ทำให้ Render ขึ้นเวอร์ชันใหม่ (ขั้น 0.1, 0.5)
+- ผ่านชุดทดสอบอัตโนมัติ 534 ข้อ และเปิดใช้ออนไลน์บน Render แล้ว ระบบปิดตัวอย่างเรียบร้อย และการแก้แค่เอกสารไม่ทำให้ Render ขึ้นเวอร์ชันใหม่ (ขั้น 0.1, 0.5)
 - หน้าเว็บเป็นแบบแชท: พิมพ์เคส ดูขั้นตอนก่อนส่ง กดยืนยัน แล้วติดตามใน Flow และประวัติเหตุการณ์ (ขั้น 1.6)
 - หน้าเว็บบอกว่ามีเคสรอกี่เคส เคสที่รอนานสุดรอมานานเท่าไร ปกติแต่ละเคสใช้เวลาเท่าไร และเคสที่ไม่สำเร็จล้มเพราะอะไร (ขั้น 5.3)
 - ถ้ามีคนแก้กฎหรือ prompt แล้วคำตอบของเคสทดสอบเคสไหนเปลี่ยน ช่องตรวจบน GitHub จะเป็นสีแดงและบอกว่าเคสไหนเปลี่ยนอะไร (ขั้น 5.2)
@@ -52,6 +52,7 @@ differs, this file and architecture.md win.
   ระบบจริงไม่มีปุ่มนี้ และยังให้คนตัดสินทุกเคส ผลหลัก: ความมั่นใจที่ AI บอกเองใช้แยกถูกผิดไม่ได้ (ในชุดเคสยาก AI บอก "มั่นใจสูง" 122 จาก 128 เคส
   รวมเคสที่ตอบผิด 12 จาก 13 เคส) และไม่มีกติกาไหนในระบบตอนนี้ที่รู้ว่า "เคสนี้ต้องให้คนดู" เคสบัญชีถูกแฮ็ก เรื่องกฎหมาย หรือคำสั่งแอบแฝงจึงหลุดได้
   ([วิธีวัด](autosend_simulation.md), [ผลวัด](evidence/2026-11-11-autosend-limits.md))
+- **โมเดลที่คุณปรับแต่งเอง (13 พ.ย. ตามที่คุณขอ, ขั้น 5.11, ADR-034):** Typhoon 4B ที่คุณฝึกเพิ่มด้วย QLoRA สำหรับการคัดแยกเคส ใช้ในระบบได้แล้วผ่านช่องทางโมเดลในเครื่อง เป็นความเห็นที่สองแบบเดิม (กฎยังเป็นคำแนะนำทางการ และคนยังตัดสินทุกเคส) ไฟล์ถูกตรึงด้วยขนาดและ SHA-256 ที่คุณให้ ระบบดาวน์โหลดจากลิงก์ใน secret `NF_MODEL_URL` เท่านั้น ไม่เก็บในแคชหรือ artifact ของ repo สาธารณะนี้ และมีการทดสอบปลายทางกับบริการจริงทั้งสาย (คนตัดสิน ใบรับของ Core หมดเวลา เครื่องรันโมเดลดับ คำตอบผิดรูป) ตอนนี้ทดสอบแล้วกับเครื่องรันโมเดลจำลองและกับไฟล์ต้นฉบับ 4B ไฟล์ของคุณรอลิงก์ ([วิธีใช้และวิธีให้ลิงก์](local_model_finetune.md))
 
 **ลำดับต่อจากนี้** แต่ละขั้นจบด้วยสิ่งที่คุณลองเองได้
 
@@ -76,6 +77,7 @@ differs, this file and architecture.md win.
 - จะเปิด repo เป็นสาธารณะเมื่อไร
 - จะให้หน้าเว็บจริงใช้ AI จริง (Typhoon ฟรี) หรือไม่ และจะเริ่มงานไหนของแผนเพิ่มประสิทธิผลก่อน (E1–E6)
 - ทักษะใหม่ตัวแรกที่จะต่อกับตัวกลาง (H4) คืออะไร
+- จะส่งไฟล์โมเดลที่ปรับแต่งเองให้ช่องทางวัดผลด้วยวิธีไหน (D10): ลิงก์ Google Drive หรือ Hugging Face แบบส่วนตัว (ขั้น 5.11)
 - จะมี "ปุ่มอนุมัติเอง" จริงหรือไม่ (D9): ตอนนี้ยังไม่ควร เพราะผลวัด (5.9) บอกว่าความมั่นใจของ AI ใช้แยกถูกผิดไม่ได้ และการเปลี่ยนนี้แก้กติกาข้อ 4
 
 ## How to use this file (for Claude Code)
@@ -146,6 +148,7 @@ owner.
 | 5.9 | Auto-approve limits: a simulated "send it myself" button on the open benchmarks and a hard set (ADR-031, [design](autosend_simulation.md)) | ✅ PR #66 (2026-11-11), asked for by the owner: a replay of saved answers, never wired into the service; on the 128-case hard set Typhoon said `high` on 122 and was wrong on 13, 12 of them `high`; every policy lets cases that must see a person through ([evidence](evidence/2026-11-11-autosend-limits.md)) | 5.6 |
 | 5.10 | Attention: raise the cases a person should see first, by code signals and the AI's flag (ADR-032, ADR-033) | ✅ built and measured in PR #67 (2026-11-11), the session's own plan after the owner said to plan anew with one expectation, better effectiveness, and then asked for more capability. Built: the `screen` step and signals v1 then v2 (v2 from the development half of the open data, measured on a sealed half), the prompt `triage_classify_v2` with an `attention` answer that can only add a flag, scorecard figures, a replay, the `screened` policy, CI steps. Live with Typhoon, 1,780 cases, all waiting for a person: `needs_person` raised 38/38 (development) and 32/32 (the developer's held-out set; 12/32 before); sealed open security requests 183/196; BIPIA 51/75 (sealed half 14/30; 0/75 before). Costs: raised cases 234 → 379 of 1,320, about twice the input tokens, the AI's category right 1,157 → 1,147 of 1,513 ([evidence](evidence/2026-11-11-attention-signals.md)). The page's mock AI never flags. Merging redeploys Render | 5.9 |
 | 5.8 | Local open-model lane: llama.cpp and Typhoon 2.5 4B on the GitHub runner (ADR-026) | ✅ built in PR #46, with two smoke runs ([evidence note](evidence/2026-11-08-first-local-model-smoke.md)); first full run on `main` on 2026-11-08: rule mistakes raised 32/32 (Typhoon 32/32), triage AI correct 58/61 (Typhoon 60/61), topic correct 44/48 (Typhoon 46/48), 0 of 142 links outside the library, about 7 times Typhoon's latency ([evidence note](evidence/2026-11-08-first-local-model-full.md)); next, the owner chooses a branch (5.8, "After the first full run", step 2) | — |
+| 5.11 | The owner's fine-tuned Typhoon 4B in the local lane, with an end-to-end check and a comparison (ADR-034, [design](local_model_finetune.md)) | 🟡 built in PR #68 (2026-11-13), asked for by the owner: the pin file, a private-link source (never cached or uploaded), the lane script, the end-to-end check (stand-in server in CI; the publisher's 4B on the runner), the comparison and the training-overlap check ([evidence](evidence/2026-11-13-finetune-integration.md)); the owner's file waits for the secret `NF_MODEL_URL` | 5.8 |
 | 6.1 | Pattern A: bounded read-only tool loop | ⬜ | 3.2 |
 | 6.2 | Pattern B: planner → checked plan → linked job | ⬜ | 2.2, 4.2 |
 | 6.3 | MCP server (submit, get, list; never review decisions) | ⬜ | 2.1 |
@@ -1305,6 +1308,46 @@ workflow types.
   review or send anything; let the AI's `none` lower a priority; add a phrase or a prompt line because of a
   held-out or sealed result (a change is a new version, measured again); print the sealed half's text.
 
+### 5.11 The owner's fine-tuned model in the local lane (asked by the owner on 2026-11-13)
+
+- **Why:** the owner wants an AI engine the project controls and hosts itself, starting with `case_triage.v2`. They
+  fine-tuned Typhoon 2.5 Qwen3 4B with QLoRA in Google Colab (232 training and 54 validation examples), merged it,
+  quantized it to Q4_K_M (`nf_typhoon4b_v01_q4_k_m.gguf`, 2,497,278,816 bytes, SHA-256 `323ea4bb91fe…18cc5c88`) and
+  asked for it to be integrated and tested for real, without changing the architecture or its checks.
+- **Built (PR #68, ADR-034; [design](local_model_finetune.md)):**
+  - `.github/local_models.json`: both model files pinned by size and SHA-256, with provenance;
+  - `fetch_model.py`: the pin file, and a private `link` source from `NF_MODEL_URL` (optional `NF_MODEL_TOKEN`),
+    Google Drive links included; only the pinned bytes are kept, the link is never printed, a link source is never
+    cached and the file is never uploaded;
+  - `local_model_lane.py`: one model on the runner (load time, first answer, scorecards, end-to-end check, peak
+    memory, token speeds); the workflow runs the publisher's file, the fine-tune or both on one runner;
+  - `tests/local_model_e2e.py`: the real service with the `local` provider, people's decisions, receipts, a timeout,
+    an unreachable server and (with `tests/fake_llama_server.py`) every malformed answer, run on every push;
+  - `tests/local_model_compare.py` (case by case against the base file and Typhoon 30B's saved run) and
+    `tests/training_overlap.py` (test cases found in training data, when `NF_TRAINING_URL` is given).
+- **Status (2026-11-13):** see the status table. Nothing in `app/` or Core changed; merging does not redeploy Render.
+- **Done when:**
+  - the owner's file runs with `model: both` on all five sets: downloaded and checked against the pin, the
+    end-to-end check green for both files, and the comparison in an evidence note with every rate as
+    numerator/denominator, the latency and memory, the failures and the run time;
+  - the training-data overlap is known (the overlap check, or the owner's statement of where the 232 examples came
+    from), and the figures are given without any case found in it.
+- **Owner test (ไทย):**
+  1. ใส่ลิงก์ไฟล์ GGUF ใน secret `NF_MODEL_URL` (วิธีอยู่ใน [local_model_finetune.md](local_model_finetune.md) หัวข้อ "สิ่งที่คุณต้องทำ")
+  2. เปิด GitHub → Actions → *Local open model eval* → Run workflow → model `both` · triage_sets `all` · e2e `full` → Run
+  3. รอราว 1.5–2 ชั่วโมง แล้วเปิด Summary ต้องเห็นไฟล์ของคุณ "ตรวจขนาดและ SHA-256 แล้ว", "ทดสอบปลายทาง ผ่านทุกข้อ" ของทั้งสองรุ่น
+     และตาราง "เทียบโมเดลบนชุดเคสเดียวกัน" ทั้ง 5 ชุด
+- **After the first run, in order:**
+  1. read the comparison together: in shadow mode what matters most is how many rule mistakes and `needs_person`
+     cases the AI raises for a person, then needless flags, answers outside the schema and latency; no target is set
+     before the run (as in 0.3 and 5.8);
+  2. the owner chooses: keep measuring (another version is a new entry and a new run, never an edited pin), retrain
+     (only for a reason the evidence shows, on data that does not contain these sets' cases), or stop;
+  3. serving the page with it needs a paid machine with room for the model (D7) and the owner's choice of how the
+     file is shared (D10).
+- **Don't:** present its numbers as Typhoon 30B's or Claude's; claim it for the study guide or any other domain; edit a
+  pin to point at other bytes; cache, upload or print the file or its link; let it decide anything (rule 4).
+
 ## Phase 6 — Milestone E: agent patterns and MCP
 
 ### 6.1 Pattern A: a bounded read-only tool loop inside one step
@@ -1609,6 +1652,7 @@ of H5 were built ([evidence](evidence/2026-11-11-skill-handoff.md)).
 | D8 | The personal e-mail address in 53 public commits | — (the setting in 7.6 stops new ones now) | Keep the history (chosen by the owner on 2026-11-10) · rewrite it and ask GitHub Support to purge the old commits · re-create the repository from the rewritten history (7.6) | Decided: kept as it is; new commits checked in CI |
 | D7 | An open model behind the online page | 5.8 step 4 | Mock (today) · Typhoon through 0.4 (free; what is typed goes to SCB 10X) · the local model on a paid machine with room for it (prices checked at the time) | The mock on the page; the local model only in GitHub Actions, for measuring |
 | D9 | Sending a case without a person (an auto-approve button) | not planned; it would change rule 4 and ADR-010 | No (today) · a narrow trial for one low-risk action with undo, only after a confidence that can be checked (E5), a check for text that talks to the system, and reviewer labels (2.8); see 5.9 | Simulation only (ADR-031): every case waits for a person |
+| D10 | How the owner's fine-tuned model file reaches the lane | 5.11 | A Google Drive link shared with "Anyone with the link" in the secret `NF_MODEL_URL` (fewest clicks; whoever holds the link can download it) · a private Hugging Face repository with a read-only token (`NF_MODEL_URL` + `NF_MODEL_TOKEN`; private) · not at all (measured only in Colab, outside this repository's checks) | Not shared yet; the lane runs the publisher's 4B until the secret exists |
 
 ## Evidence track
 
@@ -1753,3 +1797,9 @@ of H5 were built ([evidence](evidence/2026-11-11-skill-handoff.md)).
   category; a worse category on injected instructions), both fixed from development cases before the full run.
   Typhoon was unavailable for about an hour and the owner paused the work once for credits; the final run of
   1,780 cases is from one commit, in two parts.
+- 2026-11-13: the owner asked to integrate their own fine-tuned Typhoon 4B (QLoRA in Colab, merged and quantized to
+  Q4_K_M) through the `local` provider in shadow mode, with real integration tests and without changing the
+  architecture. Added 5.11, ADR-034 and D10 in PR #68: the file is pinned by the owner's size and SHA-256 and comes
+  from a private link in a secret (never cached, uploaded or printed); the lane runs it beside the publisher's file
+  on one runner; an end-to-end check runs the real service with it. The connected Google Drive did not show the
+  owner's folder, so the first run of the owner's file waits for the secret.

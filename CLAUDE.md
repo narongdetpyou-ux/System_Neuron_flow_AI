@@ -15,7 +15,10 @@ trusted agents in bounded child processes, retries, recovers after a crash and w
   reviewer credential until per-person tokens, 2.1);
 - an AI gateway (an offline mock, Claude, Typhoon: SCB 10X's Thai-first model, free within rate limits;
   ADR-021, or `local`: an open-weight model on a server we run ourselves, today llama.cpp with Typhoon 2.5 4B
-  on the GitHub runner; ADR-026);
+  on the GitHub runner; ADR-026). Since 2026-11-13 the local lane can also run the owner's own QLoRA fine-tune of
+  that 4B for case triage (`nf-typhoon4b-v01-q4_k_m`), pinned by size and SHA-256 in `.github/local_models.json` and
+  fetched from a private link in the secret `NF_MODEL_URL`, never cached or uploaded, with an end-to-end check of the
+  real service (ADR-034, [docs/local_model_finetune.md](docs/local_model_finetune.md));
 - triage scorecards on 61 development cases, 116 robustness cases and 40 held-out cases; E2 compares the
   original `keywords-v1` with versioned Thai/English `keywords-v2` using the same saved AI answers;
 - Sentry reporting, and tracing to Honeycomb (one trace per case; off until a key is set);
@@ -117,6 +120,10 @@ Read in this order when you need depth:
     `docs/evidence/2026-11-08-first-local-model-smoke.md`, `docs/evidence/2026-11-08-first-local-model-full.md`).
     There is none for Claude, and no security review or user study yet. A Typhoon or local result describes
     that model only; never present it as another model's, least of all Claude's.
+  - The owner's fine-tuned 4B (ADR-034) has no measurement here yet. Its pins are the owner's reported size and
+    SHA-256, and its Colab results (test 50/50, hard 36/36, attention 37/38, 141 s for one CPU answer) are the
+    owner's, not this repository's. Until its training data is checked (`tests/training_overlap.py`), say that
+    overlap with these sets is unknown.
   - Never write a number you did not measure. Record failures as well as successes.
 - **The philosophy covers how you talk, too.** Plain language outside, careful work inside, and small
   measured steps instead of perfection. When the owner brings up a technology or a logic system in everyday
@@ -189,7 +196,7 @@ If a task seems to need breaking a rule:
 ## 4. Checking your work
 
 ```bash
-python -m unittest discover -s tests -v        # all tests (533 on 2026-11-13); CI: Python 3.10 and 3.12
+python -m unittest discover -s tests -v        # all tests (534 on 2026-11-13); CI: Python 3.10 and 3.12
 python -m examples.case_triage_demo            # v1 rules, one synthetic case
 python -m examples.case_triage_shadow_demo     # v2 shadow mode with the offline mock AI
 python -m examples.study_guide_demo            # the study guide's answers to four synthetic requests
@@ -206,6 +213,11 @@ python -m app.eval.attention_replay --pair old-report.json cases.json  # the "lo
 python -m tests.open_benchmarks.attention_open_check --cache ~/open-bench-cache --part sealed  # signals on open data (counts)
 python -I tests/open_benchmarks/build_sets.py --out open-sets --cache ~/open-bench-cache --check  # open sets (network)
 python -m examples.skill_handoff_demo          # one case step by step through the exchange
+python tests/fake_llama_server.py --port 18080 &  # a stand-in for llama.cpp's server (ADR-034), then:
+python -m tests.local_model_e2e --llm-base-url http://127.0.0.1:18080/v1 --model-id fake-model:0123456789ab \
+    --phases service,failures,faults --fake-control   # the real service end to end with the local provider (~30 s)
+python -m tests.local_model_compare --model "A=a-*.json" --model "B=b-*.json"   # two models case by case
+python -m tests.training_overlap --training train.jsonl   # which test cases appear in a fine-tune's training data
 NEURON_FLOW_ACCESS_KEY=$(python -c "import secrets; print(secrets.token_urlsafe(24))") python -m app.serve
 ```
 
@@ -217,7 +229,8 @@ GitHub Actions (the owner can open these; the first three run on every push and 
   has a link outside the library or more than 5 resources. Last, the robustness benchmark (roadmap 5.4) fails when
   any item's outcome or sweep differs from `tests/baselines/robustness_v1.json`; its Thai summary lists the
   open bugs. Then the skill-handoff demo (one case step by step) and the handoff check over every case of the
-  three triage sets (ADR-030), which fails on any broken check; both write Thai summaries to the run page.
+  three triage sets (ADR-030), which fails on any broken check; both write Thai summaries to the run page. Last,
+  the local lane's end-to-end check against `tests/fake_llama_server.py` with every fault (ADR-034).
   Before the study guide's scorecard, the 128 hard auto-send cases run with the mock against
   `tests/baselines/autosend_hard_mock.json`, and the auto-approve simulation replays them with the 61 development
   cases (ADR-031); its Thai summary is on the run page and it fails only if a real job did not wait for a person.
@@ -270,12 +283,17 @@ GitHub Actions (the owner can open these; the first three run on every push and 
   default (`TYPHOON_API_KEY`, cases 1 s apart; about 1,800 cases with the held-out attention set and the sealed
   half of the open data, ADR-032); pull requests that change this lane get a run with the mock. This session can build the sets itself: `raw.githubusercontent.com` and MASSIVE's S3 archive
   are reachable from its network, Hugging Face is not.
-- *Local open model eval* (`local-model-eval.yml`, ADR-026, roadmap 5.8) runs both scorecards against an
-  open-weight model that the job runs itself: llama.cpp's server built from a pinned commit (cached), serving
-  Typhoon 2.5 Qwen3 4B from a Hugging Face file checked against its SHA-256 (`.github/scripts/fetch_model.py`),
-  on 127.0.0.1 with greedy decoding. No secret; nothing goes to an AI company. Pull requests that change
-  `app/llm/`, the workflow or its scripts get a smoke run (5 cases, 5 requests); *Run workflow* runs
-  everything. CPU only, so it is slow: the first full run took about 66 minutes, 55 of them the study guide.
+- *Local open model eval* (`local-model-eval.yml`, ADR-026, ADR-034, roadmap 5.8 and 5.11) runs pinned model files
+  on the runner itself: llama.cpp's server built from a pinned commit (cached), on 127.0.0.1 with greedy decoding.
+  `model` chooses the publisher's Typhoon 2.5 Qwen3 4B (Hugging Face, cached), the owner's fine-tune (from the
+  secret `NF_MODEL_URL`, optional `NF_MODEL_TOKEN`; never cached, never uploaded) or `both` on one runner;
+  `triage_sets` all five sets (409 cases) or one; the study guide only when asked; `e2e` the end-to-end check through
+  the real service. `.github/scripts/local_model_lane.py` runs each model (load time, first answer, scorecards,
+  end-to-end check, peak memory, token speeds), then `tests/local_model_compare.py` compares them case by case and
+  with Typhoon 30B's saved run; `NF_TRAINING_URL`, when set, adds the training-overlap check. The secrets are read
+  only on runs started by hand. Nothing goes to an AI company. Pull requests that change the lane get a smoke run
+  with the publisher's file (5 cases, 5 requests, a quick end-to-end check). CPU only, so it is slow: the first
+  full run took about 66 minutes, 55 of them the study guide.
   This session cannot reach Hugging Face: the model file's commit, size and SHA-256 are on the run page.
   GitHub's terms allow hosted runners only for building and testing the project, so this lane measures and
   never serves the web page.
@@ -365,6 +383,7 @@ Notes for cloud sessions (claude.ai/code):
 | `tests/open_benchmarks/` | stage 2 of the benchmarking plan (roadmap 5.6): `build_sets.py` builds the CLINC150, BANKING77, MASSIVE th/en and BIPIA case sets at run time from pinned sources (standard library, run with `python -I`; refuses any SHA-256 it does not expect), `manifest_v1.json` (the sources and every built file's SHA-256; `--check`), `NOTICE.md` (licences), and `attention_open_check.py` (the development and sealed halves of the same sources for the attention signals; the sealed half prints counts only and can be written as a case file at run time). Nothing downloaded is committed |
 | `tests/robustness/` | the robustness benchmark (docs/benchmarking.md): the synthetic set, the pinned open extract with its licences (`NOTICE.md`), the runner `bench.py`, the extract builder (`build_open_extract.py verify` re-checks the upstream files) and the 116-case file for live runs |
 | `tests/`, `examples/`, `.github/` | tests (`tests/baselines/` holds the eval gate's baseline), demos and smoke tests, CI (`.github/scripts/` holds the `render.yaml` and trace checks and the image's bytecode-cache check, `.github/otel/` the tracing check's collector; `.github/gitleaks.toml` and `.github/.gitleaksignore` the secret scan's rules and reviewed findings) |
+| `.github/local_models.json`, `tests/local_model_*.py`, `tests/fake_llama_server.py`, `tests/training_overlap.py` | the local lane (ADR-026, ADR-034): every model file pinned by size and SHA-256; `fetch_model.py` and `local_model_lane.py` in `.github/scripts/`; the end-to-end check, the model comparison, the stand-in for llama.cpp's server and the training-overlap check |
 | `.claude/` | the session-start hook for Claude Code cloud sessions |
 
 ## 7. Hosting (Render)
@@ -545,7 +564,21 @@ Notes for cloud sessions (claude.ai/code):
     (roadmap 0.4).
   - The rest of the roadmap is open.
 - **Next:** [docs/ROADMAP.md](docs/ROADMAP.md), the first item that is not ✅ and whose needs are met.
-  - **Attention is built and measured in PR #67 (2026-11-11), pending merge** (ADR-032, ADR-033, roadmap 5.10).
+  - **The owner's fine-tuned Typhoon 4B is built into the local lane in PR #68 (2026-11-13), pending merge**
+    (ADR-034, roadmap 5.11, D10; [docs/local_model_finetune.md](docs/local_model_finetune.md)). The owner fine-tuned
+    Typhoon 2.5 Qwen3 4B with QLoRA in Colab for case triage, merged and quantized it (Q4_K_M,
+    `nf_typhoon4b_v01_q4_k_m.gguf`, 2,497,278,816 bytes, SHA-256 `323ea4bb91fe…18cc5c88`), and asked for it to be
+    integrated through the `local` provider in shadow mode with real integration tests. The Google Drive connected
+    to the session did not show the owner's folder, so the file has not run here: the first run waits for the
+    repository secret `NF_MODEL_URL` (a Drive link shared with "Anyone with the link", or a private Hugging Face
+    repository with `NF_MODEL_TOKEN`; the owner's choice, D10). Everything else is built and tested: the pin file,
+    the private-link source (never cached, uploaded or printed), the lane script, the end-to-end check (against the
+    stand-in on every push, and against the publisher's 4B on the runner), the comparison and the training-overlap
+    check ([evidence](docs/evidence/2026-11-13-finetune-integration.md)). Only `.github/` and `tests/` change, so the
+    merge does not redeploy Render. Next: the owner adds the secret, then *Local open model eval* with `model: both`,
+    `triage_sets: all`; record the run in the evidence note (5.11, "Done when"); ask the owner where the 232
+    training examples came from, or for `NF_TRAINING_URL`.
+  - **Attention was built and measured in PR #67 and merged on 2026-11-11** (ADR-032, ADR-033, roadmap 5.10).
     The owner said to plan anew, not from the repository's plan, with one expectation: better effectiveness; after
     the first version (signals v1) the owner said it was not enough and asked for more capability. Now in the PR:
     signals v2 (wording from the development half of the open data, measured once on the sealed half) and the
@@ -560,7 +593,7 @@ Notes for cloud sessions (claude.ai/code):
     cases only. It changes `app/`, so the merge redeploys Render (queued cases are lost on the free plan). The
     page's mock AI always answers `none`: the page gets the AI's flag only with a real model (0.4, the owner's
     choice). Next after it: roadmap 5.10, "Next"; measure a prompt wording several times before changing it.
-  - **The auto-approve limits are built in PR #66 (2026-11-11), pending merge** (ADR-031, roadmap 5.6, 5.9 and the
+  - **The auto-approve limits were built in PR #66 and merged on 2026-11-11** (ADR-031, roadmap 5.6, 5.9 and the
     first injection measurement of 5.7): the hard set, the open-benchmark builder, the simulation, the CI step with
     the mock, the manual workflow and the first Typhoon run. After the merge: the owner's run of *Auto-approve
     limits* by hand. It also changes `app/eval/`, which is part of the image, so the merge redeploys Render (on the

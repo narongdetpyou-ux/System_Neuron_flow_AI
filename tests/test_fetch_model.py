@@ -419,6 +419,27 @@ class LinkTests(unittest.TestCase):
                              (SHA, "false", f"{FINETUNE}:{SHA[:12]}"))
             self.assertIn("ลิงก์ส่วนตัวจาก secret `NF_MODEL_URL`", summary.read_text(encoding="utf-8"))
 
+    def test_in_actions_the_only_lines_with_the_link_are_mask_commands(self):
+        import contextlib
+        import io
+        document = json.loads(PINS.read_text(encoding="utf-8"))
+        entry = dict(document["models"][FINETUNE], file="model.gguf", size=len(CONTENT), sha256=SHA)
+        with FakeLink({SECRET_PATH: octets()}) as link, tempfile.TemporaryDirectory() as work:
+            pins = Path(work) / "pins.json"
+            pins.write_text(json.dumps({"schema": document["schema"], "models": {FINETUNE: entry}}), encoding="utf-8")
+            printed = io.StringIO()
+            with contextlib.redirect_stdout(printed):
+                code = fetch_model.main(["--profile", str(pins), "--model", FINETUNE, "--dest", str(Path(work) / "m")],
+                                        environ={"GITHUB_ACTIONS": "true", "NF_MODEL_URL": link.base_url + SECRET_PATH,
+                                                 "NF_MODEL_TOKEN": TOKEN})
+        self.assertEqual(code, 0)
+        lines = printed.getvalue().splitlines()
+        with_secret = [line for line in lines if SECRET_PATH in line or TOKEN in line]
+        self.assertTrue(with_secret)  # the link and the token are masked before anything else is printed
+        self.assertTrue(all(line.startswith("::add-mask::") for line in with_secret), with_secret)
+        first_other = next(i for i, line in enumerate(lines) if not line.startswith("::add-mask::"))
+        self.assertTrue(all(not line.startswith("::add-mask::") for line in lines[first_other:]))
+
     def test_a_missing_secret_names_the_secret_to_add(self):
         with tempfile.TemporaryDirectory() as work:
             summary = Path(work) / "summary.md"
