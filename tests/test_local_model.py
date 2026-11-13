@@ -244,53 +244,79 @@ class RunPageTests(unittest.TestCase):
 
 
 class WorkflowFileTests(unittest.TestCase):
-    """The *Local open model eval* workflow's promises, checked on the file itself."""
+    """The *Local open model eval* workflow's promises, checked on the file itself (and on the lane script and pin file
+    it uses, ADR-034)."""
 
     @classmethod
     def setUpClass(cls):
         cls.text = WORKFLOW.read_text(encoding="utf-8")
+        cls.lane = (ROOT / ".github" / "scripts" / "local_model_lane.py").read_text(encoding="utf-8")
+        cls.fetch = (ROOT / ".github" / "scripts" / "fetch_model.py").read_text(encoding="utf-8")
+        cls.pins = json.loads((ROOT / ".github" / "local_models.json").read_text(encoding="utf-8"))
 
     def env_value(self, name):
         found = re.search(rf"^\s+{name}:\s*\"?([^\"\n#]*)\"?\s*(#.*)?$", self.text, re.MULTILINE)
         self.assertIsNotNone(found, name)
         return found.group(1).strip()
 
-    def test_it_uses_the_local_provider_and_no_secret(self):
+    def test_it_uses_the_local_provider_and_only_the_private_links_secrets(self):
         self.assertEqual(self.env_value("NEURON_FLOW_LLM_PROVIDER"), "local")
-        self.assertNotIn("secrets.", self.text)
-        self.assertNotRegex(self.text, r"API_KEY\s*:")  # no key variable is set at all
+        self.assertNotRegex(self.text, r"API_KEY\s*:")  # no AI provider's key variable is set at all
         timeout = float(self.env_value("NEURON_FLOW_LLM_TIMEOUT_S"))
         LLMConfig(provider="local", model=MODEL, request_timeout_s=timeout)  # within the client's limits
+        # The only secrets: the owner's private link, its optional token, and the optional training-data link, each
+        # read only on a run started by hand (never on a pull request).
+        uses = re.findall(r"secrets\.([A-Z_]+)", self.text)
+        self.assertEqual(set(uses), {"NF_MODEL_URL", "NF_MODEL_TOKEN", "NF_TRAINING_URL"})
+        for line in (line for line in self.text.splitlines() if "secrets." in line):
+            self.assertIn("github.event_name == 'workflow_dispatch' && secrets.", line)
 
     def test_the_server_listens_on_this_machine_only(self):
-        self.assertIn("--host 127.0.0.1 --port 8080", self.text)
-        self.assertNotIn("0.0.0.0", self.text)
-        self.assertIn("--no-webui", self.text)
+        self.assertIn('"--host", "127.0.0.1"', self.lane)
+        for text in (self.text, self.lane):
+            self.assertNotIn("0.0.0.0", text)
+        self.assertIn('"--no-webui"', self.lane)
 
-    def test_llama_cpp_and_the_model_file_are_pinned(self):
+    def test_llama_cpp_and_every_model_file_are_pinned(self):
         self.assertRegex(self.env_value("LLAMA_CPP_COMMIT"), r"^[0-9a-f]{40}$")
         self.assertRegex(self.env_value("LLAMA_CPP_TAG"), r"^b\d+$")
         self.assertIn('if [ "$got" != "$LLAMA_CPP_COMMIT" ]', self.text)  # the tag must be that commit
-        self.assertRegex(self.env_value("MODEL_SHA256"), r"^[0-9a-f]{64}$")
-        self.assertRegex(self.env_value("MODEL_REVISION"), r"^[0-9a-f]{40}$")  # a commit, not a branch
-        self.assertEqual(self.env_value("MODEL_FILE"), self.env_value("MODEL_NAME") + ".gguf")  # no glob
-        self.assertIn('--sha256 "$MODEL_SHA256"', self.text)
-        self.assertIn("key: local-model-${{ env.MODEL_NAME }}-${{ env.MODEL_SHA256", self.text)
+        self.assertIn("--profile .github/local_models.json", self.text)
+        self.assertEqual(set(self.pins["models"]), {self.env_value("BASE_MODEL"), self.env_value("FINETUNE_MODEL")})
+        for name, entry in self.pins["models"].items():
+            self.assertRegex(entry["sha256"], r"^[0-9a-f]{64}$", name)
+            self.assertIsInstance(entry["size"], int, name)
+            self.assertTrue(entry["file"].endswith(".gguf") and "*" not in entry["file"], name)
+        base = self.pins["models"][self.env_value("BASE_MODEL")]
+        self.assertRegex(base["source"]["revision"], r"^[0-9a-f]{40}$")  # a commit, not a branch
+        self.assertIn(f"key: local-model-public-{self.env_value('BASE_MODEL')}-{base['sha256']}-v2", self.text)
+
+    def test_a_file_that_is_not_published_is_never_cached_or_uploaded(self):
+        caches = re.findall(r"uses: actions/cache@v\d+\n\s+with:\n\s+path: (\S+)", self.text)
+        self.assertEqual(caches, ["~/llama-bin", "~/models/public"])
+        self.assertIn('dest="$RUNNER_TEMP/private-models"', self.text)  # outside every cached folder
+        self.assertIn('if grep -qx "cache=true" "$described"; then dest="$HOME/models/public"', self.text)
+        self.assertFalse(self.pins["models"][self.env_value("FINETUNE_MODEL")]["cache"])
+        upload = self.text.split("uses: actions/upload-artifact", 1)[1]
+        self.assertIn("path: lane/*.json", upload)
+        self.assertNotIn("gguf", upload)
+        self.assertNotIn("models", upload)
 
     def test_the_model_id_names_the_file_and_is_the_servers_alias(self):
-        self.assertIn('model_id="$MODEL_NAME:${MODEL_SHA:0:12}"', self.text)
-        self.assertIn('echo "NEURON_FLOW_LLM_MODEL=$model_id" >> "$GITHUB_ENV"', self.text)
-        self.assertIn('--alias "$model_id"', self.text)
-        name = self.env_value("MODEL_NAME")
-        LLMConfig(provider="local", model=f"{name}:0123456789ab")  # a valid model id
+        self.assertIn('"model_id": f"{name}:{entry[\'sha256\'][:12]}"', self.fetch)
+        self.assertIn('"--alias", model_id', self.lane)
+        self.assertIn("NEURON_FLOW_LLM_MODEL=args.model_id", self.lane)
+        for name in self.pins["models"]:
+            LLMConfig(provider="local", model=f"{name}:0123456789ab")  # a valid model id
 
-    def test_pull_requests_get_a_small_smoke_run(self):
+    def test_pull_requests_get_a_small_smoke_run_with_the_public_file(self):
         self.assertIn("github.event_name == 'pull_request' && '5' || inputs.limit", self.text)
+        self.assertIn("github.event_name == 'pull_request' && 'typhoon2.5-qwen3-4b-q4_k_m' || inputs.model", self.text)
         on = self.text.split("\npermissions:", 1)[0]
-        for path in ('".github/workflows/local-model-eval.yml"', '".github/scripts/fetch_model.py"', '"app/llm/**"'):
+        for path in ('".github/workflows/local-model-eval.yml"', '".github/scripts/fetch_model.py"', '"app/llm/**"',
+                     '".github/local_models.json"', '".github/scripts/local_model_lane.py"', '"tests/local_model_e2e.py"'):
             self.assertIn(path, on)
         self.assertIn("workflow_dispatch:", on)
-
 
 if __name__ == "__main__":
     unittest.main()

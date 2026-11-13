@@ -1,39 +1,67 @@
 name: Local open model eval
-# Runs the two scorecards against an open-weight model that this job runs itself on the GitHub runner (ADR-026):
-# llama.cpp's server, built from a pinned commit, serves Typhoon 2.5 Qwen3 4B (SCB 10X, Apache-2.0) from a file
-# checked against a pinned SHA-256. The server listens on 127.0.0.1 only, so nothing leaves the runner for an AI
-# company, and no key or secret is used. Standard runners are free for this public repository (4 CPUs, 16 GB):
-# CPU only, so answers take seconds, not milliseconds. Synthetic data only (rule 9).
-# - Pull requests that change the AI client or this lane get a smoke run: the first 5 cases and 5 requests.
-# - Actions -> Local open model eval -> Run workflow runs everything (or the part chosen below).
+# Runs pinned open-weight model files on the GitHub runner itself (ADR-026, ADR-034): llama.cpp's server, built from
+# a pinned commit, serves one file at a time on 127.0.0.1 only, so nothing leaves the runner for an AI company.
+# The files are pinned by size and SHA-256 in .github/local_models.json:
+# - typhoon2.5-qwen3-4b-q4_k_m: the publisher's Typhoon 2.5 Qwen3 4B (SCB 10X, Apache-2.0), from Hugging Face;
+# - nf-typhoon4b-v01-q4_k_m: the owner's QLoRA fine-tune of it for case triage, from a private link kept in the
+#   repository secret NF_MODEL_URL (and NF_MODEL_TOKEN when the link needs a sign-in). It is never cached in Actions
+#   and never uploaded: this repository is public.
+# For each chosen model, .github/scripts/local_model_lane.py starts the server, times the first answer, runs the
+# triage scorecards on the chosen case sets, runs the end-to-end check through the real service (people decide,
+# receipts, failure paths) and records memory and speed. "both" runs the two files one after the other on the same
+# runner, so their latency can be compared, then compares them case by case (and with Typhoon 30B's saved run).
+# Standard runners are free for this public repository (4 CPUs, 16 GB): CPU only, so answers take seconds.
+# Synthetic data only (rule 9). Shadow mode is unchanged: every case still waits for a person.
+# - Pull requests that change this lane get a smoke run: the publisher's file, 5 cases, 5 requests, a quick end-to-end.
+# - Actions -> Local open model eval -> Run workflow runs what is chosen below.
 on:
   pull_request:
     paths:
       - ".github/workflows/local-model-eval.yml"
+      - ".github/local_models.json"
       - ".github/scripts/fetch_model.py"
       - ".github/scripts/llm_probe.py"
+      - ".github/scripts/local_model_lane.py"
+      - "tests/local_model_e2e.py"
+      - "tests/local_model_compare.py"
       - "app/llm/**"
   workflow_dispatch:
     inputs:
-      scorecards:
-        description: "Which scorecards: both, triage (61 cases) or study_guide (67 requests)"
+      model:
+        description: "Model file: the publisher's 4B, the owner's fine-tune (needs the secret NF_MODEL_URL), or both on one runner"
         type: choice
         options:
+          - typhoon2.5-qwen3-4b-q4_k_m
+          - nf-typhoon4b-v01-q4_k_m
           - both
-          - triage
-          - study_guide
-        default: both
+        default: typhoon2.5-qwen3-4b-q4_k_m
+      triage_sets:
+        description: "Triage case sets: all five (409 cases), or one of synthetic, edge, heldout, hard, attention"
+        type: choice
+        options:
+          - all
+          - synthetic
+          - edge
+          - heldout
+          - hard
+          - attention
+        default: all
       limit:
-        description: "Only the first N cases / requests (leave empty for all)"
+        description: "Only the first N cases of each set (leave empty for all)"
         default: ""
         required: false
-      case_set:
-        description: "Triage cases: synthetic_v1 (61 cases) or robustness_edge_v1 (116 edge cases, docs/benchmarking.md)"
+      study_guide:
+        description: "Also the study guide's 67 requests (about 55 minutes a model; new study-guide work is paused)"
+        type: boolean
+        default: false
+      e2e:
+        description: "End-to-end check through the real service: full (12 cases), quick (4) or none"
         type: choice
         options:
-          - synthetic_v1
-          - robustness_edge_v1
-        default: synthetic_v1
+          - full
+          - quick
+          - none
+        default: full
 permissions:
   contents: read
 concurrency:
@@ -43,24 +71,21 @@ env:
   # llama.cpp: built from this tag, which must be this commit (checked after the clone).
   LLAMA_CPP_TAG: b12198
   LLAMA_CPP_COMMIT: f477f795cb071baf5b8af6488378366a72034ac4
-  # The model file, pinned on 2026-11-08 from PR #46's first smoke run, where the publisher's SHA-256 matched the
-  # download. A different file needs a new pin (and is a new agent version: MODEL_NAME:<first 12 hex digits>).
-  MODEL_REPO: typhoon-ai/typhoon2.5-qwen3-4b-gguf
-  MODEL_REVISION: 386874d02430a544367cb0878687f8983751bbd2
-  MODEL_FILE: typhoon2.5-qwen3-4b-q4_k_m.gguf
-  MODEL_SHA256: b365302922688f3a3c9ac8e3c00ab97a152cac0cdbf4eb5a734ecb483ae3e511
-  MODEL_NAME: typhoon2.5-qwen3-4b-q4_k_m
+  BASE_MODEL: typhoon2.5-qwen3-4b-q4_k_m
+  FINETUNE_MODEL: nf-typhoon4b-v01-q4_k_m
 jobs:
   eval:
     runs-on: ubuntu-latest
-    timeout-minutes: 180
+    timeout-minutes: 300
     env:
       NEURON_FLOW_LLM_PROVIDER: local
       # CPU answers are slow: the longest wait the client allows (Core's step limit is this + 15 s).
       NEURON_FLOW_LLM_TIMEOUT_S: "300"
-      SCORECARDS: ${{ github.event_name == 'pull_request' && 'both' || inputs.scorecards }}
+      MODEL_CHOICE: ${{ github.event_name == 'pull_request' && 'typhoon2.5-qwen3-4b-q4_k_m' || inputs.model }}
+      TRIAGE_SETS: ${{ github.event_name == 'pull_request' && 'synthetic' || inputs.triage_sets }}
       LIMIT: ${{ github.event_name == 'pull_request' && '5' || inputs.limit }}
-      CASE_SET: ${{ github.event_name == 'pull_request' && 'synthetic_v1' || inputs.case_set }}
+      STUDY_GUIDE: ${{ github.event_name == 'pull_request' && 'true' || inputs.study_guide }}
+      E2E: ${{ github.event_name == 'pull_request' && 'quick' || inputs.e2e }}
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
@@ -90,79 +115,120 @@ jobs:
           cmake --build "$RUNNER_TEMP/llama-build" --target llama-server -j "$(nproc)"
           mkdir -p ~/llama-bin
           cp "$RUNNER_TEMP/llama-build/bin/llama-server" ~/llama-bin/
-      - name: Restore the model file
-        uses: actions/cache@v6
-        with:
-          path: ~/models
-          key: local-model-${{ env.MODEL_NAME }}-${{ env.MODEL_SHA256 || env.MODEL_REVISION }}-v1
-      - name: Download and check the model file
-        id: model
-        run: >-
-          python .github/scripts/fetch_model.py --repo "$MODEL_REPO" --revision "$MODEL_REVISION"
-          --file "$MODEL_FILE" --sha256 "$MODEL_SHA256" --dest ~/models
-          --summary "$GITHUB_STEP_SUMMARY" --github-output "$GITHUB_OUTPUT"
-      # Greedy decoding (temperature 0) with a light repetition penalty, as the model card suggests low
-      # temperature and 1.05: the same file, settings and case give the same answer, so runs can be compared.
-      # Thinking is off. Two slots, so the study guide's two prompts each keep their cached start.
-      - name: Start the model server
-        env:
-          MODEL_PATH: ${{ steps.model.outputs.path }}
-          MODEL_SHA: ${{ steps.model.outputs.sha256 }}
+      # Which files run, in which order, and where each is kept: a public file in ~/models/public (the only folder
+      # the cache below saves), a file that is not published in $RUNNER_TEMP/private-models (never cached).
+      - name: Choose the models
+        id: choose
         run: |
-          model_id="$MODEL_NAME:${MODEL_SHA:0:12}"
-          echo "NEURON_FLOW_LLM_MODEL=$model_id" >> "$GITHUB_ENV"
-          ~/llama-bin/llama-server -m "$MODEL_PATH" --alias "$model_id" --host 127.0.0.1 --port 8080 \
-            --ctx-size 16384 --parallel 2 --reasoning off --temp 0 --repeat-penalty 1.05 --seed 42 \
-            --no-webui --no-slots > "$RUNNER_TEMP/llama-server.log" 2>&1 &
-          echo "$!" > "$RUNNER_TEMP/llama-server.pid"
-          for _ in $(seq 1 150); do
-            if curl -fsS http://127.0.0.1:8080/health > /dev/null 2>&1; then break; fi
-            if ! kill -0 "$(cat "$RUNNER_TEMP/llama-server.pid")" 2> /dev/null; then break; fi
-            sleep 2
+          case "$MODEL_CHOICE" in
+            both) models=("$BASE_MODEL" "$FINETUNE_MODEL") ;;
+            "$BASE_MODEL"|"$FINETUNE_MODEL") models=("$MODEL_CHOICE") ;;
+            *) echo "::error::Unknown model $MODEL_CHOICE"; exit 1 ;;
+          esac
+          index=0
+          for model in "${models[@]}"; do
+            index=$((index + 1))
+            described="$RUNNER_TEMP/describe-$index.txt"
+            python .github/scripts/fetch_model.py --profile .github/local_models.json --model "$model" --describe \
+              --github-output "$described" > /dev/null
+            if grep -qx "cache=true" "$described"; then dest="$HOME/models/public"; else dest="$RUNNER_TEMP/private-models"; fi
+            echo "model_$index=$model" >> "$GITHUB_OUTPUT"
+            echo "dest_$index=$dest" >> "$GITHUB_OUTPUT"
           done
-          if ! curl -fsS http://127.0.0.1:8080/health > /dev/null 2>&1; then
-            echo "::error::the model server did not start"
-            tail -n 40 "$RUNNER_TEMP/llama-server.log"
-            exit 1
-          fi
+          echo "uses_base=$([[ " ${models[*]} " == *" $BASE_MODEL "* ]] && echo true || echo false)" >> "$GITHUB_OUTPUT"
           {
-            echo "### เครื่องรันโมเดล (model server)"
+            echo "### โมเดลที่รันรอบนี้ (models in this run)"
             echo ""
-            echo "| | |"
-            echo "|---|---|"
-            echo "| โปรแกรม | llama.cpp \`$LLAMA_CPP_TAG\` (\`${LLAMA_CPP_COMMIT:0:12}\`), CPU $(nproc) cores, ฟังเฉพาะ 127.0.0.1 |"
-            echo "| รุ่นที่ระบบเรียก (model id) | \`$model_id\` |"
-            echo "| การตั้งค่า | temperature 0, repeat penalty 1.05, thinking off, context 16384 (2 slots) |"
+            for model in "${models[@]}"; do echo "- \`$model\`"; done
+            echo ""
+            echo "ชุดเคส: \`$TRIAGE_SETS\` · จำกัดจำนวน: \`${LIMIT:-ทั้งหมด}\` · แนะนำแหล่งเรียน: \`$STUDY_GUIDE\` · ทดสอบปลายทาง: \`$E2E\`"
             echo ""
           } >> "$GITHUB_STEP_SUMMARY"
-      - name: Check the connection with one fixed sentence
-        continue-on-error: true
-        run: PYTHONPATH=. python .github/scripts/llm_probe.py "$GITHUB_STEP_SUMMARY"
-      - name: Score shadow mode with the local model
-        if: ${{ !cancelled() && env.SCORECARDS != 'study_guide' }}
+      - name: Restore the publisher's model file
+        if: steps.choose.outputs.uses_base == 'true'
+        uses: actions/cache@v6
+        with:
+          path: ~/models/public
+          key: local-model-public-typhoon2.5-qwen3-4b-q4_k_m-b365302922688f3a3c9ac8e3c00ab97a152cac0cdbf4eb5a734ecb483ae3e511-v2
+      - name: Download and check the first model file
+        id: m1
+        env:
+          MODEL: ${{ steps.choose.outputs.model_1 }}
+          DEST: ${{ steps.choose.outputs.dest_1 }}
+          # The private link and its optional token reach this step only, and only on a run started by hand.
+          NF_MODEL_URL: ${{ github.event_name == 'workflow_dispatch' && secrets.NF_MODEL_URL || '' }}
+          NF_MODEL_TOKEN: ${{ github.event_name == 'workflow_dispatch' && secrets.NF_MODEL_TOKEN || '' }}
+        run: >-
+          python .github/scripts/fetch_model.py --profile .github/local_models.json --model "$MODEL" --dest "$DEST"
+          --summary "$GITHUB_STEP_SUMMARY" --github-output "$GITHUB_OUTPUT"
+      - name: Run the first model (server on 127.0.0.1, scorecards, end-to-end check, memory and speed)
+        if: ${{ !cancelled() && steps.m1.outcome == 'success' }}
+        env:
+          MODEL_PATH: ${{ steps.m1.outputs.path }}
+          MODEL_ID: ${{ steps.m1.outputs.model_id }}
+          MODEL_SHA: ${{ steps.m1.outputs.sha256 }}
         run: |
-          ARGS=()
+          ARGS=(--triage-sets "$TRIAGE_SETS" --e2e "$E2E")
           if [ -n "$LIMIT" ]; then ARGS+=(--limit "$LIMIT"); fi
-          if [ "$CASE_SET" = "robustness_edge_v1" ]; then ARGS+=(--golden tests/robustness/triage_edge_golden_v1.json); fi
-          python -m app.eval.triage_shadow_eval --summary "$GITHUB_STEP_SUMMARY" --out shadow-eval-local.json "${ARGS[@]}"
-      - name: Score the study guide with the local model
-        if: ${{ !cancelled() && env.SCORECARDS != 'triage' }}
+          if [ "$STUDY_GUIDE" = "true" ]; then ARGS+=(--study-guide); fi
+          python .github/scripts/local_model_lane.py --server-cmd "$HOME/llama-bin/llama-server" \
+            --model-path "$MODEL_PATH" --model-id "$MODEL_ID" --model-sha256 "$MODEL_SHA" --out-dir lane \
+            --log-dir "$RUNNER_TEMP" --summary "$GITHUB_STEP_SUMMARY" "${ARGS[@]}"
+      - name: Download and check the second model file
+        id: m2
+        if: ${{ !cancelled() && steps.choose.outputs.model_2 != '' }}
+        env:
+          MODEL: ${{ steps.choose.outputs.model_2 }}
+          DEST: ${{ steps.choose.outputs.dest_2 }}
+          NF_MODEL_URL: ${{ github.event_name == 'workflow_dispatch' && secrets.NF_MODEL_URL || '' }}
+          NF_MODEL_TOKEN: ${{ github.event_name == 'workflow_dispatch' && secrets.NF_MODEL_TOKEN || '' }}
+        run: >-
+          python .github/scripts/fetch_model.py --profile .github/local_models.json --model "$MODEL" --dest "$DEST"
+          --summary "$GITHUB_STEP_SUMMARY" --github-output "$GITHUB_OUTPUT"
+      - name: Run the second model on the same runner
+        if: ${{ !cancelled() && steps.m2.outcome == 'success' }}
+        env:
+          MODEL_PATH: ${{ steps.m2.outputs.path }}
+          MODEL_ID: ${{ steps.m2.outputs.model_id }}
+          MODEL_SHA: ${{ steps.m2.outputs.sha256 }}
         run: |
-          ARGS=()
+          ARGS=(--triage-sets "$TRIAGE_SETS" --e2e "$E2E")
           if [ -n "$LIMIT" ]; then ARGS+=(--limit "$LIMIT"); fi
-          python -m app.eval.study_guide_eval --summary "$GITHUB_STEP_SUMMARY" --out study-guide-eval-local.json "${ARGS[@]}"
-      - name: Show the end of the model server's log when something failed
+          if [ "$STUDY_GUIDE" = "true" ]; then ARGS+=(--study-guide); fi
+          python .github/scripts/local_model_lane.py --server-cmd "$HOME/llama-bin/llama-server" \
+            --model-path "$MODEL_PATH" --model-id "$MODEL_ID" --model-sha256 "$MODEL_SHA" --out-dir lane \
+            --log-dir "$RUNNER_TEMP" --summary "$GITHUB_STEP_SUMMARY" "${ARGS[@]}"
+      # Optional: when the secret NF_TRAINING_URL links to the fine-tune's training data, count the test cases that
+      # also appear in it (only this repository's case ids and counts are written; the training text never is).
+      - name: Check the test cases against the fine-tune's training data (optional)
+        if: ${{ !cancelled() && github.event_name == 'workflow_dispatch' && (steps.choose.outputs.model_1 == env.FINETUNE_MODEL || steps.choose.outputs.model_2 == env.FINETUNE_MODEL) }}
+        env:
+          NF_TRAINING_URL: ${{ github.event_name == 'workflow_dispatch' && secrets.NF_TRAINING_URL || '' }}
+        run: >-
+          python -m tests.training_overlap --url-env NF_TRAINING_URL --json lane/training-overlap.json
+          --ids-out lane/training-cases.json --summary "$GITHUB_STEP_SUMMARY"
+      - name: Compare the models case by case (and with Typhoon 30B's saved run)
+        if: ${{ !cancelled() }}
+        env:
+          FIRST: ${{ steps.choose.outputs.model_1 }}
+          SECOND: ${{ steps.choose.outputs.model_2 }}
+        run: |
+          label() { if [ "$1" = "$FINETUNE_MODEL" ]; then echo "4B ปรับแต่งแล้ว (nf v01)"; else echo "Typhoon 2.5 4B ต้นฉบับ"; fi; }
+          ARGS=()
+          if [ -n "$SECOND" ]; then ARGS+=(--model "$(label "$SECOND")=lane/shadow-$SECOND-*.json"); fi
+          ARGS+=(--model "$(label "$FIRST")=lane/shadow-$FIRST-*.json")
+          ARGS+=(--model "Typhoon 30B ผ่าน API (รอบ 2026-11-11 คนละเครื่อง)=docs/evidence/2026-11-11-attention-raw/typhoon-v2-*.json")
+          if [ -f lane/training-cases.json ]; then ARGS+=(--training-cases lane/training-cases.json); fi
+          if ls lane/shadow-*.json > /dev/null 2>&1; then
+            python -m tests.local_model_compare "${ARGS[@]}" --summary "$GITHUB_STEP_SUMMARY" --json lane/comparison.json
+          fi
+      - name: Show the end of the model servers' logs when something failed
         if: ${{ failure() }}
-        run: tail -n 40 "$RUNNER_TEMP/llama-server.log" || true
-      - name: Stop the model server
-        if: ${{ always() }}
-        run: kill "$(cat "$RUNNER_TEMP/llama-server.pid" 2> /dev/null)" 2> /dev/null || true
-      - name: Keep the scorecards
+        run: tail -n 40 "$RUNNER_TEMP"/llama-server-*.log || true
+      - name: Keep the reports (JSON only; never a model file)
         if: ${{ always() }}
         uses: actions/upload-artifact@v7
         with:
           name: local-model-eval
-          path: |
-            shadow-eval-local.json
-            study-guide-eval-local.json
+          path: lane/*.json
           if-no-files-found: ignore

@@ -1,6 +1,6 @@
 # Intake API, job queue, Runner and web page (round 2, Milestone B)
 
-**Status:** built in PR #11 and tested offline (509 tests on 2026-11-11, including killing the Runner
+**Status:** built in PR #11 and tested offline (533 tests on 2026-11-13, including killing the Runner
 mid-step). The container build is checked on every push by *Actions → Service container*. Live on
 Render's free plan since 2026-11-01 (`render.yaml`). Railway was the first choice, but it has paused new
 sign-ups since 22 Oct 2026 after a security incident; `railway.json` stays in the repository for later.

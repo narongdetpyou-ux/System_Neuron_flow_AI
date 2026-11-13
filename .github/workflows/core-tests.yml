@@ -82,6 +82,18 @@ jobs:
       - name: Skill handoff check over the three triage case sets (offline mock AI)
         if: ${{ !cancelled() }}
         run: python -m tests.handoff_check --summary "$GITHUB_STEP_SUMMARY" --json handoff-eval-mock.json
+      # The local model lane's end-to-end check (ADR-034) against a stand-in for llama.cpp's server, with every fault
+      # the stand-in can make: the real service with the local provider, people's decisions, receipts, timeouts, a
+      # server that does not answer, and answers that are not JSON, outside the schema, cut off or refused. The real
+      # model file runs in *Local open model eval*.
+      - name: End-to-end check of the local provider with a stand-in model server (no model file)
+        if: ${{ !cancelled() }}
+        run: |
+          python tests/fake_llama_server.py --alias stand-in:000000000000 --port 18080 > "$RUNNER_TEMP/fake-llama.log" 2>&1 &
+          for _ in $(seq 1 50); do curl -fsS http://127.0.0.1:18080/health > /dev/null 2>&1 && break; sleep 0.2; done
+          python -m tests.local_model_e2e --llm-base-url http://127.0.0.1:18080/v1 --model-id stand-in:000000000000 \
+            --phases service,failures,faults --fake-control --job-timeout-s 120 \
+            --summary "$GITHUB_STEP_SUMMARY" --json local-e2e-fake.json
       - name: Keep the scorecards
         if: ${{ !cancelled() && matrix.python-version == '3.12' }}
         uses: actions/upload-artifact@v7
@@ -95,3 +107,4 @@ jobs:
             study-guide-eval-mock.json
             robustness.json
             handoff-eval-mock.json
+            local-e2e-fake.json

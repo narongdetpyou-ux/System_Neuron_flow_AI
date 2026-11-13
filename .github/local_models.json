@@ -1,0 +1,41 @@
+{
+  "schema": "neuron-flow-local-models-v1",
+  "note": "Model files the Local open model eval workflow may serve on 127.0.0.1 (ADR-026, ADR-034). Each file is pinned by its size and SHA-256; any other bytes are refused. A changed file is a new entry with a new name. The model id the system records is <name>:<first 12 hex digits of the SHA-256>.",
+  "models": {
+    "typhoon2.5-qwen3-4b-q4_k_m": {
+      "title": "Typhoon 2.5 Qwen3 4B (SCB 10X), Q4_K_M, the publisher's own file",
+      "file": "typhoon2.5-qwen3-4b-q4_k_m.gguf",
+      "size": 2497276128,
+      "sha256": "b365302922688f3a3c9ac8e3c00ab97a152cac0cdbf4eb5a734ecb483ae3e511",
+      "license": "Apache-2.0",
+      "scope": "general: the case triage and study guide scorecards",
+      "cache": true,
+      "source": {
+        "kind": "huggingface",
+        "repo": "typhoon-ai/typhoon2.5-qwen3-4b-gguf",
+        "revision": "386874d02430a544367cb0878687f8983751bbd2"
+      },
+      "pinned": "2026-11-08, from PR #46's first smoke run, where the publisher's SHA-256 matched the download"
+    },
+    "nf-typhoon4b-v01-q4_k_m": {
+      "title": "The owner's QLoRA fine-tune of Typhoon 2.5 Qwen3 4B for case triage (v01), merged and quantized to Q4_K_M",
+      "file": "nf_typhoon4b_v01_q4_k_m.gguf",
+      "size": 2497278816,
+      "sha256": "323ea4bb91fea1b6aa2e03fe845ca247f8c48de1e9e4d8da1841d48f18cc5c88",
+      "license": "derived from an Apache-2.0 model; the owner's file, not published",
+      "scope": "case triage only (case_triage.v2's AI second opinion, shadow mode)",
+      "cache": false,
+      "source": {
+        "kind": "link",
+        "url_env": "NF_MODEL_URL",
+        "token_env": "NF_MODEL_TOKEN"
+      },
+      "base_model": {
+        "repo": "typhoon-ai/typhoon2.5-qwen3-4b",
+        "revision": "ce0a7416fe82d4404b2b4a253ce3ac095ab1252c"
+      },
+      "adapter_sha256": "6d172e4ac9b177c78059f8318f38671b7ae1694d78da697e0b907a627bacd8ff",
+      "pinned": "2026-11-13, from the owner's conversion record (size and SHA-256 as the owner reported them; checked on every download)"
+    }
+  }
+}
