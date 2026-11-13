@@ -18,6 +18,9 @@ cases and of all cases (a case without an answer counts as not right); the rules
 latency. Then case by case, candidate against baseline: the cases only the candidate gets right, only the baseline
 gets right, both get wrong, and ``needs_person`` cases only one of them flags.
 
+Exit status: 0 when the candidate has at least one report (a set that is not comparable is reported, not failed), 1
+when it has none.
+
 ``--training-cases FILE`` (a JSON list of case ids, from ``tests/training_overlap.py``) marks cases whose text was
 found in the training data, and the figures are repeated without them. Nothing here is accuracy: the labels are the
 developer's and each report is one run.
@@ -165,7 +168,8 @@ def markdown(document):
     for entry in document["sets"]:
         lines += [f"### {SET_NAMES.get(entry['set'], entry['set'])}", ""]
         if not entry["comparable"]:
-            lines += ["เทียบกันไม่ได้: " + "; ".join(entry["problems"]), ""]
+            lines += ["เทียบกันไม่ได้: " + "; ".join(entry["problems"]) + " (รอบที่จำกัดจำนวนเคสด้วย `limit` "
+                      "ไม่ถูกเทียบกับรอบเต็ม; *a run limited with `limit` is never compared with a full run*)", ""]
         present = [label for label in labels if label in entry["models"]]
         lines += ["| สิ่งที่วัด | " + " | ".join(present) + " |", "|---|" + "---|" * len(present)]
         for title, key in rows:
@@ -217,7 +221,8 @@ def main(argv=None):
             stream.write(text)
     if args.json:
         Path(args.json).write_text(json.dumps(document, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
-    return 0 if any(entry["comparable"] for entry in document["sets"]) else 1
+    # A set that is not comparable is a finding, shown on the run page, not a failure; no report at all is one.
+    return 0 if document["sets"] else 1
 
 
 if __name__ == "__main__":

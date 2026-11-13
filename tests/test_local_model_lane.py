@@ -219,6 +219,23 @@ class CompareTests(unittest.TestCase):
         self.assertEqual(entry["models"]["base"]["needs_person_raised"]["denominator"], 38)
         self.assertIn("ถูกเฉพาะตัวที่ทดสอบ (2)", local_model_compare.markdown(document))
 
+    def test_a_limited_run_is_reported_as_not_comparable_without_failing(self):
+        limited = copy.deepcopy(self.base)
+        limited["cases"] = limited["cases"][:5]
+        limited["provenance"]["golden"]["cases"] = 5
+        with tempfile.TemporaryDirectory() as work:
+            path = Path(work) / "limited.json"
+            path.write_text(json.dumps(limited), encoding="utf-8")
+            summary = Path(work) / "summary.md"
+            code = quiet(local_model_compare.main, ["--model", f"limited={path}",
+                                                    "--model", f"full={SAVED / 'typhoon-v2-hard.json'}",
+                                                    "--summary", str(summary)])
+            self.assertEqual(code, 0)
+            self.assertIn("เทียบกันไม่ได้", summary.read_text(encoding="utf-8"))
+            nothing = quiet(local_model_compare.main, ["--model", f"none={Path(work) / 'missing-*.json'}",
+                                                       "--model", f"full={SAVED / 'typhoon-v2-hard.json'}"])
+        self.assertEqual(nothing, 1)
+
     def test_another_prompt_is_not_comparable_and_training_cases_can_be_left_out(self):
         candidate = copy.deepcopy(self.base)
         candidate["provenance"]["prompt"]["sha256"] = "0" * 64
