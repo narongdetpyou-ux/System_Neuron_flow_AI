@@ -5,8 +5,8 @@ one run before the change and one after; and a Claude Code cloud session for the
 3.12.3). **What:** package E1 of the [effectiveness plan](../effectiveness_plan.md): the first case after a
 start took 9.0 to 10.5 s on Render in 4 of 4 observations
 ([baseline](2026-11-10-effectiveness-baseline.md)). **Data:** two synthetic cases
-(`examples/service_smoke_test.py`), the mock AI. **Not in this note yet:** a measurement on Render. That
-needs the merge and a deploy, and is the last task of E1.
+(`examples/service_smoke_test.py`), the mock AI. **On Render** (added 2026-11-16): the first job after a
+free-plan sleep, read from Honeycomb, is in the last section.
 
 ## สรุปสำหรับเจ้าของโปรเจกต์
 
@@ -20,8 +20,9 @@ needs the merge and a deploy, and is the last task of E1.
   - ที่ความเร็วเต็มของเครื่อง GitHub: 1.0 วินาที ก่อนแก้ และ 0.3 วินาที หลังแก้
   - โปรแกรมใหม่ 1 ตัวเริ่มได้เร็วขึ้นราว 4 เท่า (ที่ 0.1 CPU: จาก 5.5 วินาที เหลือ 1.4 วินาที)
 - **ราคาที่จ่าย:** ภาพของบริการใหญ่ขึ้นจาก 45.8 เป็น 54.2 MB และการสร้างภาพนานขึ้นราว 3 วินาที
-- **ที่ยังไม่รู้:** เวลาจริงบน Render ตัวเลขข้างบนวัดอย่างละ 1 รอบบนเครื่องของ GitHub
-  หลังรวม (merge) ผมจะอ่านเวลาเคสแรกจาก Honeycomb แล้วจดต่อท้ายบันทึกนี้ เทียบกับ 9.0 ถึง 10.5 วินาทีเดิม
+- **วัดบน Render จริงแล้ว (16 พ.ย.):** เคสที่คุณส่งหลังระบบตื่นจากการพักเครื่อง เป็นเคสแรกของรอบนั้น
+  ช่วงทำงาน (`run`) ใช้ **3.2 วินาที** จากเดิม 9.0 ถึง 10.5 วินาที แม้ตอนนี้เคสมี 5 ขั้นแทน 4 ขั้น วัดได้ 1 ครั้ง
+  ตัวเลขละเอียดอยู่ท้ายบันทึกนี้ ส่วนเคสแรกหลังอัปเดตเวอร์ชันยังไม่มีให้วัด เพราะหลังอัปเดตทุกครั้งไม่มีใครส่งเคสก่อนระบบพักเครื่อง
 
 ## 1. What the image had (before)
 
@@ -105,9 +106,9 @@ case per start (`examples/service_smoke_test.py --first-case-only`).
 - **Shows:** on the same code, the first case after a start was about 4 times faster with the cache in
   every setting measured here: 0.989 to 0.256 s at the runner's full speed, 14.423 to 3.135 s at 0.1 CPU,
   and about 1.1 to 0.3 s in the session.
-- **Does not show the time on Render.** The 9.0 to 10.5 s there was measured on Render's machines with
-  tracing on; nothing here was. The figure for Render comes after the merge, from the `run` span of the
-  first job after the deploy and after one sleep (task 4 of E1), and is added below.
+- **Did not show the time on Render** when it was written. The 9.0 to 10.5 s there was measured on Render's
+  machines with tracing on; nothing above was. The figure for Render, from the `run` span of the first job
+  after a free-plan sleep (task 4 of E1), is in the last section.
 - **Does not show a distribution.** One run before and one after, on shared runners.
 
 ## Limits
@@ -118,10 +119,41 @@ case per start (`examples/service_smoke_test.py --first-case-only`).
   lookup to the test folder so that "none" means none.
 - The Render service was not touched: this branch is not deployed.
 
-## After the merge (to be filled in)
+## On Render after the merge (2026-11-16)
 
 | Start on Render | `run` span of the first job | Source |
 |---|---|---|
 | Before E1 (4 observations) | 9.0 to 10.5 s | [baseline](2026-11-10-effectiveness-baseline.md) |
-| After the deploy of E1 | not measured yet | Honeycomb |
-| After one free-plan sleep | not measured yet | Honeycomb |
+| Right after a deploy that carries E1 | not measured: no case was sent between such a deploy and the next sleep | Honeycomb: no `POST /v1/jobs` from 2026-11-09 to 2026-11-16 06:19 UTC |
+| After one free-plan sleep (2026-11-16) | **3,158 ms** (one observation) | Honeycomb, trace `c032092743134c895e53b59b0dc35e65` |
+
+**The case.** The owner sent one synthetic case on the live page at 06:19:56 UTC, for the owner tests of 2.4, H3
+and this note. It was the first job of the Runner process (`service.instance.id` `1573e02c…`, whose first span it
+is) on a service the free plan had put to sleep: the dataset holds no span at all in the 7 days before the API
+process's first span, at 06:19:27 UTC. The service ran `0.4.1+45f27f4659e3`, the merge of PR #67, which carries
+E1's cache. Mock AI.
+
+| Span | Before E1 (baseline: 2 first jobs; 3 jobs for the first two rows) | 2026-11-16, first job after a sleep |
+|---|---|---|
+| `POST /v1/jobs` (202) | median 12.8 ms, slowest 13.8 ms | 86.5 ms |
+| `queue wait` | median 401 ms, slowest 423 ms | 354 ms |
+| `job case_triage.v2` | 9,904 and 10,498 ms | 3,512 ms |
+| ... `run` (first claim to outcome) | 9,480 and 10,097 ms | **3,158 ms** |
+| ... `step classify_rules` | 9,393 and 10,012 ms | 2,699 ms |
+| ... `step classify_llm` | 4,218 and 4,402 ms | 1,197 ms |
+| ... `step screen` | no such step then | 393 ms |
+| ... `step compare`, `step prepare` | at most 14 ms | 12 ms each |
+
+- The job ended `REVIEW_REQUIRED` after one claim; the page showed "ใช้เวลา 3.2 วินาที".
+- The workflow has had a fifth step since PR #67 (`screen`, ADR-032), so this job did more than the baseline's
+  and still ran in about a third of the time. The step whose span covers the worker starts, `classify_rules`,
+  went from 9.4–10.0 s to 2.7 s.
+- The imitation in CI was close: 3.135 s with the container held to 0.1 CPU (section 3), on the four-step
+  workflow of that day.
+- The next job of the same Runner process, the handed-off `case_triage.v2.apply` after the owner's approval,
+  ran in 42 ms: a warm job, like the baseline's later jobs (0.1 to 0.4 s).
+- `POST /v1/jobs` took 86.5 ms, against 12.8 to 13.8 ms in the baseline. One observation, the API process's
+  first case after a start; not investigated.
+- **Limits:** one observation of one synthetic case with the mock AI, on Render's free instance as it was that
+  minute. Task 5 of E1 (starting the workers ahead) was planned only if the first case still feels slow to the
+  owner.

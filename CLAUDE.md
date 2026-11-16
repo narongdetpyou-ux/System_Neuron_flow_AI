@@ -513,8 +513,8 @@ Notes for cloud sessions (claude.ai/code):
     process compiled everything it imported at each start. The `Dockerfile` now compiles it once and
     *Service container* requires it. On GitHub's runners, one run each: the first case after a start
     0.989 s before and 0.256 s after; with the container held to 0.1 CPU, 14.4 s before and 3.1 s after.
-    **Not measured on Render yet**: after the merge, read the `run` span of the first job after the deploy
-    and after one sleep in Honeycomb, and fill in the table at the end of the evidence note (E1, task 4).
+    On Render (2026-11-16, the owner's case, read from Honeycomb): the first job after a free-plan sleep ran in
+    3.2 s (`run` 3,158 ms; 9.0 to 10.5 s before), one observation; no case was sent right after a deploy.
   - The answer to the first independent review (2026-11-10, of `main` @ `f38c926`; all four findings, one PR;
     `docs/evidence/2026-11-10-independent-review-response.md`):
     - review decisions (2.2) and the page's decision card and "รอรีวิว" list (2.4), built before 2.1 with the
@@ -609,13 +609,12 @@ Notes for cloud sessions (claude.ai/code):
     (roadmap 2.3), queue schema 3 with the `handoffs` ledger, the handoff inside the decision's transaction, the API
     fields and the page. 37 new tests (448 in all); `tests/handoff_check.py` ran all 217 existing triage cases end
     to end with 0 problems; every earlier gate unchanged
-    ([evidence](docs/evidence/2026-11-11-skill-handoff.md)). Next: the owner's test on the live page.
+    ([evidence](docs/evidence/2026-11-11-skill-handoff.md)). The owner's test on the live page passed on 2026-11-16.
   - Waiting on the owner: 0.2 and 1.4 (D1, paid Render plan), 0.3 path B and 0.4 with Claude (D2, Claude
     API key); 0.4 with Typhoon is free but sends what is typed on the page to Typhoon, so it is the owner's
-    choice too; an open model behind the page needs a paid machine (D7); the owner tests on the live page of 2.4,
-    the skill handoff (H3) and attention (5.10); the first new skill (H4). Render's log (read 2026-11-16) has no
-    case submitted (`POST /v1/jobs`) since the E1 deploy on 2026-11-10, so those tests and E1's measurement on
-    Render have no data yet.
+    choice too; an open model behind the page needs a paid machine (D7); the rest of the owner tests on the live
+    page (2.4's steps 1 and 4, attention 5.10); the first new skill (H4). The owner's first case since
+    2026-11-10, on 2026-11-16, passed H3 and 2.4's steps 2 and 3 and gave E1's Render figure.
     D8 is decided (2026-11-10): the e-mail history stays as it is; do not propose a rewrite.
   - **The study guide is paused (owner, 2026-11-11):** no new study-guide work (E4, E6 or changes to
     `app/domains/study_guide/`) until the owner resumes it; its checks keep running.
@@ -635,7 +634,8 @@ Notes for cloud sessions (claude.ai/code):
     the rest of Phase 2 (2.1 next; 2.2, 2.3 and 2.4 are built), H5's trace link, and Phase 4 (4.1 first; Phase 3, which it
     needs, is built). The rest of 7.1 (who can read the AI key) needs an ADR first.
   - The effectiveness track (2026-11-10, PR #50, [docs/effectiveness_plan.md](docs/effectiveness_plan.md)): E1
-    is built (PR #60) and waits for its measurement on Render (9.0 to 10.5 s before); E2 (Thai/English
+    is built (PR #60) and measured on Render (3.2 s after a sleep, 9.0 to 10.5 s before; its task 5 only if the
+    owner still finds the first case slow); E2 (Thai/English
     rules v2) is built and measured in PR #64, merged on 2026-11-11, with results and limits in its evidence note; E3 (a real model
     behind the page) is the owner's decision; E4 and E6 are paused with the study guide; E5 needs 5.6.
   - The owner decides which phase or package comes next; ask before starting one.

@@ -1,10 +1,11 @@
 # Effectiveness plan: make the measured results reach the person
 
-**Status (2026-11-11):** a plan the owner asked for ("วางแผนปฏิบัติงานเพิ่มเติมเพื่อเพิ่มประสิทธิผลการทำงานของระบบ"), proposed in
-PR #50. E1 is built and merged (PR #60); its post-change measurement on Render is still open. E2 is
+**Status (2026-11-16):** a plan the owner asked for ("วางแผนปฏิบัติงานเพิ่มเติมเพื่อเพิ่มประสิทธิผลการทำงานของระบบ"), proposed in
+PR #50. E1 is built and merged (PR #60) and was measured on Render on 2026-11-16: the first job after a
+free-plan sleep ran in 3.2 s, against 9.0 to 10.5 s before (one observation). E2 is
 implemented and measured in PR #64, continuing PR #62's held-out-set commit: the three-set Typhoon run
-and code checks passed, with results in the [E2 evidence](evidence/2026-11-11-e2-rules-v2.md). The PR awaits
-the owner's merge instruction. E3–E6 are not built. The plan adds six work packages, E1 to
+and code checks passed, with results in the [E2 evidence](evidence/2026-11-11-e2-rules-v2.md). It was merged
+on 2026-11-11. E3–E6 are not built. The plan adds six work packages, E1 to
 E6, to [ROADMAP.md](ROADMAP.md), which stays the source of truth for status. Every "now" figure below was measured and is in an evidence note, most of them in
 [the baseline note of 2026-11-10](evidence/2026-11-10-effectiveness-baseline.md).
 
@@ -31,7 +32,7 @@ E6, to [ROADMAP.md](ROADMAP.md), which stays the source of truth for status. Eve
 | เคสที่ถูกยกเป็น "ต้องดูก่อน" (เมื่อใช้ AI จริง) | 33 จาก 61 และ 64 จาก 116 คือเกินครึ่ง ป้ายจึงแทบไม่ช่วยจัดลำดับ | E2 |
 | AI จริง (Typhoon) จัดหมวดถูก | 60 จาก 61 และ 104 จาก 116 ภาษาไทยถูกทุกข้อ (26 จาก 26 และ 13 จาก 13) | รักษาไว้ |
 | จุดที่ AI จริงพลาด | ทั้ง 12 ข้อที่ AI พลาดในชุดเคสยาก เฉลยว่า "อื่น ๆ" แต่ AI จับใส่หมวดใกล้เคียง และ AI บอก "มั่นใจสูง" ทุกข้อ ทั้งข้อถูกและข้อผิด | E5 |
-| เคสแรกหลังระบบตื่น | ราว 10 วินาที บน Render (วัดได้ 4 ครั้ง ช้าทั้ง 4 ครั้ง) เคสถัดไป 0.1–0.4 วินาที; หลังแก้ใน PR #60 ยังไม่ได้วัดบน Render แต่บนเครื่องของ GitHub ที่จำกัดกำลังให้เท่าเครื่องฟรี วัดได้ 14.4 วินาทีก่อนแก้ และ 3.1 วินาทีหลังแก้ | E1 |
+| เคสแรกหลังระบบตื่น | ก่อนแก้ราว 10 วินาที บน Render (วัดได้ 4 ครั้ง ช้าทั้ง 4 ครั้ง) เคสถัดไป 0.1–0.4 วินาที; หลังแก้ใน PR #60 วัดบน Render แล้วเมื่อ 16 พ.ย. จากเคสที่คุณส่งหลังระบบตื่น: 3.2 วินาที (วัดได้ 1 ครั้ง) | E1 |
 | ผู้ช่วยแนะนำแหล่งเรียนบนหน้าเว็บจริง หาหัวข้อถูก | 2 จาก 48 ข้อ เพราะหน้าเว็บยังใช้ AI จำลอง (Typhoon ได้ 46 จาก 48) | E3 |
 | คำตอบของคนต่อคำถาม "เข้าใจถูกไหม" | ไม่ได้เก็บ | E4 |
 | แหล่งเรียนภาษาไทยในคลัง | 1 จาก 17 แหล่ง | E6 |
@@ -90,12 +91,12 @@ breaks) and model quality on synthetic sets. This plan follows the numbers a per
 | M3 | Rule mistakes that are raised, with a real model | Development: no rule mistakes (0/0, no rate); edge 3/11; held-out 18/18 (v1: 32/32, 60/68, 26/26) | [E2 evidence](evidence/2026-11-11-e2-rules-v2.md) | E2, E3, E5 |
 | M4 | Cases wrong for both rules and AI | Development 0/61, edge 8/116, held-out 0/40: unchanged from v1 on the same answers; all 8 edge cases still agree on a wrong category and are not elevated | [E2 evidence](evidence/2026-11-11-e2-rules-v2.md); fewer flags do not mean this failure is fixed | E2, E5 |
 | M5 | The AI at the edge of `other` | 2026-11-10 baseline: 17/29 right on `other`, 87/87 on the three categories (Typhoon, edge set); `high` confidence on 116/116 | baseline | E5 |
-| M6 | First job after a start | On Render, before E1: 9.0 to 10.5 s in 4 of 4 observations; later jobs 0.1 to 0.4 s. After E1 (PR #60): not measured on Render yet; in CI with the container held to 0.1 CPU, 14.4 s before and 3.1 s after (one run each) | [2026-11-03](evidence/2026-11-03-render-operations.md), baseline (Honeycomb), [E1 note](evidence/2026-11-10-e1-bytecode-cache.md) | E1 |
+| M6 | First job after a start | On Render, before E1: 9.0 to 10.5 s in 4 of 4 observations; later jobs 0.1 to 0.4 s. After E1 (PR #60), on Render: 3.2 s (`run` 3,158 ms) for the first job after a free-plan sleep, one observation on 2026-11-16 with the five-step workflow; in CI with the container held to 0.1 CPU, 14.4 s before and 3.1 s after (one run each) | [2026-11-03](evidence/2026-11-03-render-operations.md), baseline (Honeycomb), [E1 note](evidence/2026-11-10-e1-bytecode-cache.md) | E1 |
 | M7 | Study topic found on the online page | 2/48 (the page runs the mock); 46/48 with Typhoon | mock scorecard in CI; 2026-11-06 | E3 |
 | M8 | Out-of-scope study requests caught, with a real model | 16/19, precision 16/17 (Typhoon) | 2026-11-06 | E5 |
 | M9 | People's answers to "เข้าใจถูกไหม" | not recorded | – | E4 |
 | M10 | Thai resources in the study library | 1 of 17 | `resources_v1.json` | E6 |
-| M11 | Review decisions recorded | Decision API and page built (2.2, 2.4); no live-use count measured here | ADR-027; linked job still open (2.3) | Phase 2 |
+| M11 | Review decisions recorded | Decision API and page built (2.2, 2.4), with the linked job after an approval (2.3); on the live page only the owner's test decision of 2026-11-16, which the free plan forgets at the next sleep, so no use count yet | ADR-027, ADR-030; [skill-handoff evidence](evidence/2026-11-11-skill-handoff.md) | Phase 2 |
 
 A package that moves a number updates this table and writes the new figure in an evidence note. All sets are
 synthetic or open-dataset text with the developer's labels, so these are measurements of this system on
@@ -124,12 +125,13 @@ Each package is one pull request unless it says otherwise, and follows the defin
 
 ### E1 First case after a start: seconds, not ten
 
-- **Status (2026-11-11):** tasks 1 to 3 are built and merged in PR #60
+- **Status (2026-11-16): done.** Tasks 1 to 3 are built and merged in PR #60
   ([evidence note](evidence/2026-11-10-e1-bytecode-cache.md)). Task 1 found that the image had no cache at
   all: 0 of the 141 modules the Runner imports, the standard library included. With the cache built into the
   image, the first case in CI went from 0.989 s to 0.256 s, and from 14.4 s to 3.1 s with the container held
-  to 0.1 CPU (one run each, on GitHub's runners). Task 4, the post-change measurement on Render, is still open. Task 5
-  is not started and waits for the owner's word after task 4.
+  to 0.1 CPU (one run each, on GitHub's runners). Task 4: on Render the first job after a free-plan sleep ran in
+  3.2 s on 2026-11-16 (the owner's case, one observation; 9.0 to 10.5 s before). No case was sent right after a
+  deploy, so that figure is not measured. Task 5 is not started: only if the owner still finds the first case slow.
 - **Goal:** the first case after the service wakes is answered in a few seconds.
 - **Why (M6):** 4 of 4 first jobs took 9.0 to 10.5 s. The spans put it in the first two steps, which is where
   Core starts its worker processes. The image has no bytecode cache for `app/` and `neuron_flow/`

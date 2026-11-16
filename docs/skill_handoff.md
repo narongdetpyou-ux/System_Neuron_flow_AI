@@ -1,8 +1,8 @@
 # Skill handoff: separate skills, one exchange, a translator on the way
 
-**Status (2026-11-11):** built (roadmap [H1–H3 and H5's page part](ROADMAP.md#skill-handoff-track-h1h5), ADR-030 in
-[architecture.md](architecture.md#8-architecture-decisions-adrs)), on the branch of its pull request; not merged or
-deployed yet.
+**Status (2026-11-16):** built (roadmap [H1–H3 and H5's page part](ROADMAP.md#skill-handoff-track-h1h5), ADR-030 in
+[architecture.md](architecture.md#8-architecture-decisions-adrs)), merged and deployed on 2026-11-11; the owner's test on
+the live page passed on 2026-11-16.
 - The owner asked for it on 2026-11-11: each skill stays separate, work passes between skills through a
   go-between, and on the way a translator turns the data into the receiving agent's own language. The owner first
   got the design, then asked for it to be built and shown working, and for it to be tested with a new suite and
@@ -68,6 +68,7 @@ deployed yet.
 - ตอนนี้ (ก่อนรวมโค้ด): เปิด PR → แท็บ Checks → *Core logic tests* → หน้าสรุป (Summary) จะเห็น
   "การส่งต่อระหว่างทักษะ: ตัวอย่างทีละขั้น" และตาราง "ทดสอบกับชุดเคสเดิม"
 - หลังรวมโค้ดและ Render อัปเดตแล้ว: ลองบนหน้าเว็บจริงตามขั้นตอน "ลองบนหน้าเว็บ" ด้านล่าง
+  (คุณลองแล้วเมื่อ 16 พ.ย. ผ่าน: อนุมัติ 1 เคส เห็นกล่อง "ส่งต่อแล้ว" และงานบันทึกผลเสร็จ 1 งาน)
 
 **ลองบนหน้าเว็บ (หลังรวมโค้ด)**
 1. ส่งเคสตัวอย่าง เช่น "ถูกหักเงินซ้ำ" รอจนขึ้น "รอคนตรวจ"
@@ -360,7 +361,7 @@ The packages and what each needs are also in [ROADMAP.md](ROADMAP.md#skill-hando
 |---|---|---|
 | H1 | This design and ADR-030 | ✅ the owner read it and asked for it to be built (2026-11-11) |
 | H2 | `app/exchange/`: envelope, vocabulary and its hash, the `Translator` type, `out.case_triage.v2@1`, `in.case_triage.v2.apply@1`, isolation tests, golden outputs | ✅ built and tested |
-| H3 | The route table and its checks, queue schema 3 and the `handoffs` table, the handoff inside `finish()` and `decide()`, events, the API fields, and `case_triage.v2.apply` (roadmap 2.3), refused at `POST /v1/jobs` | 🟡 built and tested (P0 gate "approval creates exactly one phase-B job" met); the owner's test on the live page after the merge is left |
+| H3 | The route table and its checks, queue schema 3 and the `handoffs` table, the handoff inside `finish()` and `decide()`, events, the API fields, and `case_triage.v2.apply` (roadmap 2.3), refused at `POST /v1/jobs` | ✅ built and tested (P0 gate "approval creates exactly one phase-B job" met); the owner's test on the live page passed on 2026-11-16 |
 | H4 | The first new skill the owner chooses, as its own domain, joined only through translators and one route | ⬜ waits for the owner's choice |
 | H5 | The chain on the page (built) and a link between the two jobs' traces (not built) | 🟡 |
 
