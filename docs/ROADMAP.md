@@ -23,7 +23,7 @@ differs, this file and architecture.md win.
   - ถ้าสองฝ่ายเห็นไม่ตรงกัน โค้ดเจอสัญญาณ หรือ AI ชี้ เคสจะถูกยกให้คนดูก่อน พร้อมบอกเหตุผล (ขั้น 5.10)
 - ถ้าเครื่องดับกลางทาง ระบบทำต่อได้ ส่งซ้ำก็ไม่เกิดงานซ้ำ
 - ยกเลิกเคสที่ยังรอคิวได้ และทุกคำขอมีรหัสคำขอ (request id) ไว้ไล่ดูใน log (ขั้น 1.2, 1.3)
-- ผ่านชุดทดสอบอัตโนมัติ 509 ข้อ และเปิดใช้ออนไลน์บน Render แล้ว ระบบปิดตัวอย่างเรียบร้อย และการแก้แค่เอกสารไม่ทำให้ Render ขึ้นเวอร์ชันใหม่ (ขั้น 0.1, 0.5)
+- ผ่านชุดทดสอบอัตโนมัติ 534 ข้อ และเปิดใช้ออนไลน์บน Render แล้ว ระบบปิดตัวอย่างเรียบร้อย และการแก้แค่เอกสารไม่ทำให้ Render ขึ้นเวอร์ชันใหม่ (ขั้น 0.1, 0.5)
 - หน้าเว็บเป็นแบบแชท: พิมพ์เคส ดูขั้นตอนก่อนส่ง กดยืนยัน แล้วติดตามใน Flow และประวัติเหตุการณ์ (ขั้น 1.6)
 - หน้าเว็บบอกว่ามีเคสรอกี่เคส เคสที่รอนานสุดรอมานานเท่าไร ปกติแต่ละเคสใช้เวลาเท่าไร และเคสที่ไม่สำเร็จล้มเพราะอะไร (ขั้น 5.3)
 - ถ้ามีคนแก้กฎหรือ prompt แล้วคำตอบของเคสทดสอบเคสไหนเปลี่ยน ช่องตรวจบน GitHub จะเป็นสีแดงและบอกว่าเคสไหนเปลี่ยนอะไร (ขั้น 5.2)
@@ -39,13 +39,14 @@ differs, this file and architecture.md win.
 - มีด่านความทนทาน (robustness benchmark ขั้นที่ 1) แล้ว: ทุกครั้งที่ส่งโค้ด GitHub ป้อนเคสสุดโหดที่เขียนเอง 270 ข้อ และข้อมูลเปิดที่นักพัฒนาทั่วโลกใช้ (ข้อความแปลก 515 แบบ ไฟล์ทดสอบ JSON 318 ไฟล์ และคำขอจาก CLINC150 กับ BANKING77) เข้าทุกชั้นของระบบ รอบแรกเจอปัญหาร้ายแรง 8 จุด ที่สำคัญที่สุดคือถ้า AI ตอบมี "ตัวอักษรพัง" เคสทั้งเคสจะล้มและไม่ถึงคนตรวจ แก้ครบทั้ง 8 จุดแล้วใน PR #42 (รวมแล้วเมื่อ 8 พ.ย. และเคสที่คุณส่งบนหน้าเว็บจริงหลังรวมยังถึงคนตรวจ): ข้อมูลแปลกได้ "ข้อมูลไม่ถูกต้อง (400)" แทน "เซิร์ฟเวอร์พัง (500)" และเคสที่ AI ตอบมีตัวอักษรพังยังถึงคนตรวจพร้อมความเห็นของ AI 7 จุดแก้นอก Core ส่วนจุดที่ 8 ตรวจตัวอ่าน JSON ของ Core เอง จึงแก้ Core 1 ฟังก์ชันพร้อมบันทึกข้อตัดสินใจ (ADR-025) หลัง E2 ใน PR #64 ผ่าน 239 จาก 270 ข้อ (ก่อน E2 ผ่าน 215 ข้อ; ขั้น 5.4–5.5, [แผนทดสอบ 3 ขั้น](benchmarking.md), [บันทึกหลักฐาน](evidence/2026-11-07-robustness-stage1.md))
 - วัดเคสยาก 116 ข้อของด่านความทนทานกับ AI จริง (Typhoon) เป็นครั้งแรกเมื่อ 10 พ.ย.: AI จัดหมวดถูก 104 จาก 116 กฎคำสำคัญถูก 48 จาก 116 เคสภาษาไทย AI ถูก 13 จาก 13 ข้อที่ AI พลาดทั้ง 12 ข้อเฉลยว่า "อื่น ๆ" แต่ AI จับใส่หมวดใกล้เคียง และ AI บอกว่า "มั่นใจสูง" ทุกข้อ ป้ายของชุดนี้ผู้พัฒนาจับคู่เอง จึงยังไม่ใช่ความแม่นยำ ผลนี้เป็นฐานของ[แผนเพิ่มประสิทธิผล](effectiveness_plan.md) ([บันทึกหลักฐาน](evidence/2026-11-10-effectiveness-baseline.md))
 - **แก้ตามผู้ตรวจสอบอิสระ (10 พ.ย.) ครบ 4 ข้อ** ([บันทึกหลักฐาน](evidence/2026-11-10-independent-review-response.md)):
-  - **คนตัดสินเคสได้แล้ว** (ขั้น 2.2 และ 2.4): เคสที่ "รอคนตรวจ" มีการ์ด "ตัดสินเคสนี้" กด "อนุมัติ" (ใช้หมวดที่กฎเสนอหรือเลือกเอง) หรือ "ไม่อนุมัติ" พร้อมเหตุผล เคสจะเปลี่ยนเป็น "อนุมัติแล้ว" หรือ "ไม่อนุมัติ" ตัดสินแล้วแก้ไม่ได้ กดซ้ำก็ไม่บันทึกซ้ำ และด้านซ้ายมีรายการ "รอรีวิว" ที่เอาเคสด่วนขึ้นก่อน ตอนนี้ผู้ตัดสินคือผู้ถือรหัสเข้าใช้ร่วม คือคุณ (รหัสรายคนอยู่ในขั้น 2.1) ส่วนงานต่อเนื่องหลังอนุมัติ (2.3) ทำแล้วเมื่อ 11 พ.ย. (ข้อ "ทักษะแยกกัน" ข้างล่าง) และคุณลองอนุมัติเคสบนหน้าเว็บจริงแล้วเมื่อ 16 พ.ย.
+  - **คนตัดสินเคสได้แล้ว** (ขั้น 2.2 และ 2.4): เคสที่ "รอคนตรวจ" มีการ์ด "ตัดสินเคสนี้" กด "อนุมัติ" (ใช้หมวดที่กฎเสนอหรือเลือกเอง) หรือ "ไม่อนุมัติ" พร้อมเหตุผล เคสจะเปลี่ยนเป็น "อนุมัติแล้ว" หรือ "ไม่อนุมัติ" ตัดสินแล้วแก้ไม่ได้ กดซ้ำก็ไม่บันทึกซ้ำ และด้านซ้ายมีรายการ "รอรีวิว" ที่เอาเคสด่วนขึ้นก่อน ตอนนั้นผู้ตัดสินคือผู้ถือรหัสเข้าใช้ร่วม คือคุณ ส่วนรหัสรายคน (2.1) ทำแล้วเมื่อ 16 พ.ย. (ข้อ "รหัสรายคน" ข้างล่าง) งานต่อเนื่องหลังอนุมัติ (2.3) ทำแล้วเมื่อ 11 พ.ย. (ข้อ "ทักษะแยกกัน" ข้างล่าง) และคุณลองอนุมัติเคสบนหน้าเว็บจริงแล้วเมื่อ 16 พ.ย.
   - **ด่านปิดข้อมูลส่วนตัวบังคับที่ประตูส่งออกแล้ว**: ตัวกลางเรียก AI (gateway) ปิดข้อมูลซ้ำเองก่อนส่งทุกครั้ง ถ้ายังเจอข้อมูลที่ต้องปิด จะไม่ส่งเลย และโค้ดอื่นสร้างข้อความ "ผ่านการปิดแล้ว" ปลอมเองไม่ได้ ระหว่างทำเจอว่ากฎปิดข้อมูลเดิมปิดซ้ำแล้วได้ผลไม่เหมือนเดิมในบางข้อความ (เช่น "นางสาว" + ชื่อ) จึงแก้เป็นกฎรุ่น 2 (`redact-v2`) คำตอบในชุดข้อสอบทุกชุดเหมือนเดิม
   - **บอกตรง ๆ ว่าเก็บได้นานแค่ไหน**: บนแผนฟรี หน้าเว็บไม่พูดว่า "บันทึกถาวร" แล้ว เตือนก่อนส่งและบนเคสที่รอตัดสิน และถ้าระบบเริ่มใหม่ด้วยที่เก็บว่าง หน้าเว็บจะบอกว่าเคสที่คุณส่งจากเครื่องนี้หายไปกี่รายการ (จำแค่รหัสงาน ไม่จำข้อความเคส) ทางแก้ถาวรยังเป็นแผน Render แบบเสียเงิน (D1)
   - **อีเมลส่วนตัวใน commit**: พบว่ายังเพิ่มขึ้นทุกครั้งที่กด Merge บน github.com (51 commit ตอนเปิดสาธารณะ ตอนนี้ 53) จึงเพิ่มช่องตรวจที่จับอีเมลส่วนตัวใน commit ใหม่ ทางหยุดคือการตั้งค่า 1 อย่างของคุณใน GitHub ส่วนของเก่าคุณเลือกเก็บประวัติไว้ตามเดิมแล้ว (D8 ข้างล่าง)
 - เคสแรกหลังระบบตื่นเคยใช้ราว 10 วินาที สาเหตุที่ยืนยันแล้วบนภาพจริงของบริการคือไม่มีไฟล์ที่แปลไว้ล่วงหน้า (bytecode cache) เลย โปรแกรมจึงต้องแปลโค้ดใหม่ทุกครั้งที่เริ่ม แก้แล้วใน PR #60 (งาน E1, 10 พ.ย.): บนเครื่องของ GitHub ที่จำกัดกำลังให้เท่าเครื่องฟรีของ Render เคสแรกเร็วขึ้นจาก 14.4 เป็น 3.1 วินาที และวัดบน Render จริงแล้วเมื่อ 16 พ.ย. จากเคสที่คุณส่งหลังระบบตื่น: 3.2 วินาที จากเดิม 9.0–10.5 วินาที (วัดได้ 1 ครั้ง) ([บันทึกหลักฐาน](evidence/2026-11-10-e1-bytecode-cache.md))
 
 - **ทักษะแยกกัน ส่งงานผ่านตัวกลาง (11 พ.ย. ตามที่คุณขอ, ADR-030):** แต่ละทักษะไม่เรียกโค้ดของกัน ส่งงานให้กันผ่านตัวกลาง (exchange) ตามตารางเส้นทางที่มีเลขรุ่น ระหว่างทางมีล่ามขาออกแปลเป็นภาษากลาง และล่ามขาเข้าแปลเป็นภาษาของทักษะปลายทาง เส้นทางแรกใช้งานแล้ว: กด "อนุมัติ" เคส → ระบบสร้างงาน "บันทึกผลหลังอนุมัติ" ทันทีในครั้งเดียวกับการตัดสิน บันทึกว่าเคสไปคิวไหน ใครอนุมัติ พร้อมใบรับจาก Core (นี่คือขั้น 2.3) ข้อความเคสไม่ถูกส่งต่อ ไม่อนุมัติก็ไม่ส่งต่อ ทดสอบกับชุดเคสเดิมทั้ง 3 ชุด 217 เคส ผ่านทุกข้อ และชุดทดสอบเดิมได้ผลเหมือนเดิมทุกข้อ ([แบบและวิธีทดสอบ](skill_handoff.md), [บันทึกหลักฐาน](evidence/2026-11-11-skill-handoff.md)) คุณลองบนหน้าเว็บจริงแล้วเมื่อ 16 พ.ย.: อนุมัติ 1 เคส ระบบส่งต่อ 1 งาน และงานนั้นเสร็จ
+- **รหัสรายคน (16 พ.ย. ตามที่คุณสั่ง, ขั้น 2.1, ADR-034):** คุณสร้างรหัสเข้าใช้ให้ผู้ตรวจหรือผู้ส่งเคสแต่ละคนได้ในแท็บ "ตั้งค่า" ส่วน "จัดการผู้ใช้" รหัสแสดงครั้งเดียว ผู้ตรวจตัดสินเคสได้แต่ส่งเคสไม่ได้ ผู้ส่งเคสส่งเคสได้แต่ตัดสินไม่ได้ ทุกการตัดสินบันทึกว่าเป็นรหัสของใคร และกดเพิกถอนแล้วรหัสนั้นใช้ไม่ได้ทันทีโดยไม่กระทบคนอื่น รหัสเข้าใช้ร่วมของคุณยังเป็นของเจ้าของระบบเหมือนเดิม ข้อจำกัด: บน Render แผนฟรี รหัสรายคนหายไปพร้อมเคสทุกครั้งที่ระบบหลับ รีสตาร์ท หรืออัปเดต (หายแบบปลอดภัย: ใช้ไม่ได้อีก) ถ้าจะใช้กับคนอื่นจริงต้องมีดิสก์ถาวร (D1) ([วิธีใช้](intake_queue.md))
 - **ผู้ช่วยแนะนำแหล่งเรียน: หยุดพัฒนาไว้ก่อน (11 พ.ย. ตามที่คุณสั่ง):** ของเดิมยังใช้ได้และช่องตรวจยังรัน
 - **ขีดสุดของระบบ ถ้ามี "ปุ่มอนุมัติเอง" (11 พ.ย. ตามที่คุณขอ, ADR-031):** ผมจำลองปุ่มนี้บนกระดาษจากคำตอบจริงของ Typhoon
   กับข้อสอบกลางจากข้อมูลเปิด (CLINC150, BANKING77, MASSIVE ไทย-อังกฤษ, คำสั่งแอบแฝง BIPIA) ชุดเคสยากที่เขียนใหม่ 128 เคส และชุดเดิม 3 ชุด
@@ -59,7 +60,7 @@ differs, this file and architecture.md win.
 |---|---|---|---|
 | 0 | เปิดใช้ออนไลน์บน Render และวัดผล AI จริงครั้งแรก | ใส่เคสบนหน้าเว็บจริง และอ่านผลวัดของ AI จริง | ออนไลน์แล้ว; วัดผล AI จริงครั้งแรกแล้วด้วย Typhoon (0.3, 6 พ.ย.); ที่เหลือรอคุณตัดสินใจ: D1 แผน Render แบบเสียเงิน, D2 API key ของ Claude และ 0.4 กับ Typhoon (ฟรี แต่ข้อความที่พิมพ์บนหน้าเว็บจะถูกส่งไป Typhoon) |
 | 1 | เก็บงานเล็ก ๆ ให้ระบบแน่นขึ้น | ยกเลิกเคสที่ยังรอคิวได้ | เสร็จ ยกเว้น 1.4 (สำรองข้อมูล) ที่ต้องใช้แผน Render แบบเสียเงิน |
-| 2 | ให้คนรีวิวได้จริง: ผู้รีวิวมีรหัสของตัวเอง กดอนุมัติหรือไม่อนุมัติได้ และ n8n แจ้งเตือน | กล่อง "รอรีวิว" บนหน้าเว็บ และข้อความแจ้งเตือน | เริ่มแล้ว (10 พ.ย. ตามข้อ 4 ของผู้ตรวจสอบอิสระ): 2.2 บันทึกการตัดสินและ 2.4 การ์ดตัดสินกับรายการ "รอรีวิว" ทำแล้ว โดยผู้ตัดสินคือผู้ถือรหัสเข้าใช้ร่วม (คุณ); 2.3 งานต่อเนื่องหลังอนุมัติทำแล้ว (11 พ.ย.) เป็นเส้นทางแรกของตัวกลาง (ขั้น H); คุณลองบนหน้าเว็บจริงแล้ว (16 พ.ย.): อนุมัติ 1 เคส เกิดงานต่อเนื่อง 1 งานและเสร็จ ส่วนป้าย "ด่วน" และการกด "ไม่อนุมัติ" โดยไม่ใส่เหตุผลยังไม่ได้ลอง; 2.1 รหัสรายคน และ 2.5 n8n ยังไม่ทำ |
+| 2 | ให้คนรีวิวได้จริง: ผู้รีวิวมีรหัสของตัวเอง กดอนุมัติหรือไม่อนุมัติได้ และ n8n แจ้งเตือน | กล่อง "รอรีวิว" บนหน้าเว็บ และข้อความแจ้งเตือน | เริ่มแล้ว (10 พ.ย. ตามข้อ 4 ของผู้ตรวจสอบอิสระ): 2.2 บันทึกการตัดสินและ 2.4 การ์ดตัดสินกับรายการ "รอรีวิว" ทำแล้ว โดยผู้ตัดสินคือผู้ถือรหัสเข้าใช้ร่วม (คุณ); 2.3 งานต่อเนื่องหลังอนุมัติทำแล้ว (11 พ.ย.) เป็นเส้นทางแรกของตัวกลาง (ขั้น H); คุณลองบนหน้าเว็บจริงแล้ว (16 พ.ย.): อนุมัติ 1 เคส เกิดงานต่อเนื่อง 1 งานและเสร็จ ส่วนป้าย "ด่วน" และการกด "ไม่อนุมัติ" โดยไม่ใส่เหตุผลยังไม่ได้ลอง; 2.1 รหัสรายคนของผู้ตรวจและผู้ส่งเคสทำแล้ว (16 พ.ย.) รอคุณลองบนหน้าเว็บจริง; 2.5 n8n ยังไม่ทำ |
 | 3 | ผู้ช่วยแนะนำแหล่งเรียน (`study_guide.v1`) ตามหลักปรัชญาของคุณ | พิมพ์เรื่องที่อยากรู้ด้วยคำธรรมดา แล้วได้แหล่งเรียนไม่เกิน 5 แหล่งพร้อมลำดับการเรียน | สร้างครบทุกขั้นแล้ว (คุณเลือกขั้นนี้ก่อนขั้น 2 เมื่อ 5 พ.ย.): 3.1 คลังแหล่งเรียน 3.2 ตัวผู้ช่วย และ 3.3 ชุดข้อสอบ ทำแล้ว (ดูตัวอย่างคำตอบและผลข้อสอบใน Actions ได้); 3.4 ช่อง "อยากเรียน" บนหน้าเว็บ สร้างและ merge แล้ว (7 พ.ย.) คุณลองบนหน้าเว็บจริงผ่านแล้ว (8 พ.ย.); รันกับ AI จริง (Typhoon) แล้ว หาหัวข้อถูก 46 จาก 48 ข้อ ไม่มีลิงก์นอกคลัง (Claude รอ D2); **หยุดพัฒนาเพิ่มไว้ก่อนตามที่คุณสั่ง (11 พ.ย.)**: ของที่มีอยู่ยังใช้ได้และช่องตรวจยังรันเหมือนเดิม |
 | 4 | ช่องคุยภาษาธรรมดา: ระบบเข้าใจว่าคุณขออะไร บอกตรง ๆ เมื่อเรื่องอยู่นอกกรอบ และถามกลับ 1 คำถามเมื่อข้อมูลไม่พอ | คุยกับระบบได้เลย ไม่ต้องเลือกประเภทงานเอง | ยังไม่เริ่ม (ขั้น 3 สร้างครบแล้ว เริ่มได้เมื่อคุณเลือก) |
 | 5 | ติดตามเส้นทางของแต่ละงาน (เวลา token จุดที่ช้า) ด่านตรวจผลรายเคส และแผนทดสอบ 3 ขั้นด้วยข้อมูลเปิด | ตัวเลขคิวและเวลาบนหน้าเว็บ ช่องตรวจบน PR แล้วต่อด้วยเส้นทางงานใน Honeycomb; ผลด่านความทนทานในหน้าสรุปของ *Core logic tests* | เสร็จแล้วทั้ง 5.1, 5.2, 5.3 และ 5.4; เส้นทางงานแรกเข้า Honeycomb เมื่อ 4 พ.ย. 00:23 น.; ด่านความทนทาน (5.4) รวมเข้า main แล้ว 7 พ.ย.; แก้ 8 bug ที่เจอแล้ว (5.5, PR #42 รวมแล้วเมื่อ 8 พ.ย.); E2 ใน PR #64 แก้จุดอ่อนของกฎได้ 24 จุด เหลือจุดอ่อนทั้งหมด 20 จุด ขั้นข้อสอบกลาง (5.6) สร้างและวัดกับ Typhoon แล้ว 11 พ.ย. พร้อมการจำลองปุ่มอนุมัติเอง (5.9) และวัดคำสั่งแอบแฝงครั้งแรก (ส่วนหนึ่งของ 5.7); ส่วนที่เหลือของ 5.7 ยังไม่ทำ; 5.8 โมเดลเปิดที่รันเองบนเครื่องทดสอบของ GitHub สร้างแล้วใน PR #46 และรันเต็มรอบแรกแล้ว 8 พ.ย. (ดันเคสที่กฎผิดขึ้นคิวด่วนครบ 32/32) รอเจ้าของโปรเจกต์เลือกทาง |
@@ -69,7 +70,7 @@ differs, this file and architecture.md win.
 | H | [ทักษะแยกกัน ส่งงานผ่านตัวกลาง](skill_handoff.md) มีล่ามแปลเป็นภาษาของทักษะปลายทางระหว่างทาง (H1–H5) | อนุมัติเคสบนหน้าเว็บแล้วเห็นงานที่ส่งต่อมา 1 งาน และกล่อง "ส่งต่อแล้ว" | สร้างแล้วตามที่คุณขอ (11 พ.ย., H1–H3): เส้นทางแรก "อนุมัติเคส → บันทึกผลหลังอนุมัติ" ทำงานแล้ว หน้าเว็บแสดงการส่งต่อทั้งสองทาง ทดสอบกับเคสเดิม 217 เคสผ่านทุกข้อ; คุณลองบนหน้าเว็บจริงผ่านแล้ว (16 พ.ย.); ทักษะใหม่ตัวแรก (H4) รอคุณเลือก |
 
 **เรื่องที่คุณต้องตัดสินใจเอง** อยู่ในตาราง [Owner decisions](#owner-decisions) ข้างล่าง เช่น
-- จะจ่ายค่า Render เพื่อให้เคสไม่หายหรือไม่
+- จะจ่ายค่า Render เพื่อให้เคสและรหัสรายคนไม่หายหรือไม่
 - จะใส่ Claude API key หรือไม่ (ไม่ใส่ก็วัดผลกับ AI จริงได้ผ่าน Typhoon)
 - โมเดลเปิดที่รันเองบนเครื่องทดสอบของ GitHub ผ่าน พอใช้ หรือไม่ผ่าน หลังรอบเต็มรอบแรก (ขั้น 5.8)
 - ใครเป็นผู้รีวิว
@@ -120,8 +121,8 @@ owner.
 | 1.4 | Backup, restore and retention | ⬜ | D1 = paid (disk) |
 | 1.5 | Docs truth checks in CI | ✅ PR #24 | — |
 | 1.6 | New look for the web page from the owner's mockup: chat intake with a confirm step, Flow and Trace, read-only settings | ✅ PR #18, merged and deployed 2026-11-03; the owner reported the owner test passed on the live page | — |
-| 2.1 | Personal access tokens and roles (replaces the shared key) | ⬜ | — |
-| 2.2 | Review ledger and decisions API | 🟡 built on 2026-11-10 before 2.1 (ADR-027): the owner's shared key is the reviewer's credential; per-role denial waits for 2.1 | 2.1 for per-person identity |
+| 2.1 | Personal access tokens and roles (replaces the shared key) | 🟡 built on 2026-11-16 (ADR-034): the owner issues reviewer and submitter tokens on the page (shown once), revokes them at once, and every route checks the role; on the free plan tokens are lost at every sleep (fail closed); the owner test on the live page is left | — |
+| 2.2 | Review ledger and decisions API | ✅ built on 2026-11-10 before 2.1 (ADR-027); since 2.1 (2026-11-16) a reviewer's token decides, recorded by its id, and a revoked token or the wrong role is denied | — |
 | 2.3 | Linked phase-B job on approval | ✅ built on 2026-11-11 as the first route of the skill-handoff exchange (H3, ADR-030): one approval starts exactly one `case_triage.v2.apply` job with a Core receipt ([evidence](evidence/2026-11-11-skill-handoff.md)); on the live page on 2026-11-16 the owner's approval started one, which completed in 42 ms | 2.2 |
 | 2.4 | Reviewer inbox on the web page | 🟡 built on 2026-11-10: a decision card on every waiting case and a "รอรีวิว" list, elevated first; owner test on the live page on 2026-11-16: an approval with a reason, shown as final (steps 2 and 3); the elevated tag (step 1) and a rejection without a reason (step 4) not tried yet | 2.2 |
 | 2.5 | n8n intake and reviewer notifications | ⬜ | 2.1, 2.2, D3 |
@@ -162,7 +163,7 @@ owner.
 | E5 | The edge of `other`, and a confidence that means something | ⬜ planned; 5.6 is built, and its first run confirms the problem on text nobody here wrote: most of Typhoon's mistakes are `other` requests pulled into a near category, nearly all with `high` confidence ([evidence](evidence/2026-11-11-autosend-limits.md)) | the owner labels about 20 borderline requests |
 | E6 | A study library that serves Thai readers | ⏸ paused with the study guide (owner, 2026-11-11); planned; today 1 of 17 resources is in Thai | the owner resumes it; the owner reads each candidate |
 | H1 | Skill handoff: the design and ADR-030 ([skill_handoff.md](skill_handoff.md)) | ✅ 2026-11-11; the owner asked for it to be built and shown working | — |
-| H2 | The common language and the first translators | ✅ built 2026-11-11: `app/exchange/`, `vocabulary-v1`, `out.case_triage.v2@1`, `in.case_triage.v2.apply@1`, isolation and golden-output tests | H1 |
+| H2 | The common language and the first translators | ✅ built 2026-11-11: `app/exchange/`, `vocabulary-v1` (`vocabulary-v2` since 2026-11-16, so a reviewer may approve, ADR-034), `out.case_triage.v2@1`, `in.case_triage.v2.apply@1`, isolation and golden-output tests | H1 |
 | H3 | The exchange and the first route (2.3's linked job after an approval) | ✅ built 2026-11-11: route table, queue schema 3 with the `handoffs` ledger, the handoff inside the decision's transaction, API fields; new suite and all 217 existing triage cases pass ([evidence](evidence/2026-11-11-skill-handoff.md)); the owner's test on the live page passed on 2026-11-16 | H2, 2.2 |
 | H4 | The first new skill, joined only through translators | ⬜ | H3, the owner's choice |
 | H5 | The chain on the page and in traces | 🟡 the page shows the chain both ways (2026-11-11); the trace link is not built | H3 |
@@ -521,6 +522,21 @@ person ends at `REVIEW_REQUIRED`, and nothing else can happen to it.
   2. เปิดหน้าต่างส่วนตัว แล้วใช้รหัสนั้นเข้าใช้
   3. กดเพิกถอนรหัส รหัสนั้นต้องใช้ไม่ได้ทันที
 - **Don't:** build passwords, e-mail login or OAuth now. Note them in the ADR as later options.
+- **Status (2026-11-16): built** when the owner said to start it (ADR-034, not ADR-017, which tracing took).
+  As designed above, with these differences, each recorded in ADR-034:
+  - the queue database was already at schema 3 (reviews, then handoffs), so tokens are schema 4 with a tested
+    3 → 4 upgrade;
+  - tokens are issued for `reviewer` and `submitter` only: the owner role stays with the shared key;
+  - `submitter` may also cancel a job that is still queued, as the page's sender always could;
+  - on Render's free plan the tokens are lost with the queue at every sleep, restart and deploy. They fail closed
+    (a lost token is refused, and nothing revoked can come back); signed tokens without storage were rejected
+    because a lost revocation would let a revoked token work again. Real use with other people needs D1;
+  - the exchange's vocabulary is now `vocabulary-v2`, so a reviewer's approval hands on like the owner's (2.3);
+  - `GET /v1/me` tells the page the role, and the page hides what that role cannot do.
+  Met: every item of "Done when" (`tests/test_service_access.py`, 20 tests; the page's `AccessTests`), and the
+  container smoke test issues a reviewer token, decides with it, revokes it and finds it still revoked after a
+  restart. A headless-browser walk as owner, reviewer and submitter passed on a local service. Left: the owner
+  test on the live page (above; in the settings tab, "จัดการผู้ใช้").
 
 ### 2.2 Review ledger and decisions API
 
@@ -557,8 +573,9 @@ person ends at `REVIEW_REQUIRED`, and nothing else can happen to it.
   - `final_category` is optional for `REJECT` (a rejected case may have no category); approving without one
     keeps the rules' suggestion.
   - Met: once per version, 16 identical approvals → one decision, 16 different decisions → one wins, all or
-    nothing under an injected failure, no key or a wrong key denied (`tests/test_service_reviews.py`). Open
-    until 2.1: a revoked token and the wrong role.
+    nothing under an injected failure, no key or a wrong key denied (`tests/test_service_reviews.py`). Closed by
+    2.1 on 2026-11-16: a revoked token and the wrong role are denied, and a reviewer's token decides
+    (`tests/test_service_access.py`).
 
 ### 2.3 Linked phase-B job on approval (ADR-004)
 
@@ -1761,3 +1778,9 @@ of H5 were built ([evidence](evidence/2026-11-11-skill-handoff.md)).
   uses a case that a signal raises, because rules v2 read Thai and no longer raise "ถูกหักเงินซ้ำ". The case was
   the first job after a free-plan sleep: E1 marked ✅ with its Render figure, 3.2 s (9.0 to 10.5 s before; one
   observation, read from Honeycomb).
+- 2026-11-16: 2.1 built when the owner said to start it after the merge of PR #71 (ADR-034): personal tokens for
+  reviewers and submitters, issued and revoked by the owner on the page, a role table checked on every route, and
+  decisions that record the token. 2.2 marked ✅ (its last open gates, a revoked token and the wrong role, are
+  met). The queue is at schema 4, and the exchange's vocabulary at v2 so a reviewer's approval hands on. Two
+  limits are written down rather than hidden: on the free plan the tokens vanish at every sleep (fail closed),
+  and there are no passwords, expiry dates or single sign-on.

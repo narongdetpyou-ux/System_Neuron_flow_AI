@@ -11,8 +11,9 @@ trusted agents in bounded child processes, retries, recovers after a crash and w
 `app/` is built on top of it without changing Core. It contains:
 - a case-triage domain: keyword rules make the official suggestion, an AI gives a second opinion
   (shadow mode), and a person always decides: since 2026-11-10 on the page's decision card or through
-  `POST /v1/reviews/{review_id}/decisions` (roadmap 2.2, 2.4; ADR-027: the owner's shared key is the only
-  reviewer credential until per-person tokens, 2.1);
+  `POST /v1/reviews/{review_id}/decisions` (roadmap 2.2, 2.4; ADR-027). Since 2026-11-16 the owner issues personal
+  tokens for reviewers and submitters on the page, and every route checks the caller's role; the shared key stays
+  the owner's (roadmap 2.1, ADR-034);
 - an AI gateway (an offline mock, Claude, Typhoon: SCB 10X's Thai-first model, free within rate limits;
   ADR-021, or `local`: an open-weight model on a server we run ourselves, today llama.cpp with Typhoon 2.5 4B
   on the GitHub runner; ADR-026);
@@ -189,7 +190,7 @@ If a task seems to need breaking a rule:
 ## 4. Checking your work
 
 ```bash
-python -m unittest discover -s tests -v        # all tests (509 on 2026-11-11); CI: Python 3.10 and 3.12
+python -m unittest discover -s tests -v        # all tests (534 on 2026-11-16); CI: Python 3.10 and 3.12
 python -m examples.case_triage_demo            # v1 rules, one synthetic case
 python -m examples.case_triage_shadow_demo     # v2 shadow mode with the offline mock AI
 python -m examples.study_guide_demo            # the study guide's answers to four synthetic requests
@@ -352,12 +353,12 @@ Notes for cloud sessions (claude.ai/code):
 | `app/domains/case_triage/` | v1 rules, the input contract, the v2 shadow agents and workflow, and the attention signals (`signals.py`, `signals_v2.json`, ADR-032) |
 | `app/domains/study_guide/` | the study guide: topic catalog and verified resource library (`catalog/*_v1.json`), their checks and hash (`library.py`), the link check (`link_check.py`), and the `study_guide.v1` workflow (`workflow.py`, `agents.py`, `planning.py`, `ai_prompts.py`, `mock_answers.py`); no `.md` files here, because the Render build filter ignores them |
 | `app/llm/` | AI gateway, prompt library (prompt + answer schema, one hash), personal-data masking, mock, Claude, Typhoon and local providers (`providers/openai_compat.py` serves OpenAI-format services, Typhoon and a server we run ourselves, and states the answer format in words for both, ADR-022, ADR-026; `providers/_http.py` refuses redirects for every real client) |
-| `app/exchange/` | the skill-handoff exchange (ADR-030): the common language (`common.py`, `vocabulary_v1.json`), translators (`translators/`, one module per skill, outside `app/domains/`), the route table (`routes.py`, `routes_v1.json`) and `exchange.py`, which checks the table at start and prepares each handoff for the queue store |
+| `app/exchange/` | the skill-handoff exchange (ADR-030): the common language (`common.py`, `vocabulary_v2.json`; v2 lets a reviewer approve, ADR-034), translators (`translators/`, one module per skill, outside `app/domains/`), the route table (`routes.py`, `routes_v1.json`) and `exchange.py`, which checks the table at start and prepares each handoff for the queue store |
 | `app/eval/` | the two scorecards (triage: 61 labelled cases; study guide: 67 labelled requests), the eval gate's shared code and per-category scores (`common.py`), the rules v1/v2 replay (`rules_comparison.py`) the auto-approve simulation (`autosend_sim.py`, ADR-031: a replay only, never imported by the service) and the attention replay (`attention_replay.py`, ADR-032: the flag before and after the signals on saved answers); `golden/` holds the case sets, among them the 128-case hard auto-send set and the 64-case held-out attention set |
 | `app/observability/sentry.py` | Sentry reporting: step failures, degraded AI, Runner recoveries |
 | `app/observability/tracing.py`, `job_spans.py` | tracing: the OTLP/JSON exporter with its attribute allow-list, and a finished job's spans (ADR-017) |
-| `app/persistence/queue_store.py` | the application queue in its own SQLite file (`<data>/app/queue.sqlite3`, schema 3): jobs, events, the Runner heartbeat, reviews and append-only decisions, skill handoffs, and the store id that shows when the queue started empty |
-| `app/services/` | workflow catalog, admission, Runner with reconciliation, result summaries, queue and run-time figures, review decisions (`reviews.py`) |
+| `app/persistence/queue_store.py` | the application queue in its own SQLite file (`<data>/app/queue.sqlite3`, schema 4): jobs, events, the Runner heartbeat, reviews and append-only decisions, skill handoffs, personal access tokens (the secret's SHA-256, never the secret; ADR-034), and the store id that shows when the queue started empty |
+| `app/services/` | workflow catalog, admission, Runner with reconciliation, result summaries, queue and run-time figures, review decisions (`reviews.py`), who may call the API and what each role may do (`access.py`: the shared key, personal tokens and the role table, ADR-034) |
 | `app/api/`, `app/web/` | standard-library HTTP API and the Thai web page (chat layout with a case / study-question switch, the study guide's layered answer, Flow and Trace, read-only settings); `tests/test_web_page.py` holds the page to its contracts |
 | `app/boot.py` | the image's process 1: takes the data folder as root, switches to `neuron`, becomes tini |
 | `app/settings.py`, `app/serve.py` | settings from the environment; the launcher (API + supervised Runner) |
@@ -515,6 +516,16 @@ Notes for cloud sessions (claude.ai/code):
     0.989 s before and 0.256 s after; with the container held to 0.1 CPU, 14.4 s before and 3.1 s after.
     On Render (2026-11-16, the owner's case, read from Honeycomb): the first job after a free-plan sleep ran in
     3.2 s (`run` 3,158 ms; 9.0 to 10.5 s before), one observation; no case was sent right after a deploy.
+  - Personal access tokens and roles (roadmap 2.1, ADR-034), built on 2026-11-16 when the owner said to start
+    2.1 right after the merge of PR #71. The shared key stays the owner's bootstrap credential; the owner issues
+    tokens (`nf_<id>_<secret>`, shown once) for `reviewer` or `submitter` in the settings tab's "จัดการผู้ใช้" or
+    `POST /v1/tokens`, lists and revokes them; the queue database (schema 4) keeps the secret's SHA-256, never the
+    secret; every request reads the row again, so a revocation applies at once; a fixed role table is checked on
+    every route (403 `forbidden`); decisions record the token id and role; the exchange's `vocabulary-v2` lets a
+    reviewer's approval hand on. On Render's free plan the tokens go with the queue at every sleep, restart and
+    deploy (they fail closed). Checked by `tests/test_service_access.py`, the page's contract tests, the container
+    smoke test (issue, decide, revoke, and the revocation kept across a restart) and a headless-browser walk as
+    owner, reviewer and submitter. The owner test on the live page is left.
   - The answer to the first independent review (2026-11-10, of `main` @ `f38c926`; all four findings, one PR;
     `docs/evidence/2026-11-10-independent-review-response.md`):
     - review decisions (2.2) and the page's decision card and "รอรีวิว" list (2.4), built before 2.1 with the
@@ -537,7 +548,7 @@ Notes for cloud sessions (claude.ai/code):
     wrong on 13, 12 of them `high`, so its own confidence cannot carry a button; no policy holds the cases that
     must see a person ([evidence](docs/evidence/2026-11-11-autosend-limits.md)). No real button exists or is planned
     (D9).
-  - Per-person reviewer identity (2.1) and the n8n intake (2.5) are not built; review decisions (ADR-027) and the
+  - The n8n intake (2.5) is not built; review decisions (ADR-027), personal tokens and roles (2.1, ADR-034) and the
     linked job after an approval (2.3, ADR-030) are.
   - The first new skill on the exchange (H4) waits for the owner's choice; the link between two handed-off jobs'
     traces (H5) is not built.
@@ -613,7 +624,7 @@ Notes for cloud sessions (claude.ai/code):
   - Waiting on the owner: 0.2 and 1.4 (D1, paid Render plan), 0.3 path B and 0.4 with Claude (D2, Claude
     API key); 0.4 with Typhoon is free but sends what is typed on the page to Typhoon, so it is the owner's
     choice too; an open model behind the page needs a paid machine (D7); the rest of the owner tests on the live
-    page (2.4's steps 1 and 4, attention 5.10); the first new skill (H4). The owner's first case since
+    page (2.1's tokens, 2.4's steps 1 and 4, attention 5.10); the first new skill (H4). The owner's first case since
     2026-11-10, on 2026-11-16, passed H3 and 2.4's steps 2 and 3 and gave E1's Render figure.
     D8 is decided (2026-11-10): the e-mail history stays as it is; do not propose a rewrite.
   - **The study guide is paused (owner, 2026-11-11):** no new study-guide work (E4, E6 or changes to
@@ -631,7 +642,7 @@ Notes for cloud sessions (claude.ai/code):
   - 5.8's first full run is recorded: the owner chooses its branch (not good enough, close or good enough;
     roadmap 5.8, "After the first full run", step 2), then follow it.
   - Buildable now without an owner decision: the rest of 5.5 (decide and fix the stage-1 gaps), 5.6 and 5.7,
-    the rest of Phase 2 (2.1 next; 2.2, 2.3 and 2.4 are built), H5's trace link, and Phase 4 (4.1 first; Phase 3, which it
+    the rest of Phase 2 (2.1 to 2.4 are built; 2.5 needs D3, 2.6 to 2.8 when needed), H5's trace link, and Phase 4 (4.1 first; Phase 3, which it
     needs, is built). The rest of 7.1 (who can read the AI key) needs an ADR first.
   - The effectiveness track (2026-11-10, PR #50, [docs/effectiveness_plan.md](docs/effectiveness_plan.md)): E1
     is built (PR #60) and measured on Render (3.2 s after a sleep, 9.0 to 10.5 s before; its task 5 only if the

@@ -12,11 +12,18 @@
   GET  /v1/reviews                cases waiting for a person: ?state=PENDING|APPROVED|REJECTED&limit=1-100&after=
   GET  /v1/reviews/{review_id}    the case, the proposal (rules, AI second opinion, why raised), every decision
   POST /v1/reviews/{review_id}/decisions   approve or reject: 201 new, 200 the same decision again, 400/404/409
+  GET  /v1/me                     who the credential is and what its role may do
+  GET  /v1/tokens                 the owner: every personal token, without secrets
+  POST /v1/tokens                 the owner: issue a token for a reviewer or a submitter; 201, shown once
+  POST /v1/tokens/{token_id}/revoke   the owner: revoke at once; 200, or 404
 
-Every ``/v1`` route needs ``Authorization: Bearer <NEURON_FLOW_ACCESS_KEY>``. Responses never contain
-file paths, credentials or stack traces. Every response carries ``X-Request-Id``: a well-formed id the
-client sent, or a new random one. The same id is written in the access log line and, for a new job, in
-its ``job.queued`` event, so one request can be followed from the log to the job record.
+Every ``/v1`` route needs ``Authorization: Bearer <credential>``: the owner's shared key
+``NEURON_FLOW_ACCESS_KEY`` or a personal token, and the credential's role must be allowed on the route
+(``app.services.access``, ADR-034; 401 for a wrong credential, 403 for a role without the right). Responses never
+contain file paths, credentials or stack traces; the one exception is the reply that creates a token, which holds
+it once. Every response carries ``X-Request-Id``: a well-formed id the client sent, or a new random one. The same
+id is written in the access log line and, for a new job, in its ``job.queued`` event, so one request can be
+followed from the log to the job record.
 
 When tracing is on (``app.observability.tracing``), every ``/v1`` request also becomes one span, and a job
 that a request admits records that span as its parent, so the Runner's spans of the job join the same
@@ -54,6 +61,7 @@ from app.llm import LLMConfig, LLMConfigError
 from app.observability.tracing import Tracing, parse_traceparent
 from app.persistence import DECIDED, PENDING, QUEUED, REVIEW_REQUIRED, StateError
 from app.persistence.queue_store import iso
+from app.services import access
 from app.services.admission import AdmissionError, admit
 from app.services.metrics import queue_metrics
 from app.services.results import plan_view
@@ -68,6 +76,7 @@ WEB_DIR = Path(__file__).resolve().parent.parent / "web"
 JOB_PATH = re.compile(r"^/v1/jobs/(job_[0-9a-f]{24})(/events|/cancel)?$")
 JOB_ID_TEXT = re.compile(r"(?:job|rev)_[0-9a-f]{24}")  # a review id is named after its job, so it counts as one
 REVIEW_PATH = re.compile(r"^/v1/reviews/(rev_[0-9a-f]{24})(/decisions)?$")
+TOKEN_PATH = re.compile(r"^/v1/tokens/([0-9a-f]{16})/revoke$")
 LOST_ON = ("sleep", "restart", "deploy")  # what wipes a data folder that is not persistent (Render's free plan)
 # A client may send its own id: 1-64 characters, letters, digits, '.', '_' or '-'. Nothing else reaches the logs.
 REQUEST_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$")
@@ -139,6 +148,7 @@ class ApiApp:
         self._key_digest = hashlib.sha256(key.encode("utf-8")).digest() if key else None
         self._submit_limit = RateLimiter(settings.submit_per_minute, 60, total_capacity=settings.submit_per_minute * 4)
         self._decide_limit = RateLimiter(settings.submit_per_minute, 60, total_capacity=settings.submit_per_minute * 4)
+        self._token_limit = RateLimiter(10, 60)  # new personal tokens per client and minute (ADR-034)
         self._auth_limit = RateLimiter(10, 60)
         self._assets = {path: ((WEB_DIR / name).read_bytes(), content_type)
                         for path, (name, content_type) in _ASSETS.items()}
@@ -150,11 +160,11 @@ class ApiApp:
         """The id for one request: the client's ``X-Request-Id`` if it is safe to log, else a new one.
 
         Refused (and replaced): anything malformed, anything that contains a job or review id (access lines
-        never carry job ids, and a review id is named after its job), and the access key itself (a client that
-        confuses the two headers).
+        never carry job ids, and a review id is named after its job), the access key itself and anything that
+        holds the start of a personal token (a client that confuses the two headers).
         """
         sent = headers.get("x-request-id", "").strip()
-        if not REQUEST_ID.fullmatch(sent) or JOB_ID_TEXT.search(sent):
+        if not REQUEST_ID.fullmatch(sent) or JOB_ID_TEXT.search(sent) or access.TOKEN_LIKE.search(sent):
             return new_request_id()
         if self._key_digest is not None and hmac.compare_digest(
                 hashlib.sha256(sent.encode("utf-8")).digest(), self._key_digest):
@@ -185,11 +195,23 @@ class ApiApp:
             return self._health() if reading else _not_allowed("GET, HEAD")
         if not path.startswith("/v1/"):
             return error(404, "not_found", "No such page")
-        denied = self._authorize(request)
+        identity, denied = self._authorize(request)
         if denied is not None:
             return denied
+        template = route_template(path)
+        if access.known(method, template) and not access.allowed(method, template, identity.role):
+            return error(403, "forbidden", "Your role cannot do this", role=identity.role)
         if path == "/v1/status":
             return self._status() if reading else _not_allowed("GET, HEAD")
+        if path == "/v1/me":
+            return json_response(200, access.me_view(identity)) if reading else _not_allowed("GET, HEAD")
+        if path == "/v1/tokens":
+            if method == "POST":
+                return self._issue(request, identity)
+            return self._tokens() if reading else _not_allowed("GET, HEAD, POST")
+        token_match = TOKEN_PATH.fullmatch(path)
+        if token_match is not None:
+            return self._revoke(request, token_match.group(1), identity) if method == "POST" else _not_allowed("POST")
         if path == "/v1/jobs":
             if method == "POST":
                 return self._submit(request)
@@ -199,7 +221,8 @@ class ApiApp:
         review_match = REVIEW_PATH.fullmatch(path)
         if review_match is not None:
             if review_match.group(2):
-                return self._decide(request, review_match.group(1)) if method == "POST" else _not_allowed("POST")
+                return (self._decide(request, review_match.group(1), identity) if method == "POST"
+                        else _not_allowed("POST"))
             return self._review(review_match.group(1)) if reading else _not_allowed("GET, HEAD")
         match = JOB_PATH.fullmatch(path)
         if match is None:
@@ -216,20 +239,25 @@ class ApiApp:
     # -- access ----------------------------------------------------------------------------------
 
     def _authorize(self, request):
+        """``(identity, None)`` for a valid credential, or ``(None, response)``: 503 without a configured key, 429
+        after too many wrong credentials from this client, 401 for a wrong, unknown, revoked or lost one."""
         if self._key_digest is None:
-            return error(503, "access_key_not_configured",
-                         f"Set NEURON_FLOW_ACCESS_KEY (at least {MIN_ACCESS_KEY_LENGTH} characters) and restart"
-                         " the service", problem=self.settings.access_key_problem)
+            return None, error(503, "access_key_not_configured",
+                               f"Set NEURON_FLOW_ACCESS_KEY (at least {MIN_ACCESS_KEY_LENGTH} characters) and"
+                               " restart the service", problem=self.settings.access_key_problem)
         if self._auth_limit.blocked(request.client):
             retry = self._auth_limit.retry_after(request.client)
-            return error(429, "too_many_attempts", "Too many wrong access keys; wait and try again",
-                         headers=[("Retry-After", str(retry))], retry_after_s=retry)
-        scheme, _, token = request.headers.get("authorization", "").partition(" ")
-        presented = hashlib.sha256(token.strip().encode("utf-8")).digest()
-        if scheme.lower() == "bearer" and token.strip() and hmac.compare_digest(presented, self._key_digest):
-            return None
+            return None, error(429, "too_many_attempts", "Too many wrong access keys; wait and try again",
+                               headers=[("Retry-After", str(retry))], retry_after_s=retry)
+        scheme, _, credential = request.headers.get("authorization", "").partition(" ")
+        identity = None
+        if scheme.lower() == "bearer" and credential.strip():
+            identity = access.authenticate(self.store, credential.strip(), self._key_digest, now=self.clock())
+        if identity is not None:
+            return identity, None
         self._auth_limit.allow(request.client)  # count the failure
-        return error(401, "unauthorized", "Missing or wrong access key", headers=[("WWW-Authenticate", "Bearer")])
+        return None, error(401, "unauthorized", "Missing or wrong access key",
+                           headers=[("WWW-Authenticate", "Bearer")])
 
     # -- routes ----------------------------------------------------------------------------------
 
@@ -277,6 +305,7 @@ class ApiApp:
             "storage": {"kind": self.settings.storage, "persistent": self.settings.persistent},
             "retention": self._retention(),
             "reviews": {**self.store.review_counts(), **review_service.policy()},
+            "access": access.policy(),
             # A case's summary (case_triage) and a study request's message (study_guide.v1), checked at admission.
             "limits": {"max_queued": self.settings.max_queued, "submit_per_minute": self.settings.submit_per_minute,
                        "summary_min_chars": SUMMARY_MIN_CHARS, "summary_max_chars": SUMMARY_MAX_CHARS,
@@ -359,8 +388,9 @@ class ApiApp:
             return error(404, "review_not_found", "No review with this id")
         return json_response(200, review_service.review_detail(review))
 
-    def _decide(self, request, review_id):
-        """A person's decision. The reviewer comes from the credential (today: the shared key, the owner)."""
+    def _decide(self, request, review_id, identity):
+        """A person's decision. The reviewer comes from the credential (the owner's shared key or a reviewer's
+        personal token, ADR-034), never from the body."""
         content_type = request.headers.get("content-type", "").split(";", 1)[0].strip().lower()
         if content_type != "application/json":
             return error(415, "unsupported_media_type", "Send JSON with Content-Type: application/json")
@@ -375,8 +405,8 @@ class ApiApp:
         except ValueError:  # a SpecError, or any other parse failure: the client's input, never a 500
             return error(400, "invalid_json", "The body is not valid JSON, or it repeats a field")
         try:
-            review, row, created = review_service.decide(self.store, review_id, body, request_id=request.request_id,
-                                                         exchange=self.exchange)
+            review, row, created = review_service.decide(self.store, review_id, body, reviewer=identity.reviewer,
+                                                         request_id=request.request_id, exchange=self.exchange)
         except review_service.DecisionError as exc:
             return error(exc.status, exc.code, exc.message, **exc.extra)
         # What the decision handed on (ADR-030): the same rows for a repeated click, never a second job.
@@ -386,6 +416,64 @@ class ApiApp:
                               "review": review_service.review_detail(review), "handoffs": handoffs,
                               "retention": self._retention()},
                              [("Location", f"/v1/reviews/{review_id}")])
+
+    # -- personal tokens (the owner only, ADR-034) ----------------------------------------------------
+
+    def _json_body(self, request, limiter, what):
+        """The decoded JSON body, or an error response: the content type, size, rate and syntax checks the write
+        routes share. Returns ``(body, None)`` or ``(None, response)``."""
+        content_type = request.headers.get("content-type", "").split(";", 1)[0].strip().lower()
+        if content_type != "application/json":
+            return None, error(415, "unsupported_media_type", "Send JSON with Content-Type: application/json")
+        if len(request.body) > MAX_BODY_BYTES:
+            return None, error(413, "body_too_large", f"The body is larger than {MAX_BODY_BYTES} bytes")
+        allowed, retry = limiter.allow(request.client)
+        if not allowed:
+            return None, error(429, "rate_limited", f"Too many {what}; wait and try again",
+                               headers=[("Retry-After", str(retry))], retry_after_s=retry)
+        try:
+            return decode(request.body), None
+        except ValueError:  # a SpecError, or any other parse failure: the client's input, never a 500
+            return None, error(400, "invalid_json", "The body is not valid JSON, or it repeats a field")
+
+    def _issue(self, request, identity):
+        """A new personal token. The reply is the only place its secret ever appears."""
+        body, refused = self._json_body(request, self._token_limit, "new tokens")
+        if refused is not None:
+            return refused
+        try:
+            token, row = access.issue(self.store, body, created_by=identity.token_id, now=self.clock())
+        except access.TokenError as exc:
+            return error(exc.status, exc.code, exc.message, **exc.extra)
+        log.info("api: access token %s issued for the role %s", row["token_id"], row["role"])
+        return json_response(201, {"token": token, "shown_once": True, "token_info": access.token_view(row),
+                                   "retention": self._retention()}, [("Location", "/v1/tokens")])
+
+    def _tokens(self):
+        rows = self.store.list_tokens()
+        return json_response(200, {"tokens": [access.token_view(row) for row in rows],
+                                   "active": sum(1 for row in rows if row["revoked_at"] is None),
+                                   **access.policy(), "retention": self._retention()})
+
+    def _revoke(self, request, token_id, identity):
+        """Revoke a token. The body may be empty or ``{}``; revoking it again returns the same record."""
+        if request.body.strip():
+            content_type = request.headers.get("content-type", "").split(";", 1)[0].strip().lower()
+            if content_type != "application/json":
+                return error(415, "unsupported_media_type", "Send JSON with Content-Type: application/json")
+            try:
+                body = decode(request.body)
+            except ValueError:
+                return error(400, "invalid_json", "The body is not valid JSON, or it repeats a field")
+            if body != {}:
+                return error(400, "invalid_fields", "A revoke request takes no fields; send {} or nothing")
+        try:
+            row, changed = self.store.revoke_token(token_id, revoked_by=identity.token_id, now=self.clock())
+        except KeyError:
+            return error(404, "token_not_found", "No token with this id")
+        if changed:
+            log.info("api: access token %s revoked", token_id)
+        return json_response(200, {"token_info": access.token_view(row), "changed": changed})
 
     def _retention(self):
         """How long what the API just stored will last: persistent storage, or until the next wipe."""
@@ -476,7 +564,10 @@ def _int_param(request, name, default, low, high):
 
 
 def route_label(path):
-    """Path for log lines, with job and review ids replaced, so logs stay short and comparable."""
+    """Path for log lines, with job, review and token ids replaced, so logs stay short and comparable. Anything that
+    looks like a personal token (pasted into an address by mistake) is replaced too."""
+    path = re.sub(r"nf_[0-9a-f]{16}_[A-Za-z0-9_-]*", "{token}", path)
+    path = re.sub(r"(?<=/v1/tokens/)[^/]+", "{token_id}", path)
     return re.sub(r"rev_[0-9a-f]{24}", "{review_id}", re.sub(r"job_[0-9a-f]{24}", "{job_id}", path))[:100]
 
 
@@ -489,8 +580,10 @@ def route_template(path):
     """The route of an API path as a fixed template (``/v1/jobs/{job_id}``), or ``None`` for an unknown path.
 
     Spans carry this, never the path itself, so a path a client made up cannot carry text into a trace."""
-    if path in ("/v1/status", "/v1/jobs", "/v1/reviews"):
+    if path in ("/v1/status", "/v1/jobs", "/v1/reviews", "/v1/me", "/v1/tokens"):
         return path
+    if TOKEN_PATH.fullmatch(path):
+        return "/v1/tokens/{token_id}/revoke"
     review = REVIEW_PATH.fullmatch(path)
     if review:
         return "/v1/reviews/{review_id}" + (review.group(2) or "")

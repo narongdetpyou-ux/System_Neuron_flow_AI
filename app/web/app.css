@@ -466,8 +466,23 @@ details.layer > .kv { padding: 0; }
 .counter.over { color: var(--err); }
 .note { margin-top: 8px; font-size: 11.5px; color: var(--muted-2); }
 
-/* settings (read-only) */
+/* settings (read-only), with the owner's "จัดการผู้ใช้" above it (roadmap 2.1, ADR-034) */
 .view-settings { overflow-y: auto; padding: 24px clamp(16px, 3vw, 40px) 32px; gap: 18px; }
+#settings-body, .users-section { display: flex; flex-direction: column; gap: 18px; }
+.role-list { margin: 0; padding-left: 18px; display: grid; gap: 4px; font-size: 12.5px; color: var(--text-2); }
+.token-form { display: grid; grid-template-columns: minmax(6rem, 9rem) minmax(0, 1fr); gap: 8px 12px; align-items: center; max-width: 560px; }
+.token-box { display: flex; flex-direction: column; gap: 8px; padding: 12px; border-radius: var(--radius); background: var(--warn-bg); box-shadow: 0 0 0 1px var(--warn-line); }
+.token-box .label { font-size: 13px; color: var(--warn); }
+.token-box .input { font-size: 12.5px; }
+.token-confirm { display: inline-flex; flex-wrap: wrap; gap: 6px; }
+.token-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.token-item { display: grid; gap: 6px; padding: 10px 12px; border-radius: var(--radius); background: var(--surface-3); box-shadow: 0 0 0 1px var(--line-2); }
+.token-item.revoked { opacity: .7; }
+.token-who { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; font-size: 13px; }
+.token-when { font-size: 11.5px; overflow-wrap: anywhere; }
+.token-item > .btn, .token-item > .token-confirm { justify-self: start; }
+.role-note { margin: 0; padding: 12px clamp(14px, 3vw, 28px); font-size: 12.5px; color: var(--muted); }
+@media (max-width: 560px) { .token-form { grid-template-columns: minmax(0, 1fr); } }
 .settings-intro { color: var(--muted); max-width: 75ch; }
 .panel { border-radius: 10px; background: var(--surface); box-shadow: 0 0 0 1px var(--line-2); padding: 16px 18px; display: flex; flex-direction: column; gap: 12px; }
 .panel h2 { font-size: 15.5px; }

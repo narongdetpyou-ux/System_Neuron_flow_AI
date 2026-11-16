@@ -13,7 +13,10 @@ what the service and the study guide promise:
 5. the script parses (with Node.js, when it is installed: GitHub's runners have it);
 6. reviews and retention (the independent review of 2026-11-10, points 3 and 4): every job status, decision and
    review error has Thai words; the page never says "saved permanently" without checking the storage; the browser
-   keeps only the access key and job ids, never case text; and who decides is never sent from the page.
+   keeps only the access key and job ids, never case text; and who decides is never sent from the page;
+7. personal tokens and roles (roadmap 2.1, ADR-034): every role and token error has Thai words, a new token is
+   shown from memory and never stored, only checked token ids reach an address, a status refresh never redraws
+   the owner's section, and the page hides what the signed-in role cannot do.
 
 A headless-browser walkthrough of the page itself is described in docs/intake_queue.md.
 """
@@ -287,3 +290,54 @@ class ReviewAndRetentionTests(unittest.TestCase):
         self.assertNotRegex(submit, r"reviewer|token_id|role")
         self.assertIn('id="inbox"', PAGE)
         self.assertIn('id="lost-banner"', PAGE)
+
+
+class AccessTests(unittest.TestCase):
+    """Personal tokens and roles on the page (roadmap 2.1, ADR-034)."""
+
+    def test_every_role_and_token_error_has_thai_words(self):
+        from app.services.access import ISSUABLE_ROLES, ROLES
+        roles = js_table("ROLE_TH")
+        self.assertEqual(set(roles), set(ROLES))
+        self.assertTrue(all(re.search(r"[฀-๿]", word) for word in roles.values()))
+        self.assertEqual(set(js_table("ROLE_DOES")), set(ISSUABLE_ROLES))
+        errors = js_table("API_ERROR")
+        for code in ("forbidden", "invalid_display_name", "invalid_role", "too_many_tokens", "token_not_found"):
+            with self.subTest(code=code):
+                self.assertIn(code, errors)
+
+    def test_a_new_token_is_shown_from_memory_and_never_stored(self):
+        # The only browser writes stay the person's own credential and job ids (ReviewAndRetentionTests); here the
+        # code that holds a new token never touches storage, and the lock forgets it.
+        create = SCRIPT[SCRIPT.index("async function createToken"):]
+        create = create[:create.index("\n  }\n")]
+        self.assertNotRegex(create, r"Storage|saveKey")
+        self.assertIn("users.created = {", create)
+        lock = SCRIPT[SCRIPT.index('$("lock").addEventListener'):]
+        self.assertIn("state.users = freshUsers()", lock[:lock.index("\n    });\n")])
+
+    def test_only_checked_token_ids_reach_an_address(self):
+        revoke = SCRIPT[SCRIPT.index("async function revokeToken"):]
+        revoke = revoke[:revoke.index("\n  }\n")]
+        self.assertIn("TOKEN_ID.test(tokenId)", revoke)
+        self.assertIn("encodeURIComponent(tokenId)", revoke)
+        self.assertEqual(SCRIPT.count("/v1/tokens/"), 1)
+
+    def test_a_status_refresh_never_redraws_the_owners_section(self):
+        settings_view = SCRIPT[SCRIPT.index("function renderSettings"):]
+        settings_view = settings_view[:settings_view.index("\n  }\n")]
+        self.assertIn('$("settings-body")', settings_view)
+        self.assertNotIn("users-section", settings_view)
+        for element in ('id="users-section"', 'id="settings-body"', 'id="role-note"', 'id="sys-me"'):
+            with self.subTest(element=element):
+                self.assertIn(element, PAGE)
+
+    def test_the_page_asks_who_it_is_and_hides_what_the_role_cannot_do(self):
+        self.assertIn('call("GET", "/v1/me")', SCRIPT)
+        for guard in ('can("submit")', 'can("review")', 'can("cancel")', 'can("manage_tokens")'):
+            with self.subTest(guard=guard):
+                self.assertIn(guard, SCRIPT)
+        decision_card = SCRIPT[SCRIPT.index("function decisionForm"):]
+        self.assertIn('!can("review")', decision_card[:decision_card.index("\n  }\n")])
+        inbox = SCRIPT[SCRIPT.index("async function refreshInbox"):]
+        self.assertIn('can("review")', inbox[:inbox.index("\n  }\n")])

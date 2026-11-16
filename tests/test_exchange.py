@@ -65,7 +65,9 @@ class VocabularyTests(unittest.TestCase):
 
     def test_the_tag_names_the_complete_sha256_of_the_file(self):
         digest = hashlib.sha256(VOCABULARY_FILE.read_bytes()).hexdigest()
-        self.assertEqual(self.vocabulary.tag, f"vocabulary-v1@sha256:{digest}")
+        # vocabulary-v2 (ADR-034): review.reviewer_role may be owner or reviewer; any change to the file is a new version.
+        self.assertEqual(self.vocabulary.tag, f"vocabulary-v2@sha256:{digest}")
+        self.assertEqual(self.vocabulary.facts["review.reviewer_role"]["values"], ["owner", "reviewer"])
         self.assertEqual(set(self.vocabulary.origins), {"input", "rules", "person", "ai"})
 
     def test_good_facts_pass(self):

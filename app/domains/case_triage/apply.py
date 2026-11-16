@@ -18,7 +18,7 @@ from neuron_flow import AgentDefinition, SpecError
 from .contracts import CATEGORIES, QUEUE_FOR
 
 APPLY_VERSION = "apply-1"
-APPROVERS = ("owner",)  # who can approve today (ADR-027); per-person roles arrive with roadmap 2.1
+APPROVERS = ("owner", "reviewer")  # the roles that may approve: the owner's shared key or a reviewer's token (ADR-034)
 STEP_ID = "record_routing"
 _CASE_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]{0,79}$")
 _DECISION_ID = re.compile(r"^dec_[0-9a-f]{24}$")

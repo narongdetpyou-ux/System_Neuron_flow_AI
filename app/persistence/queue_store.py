@@ -35,6 +35,10 @@ transaction, on the job's new record, and returns a plan or ``None``. A ``STARTE
 the row with its reason code and no job. Either way the source gets a ``handoff.*`` event, and all of it commits
 with the source's new state or not at all. The queue limit does not apply to a handoff: its source was admitted
 under it, a job starts at most one handoff, and chains stop at the route table's depth.
+
+Access tokens (schema version 4, ADR-034): one row per personal token the owner issued, with the SHA-256 of its
+secret, never the secret. Only the API writes them. On storage that is not persistent they go with the rest of the
+queue, so a lost token is refused like an unknown one (it fails closed).
 """
 
 from contextlib import contextmanager
@@ -47,7 +51,7 @@ import time
 
 from neuron_flow.model import encode, fingerprint
 
-SCHEMA_VERSION = 3
+SCHEMA_VERSION = 4
 QUEUED, RUNNING, CANCELLED = "QUEUED", "RUNNING", "CANCELLED"
 REVIEW_REQUIRED, APPROVED, REJECTED = "REVIEW_REQUIRED", "APPROVED", "REJECTED"
 TERMINAL = (REVIEW_REQUIRED, "COMPLETED", "FAILED", "DELIVERY_FAILED")  # the outcomes the Runner records
@@ -152,8 +156,25 @@ CREATE TABLE IF NOT EXISTS handoffs (
     CHECK ((state = 'STARTED') = (target_job_id IS NOT NULL))
 );
 CREATE INDEX IF NOT EXISTS handoffs_by_source ON handoffs(source_job_id, seq);
+CREATE TABLE IF NOT EXISTS access_tokens (
+    seq INTEGER PRIMARY KEY AUTOINCREMENT,
+    token_id TEXT UNIQUE NOT NULL,
+    secret_sha256 TEXT NOT NULL,
+    display_name TEXT NOT NULL,
+    role TEXT NOT NULL CHECK (role IN ('reviewer', 'submitter')),
+    created_by TEXT NOT NULL,
+    created_at REAL NOT NULL,
+    last_used_at REAL,
+    revoked_at REAL,
+    revoked_by TEXT
+);
 """
 HANDOFF_STATES = ("STARTED", "REFUSED")
+# What a token's views may show: every column but the secret's hash, which only the credential check reads.
+_TOKEN_COLUMNS = "token_id, display_name, role, created_by, created_at, last_used_at, revoked_at, revoked_by"
+# A decision with the display name of the token that made it (none for the shared key or a token lost in a wipe).
+_DECISION_SELECT = ("SELECT d.*, t.display_name AS reviewer_name FROM review_decisions d"
+                    " LEFT JOIN access_tokens t ON t.token_id = d.reviewer_token_id")
 
 
 class QueueFull(Exception):
@@ -171,6 +192,14 @@ class DecisionConflict(Exception):
     def __init__(self, code, **extra):
         super().__init__(code)
         self.code, self.extra = code, extra
+
+
+class TokenLimit(Exception):
+    """A new access token refused: ``active`` tokens are already in use, the most allowed."""
+
+    def __init__(self, active):
+        super().__init__(f"{active} active tokens")
+        self.active = active
 
 
 def review_id_for(job_id):
@@ -229,8 +258,8 @@ class QueueStore:
             db.execute("COMMIT")
 
     def migrate(self, now=None):
-        """Create the tables, or upgrade a version-1 queue (no reviews yet) to version 2 and a version-2 queue (no
-        handoffs yet) to version 3.
+        """Create the tables, or upgrade a version-1 queue (no reviews yet) to version 2, a version-2 queue (no
+        handoffs yet) to version 3 and a version-3 queue (no access tokens yet) to version 4.
 
         The upgrade runs in one ``BEGIN IMMEDIATE`` transaction and re-reads the version inside it, so the API
         and the Runner may both call this at the same start: one upgrades, the other sees version 2. Every job
@@ -254,6 +283,9 @@ class QueueStore:
             if version == "2":  # the handoffs table was created above; nothing else changes
                 db.execute("UPDATE meta SET value='3' WHERE key='schema_version'")
                 version = "3"
+            if version == "3":  # the access_tokens table was created above; a queue starts with no tokens
+                db.execute("UPDATE meta SET value='4' WHERE key='schema_version'")
+                version = "4"
             if version != str(SCHEMA_VERSION):
                 raise RuntimeError(f"Queue database schema {version} is not supported (expected {SCHEMA_VERSION})")
             db.execute("INSERT OR IGNORE INTO meta(key, value) VALUES('store_id', ?)", ("store_" + secrets.token_hex(8),))
@@ -642,7 +674,7 @@ class QueueStore:
                 return None
             review = self._review(row)
             review["decisions"] = [dict(item) for item in db.execute(
-                "SELECT * FROM review_decisions WHERE review_id=? ORDER BY seq", (review_id,)).fetchall()]
+                _DECISION_SELECT + " WHERE d.review_id=? ORDER BY d.seq", (review_id,)).fetchall()]
         return review
 
     def review_of_job(self, job_id):
@@ -652,7 +684,7 @@ class QueueStore:
             if row is None:
                 return None
             review = dict(row)
-            latest = db.execute("SELECT * FROM review_decisions WHERE review_id=? ORDER BY seq DESC LIMIT 1",
+            latest = db.execute(_DECISION_SELECT + " WHERE d.review_id=? ORDER BY d.seq DESC LIMIT 1",
                                 (review["review_id"],)).fetchone()
         review["decision"] = dict(latest) if latest is not None else None
         return review
@@ -685,8 +717,7 @@ class QueueStore:
             raise ValueError(f"unknown decision {decision}")
         now = time.time() if now is None else now
         with self._write() as db:
-            existing = db.execute("SELECT * FROM review_decisions WHERE idempotency_key=?",
-                                  (idempotency_key,)).fetchone()
+            existing = db.execute(_DECISION_SELECT + " WHERE d.idempotency_key=?", (idempotency_key,)).fetchone()
             if existing is not None:
                 if existing["review_id"] != review_id or existing["request_sha256"] != request_sha256:
                     raise DecisionConflict("idempotency_conflict")
@@ -717,6 +748,53 @@ class QueueStore:
             if request_id:
                 payload["request_id"] = request_id
             self._event(db, review["job_id"], f"review.{state.lower()}", payload, now)
-            row = db.execute("SELECT * FROM review_decisions WHERE decision_id=?", (decision_id,)).fetchone()
+            row = db.execute(_DECISION_SELECT + " WHERE d.decision_id=?", (decision_id,)).fetchone()
             self._handoff(db, handoff, review["job_id"], dict(row), now)  # an approval's route, in this commit
             return dict(row), True
+
+    # -- access tokens (API, ADR-034) ----------------------------------------------------------
+
+    def create_token(self, *, token_id, secret_sha256, display_name, role, created_by, max_active, now=None):
+        """Store a new token's id, secret hash, name and role. Returns its row without the hash.
+
+        Raises :class:`TokenLimit` when ``max_active`` tokens are already active, and ``sqlite3.IntegrityError`` for
+        an id that exists (the caller draws another)."""
+        now = time.time() if now is None else now
+        with self._write() as db:
+            active = db.execute("SELECT COUNT(*) FROM access_tokens WHERE revoked_at IS NULL").fetchone()[0]
+            if active >= max_active:
+                raise TokenLimit(active)
+            db.execute("INSERT INTO access_tokens(token_id, secret_sha256, display_name, role, created_by, created_at)"
+                       " VALUES(?,?,?,?,?,?)", (token_id, secret_sha256, display_name, role, created_by, now))
+            return dict(db.execute(f"SELECT {_TOKEN_COLUMNS} FROM access_tokens WHERE token_id=?",
+                                   (token_id,)).fetchone())
+
+    def token_for_check(self, token_id):
+        """A token's row with its secret hash, for the credential check only (never for a view), or ``None``."""
+        with self._connect() as db:
+            row = db.execute(f"SELECT secret_sha256, {_TOKEN_COLUMNS} FROM access_tokens WHERE token_id=?",
+                             (token_id,)).fetchone()
+        return dict(row) if row is not None else None
+
+    def touch_token(self, token_id, now):
+        """Record that an active token was just used."""
+        with self._write() as db:
+            db.execute("UPDATE access_tokens SET last_used_at=? WHERE token_id=? AND revoked_at IS NULL",
+                       (now, token_id))
+
+    def list_tokens(self):
+        """Every token, newest first, without secret hashes."""
+        with self._connect() as db:
+            return [dict(row) for row in db.execute(f"SELECT {_TOKEN_COLUMNS} FROM access_tokens ORDER BY seq DESC")]
+
+    def revoke_token(self, token_id, *, revoked_by, now=None):
+        """Revoke a token at once. Returns ``(row, changed)``; revoking it again changes nothing. ``KeyError`` for an
+        unknown id."""
+        now = time.time() if now is None else now
+        with self._write() as db:
+            changed = db.execute("UPDATE access_tokens SET revoked_at=?, revoked_by=? WHERE token_id=?"
+                                 " AND revoked_at IS NULL", (now, revoked_by, token_id)).rowcount == 1
+            row = db.execute(f"SELECT {_TOKEN_COLUMNS} FROM access_tokens WHERE token_id=?", (token_id,)).fetchone()
+            if row is None:
+                raise KeyError(token_id)
+            return dict(row), changed

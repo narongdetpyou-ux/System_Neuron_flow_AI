@@ -101,8 +101,9 @@ guide** (`study_guide.v1`, the owner's first-response rule):
 | Attention: the cases a person should see first (distress or danger, a security incident, a legal or privacy request, text that tries to steer routing or approval) are raised by plain code (versioned phrases) and by the AI's own flag, which can only add | `app/domains/case_triage/signals.py`, prompt `triage_classify_v2`, `app/eval/attention_replay.py`, `tests/open_benchmarks/attention_open_check.py` | Built and measured with Typhoon on 2026-11-11 (ADR-032, ADR-033, PR #67; [evidence](docs/evidence/2026-11-11-attention-signals.md)): raised `needs_person` cases 6/38 → 38/38 on the development set and 12/32 → 32/32 on the developer's held-out set; on sealed open data, 183 of 196 requests the datasets label as security matters; 51 of BIPIA's 75 attacks (14 of the 30 sealed). Costs: more raised cases (234 → 379 of 1,320), a prompt twice as long, the AI's category right 1,157 → 1,147 of 1,513. Every case still waits for a person; with the mock AI only the code's signals apply |
 | Intake API, durable job queue, single Runner with crash recovery, Thai web page | `app/api/`, `app/persistence/`, `app/services/`, `app/web/`, `app/serve.py` | Working (round 2), tested offline and as a container in CI; live on Render's free plan since 2026-11-01 |
 | Study guide (`study_guide.v1`): versioned topic catalog (11 topics, Thai and English), verified resource library (17 links) with a weekly link check, and the five-step workflow | `app/domains/study_guide/` | Working through the API and on the web page (roadmap 3.1–3.4); mock AI in CI; **first live run with Typhoon** on 2026-11-06 (synthetic set). New work paused by the owner on 2026-11-11; its checks keep running |
-| Human-review decisions: a ledger, a decisions API and a decision card with a "รอรีวิว" list on the page | `app/services/reviews.py`, `app/persistence/queue_store.py`, `app/web/` | Working since 2026-11-10 (roadmap 2.2, 2.4), with the owner's shared key as the only reviewer (ADR-027) |
-| Per-person reviewer tokens, n8n intake, reviewer notifications | — | **Not built yet** (Milestone C in [architecture](docs/architecture.md)) |
+| Human-review decisions: a ledger, a decisions API and a decision card with a "รอรีวิว" list on the page | `app/services/reviews.py`, `app/persistence/queue_store.py`, `app/web/` | Working since 2026-11-10 (roadmap 2.2, 2.4; ADR-027); since 2026-11-16 a reviewer decides with a personal token, and the decision records whose it was |
+| Personal access tokens and roles: the owner issues a token for a reviewer or a submitter on the page (shown once) and revokes it at once; every API route checks the caller's role | `app/services/access.py`, `app/api/routes.py`, `app/web/` | **Built on 2026-11-16** (roadmap 2.1, ADR-034). On Render's free plan the tokens are lost with the queue at every sleep, restart and deploy, so they fail closed |
+| n8n intake, reviewer notifications | — | **Not built yet** (Milestone C in [architecture](docs/architecture.md)) |
 | Skill handoff: separate skills that pass work through one exchange, with a translator on each side of a common language; the first route starts the linked job after an approval (roadmap 2.3) | `app/exchange/`, `app/domains/case_triage/apply.py` | **Working since 2026-11-11** (ADR-030, [design and tests](docs/skill_handoff.md)): checked over all 217 triage cases end to end; the first new skill waits for the owner's choice |
 
 ## Try it
@@ -156,7 +157,7 @@ so; a paid plan with a disk keeps them.
 
 **Locally (Python 3.10+):**
 ```bash
-python -m unittest discover -s tests -v        # 509 tests
+python -m unittest discover -s tests -v        # 534 tests
 python -m examples.case_triage_demo            # v1 rules, one synthetic case
 python -m examples.case_triage_shadow_demo     # v2 shadow mode, three synthetic cases (offline mock AI)
 python -m app.eval.triage_shadow_eval          # scorecard on 61 synthetic cases
@@ -200,13 +201,14 @@ most 1 MiB. The agent `version` is frozen into each job, so an old job refuses t
 | [Auto-approve limits](docs/autosend_simulation.md) | What a button that sends a case without a person would do, simulated on saved answers: the hard set, the open benchmarks, the four policies, what is measured, and what a real button would need (ADR-031) |
 | [วิธีเปิด ปิด และเปลี่ยน AI ของหน้าเว็บ](docs/switch_ai_guide_th.md) | Thai, for the owner: switching the live page between the mock AI, Typhoon and Claude in Render's Environment tab, step by step, and how to switch back |
 | [Funding readiness pack](docs/funding/README.md) | Internal evidence register; not a submitted application |
-| [Evidence notes](docs/evidence/2026-11-03-render-operations.md) | Dated measurements; the first one covers Render operations (graceful stops, deploy filter, cold start), and [the first live AI runs](docs/evidence/2026-11-06-first-live-typhoon.md) are Typhoon's (2026-11-06); [the first robustness run](docs/evidence/2026-11-07-robustness-stage1.md) is from 2026-11-07, and [the local open model's first smoke run](docs/evidence/2026-11-08-first-local-model-smoke.md) and [first full run](docs/evidence/2026-11-08-first-local-model-full.md) from 2026-11-08; [the effectiveness baseline](docs/evidence/2026-11-10-effectiveness-baseline.md) (the 116 edge cases with Typhoon, and the first job after a start) is from 2026-11-10, and so is [the image's bytecode cache, before and after](docs/evidence/2026-11-10-e1-bytecode-cache.md) (measured in CI, not yet on Render), and [the answer to the first independent review](docs/evidence/2026-11-10-independent-review-response.md) |
+| [Evidence notes](docs/evidence/2026-11-03-render-operations.md) | Dated measurements; the first one covers Render operations (graceful stops, deploy filter, cold start), and [the first live AI runs](docs/evidence/2026-11-06-first-live-typhoon.md) are Typhoon's (2026-11-06); [the first robustness run](docs/evidence/2026-11-07-robustness-stage1.md) is from 2026-11-07, and [the local open model's first smoke run](docs/evidence/2026-11-08-first-local-model-smoke.md) and [first full run](docs/evidence/2026-11-08-first-local-model-full.md) from 2026-11-08; [the effectiveness baseline](docs/evidence/2026-11-10-effectiveness-baseline.md) (the 116 edge cases with Typhoon, and the first job after a start) is from 2026-11-10, and so is [the image's bytecode cache, before and after](docs/evidence/2026-11-10-e1-bytecode-cache.md) (measured in CI, and on Render on 2026-11-16), and [the answer to the first independent review](docs/evidence/2026-11-10-independent-review-response.md) |
 
 ## Scope and limits
 
-- Runs on one machine. No service-level agreement. The online service is protected by one shared access
-  key, not per-person accounts, so every review decision is recorded as the owner's; it uses Python's
-  standard-library HTTP server (fine for a pilot, not for public traffic).
+- Runs on one machine. No service-level agreement. The online service is protected by the owner's shared access
+  key and, since 2026-11-16, personal tokens with roles (no passwords, e-mail login or expiry dates; on the free
+  plan the tokens vanish with the queue at every sleep); it uses Python's standard-library HTTP server (fine for
+  a pilot, not for public traffic).
 - An independent review of the code and docs (2026-11-10) found four problems; all four are answered
   ([evidence](docs/evidence/2026-11-10-independent-review-response.md)). One is left to the owner: one of the
   owner's personal e-mail addresses is visible in 53 commits of this public history (D8 in the roadmap).

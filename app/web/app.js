@@ -21,7 +21,12 @@
  * Retention is said where it matters (the review of 2026-11-10, point 3): on temporary storage the page never
  * says "saved permanently", and it remembers the ids (never the text) of what this browser sent, with the
  * queue's store id. When the store id changes, the queue started empty again, so the page says how many of
- * those cases are gone instead of letting them vanish. */
+ * those cases are gone instead of letting them vanish.
+ *
+ * Personal tokens (roadmap 2.1, ADR-034): the gate takes the owner's shared key or a personal token. The page asks
+ * /v1/me who that is and shows only what the role may do (the server refuses the rest anyway). The owner gets
+ * "จัดการผู้ใช้" in the settings tab: create a token (shown once, kept only in this tab's memory, never stored), list
+ * the tokens and revoke one at once. */
 (function () {
   const KEY_STORAGE = "neuronflow.accessKey";
   const SENT_STORAGE = "neuronflow.sent";  // { store_id, jobs: [job id, ...] }: ids only, never case text
@@ -29,6 +34,7 @@
   const TERMINAL = new Set(["REVIEW_REQUIRED", "COMPLETED", "FAILED", "DELIVERY_FAILED", "CANCELLED", "APPROVED", "REJECTED"]);
   const CASE_ID = /^[A-Za-z0-9][A-Za-z0-9_-]{0,79}$/;
   const JOB_ID = /^job_[0-9a-f]{24}$/;
+  const TOKEN_ID = /^[0-9a-f]{16}$/;
   const SVG_NS = "http://www.w3.org/2000/svg";
 
   const STATUS = {
@@ -37,7 +43,12 @@
     APPROVED: "อนุมัติแล้ว", REJECTED: "ไม่อนุมัติ",
   };
   const DECISION = { APPROVE: "อนุมัติ", REJECT: "ไม่อนุมัติ" };
-  const ROLE_TH = { owner: "เจ้าของระบบ (รหัสเข้าใช้ร่วม)" };
+  const ROLE_TH = { owner: "เจ้าของระบบ (รหัสเข้าใช้ร่วม)", reviewer: "ผู้ตรวจ", submitter: "ผู้ส่งเคส" };
+  /* What each role may do, in the words of the "จัดการผู้ใช้" section (app/services/access.py holds the rules). */
+  const ROLE_DOES = {
+    reviewer: "ดูเคส ดูกล่อง \"รอรีวิว\" และตัดสินเคส (อนุมัติหรือไม่อนุมัติ) แต่ส่งเคสใหม่ไม่ได้",
+    submitter: "ส่งเคส ยกเลิกเคสที่ยังรอคิว และดูเคส แต่ตัดสินเคสไม่ได้ (สำหรับเครื่องมืออย่าง n8n ในอนาคต)",
+  };
   const CATEGORY = { access: "เข้าระบบ / บัญชี", upload: "อัปโหลดไฟล์", billing: "การเงิน / การชำระเงิน", other: "เรื่องอื่น ๆ" };
   const QUEUE = {
     access_review: "คิวตรวจเรื่องเข้าระบบ", upload_review: "คิวตรวจเรื่องอัปโหลด",
@@ -172,6 +183,11 @@
     version_conflict: "เคสนี้เปลี่ยนไปหลังจากคุณเปิดดู ระบบโหลดใหม่ให้แล้ว ตรวจอีกครั้งก่อนตัดสิน",
     not_reviewable: "เคสนี้ไม่ได้รอคนตัดสินแล้ว",
     review_not_found: "ไม่พบเคสที่รอตัดสินนี้ (แผนฟรีล้างข้อมูลเมื่อระบบหลับหรือรีสตาร์ท)",
+    forbidden: "บัญชีนี้ทำสิ่งนี้ไม่ได้ (บทบาทของรหัสนี้ไม่มีสิทธิ์)",
+    invalid_display_name: "ชื่อเรียกต้องมี 1–60 ตัวอักษร ไม่ขึ้นบรรทัดใหม่",
+    invalid_role: "เลือกบทบาทเป็นผู้ตรวจหรือผู้ส่งเคส",
+    too_many_tokens: "มีรหัสที่ใช้งานได้ครบ 50 รหัสแล้ว เพิกถอนรหัสที่ไม่ใช้ก่อน",
+    token_not_found: "ไม่พบรหัสนี้ (แผนฟรีล้างข้อมูลเมื่อระบบหลับหรือรีสตาร์ท)",
   };
   const STEP_STATE = { done: "สำเร็จ", fail: "ไม่สำเร็จ", skip: "ข้าม", none: "ไม่ได้รัน", pending: "ยังไม่เริ่ม", working: "กำลังทำงาน", preview: "ตัวอย่าง" };
   const LEVEL = { ok: "ok", run: "run", err: "err", warn: "warn", info: "info" };
@@ -220,11 +236,28 @@
     review: null,    // the decision card being filled: { jobId, decision, category, reason, key, signature, sending, error }
     inbox: [],       // cases that wait for a decision, elevated first (GET /v1/reviews)
     lost: null,      // { count, since } when the queue started empty again since this browser last sent something
+    me: null,        // who the credential is and what its role may do (GET /v1/me, ADR-034)
+    users: freshUsers(),  // the owner's "จัดการผู้ใช้" section
     keys: { thread: null, side: null, flow: null, inbox: null },
     graph: { nodes: new Map(), edges: [] },
     refreshTimer: null, jobTimer: null,
   };
   let draftCounter = 0;
+
+  /* The owner's token section. ``created`` holds a new token until it is hidden: in memory only, never stored. */
+  function freshUsers() {
+    return { name: "", role: "reviewer", created: null, revokeAsk: null, tokens: null, active: 0, max: 50,
+      sending: false, error: null };
+  }
+
+  /* What this credential's role may do (GET /v1/me). The server checks every request anyway; the page only hides
+   * what would be refused. */
+  function can(what) { return Boolean(state.me && state.me.can && state.me.can[what]); }
+  /* Who made a decision, or who is signed in: the role, and the token's name when it has one. */
+  function whoText(person) {
+    const who = person || {};
+    return (ROLE_TH[who.role] || who.role || "") + (who.name ? ` · ${who.name}` : "");
+  }
 
   // ---------- small formatters --------------------------------------------------------------
 
@@ -397,7 +430,8 @@
   function handleAccessProblem(result) {
     if (result.status === 401) {
       forgetKey();
-      showGate("รหัสเข้าใช้ไม่ถูกต้อง หรือถูกเปลี่ยนแล้ว ใส่ใหม่อีกครั้ง");
+      showGate("รหัสเข้าใช้ไม่ถูกต้อง ถูกเปลี่ยน หรือถูกเพิกถอนแล้ว ใส่ใหม่อีกครั้ง ถ้าเป็นรหัสรายคน (ขึ้นต้นด้วย nf_) " +
+        "ขอรหัสใหม่จากเจ้าของระบบ: บน Render แผนฟรี รหัสรายคนหายไปทุกครั้งที่ระบบหลับ รีสตาร์ท หรืออัปเดต");
       return true;
     }
     if (result.status === 429 && result.data.error === "too_many_attempts") {
@@ -459,14 +493,21 @@
       return;
     }
     if (handleAccessProblem(result)) return;
-    if (result.status !== 200) {
+    let me = null;
+    if (result.status === 200) {
+      try { me = await call("GET", "/v1/me"); } catch (_) { me = null; }
+      if (me && handleAccessProblem(me)) return;
+    }
+    if (result.status !== 200 || !me || me.status !== 200) {
       banner("ระบบตอบผิดปกติ กำลังลองใหม่…");
       setTimeout(enter, 4000);
       return;
     }
+    state.me = me.data;
     banner(null);
     showApp();
     applyStatus(result.data);
+    applyRole();
     await refreshQueue();
     await refreshInbox();
     renderAll();
@@ -536,6 +577,21 @@
     renderCounts(status.queue || {});
     renderTimes(status.metrics || {});
     if (state.view === "settings") renderSettings();
+  }
+
+  /* Who is signed in, and only the parts of the page that role may use (ADR-034). */
+  function applyRole() {
+    const me = state.me || {};
+    setSys("sys-me", whoText({ role: me.role, name: me.display_name }) || "…", "",
+      me.shared_key ? "รหัสเข้าใช้ร่วมของเจ้าของระบบ (จากแท็บ Environment ของ Render)" : "รหัสรายคนที่เจ้าของระบบสร้างให้");
+    $("case-form").hidden = !can("submit");
+    $("new-case").hidden = !can("submit");
+    const note = $("role-note");
+    note.hidden = can("submit");
+    note.textContent = can("submit") ? "" : can("review")
+      ? "บัญชีผู้ตรวจส่งเคสใหม่ไม่ได้ เลือกเคสจากกล่อง \"รอรีวิว\" ด้านซ้ายเพื่อตัดสิน"
+      : "บัญชีนี้ส่งเคสใหม่ไม่ได้ ดูเคสได้อย่างเดียว";
+    renderUsers();
   }
 
   /* Left column: how long the oldest waiting case has waited, and the usual run time of a new case. */
@@ -635,7 +691,7 @@
   /* Cases that wait for a decision, elevated first. Loaded only while some wait (the status says how many). */
   async function refreshInbox() {
     const waiting = (((state.status || {}).reviews) || {}).PENDING || 0;
-    if (!waiting) {
+    if (!waiting || !can("review")) {  // a submitter's token may not read the inbox
       state.inbox = [];
       renderInbox();
       return;
@@ -899,7 +955,7 @@
     let title = study ? "อยากเรียนเรื่องอะไร" : "เคสใหม่";
     if (state.view === "settings") {
       title = "ตั้งค่า";
-      subtitle.push(el("span", { class: "tag tag-neutral", text: "ดูอย่างเดียว" }));
+      subtitle.push(el("span", { class: "tag tag-neutral", text: can("manage_tokens") ? "ดูอย่างเดียว ยกเว้นจัดการผู้ใช้" : "ดูอย่างเดียว" }));
     } else if (state.draft) {
       title = "เคสใหม่";
       subtitle.push(el("span", { class: "tag tag-warn", text: "รอยืนยันก่อนส่ง" }));
@@ -945,11 +1001,11 @@
       const form = state.review && state.review.jobId === job.job_id ? state.review : null;
       return JSON.stringify([job.status, job.queue_position, job.claims, job.updated_at,
         Boolean(state.last && state.last.jobId === job.job_id), state.cancelAsk === job.job_id, state.cancelling,
-        form ? [form.decision, form.sending, form.error] : null, persistent()]);
+        form ? [form.decision, form.sending, form.error] : null, persistent(), (state.me || {}).role]);
     }
     const status = state.status || {};
     return JSON.stringify([status.storage, status.ai, defaultWorkflow(), Boolean(workflowInfo(defaultWorkflow())),
-      studyAvailable()]);
+      studyAvailable(), (state.me || {}).role]);
   }
 
   function renderThread(force) {
@@ -964,7 +1020,7 @@
     if (state.draft) parts = draftView(state.draft);
     else if (state.job) parts = jobView(state.job);
     else if (state.selectedId) parts = [botMsg([el("p", { class: "progress-line" }, [el("span", { class: "spinner" }), "กำลังโหลด…"])])];
-    else parts = state.mode === "study" ? studyWelcomeView() : welcomeView();
+    else parts = !can("submit") ? roleWelcomeView() : state.mode === "study" ? studyWelcomeView() : welcomeView();
     thread.replaceChildren(...parts.filter(Boolean));
     if (moved) thread.scrollTop = state.draft ? thread.scrollHeight : 0;  // a draft ends with its confirm buttons
     else if (atBottom && thread.scrollTop > 0) thread.scrollTop = thread.scrollHeight;
@@ -1005,6 +1061,19 @@
         ? el("p", { class: "muted" }, ["อยากเรียนเรื่องอะไร? กด ", el("span", { class: "hl", text: "\"อยากเรียน\"" }),
           " เหนือช่องพิมพ์ แล้วระบบจะแนะนำแหล่งเรียนให้ ตอนนี้ต้องเลือกเองว่าเป็นเคสหรือคำถาม (ขั้น 4 ในแผน ระบบจะเลือกให้เอง)"])
         : el("p", { class: "muted", text: "ช่องนี้รับเฉพาะข้อความเคส ยังคุยถาม-ตอบเรื่องอื่นไม่ได้ (ช่องคุยภาษาธรรมดาอยู่ในแผนขั้นที่ 4)" }),
+      howItWorks(),
+    ])];
+  }
+
+  /* For a token that cannot send cases (a reviewer's): where the work is, instead of an empty composer. */
+  function roleWelcomeView() {
+    const me = state.me || {};
+    return [botMsg([
+      el("p", { class: "msg-text", text: `สวัสดีครับ คุณเข้าใช้เป็น ${whoText({ role: me.role, name: me.display_name })}` }),
+      el("p", { class: "msg-text", text: can("review")
+        ? "บัญชีนี้ตัดสินเคสได้ แต่ส่งเคสใหม่ไม่ได้: เลือกเคสจากกล่อง \"รอรีวิว\" ด้านซ้าย (เคสด่วนอยู่บนสุด) แล้วใช้การ์ด \"ตัดสินเคสนี้\""
+        : "บัญชีนี้ดูเคสได้อย่างเดียว" }),
+      can("review") ? el("p", { class: "muted", text: "ทุกการตัดสินบันทึกว่าใครตัดสินจากรหัสของคุณ และตัดสินแล้วแก้ไม่ได้" }) : null,
       howItWorks(),
     ])];
   }
@@ -1129,7 +1198,7 @@
       return el("div", { class: "verdict decided" + (approved ? "" : " rejected") }, [
         el("div", { class: "label", text: `คนตัดสินแล้ว: ${DECISION[decided.decision] || decided.decision}` }),
         el("div", { class: "big", text: approved ? (QUEUE[decided.final_queue] || decided.final_queue) : "ไม่ส่งต่อ (ไม่อนุมัติ)" }),
-        el("span", { class: "tag tag-neutral", text: `โดย ${ROLE_TH[(decided.reviewer || {}).role] || (decided.reviewer || {}).role} · ${fullTime(decided.created_at)}` }),
+        el("span", { class: "tag tag-neutral", text: `โดย ${whoText(decided.reviewer)} · ${fullTime(decided.created_at)}` }),
       ]);
     }
     const elevated = review.review_priority === "elevated";
@@ -1175,6 +1244,7 @@
     const human = job.human_review || {};
     const decided = human.decision;
     if (!decided) {
+      if (human.decidable && !can("review")) return "รอผู้ตรวจหรือเจ้าของระบบตัดสิน — บัญชีนี้ตัดสินไม่ได้ (AI เสนอได้อย่างเดียว)";
       if (human.decidable) return "รอคนตัดสิน — ใช้การ์ด \"ตัดสินเคสนี้\" ด้านล่าง (AI เสนอได้อย่างเดียว)";
       return review.decision === "PENDING_HUMAN_REVIEW" ? "รอคนตัดสิน — AI เสนอได้อย่างเดียว" : review.decision;
     }
@@ -1184,15 +1254,16 @@
         (decided.final_category !== review.suggested_category ? " (เปลี่ยนจากข้อเสนอของกฎ)" : " (ตามข้อเสนอของกฎ)")
       : "ไม่อนุมัติ" + (category ? ` · หมวดที่ผู้ตัดสินเห็นว่าถูก: ${category}` : "");
     return el("span", {}, [what, el("q", { text: decided.reason }),
-      el("span", { class: "muted", text: `โดย ${ROLE_TH[(decided.reviewer || {}).role] || (decided.reviewer || {}).role} · ${fullTime(decided.created_at)} · ตัดสินแล้วแก้ไม่ได้` })]);
+      el("span", { class: "muted", text: `โดย ${whoText(decided.reviewer)} · ${fullTime(decided.created_at)} · ตัดสินแล้วแก้ไม่ได้` })]);
   }
 
   /* The decision card of a case that waits for a person (roadmap 2.4). The page never says who decides: the
-   * server takes it from the access key. The idempotency key is kept while the choice and the reason stay the
-   * same, so pressing "บันทึก" again after a lost reply can never record a second decision. */
+   * server takes it from the credential. The idempotency key is kept while the choice and the reason stay the
+   * same, so pressing "บันทึก" again after a lost reply can never record a second decision. A token whose role
+   * cannot decide (a submitter's) gets no card. */
   function decisionForm(job) {
     const human = job.human_review;
-    if (!human || !human.decidable || job.status !== "REVIEW_REQUIRED") return null;
+    if (!human || !human.decidable || job.status !== "REVIEW_REQUIRED" || !can("review")) return null;
     const review = (job.result || {}).review || {};
     let form = state.review;
     if (!form || form.jobId !== job.job_id || form.version !== human.version) {
@@ -1226,7 +1297,7 @@
       el("div", { class: "msg-actions" }, [
         el("button", { type: "button", class: "btn btn-primary", dataset: { action: "review-submit" },
           disabled: form.sending || !form.decision, text: label }),
-        el("span", { class: "hint", text: `ตัดสินในนาม ${ROLE_TH[policy.reviewer_role] || "เจ้าของระบบ"} · ตัดสินแล้วแก้ไม่ได้ · รหัสผู้ตรวจรายคนอยู่ในแผนขั้น 2.1` }),
+        el("span", { class: "hint", text: `ตัดสินในนาม ${whoText({ role: (state.me || {}).role, name: (state.me || {}).display_name })} · ตัดสินแล้วแก้ไม่ได้` }),
       ]),
       approvalRouteHint(job),
     ]);
@@ -1463,8 +1534,8 @@
       body.push(el("p", { class: job.status === "REVIEW_REQUIRED" ? "notice" : "muted",
         text: TEMPORARY_NOTE + (job.status === "REVIEW_REQUIRED" ? " ตัดสินให้เสร็จก่อนระบบหลับ" : "") }));
     }
-    if (job.status === "QUEUED") body.push(cancelActions(job));
-    if (state.last && state.last.jobId === job.job_id) {
+    if (job.status === "QUEUED" && can("cancel")) body.push(cancelActions(job));
+    if (state.last && state.last.jobId === job.job_id && can("submit")) {
       body.push(el("div", { class: "msg-actions" }, [
         el("button", { type: "button", class: "btn btn-secondary", dataset: { action: "resend" }, text: "ส่งซ้ำ (ทดสอบว่าไม่เกิดงานซ้ำ)" }),
       ]));
@@ -2041,7 +2112,9 @@
       policy(true, "ปุ่มอนุมัติ / ไม่อนุมัติ ในหน้าเคส",
         "เคสที่รอคนตรวจมีการ์ด \"ตัดสินเคสนี้\": อนุมัติ (เลือกหมวดเองได้) หรือไม่อนุมัติ พร้อมเหตุผลด้วยคำของคุณเอง ตัดสินแล้วแก้ไม่ได้ " +
         "และกดซ้ำก็ไม่บันทึกซ้ำ (ขั้น 2.2, 2.4)"),
-      policy(false, "รหัสผู้ตรวจรายคน", "ตอนนี้ผู้ตัดสินคือผู้ถือรหัสเข้าใช้ร่วม คือเจ้าของระบบ ระบบบันทึกไว้แบบนั้น รหัสรายคนพร้อมสิทธิ์อยู่ในแผนขั้น 2.1", true),
+      policy(true, "รหัสผู้ตรวจรายคน",
+        "เจ้าของระบบสร้างรหัสให้ผู้ตรวจและผู้ส่งเคสแต่ละคนได้ในส่วน \"จัดการผู้ใช้\" การตัดสินบันทึกว่าใครตัดสินจากรหัสนั้น " +
+        "และเพิกถอนรหัสของคนหนึ่งได้ทันทีโดยไม่กระทบคนอื่น (ขั้น 2.1)"),
     ]);
   }
 
@@ -2185,7 +2258,7 @@
 
   function renderSettings() {
     const status = state.status || {};
-    const view = $("view-settings");
+    const view = $("settings-body");  // the owner's "จัดการผู้ใช้" sits above it and is never redrawn from here
     const runner = status.runner || {};
     const key = JSON.stringify([status.ai, status.storage, status.limits, status.workflows, status.default_workflow,
       runner.state, runner.alive, Math.round((runner.heartbeat_age_s || 0) / 10), status.version,
@@ -2226,8 +2299,190 @@
     $("tab-settings").tabIndex = chat ? -1 : 0;
     $("view-chat").hidden = !chat;
     $("view-settings").hidden = chat;
-    if (!chat) renderSettings();
+    if (!chat) {
+      renderSettings();
+      refreshUsers();
+    }
     renderHeader();
+  }
+
+  // ---------- the owner's "จัดการผู้ใช้" (roadmap 2.1, ADR-034) -------------------------------
+
+  /* Drawn only when its own state changes (never by a status refresh), so what the owner types stays put and a new
+   * token stays on screen until the owner hides it. */
+  function renderUsers() {
+    const section = $("users-section");
+    const owner = can("manage_tokens");
+    section.hidden = !owner;
+    if (!owner) {
+      section.replaceChildren();
+      return;
+    }
+    const users = state.users;
+    const access = (state.status || {}).access || {};
+    const max = access.display_name_max_chars || 60;
+    const name = el("input", { id: "token-name", class: "input", type: "text", maxlength: String(max), autocomplete: "off",
+      spellcheck: "false", placeholder: "เช่น ผู้ตรวจ 1 (ไม่ต้องใช้ชื่อจริง)", disabled: users.sending });
+    name.value = users.name;
+    const role = el("select", { id: "token-role", class: "input", disabled: users.sending },
+      (access.issuable_roles || ["reviewer", "submitter"]).map((code) =>
+        el("option", { value: code, selected: code === users.role, text: ROLE_TH[code] || code })));
+    const parts = [
+      el("p", { class: "lead", text: "สร้างรหัสเข้าใช้ให้แต่ละคน แทนการแบ่งรหัสเข้าใช้ร่วมของคุณ การตัดสินจะบันทึกว่าใครตัดสินจากรหัสนั้น " +
+        "และเพิกถอนรหัสของคนหนึ่งได้ทันทีโดยไม่ต้องเปลี่ยนรหัสของคนอื่น ส่วนนี้แก้ได้ (ส่วนอื่นของแท็บนี้ดูอย่างเดียว)" }),
+      el("ul", { class: "role-list" }, [
+        el("li", {}, [el("b", { text: `${ROLE_TH.reviewer}: ` }), ROLE_DOES.reviewer]),
+        el("li", {}, [el("b", { text: `${ROLE_TH.submitter}: ` }), ROLE_DOES.submitter]),
+        el("li", {}, [el("b", { text: "เจ้าของระบบ: " }), "ทำได้ทุกอย่าง รวมถึงส่วนนี้ ใช้รหัสเข้าใช้ร่วมจาก Render เท่านั้น (ยังสร้างรหัสเจ้าของระบบเพิ่มไม่ได้)"]),
+      ]),
+      persistent() ? null : el("p", { class: "notice", text: "ที่เก็บข้อมูลตอนนี้เป็นแบบชั่วคราว (Render แผนฟรี): ถ้าระบบหลับ (ไม่มีคนใช้ราว 15 นาที) " +
+        "รีสตาร์ท หรืออัปเดต รหัสรายคนทั้งหมดจะหายไปพร้อมเคสและใช้ไม่ได้อีก ต้องสร้างใหม่ (รหัสที่หายจะไม่กลับมาใช้ได้เอง)" }),
+      users.created ? createdTokenBox(users.created) : null,
+      el("div", { class: "token-form" }, [
+        el("label", { for: "token-name", text: `ชื่อเรียก (1–${max} ตัวอักษร)` }), name,
+        el("label", { for: "token-role", text: "บทบาท" }), role,
+      ]),
+      users.error ? el("p", { class: "form-error", role: "alert", text: users.error }) : null,
+      el("div", { class: "msg-actions" }, [
+        el("button", { type: "button", class: "btn btn-primary", dataset: { action: "token-create" }, disabled: users.sending,
+          text: users.sending ? "กำลังทำ…" : "สร้างรหัส" }),
+        el("span", { class: "hint", text: `ใช้งานได้ ${users.active} จาก ${users.max} รหัส · รหัสใหม่แสดงครั้งเดียว` }),
+      ]),
+      tokenTable(users),
+    ];
+    section.replaceChildren(panel("จัดการผู้ใช้ (เฉพาะเจ้าของระบบ)", parts, "users-panel"));
+  }
+
+  function createdTokenBox(created) {
+    const field = el("input", { id: "token-new", class: "input mono", type: "text", readonly: true, spellcheck: "false",
+      "aria-label": "รหัสใหม่" });
+    field.value = created.token;
+    return el("div", { class: "token-box", role: "status" }, [
+      el("p", { class: "label", text: `รหัสใหม่ของ "${created.name}" (${ROLE_TH[created.role] || created.role}) — แสดงครั้งเดียว` }),
+      field,
+      el("div", { class: "msg-actions" }, [
+        el("button", { type: "button", class: "btn btn-primary", dataset: { action: "token-copy" }, text: "คัดลอก" }),
+        el("button", { type: "button", class: "btn btn-ghost", dataset: { action: "token-hide" }, text: "ซ่อนรหัสนี้" }),
+      ]),
+      el("p", { class: "hint", text: "ส่งรหัสนี้ให้เจ้าตัวทางช่องทางที่ปลอดภัย แล้วให้เขากรอกที่หน้า \"ใส่รหัสเข้าใช้\" ซ่อนหรือออกจากหน้านี้แล้วจะดูรหัสนี้อีกไม่ได้ " +
+        "ถ้าทำหาย ให้สร้างใหม่แล้วเพิกถอนรหัสเดิม" }),
+    ]);
+  }
+
+  /* One card per token, newest first: readable at phone width, with its revoke button in reach (no sideways scroll). */
+  function tokenTable(users) {
+    if (users.tokens === null) return el("p", { class: "muted", text: "กำลังโหลดรายการรหัส…" });
+    if (!users.tokens.length) return el("p", { class: "muted", text: "ยังไม่มีรหัสรายคน" });
+    const actions = (token) => {
+      if (!token.active) return null;
+      if (users.revokeAsk !== token.token_id) {
+        return el("button", { type: "button", class: "btn btn-quiet", dataset: { action: "token-revoke", token: token.token_id },
+          disabled: users.sending, text: "เพิกถอน" });
+      }
+      return el("span", { class: "token-confirm" }, [
+        el("button", { type: "button", class: "btn btn-danger", dataset: { action: "token-revoke-confirm", token: token.token_id },
+          disabled: users.sending, text: users.sending ? "กำลังเพิกถอน…" : "ยืนยันเพิกถอน" }),
+        el("button", { type: "button", class: "btn btn-ghost", dataset: { action: "token-revoke-keep" }, disabled: users.sending,
+          text: "ไม่เพิกถอน" }),
+      ]);
+    };
+    return el("ul", { class: "token-list", "aria-label": "รหัสรายคน" }, users.tokens.map((token) => el("li", {
+      class: "token-item" + (token.active ? "" : " revoked"), dataset: { token: token.token_id },
+    }, [
+      el("div", { class: "token-who" }, [
+        el("b", { text: token.display_name }),
+        el("span", { class: "tag tag-neutral", text: ROLE_TH[token.role] || token.role }),
+        el("span", { class: token.active ? "st-done" : "muted",
+          text: token.active ? "ใช้งานได้" : `เพิกถอนแล้ว ${fullTime(token.revoked_at)}` }),
+      ]),
+      el("div", { class: "token-when muted", text: `สร้างเมื่อ ${fullTime(token.created_at)} · ` +
+        (token.last_used_at ? `ใช้ล่าสุด ${fullTime(token.last_used_at)}` : "ยังไม่เคยใช้") + ` · รหัสอ้างอิง ${token.token_id}` }),
+      actions(token),
+    ])));
+  }
+
+  async function refreshUsers() {
+    if (!can("manage_tokens")) return;
+    let result;
+    try { result = await call("GET", "/v1/tokens"); } catch (_) { return; }
+    if (handleAccessProblem(result) || result.status !== 200) return;
+    state.users.tokens = result.data.tokens || [];
+    state.users.active = result.data.active || 0;
+    state.users.max = result.data.max_active_tokens || state.users.max;
+    renderUsers();
+  }
+
+  async function createToken() {
+    const users = state.users;
+    if (users.sending || !can("manage_tokens")) return;
+    const name = users.name.trim();
+    if (!name) {
+      users.error = "ใส่ชื่อเรียกก่อน เช่น ผู้ตรวจ 1";
+      renderUsers();
+      return;
+    }
+    users.sending = true;
+    users.error = null;
+    renderUsers();
+    let result;
+    try {
+      result = await call("POST", "/v1/tokens", { display_name: name, role: users.role });
+    } catch (_) {
+      users.sending = false;
+      users.error = "ติดต่อระบบไม่ได้ ลองใหม่อีกครั้ง";
+      renderUsers();
+      return;
+    }
+    users.sending = false;
+    if (handleAccessProblem(result)) return;
+    if (result.status !== 201) {
+      users.error = API_ERROR[result.data.error] || result.data.message || `ระบบตอบกลับ ${result.status}`;
+      renderUsers();
+      return;
+    }
+    const info = result.data.token_info || {};
+    users.created = { token: result.data.token, name: info.display_name, role: info.role };
+    users.name = "";
+    users.revokeAsk = null;
+    renderUsers();
+    await refreshUsers();
+  }
+
+  async function copyToken() {
+    const created = state.users.created;
+    if (!created) return;
+    try {
+      await navigator.clipboard.writeText(created.token);
+      toast("คัดลอกรหัสแล้ว");
+    } catch (_) {
+      const field = $("token-new");
+      if (field) { field.focus(); field.select(); }
+      toast("คัดลอกให้อัตโนมัติไม่ได้ รหัสถูกเลือกไว้แล้ว กด Ctrl+C หรือกดค้างแล้วเลือก \"คัดลอก\"");
+    }
+  }
+
+  async function revokeToken(tokenId) {
+    const users = state.users;
+    if (users.sending || !TOKEN_ID.test(tokenId)) return;
+    users.sending = true;
+    users.error = null;
+    renderUsers();
+    let result;
+    try {
+      result = await call("POST", `/v1/tokens/${encodeURIComponent(tokenId)}/revoke`, {});
+    } catch (_) {
+      users.sending = false;
+      users.error = "ติดต่อระบบไม่ได้ ลองใหม่อีกครั้ง";
+      renderUsers();
+      return;
+    }
+    users.sending = false;
+    users.revokeAsk = null;
+    if (handleAccessProblem(result)) return;
+    if (result.status === 200) toast(result.data.changed ? "เพิกถอนแล้ว รหัสนี้ใช้ไม่ได้ตั้งแต่ตอนนี้" : "รหัสนี้ถูกเพิกถอนไปแล้ว");
+    else users.error = API_ERROR[result.data.error] || result.data.message || `ระบบตอบกลับ ${result.status}`;
+    renderUsers();
+    await refreshUsers();
   }
 
   function setExpanded(panelId, open) {
@@ -2371,6 +2626,7 @@
 
   function submitComposer(event) {
     event.preventDefault();
+    if (!can("submit")) return;  // a reviewer's token has no composer; the server would refuse it anyway
     if (state.mode === "study" && studyAvailable()) submitStudy();
     else submitCase();
   }
@@ -2642,6 +2898,9 @@
       state.review = null;
       state.jobs = [];
       state.inbox = [];
+      state.me = null;
+      state.users = freshUsers();  // a new token on screen goes with the lock: it was never stored
+      renderUsers();
       state.keys = { thread: null, side: null, flow: null, inbox: null };
       showGate(null);
     });
@@ -2699,6 +2958,26 @@
       if (row) selectJob(row.dataset.id);
     });
     $("lost-dismiss").addEventListener("click", () => { state.lost = null; renderLost(); });
+
+    // The owner's "จัดการผู้ใช้": its fields live in state, so a redraw never loses what was typed.
+    $("users-section").addEventListener("click", (event) => {
+      const button = event.target.closest("button[data-action]");
+      if (!button || button.disabled) return;
+      const action = button.dataset.action;
+      const tokenId = button.dataset.token || "";
+      if (action === "token-create") createToken();
+      else if (action === "token-copy") copyToken();
+      else if (action === "token-hide") { state.users.created = null; renderUsers(); }
+      else if (action === "token-revoke" && TOKEN_ID.test(tokenId)) { state.users.revokeAsk = tokenId; renderUsers(); }
+      else if (action === "token-revoke-keep") { state.users.revokeAsk = null; renderUsers(); }
+      else if (action === "token-revoke-confirm" && TOKEN_ID.test(tokenId)) revokeToken(tokenId);
+    });
+    $("users-section").addEventListener("input", (event) => {
+      if (event.target.id === "token-name") state.users.name = event.target.value;
+    });
+    $("users-section").addEventListener("change", (event) => {
+      if (event.target.id === "token-role") state.users.role = event.target.value;
+    });
 
     $("job-list").addEventListener("click", (event) => {
       const row = event.target.closest("button.job");
