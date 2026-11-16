@@ -5,9 +5,9 @@ Flow for one ``POST /v1/reviews/{review_id}/decisions``:
    words), ``expected_version`` (the review version the person looked at) and ``idempotency_key``; it may hold
    ``final_category``, one of the fixed triage categories. Approving without one keeps the rules' suggestion;
    rejecting without one records no category;
-2. who decides comes from the credential, never from the body. Until per-person tokens exist (roadmap 2.1) the
-   only credential is the shared access key, which the owner holds, and the owner is the only reviewer (owner
-   decision D3's default). Decisions record that, as ``shared-access-key`` with the role ``owner``;
+2. who decides comes from the credential, never from the body (``app.services.access``, ADR-034): the owner's shared
+   key is recorded as ``shared-access-key`` with the role ``owner``, a reviewer's personal token as its token id
+   with the role ``reviewer``. A submitter's token cannot decide;
 3. the queue records the decision, the review's new state and version, and the job's new state in one
    transaction (``QueueStore.decide``). The same key with the same body returns the same decision; the same key
    with another body, a decided review or an old version is refused with 409 and changes nothing.
@@ -28,12 +28,14 @@ from app.domains.case_triage.contracts import CATEGORIES, QUEUE_FOR
 from app.persistence import PENDING, REVIEW_STATES, DecisionConflict, StateError
 from app.persistence.queue_store import iso
 
+from .access import OWNER_IDENTITY, PERMISSIONS
 from .admission import IDEMPOTENCY_KEY
 
 REASON_MAX_CHARS = 500
 DECISIONS = ("APPROVE", "REJECT")
 REVIEW_ID = re.compile(r"^rev_[0-9a-f]{24}$")
-SHARED_KEY_REVIEWER = {"token_id": "shared-access-key", "role": "owner"}
+SHARED_KEY_REVIEWER = OWNER_IDENTITY.reviewer
+DECIDE_ROLES = tuple(sorted(PERMISSIONS[("POST", "/v1/reviews/{review_id}/decisions")]))
 _REQUIRED = {"decision", "reason", "expected_version", "idempotency_key"}
 _OPTIONAL = {"final_category"}
 _CONTROL = re.compile(r"[\x00-\x08\x0b-\x1f\x7f]")  # tabs and new lines are allowed in a reason
@@ -55,10 +57,9 @@ class DecisionError(Exception):
 
 
 def policy():
-    """What the page needs to offer a decision: the choices, the limits and who decides today."""
+    """What the page needs to offer a decision: the choices, the limits and which roles may decide."""
     return {"decisions": list(DECISIONS), "categories": list(CATEGORIES), "queues": dict(QUEUE_FOR),
-            "reason_max_chars": REASON_MAX_CHARS, "reviewer_role": SHARED_KEY_REVIEWER["role"],
-            "per_person_tokens": False}
+            "reason_max_chars": REASON_MAX_CHARS, "decide_roles": list(DECIDE_ROLES), "per_person_tokens": True}
 
 
 def check_decision(body, review):
@@ -130,10 +131,12 @@ def decision_view(row):
     if row is None:
         return None
     approved = row["decision"] == "APPROVE"
+    # The token's display name when the decision came from a personal token that still exists (ADR-034).
+    reviewer = {"token_id": row["reviewer_token_id"], "role": row["reviewer_role"], "name": row.get("reviewer_name")}
     return {"decision_id": row["decision_id"], "version": row["version"], "decision": row["decision"],
             "final_category": row["final_category"],
             "final_queue": QUEUE_FOR.get(row["final_category"]) if approved else None,
-            "reason": row["reason"], "reviewer": {"token_id": row["reviewer_token_id"], "role": row["reviewer_role"]},
+            "reason": row["reason"], "reviewer": reviewer,
             "request_id": row["request_id"], "created_at": iso(row["created_at"])}
 
 

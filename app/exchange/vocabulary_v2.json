@@ -1,5 +1,5 @@
 {
-  "version": "vocabulary-v1",
+  "version": "vocabulary-v2",
   "origins": {
     "input": {"en": "typed by a person, through the API or the page", "th": "คนพิมพ์เข้ามา"},
     "rules": {"en": "made by code: rules or a fixed mapping", "th": "โค้ดหรือกฎสร้าง"},
@@ -37,9 +37,9 @@
       "meaning": {"en": "The id of the decision a person recorded", "th": "รหัสการตัดสินของคน"}
     },
     "review.reviewer_role": {
-      "type": "choice", "values": ["owner"], "origins": ["person"],
-      "meaning": {"en": "Who decided: today only the owner, through the shared access key (ADR-027)",
-                  "th": "ใครเป็นคนตัดสิน (ตอนนี้มีแค่เจ้าของระบบ)"}
+      "type": "choice", "values": ["owner", "reviewer"], "origins": ["person"],
+      "meaning": {"en": "Who decided: the owner (shared access key) or a reviewer with a personal token (ADR-034)",
+                  "th": "ใครเป็นคนตัดสิน: เจ้าของระบบ หรือผู้ตรวจที่มีรหัสของตัวเอง"}
     }
   }
 }

@@ -146,7 +146,7 @@ What the first route carries (from a real run; ids shortened):
   "envelope": "handoff-envelope-v1",
   "route": "triage-approved-to-apply",
   "routes": "routes-v1@sha256:7a21675c…",
-  "vocabulary": "vocabulary-v1@sha256:d4d25e07…",
+  "vocabulary": "vocabulary-v2@sha256:2b57bf9c…",
   "source": {"job_id": "job_…", "workflow_type": "case_triage.v2", "state": "APPROVED", "result_sha256": "…"},
   "out": "out.case_triage.v2@1",
   "depth": 1,
@@ -170,8 +170,10 @@ What the first route carries (from a real run; ids shortened):
 
 ### 3.2 Facts and the vocabulary
 
-The vocabulary is versioned data, `app/exchange/vocabulary_v1.json`, with its complete SHA-256 in its tag, like
-`keywords_v2.json` (E2). Each fact name has a type (`text` with a maximum length, `choice` with fixed values, or `id`
+The vocabulary is versioned data, `app/exchange/vocabulary_v2.json`, with its complete SHA-256 in its tag, like
+`keywords_v2.json` (E2). Version 2 (2026-11-16, roadmap 2.1, ADR-034) differs from version 1 in one place:
+`review.reviewer_role` may be `reviewer` as well as `owner`, so an approval made with a reviewer's personal token
+hands on like the owner's. Each fact name has a type (`text` with a maximum length, `choice` with fixed values, or `id`
 with a pattern), the origins it may come from, and its meaning in English and Thai. A name keeps its meaning
 forever; a new meaning is a new name, and any change to the file is a new vocabulary version.
 
@@ -184,7 +186,7 @@ forever; a new meaning is a new name, and any change to the file is a new vocabu
 | `case.final_category` | choice: the four categories | `person` | The category a person approved |
 | `case.final_queue` | choice: the four review queues | `person` | The queue of the approved category |
 | `review.decision_id` | id (`dec_` + 24 hex) | `person` | The decision a person recorded |
-| `review.reviewer_role` | choice: `owner` | `person` | Who decided: today only the owner (ADR-027) |
+| `review.reviewer_role` | choice: `owner`, `reviewer` | `person` | Who decided: the owner (shared key) or a reviewer with a personal token (ADR-027, ADR-034) |
 
 ### 3.3 Where each fact comes from
 
@@ -269,7 +271,8 @@ target's `QUEUED` job and the `handoffs` row; a `REFUSED` plan inserts the row w
 
 ## 7. What is recorded and shown
 
-**Ledger:** a `handoffs` table in the queue database (schema 3; a version-2 database is upgraded at start, tested):
+**Ledger:** a `handoffs` table in the queue database (schema 3 when it was built, 4 since personal tokens; older
+databases are upgraded at start, tested):
 handoff id (`hof_` + 24 hex), route id, the route table's and the vocabulary's tags, both translator versions, the
 source job and state, the target type and job id (none when refused), depth, state `STARTED` or `REFUSED`, the
 reason and error type, the envelope and its SHA-256, and the time. Unique: (source job id, route id) and the

@@ -1,6 +1,6 @@
 # Intake API, job queue, Runner and web page (round 2, Milestone B)
 
-**Status:** built in PR #11 and tested offline (509 tests on 2026-11-11, including killing the Runner
+**Status:** built in PR #11 and tested offline (534 tests on 2026-11-16, including killing the Runner
 mid-step). The container build is checked on every push by *Actions → Service container*. Live on
 Render's free plan since 2026-11-01 (`render.yaml`). Railway was the first choice, but it has paused new
 sign-ups since 22 Oct 2026 after a security incident; `railway.json` stays in the repository for later.
@@ -22,6 +22,10 @@ and "Web page" below, and [study_guide.md](study_guide.md#the-page-roadmap-34)).
 Skill handoffs (2026-11-11, ADR-030, [skill_handoff.md](skill_handoff.md)): an approval starts the linked
 `case_triage.v2.apply` job in the decision's own transaction (queue schema 3, a `handoffs` table with a tested
 2 → 3 upgrade), and the page shows the chain both ways (see "Skill handoffs" under "API reference").
+Personal tokens and roles (2026-11-16, roadmap 2.1, ADR-034): the owner issues tokens for reviewers and submitters
+on the page, every route checks the caller's role, and decisions record whose token it was (queue schema 4, an
+`access_tokens` table with a tested 3 → 4 upgrade; see "รหัสรายคน" and "Access: the shared key, personal tokens
+and roles" below).
 Design principles: [design_philosophy.md](design_philosophy.md).
 
 ## ภาพรวมการทำงาน (ภาษาไทย)
@@ -37,7 +41,7 @@ Design principles: [design_philosophy.md](design_philosophy.md).
 5. **Core ทำงานทีละขั้นเหมือนรอบ 1** กฎเดิมกับ AI ทำคู่กัน → เทียบสองความเห็น → เตรียมข้อเสนอ และตรวจผลทุกขั้นก่อนบันทึก
 6. **บันทึกผล** สถานะเป็น "รอคนตรวจ" (`REVIEW_REQUIRED`) พร้อมสรุปที่อ่านง่าย ไม่มีที่อยู่ไฟล์ภายในหรือรหัสลับ และในธุรกรรมเดียวกันระบบเปิด "รายการรอตัดสิน" (review) ของเคสนั้น
 7. **ดูผล** หน้าเว็บอัปเดตเอง หรือเรียก `GET /v1/jobs/{job_id}`
-8. **คนตัดสิน** กด "อนุมัติ" (ใช้หมวดที่กฎเสนอหรือเลือกเอง) หรือ "ไม่อนุมัติ" พร้อมเหตุผล เคสเปลี่ยนเป็น "อนุมัติแล้ว" (`APPROVED`) หรือ "ไม่อนุมัติ" (`REJECTED`) ตัดสินแล้วแก้ไม่ได้ กดซ้ำก็ไม่บันทึกซ้ำ ผู้ตัดสินมาจากรหัสเข้าใช้ ไม่ได้มาจากสิ่งที่หน้าเว็บส่ง ตอนนี้มีรหัสเดียว คือของเจ้าของระบบ (รหัสรายคนอยู่ในขั้น 2.1)
+8. **คนตัดสิน** กด "อนุมัติ" (ใช้หมวดที่กฎเสนอหรือเลือกเอง) หรือ "ไม่อนุมัติ" พร้อมเหตุผล เคสเปลี่ยนเป็น "อนุมัติแล้ว" (`APPROVED`) หรือ "ไม่อนุมัติ" (`REJECTED`) ตัดสินแล้วแก้ไม่ได้ กดซ้ำก็ไม่บันทึกซ้ำ ผู้ตัดสินมาจากรหัสเข้าใช้ ไม่ได้มาจากสิ่งที่หน้าเว็บส่ง: รหัสเข้าใช้ร่วมของเจ้าของระบบ หรือรหัสรายคนของผู้ตรวจ (ขั้น 2.1)
 9. **ส่งต่อ (ตั้งแต่ 11 พ.ย.)** ถ้าอนุมัติ ตัวกลาง (exchange) ส่งเคสต่อให้งาน "บันทึกผลหลังอนุมัติ" ทันทีในครั้งเดียวกับการตัดสิน ผ่านล่ามขาออก ภาษากลาง และล่ามขาเข้า งานใหม่บันทึกว่าเคสไปคิวไหนและใครอนุมัติ พร้อมใบรับจาก Core ข้อความเคสไม่ถูกส่งต่อ ถ้าไม่อนุมัติ จะไม่ส่งต่อ ([skill_handoff.md](skill_handoff.md))
 
 ### ถ้ามีอะไรผิดพลาด
@@ -56,6 +60,8 @@ Design principles: [design_philosophy.md](design_philosophy.md).
 | ใส่รหัสเข้าใช้ผิด 10 ครั้งในหนึ่งนาที | พักการลองจากเครื่องนั้นชั่วคราว (429) | "ลองรหัสผิดหลายครั้งเกินไป" |
 | กดบันทึกการตัดสินซ้ำ หรือเน็ตหลุดแล้วกดใหม่ | ใช้การตัดสินเดิม (200) ไม่บันทึกซ้ำ | "บันทึกการตัดสินแล้ว" ครั้งเดียว |
 | มีคนตัดสินเคสนี้ไปแล้ว (อีกแท็บหนึ่ง) | ปฏิเสธ (409) ไม่เปลี่ยนอะไร | "เคสนี้มีคนตัดสินไปแล้ว" แล้วหน้าเว็บโหลดผลการตัดสินให้ดู |
+| ใช้รหัสรายคนที่ถูกเพิกถอน หรือหายไปเพราะระบบเริ่มใหม่ด้วยที่เก็บว่าง | ปฏิเสธ (401) นับเป็นการลองรหัสผิด | กลับไปหน้าใส่รหัส พร้อมบอกว่าให้ขอรหัสใหม่จากเจ้าของระบบ |
+| บทบาทของรหัสไม่มีสิทธิ์ (เช่น ผู้ตรวจส่งเคส) | ปฏิเสธ (403 `forbidden`) ไม่เปลี่ยนอะไร | หน้าเว็บซ่อนปุ่มที่ใช้ไม่ได้ไว้ก่อน ถ้าเรียกผ่าน API จะได้ "บัญชีนี้ทำสิ่งนี้ไม่ได้" |
 | ล่ามแปลข้อมูลของเคสที่อนุมัติไม่ได้ | ไม่เดา บันทึกว่า "ส่งต่อไม่ได้" พร้อมเหตุผล การอนุมัติยังอยู่ | กล่อง "ส่งต่อไม่ได้" สีแดงใต้เคส บอกเหตุผล |
 | ระบบเริ่มใหม่ด้วยที่เก็บว่าง (แผนฟรี: หลับ รีสตาร์ท อัปเดต) | เคส ผล และการตัดสินเก่าหายทั้งหมด รหัสชุดข้อมูล (`store_id`) เปลี่ยน | แถบสีเหลืองบอกว่าเคสที่ส่งจากเครื่องนี้หายไปกี่รายการ กด "รับทราบ" เพื่อปิด |
 
@@ -86,6 +92,21 @@ Design principles: [design_philosophy.md](design_philosophy.md).
 **ที่เก็บชั่วคราว (Render แผนฟรี)** หน้าเว็บไม่พูดว่า "บันทึกถาวร" เตือนในการ์ดยืนยันก่อนส่งและบนเคสที่รอตัดสิน และจำ "รหัสงาน" ของสิ่งที่ส่งจากเครื่องนี้ไว้ในเบราว์เซอร์ (ไม่จำข้อความเคส) ถ้าระบบเริ่มใหม่ด้วยที่เก็บว่าง จะขึ้นแถบสีเหลืองว่าหายไปกี่รายการ แทนที่เคสจะหายไปเงียบ ๆ ทางที่ทำให้ไม่หายคือแผนเสียเงินพร้อมดิสก์ (D1)
 
 แท็บ "ตั้งค่า" **ดูอย่างเดียว**: ขั้นตอนและตัวทำงาน (agent) ของแต่ละประเภทงาน, AI ที่ใช้อยู่และวิธีเปลี่ยนใน Render, กติกาการตัดสิน, ที่เก็บข้อมูลและขีดจำกัด, "ตัวเลขการทำงาน" (ดูหัวข้อถัดไป) และ "เส้นทางงานใน Honeycomb" (เปิดหรือปิด ส่งไปที่ไหน การส่งล่าสุดสำเร็จไหม และวิธีเปิดใน Render ดู [observability_tracing.md](observability_tracing.md)) เมื่อเปิดส่งเส้นทางงานแล้ว "รายละเอียดเชิงเทคนิค" ของแต่ละเคสจะมี "รหัสเส้นทางใน Honeycomb (trace id)" ด้วย หน้าเว็บแก้ค่าเหล่านี้ไม่ได้โดยตั้งใจ: คีย์อยู่ใน Render เท่านั้น ตัวทำงานเปลี่ยนได้ผ่าน PR เท่านั้น และคนต้องเป็นผู้ตัดสินเสมอ
+
+### รหัสรายคน: ให้คนอื่นช่วยตรวจหรือส่งเคส (ขั้น 2.1)
+
+ตั้งแต่ 16 พ.ย. คุณ (เจ้าของระบบ) สร้างรหัสเข้าใช้ให้แต่ละคนได้ แทนการแบ่งรหัสเข้าใช้ร่วมของคุณ ([ADR-034](architecture.md#8-architecture-decisions-adrs))
+1. **เข้าใช้ด้วยรหัสเข้าใช้ร่วม** (จากแท็บ Environment ของ Render) แล้วเปิดแท็บ "ตั้งค่า" ส่วนบนสุดคือ "จัดการผู้ใช้ (เฉพาะเจ้าของระบบ)"
+2. **สร้างรหัส** ใส่ชื่อเรียก (ไม่ต้องใช้ชื่อจริง เช่น "ผู้ตรวจ 1") เลือกบทบาท แล้วกด "สร้างรหัส"
+   - **ผู้ตรวจ:** ดูเคส กล่อง "รอรีวิว" และตัดสินเคส แต่ส่งเคสใหม่ไม่ได้
+   - **ผู้ส่งเคส:** ส่งเคส ยกเลิกเคสที่ยังรอคิว และดูเคส แต่ตัดสินไม่ได้ (สำหรับเครื่องมืออย่าง n8n ในอนาคต)
+   - รหัสเจ้าของระบบมีแค่รหัสเข้าใช้ร่วมจาก Render ยังสร้างเพิ่มไม่ได้
+3. **รหัสแสดงครั้งเดียว** ในกล่องสีเหลือง (ขึ้นต้นด้วย `nf_`) กด "คัดลอก" แล้วส่งให้เจ้าตัวทางช่องทางที่ปลอดภัย กด "ซ่อนรหัสนี้" หรือออกจากหน้า แล้วจะดูอีกไม่ได้ ระบบเก็บแค่ลายนิ้วมือของรหัส (SHA-256) ไม่เก็บตัวรหัส
+4. **ผู้ใช้กรอกรหัสที่หน้า "ใส่รหัสเข้าใช้"** ด้านซ้ายล่างจะขึ้น "เข้าใช้เป็น ผู้ตรวจ · ชื่อเรียก" และหน้าเว็บซ่อนสิ่งที่บทบาทนั้นทำไม่ได้ (ระบบหลังบ้านปฏิเสธด้วย 403 อยู่แล้ว)
+5. **การตัดสินบันทึกว่าใครตัดสิน** เช่น "โดย ผู้ตรวจ · ผู้ตรวจ 1" และการส่งต่องานหลังอนุมัติทำงานเหมือนตอนเจ้าของระบบอนุมัติ
+6. **เพิกถอน** กด "เพิกถอน" ที่รหัสนั้น แล้วกด "ยืนยันเพิกถอน" รหัสนั้นใช้ไม่ได้ตั้งแต่คำขอถัดไป หน้าเว็บของคนนั้นจะกลับไปหน้าใส่รหัส คนอื่นไม่กระทบ
+
+**ข้อจำกัดบน Render แผนฟรี:** รหัสรายคนเก็บอยู่ในที่เก็บเดียวกับเคส จึงหายไปทุกครั้งที่ระบบหลับ (ไม่มีคนใช้ราว 15 นาที) รีสตาร์ท หรืออัปเดต รหัสที่หายใช้ไม่ได้อีกและจะไม่กลับมาใช้ได้เอง (ปลอดภัย) แต่คุณต้องสร้างใหม่ ถ้าจะใช้งานกับคนอื่นจริง ต้องมีดิสก์ถาวร (D1) รหัสเข้าใช้ร่วมใช้ได้เสมอ
 
 ### ตัวเลขคิวและเวลา (ขั้น 5.3)
 
@@ -317,14 +338,15 @@ it stops the container (Render's default, which its free plan does not let `rend
 
 ## API reference
 
-Every `/v1` route needs `Authorization: Bearer <NEURON_FLOW_ACCESS_KEY>`. Bodies are JSON, at most 16 KiB.
+Every `/v1` route needs `Authorization: Bearer <credential>`: the owner's `NEURON_FLOW_ACCESS_KEY` or a personal
+token, whose role must be allowed on the route ("Access" below). Bodies are JSON, at most 16 KiB.
 
 **Request ids (roadmap 1.2).** Every response, including the page, `/healthz` and errors refused before the
 app runs, carries an `X-Request-Id` header:
 - a client may send its own `X-Request-Id`: 1–64 characters, starting with a letter or digit, then letters,
   digits, `.`, `_` or `-`. It is used as is;
 - anything else is replaced by a new id `req_<16 hex>`. That includes an id containing a job id (access
-  lines never carry job ids) and an id equal to the access key;
+  lines never carry job ids), an id equal to the access key and an id holding the start of a personal token;
 - the id is the last field of the access log line, and a new job stores it in its first event
   (`job.queued`, `payload.request_id`). `GET /v1/jobs/{job_id}` returns it as `request_id` (`null` for jobs
   admitted before this change). A duplicate submission gets its own new id in the header, while the job
@@ -342,7 +364,11 @@ app runs, carries an `X-Request-Id` header:
 | `POST /v1/jobs/{job_id}/cancel` | Withdraw a job that is still `QUEUED`. The body is empty or `{}`. Returns the job view plus `changed` (`false` when it was already cancelled) | 200 | 400, 401, 404, 409 `not_cancellable` (with `job_status`), 415 |
 | `GET /v1/reviews?state=PENDING&limit=20&after=<cursor>` | Reviews in one state (`PENDING`, `APPROVED`, `REJECTED`). Pending: elevated first, then the oldest; decided: newest first. `next_after` is the next cursor; `counts` has every state and `elevated_pending` | 200 | 400, 401 |
 | `GET /v1/reviews/{review_id}` | The case, the proposal (rules, AI second opinion, why it was raised), `proposal_sha256`, `version`, `decidable`, and every decision | 200 | 401, 404 `review_not_found` |
-| `POST /v1/reviews/{review_id}/decisions` | A person's decision, below | 201 new, 200 the same decision again | 400, 401, 404, 409, 413, 415, 429 |
+| `POST /v1/reviews/{review_id}/decisions` | A person's decision, below | 201 new, 200 the same decision again | 400, 401, 403, 404, 409, 413, 415, 429 |
+| `GET /v1/me` | Who the credential is (`token_id`, `role`, `display_name`, `shared_key`) and what its role may do (`can`: `submit`, `cancel`, `review`, `manage_tokens`) | 200 | 401, 429 |
+| `GET /v1/tokens` | The owner: every personal token (never a secret or its hash), `active`, the limits and `retention` | 200 | 401, 403 |
+| `POST /v1/tokens` | The owner: issue a token, `{"display_name": "…", "role": "reviewer"\|"submitter"}`; the reply's `token` is the only copy (`shown_once`) | 201 | 400, 401, 403, 409 `too_many_tokens`, 413, 415, 429 |
+| `POST /v1/tokens/{token_id}/revoke` | The owner: revoke at once; the body is empty or `{}`; `changed` is `false` when it was already revoked | 200 | 400, 401, 403, 404 `token_not_found`, 415 |
 
 **Reviews (roadmap 2.2, ADR-027).** The Runner's `REVIEW_REQUIRED` opens the job's review (`rev_` + the job id's
 hex) in the same transaction. A job view (`GET /v1/jobs/{job_id}`) has `human_review`: `review_id`, `state`,
@@ -351,8 +377,9 @@ hex) in the same transaction. A job view (`GET /v1/jobs/{job_id}`) has `human_re
 "expected_version": 1, "idempotency_key": "…"}`:
 - approving without `final_category` keeps the rules' suggestion; rejecting without one records none;
 - `reason` is required: 1–500 characters after trimming, without control characters (new lines are fine);
-- who decides comes from the credential, never the body: today `{"token_id": "shared-access-key", "role":
-  "owner"}`, the only credential until per-person tokens (2.1);
+- who decides comes from the credential, never the body: `{"token_id": "shared-access-key", "role": "owner",
+  "name": null}` for the owner's shared key, or a reviewer token's id, `"reviewer"` and its display name (2.1). A
+  submitter's token gets `403 forbidden`;
 - the reply has the `decision` (with `final_queue` for an approval), the updated `review`, `handoffs` (what the
   decision handed on, below; the same rows for a repeated click) and `retention`;
 - the same key and body again → `200` with the same decision; the same key with another body or another review
@@ -361,6 +388,21 @@ hex) in the same transaction. A job view (`GET /v1/jobs/{job_id}`) has `human_re
 - other codes: `invalid_decision`, `invalid_category`, `invalid_reason`, `invalid_version`,
   `invalid_idempotency_key`, `invalid_fields`, `not_reviewable` (the job left `REVIEW_REQUIRED` behind the
   review's back; the transaction rolls back), `review_not_found`, `rate_limited`.
+
+**Access: the shared key, personal tokens and roles (roadmap 2.1, ADR-034).**
+- A token is `nf_<token_id>_<secret>`: 16 hex digits of id and 43 URL-safe characters of secret. The queue keeps
+  the secret's SHA-256, never the secret; the reply that creates a token is the only place it appears.
+- Each request: the shared key (SHA-256 and `hmac.compare_digest`), else a well-formed token looked up by id and
+  compared the same way. A revoked, unknown, malformed or lost token gets `401` and counts towards the ten wrong
+  keys a minute per client. No cache, so a revocation applies to the next request. `last_used_at` is written at
+  most once a minute.
+- Roles (`app/services/access.py`, `PERMISSIONS`): every route is open to the owner; `reviewer` may read
+  `/v1/status`, `/v1/me`, jobs, their events and reviews, and decide; `submitter` may read the same but reviews,
+  and send and cancel jobs. Anything else → `403 {"error": "forbidden", "role": …}`. Tokens are issued for
+  `reviewer` and `submitter` only, at most 50 active, 10 new ones a minute per client; a display name is 1–60
+  characters of text.
+- On storage that is not persistent the tokens go with the queue at every sleep, restart and deploy: a lost
+  token is refused like an unknown one (it fails closed). The shared key always works.
 
 **Skill handoffs (ADR-030, [skill_handoff.md](skill_handoff.md)).**
 - `GET /v1/jobs/{job_id}` has `handoff: {"from": …, "to": [...]}`: the handoff that started this job (`null` for a
@@ -467,14 +509,15 @@ text that cannot be stored (half of an emoji, a lone surrogate) is `invalid_inpu
 | A version-1 queue upgrades to version 2 with a review for every waiting job, also when two processes start at once | `tests/test_service_reviews.py` (`MigrationTests`) |
 | Every write says how long it lasts, and a new store id shows that the queue started empty (ADR-029) | `tests/test_service_reviews.py` (`RetentionTests`); the page in `tests/test_web_page.py` (`ReviewAndRetentionTests`) |
 
-Still open: a reviewer with a revoked token or the wrong role is denied (roadmap 2.1), and an approval creates
-exactly one linked phase-B job (roadmap 2.3).
+| A token is shown once; a revoked, unknown or lost token is refused at once and counts as a wrong key; every role is refused on every route its table row does not give it, and the table and the router name the same routes; no response, log line, event, stored file or Sentry event holds a token or its hash; a version-3 queue upgrades to version 4 (roadmap 2.1, ADR-034) | `tests/test_service_access.py` (20 tests); the page in `tests/test_web_page.py` (`AccessTests`); issue, decide, revoke and a restart in *Actions → Service container* (`examples/service_smoke_test.py`) |
+
+The linked phase-B job after an approval (roadmap 2.3) is checked in `tests/test_service_handoff.py`.
 
 ## Configuration
 
 | Variable | Default | Meaning |
 |---|---|---|
-| `NEURON_FLOW_ACCESS_KEY` | none (the API refuses `/v1`) | Shared access key, at least 16 characters |
+| `NEURON_FLOW_ACCESS_KEY` | none (the API refuses `/v1`) | The owner's shared access key, at least 16 characters: the bootstrap credential that issues personal tokens (ADR-034) |
 | `NEURON_FLOW_DATA_DIR` | Railway volume, else `./neuron_workspace` | Where the queue and Core data live; on Render, the disk's mount path (`/var/data`) |
 | `PORT` / `NEURON_FLOW_HOST` | `8000` / `0.0.0.0` | Listening address |
 | `NEURON_FLOW_LLM_PROVIDER`, `NEURON_FLOW_LLM_MODEL`, `ANTHROPIC_API_KEY` or `TYPHOON_API_KEY` | `mock` | AI second opinion: `mock`, `anthropic`, `typhoon` or `local` (see [case_triage_v2_shadow.md](case_triage_v2_shadow.md)); `local` also reads `NEURON_FLOW_LOCAL_BASE_URL` and the optional `NEURON_FLOW_LOCAL_API_KEY`, and needs a model server in the same container, which the Render service does not have (ADR-026, D7) |
@@ -488,10 +531,11 @@ exactly one linked phase-B job (roadmap 2.3).
 
 ## Security notes
 
-- One shared access key, compared in constant time, sent as a bearer token. The page keeps it in the
-  browser (session storage, or local storage when "remember" is ticked). There are no per-person accounts
-  yet; Milestone C adds reviewer identity (2.1). Until then every review decision is recorded as the owner's,
-  so the key must stay the owner's alone (ADR-027).
+- The owner's shared access key and personal tokens (ADR-034), compared in constant time, sent as bearer tokens.
+  The page keeps the person's own credential in the browser (session storage, or local storage when "remember"
+  is ticked). A token the owner just created is shown from memory and never stored. The shared key makes its
+  holder the owner, so it must stay the owner's alone; everyone else gets a token with a role, revocable at once.
+  No passwords, e-mail login, expiry dates or single sign-on yet (later options in ADR-034).
 - Besides the key, the browser keeps only the ids of the jobs this page sent and the queue's store id
   (`neuronflow.sent`, at most 100 ids), to tell the person when they are lost; never case text or a reason.
 - Ten wrong keys in a minute from one client pause that client's attempts.
@@ -505,7 +549,9 @@ exactly one linked phase-B job (roadmap 2.3).
   a client sent. A review id is named after its job, so access lines hide it as well. A reviewer's reason is
   stored with the decision and returned by the API, but never written to an event, a log line or a span.
   Responses carry no file paths. A client's `X-Request-Id` reaches the log only when it matches the
-  safe pattern above and is neither a job or review id nor the key.
+  safe pattern above and is neither a job or review id nor the key nor anything holding the start of a token. A
+  token pasted into an address is replaced in the access line, and the log names a token only by its id when it
+  is issued or revoked.
 - Data is synthetic. Personal data is masked before the AI call (roadmap 7.1; what is and is not detected
   is listed in [case_triage_v2_shadow.md](case_triage_v2_shadow.md)), and since 2026-11-10 the gateway masks
   again itself and refuses to send anything the rules would still change (ADR-028). The masking is
@@ -522,9 +568,12 @@ exactly one linked phase-B job (roadmap 2.3).
 - Rate limits live in memory and reset on restart.
 - Live progress inside a running job is not shown step by step: the Flow panel shows the job as running,
   then every step's result when it finishes. Jobs with the mock AI finish in well under a second once the
-  service is warm. On Render's free plan the first job after a start took 9–10 s (two starts measured on
-  2026-11-01), later ones 0.1–0.4 s.
+  service is warm. On Render's free plan the first job after a start took 9–10 s before the image carried a
+  bytecode cache (two starts measured on 2026-11-01) and 3.2 s after it (E1; one start on 2026-11-16), later
+  ones 0.1–0.4 s.
 - The chat box takes a case or a study question, chosen with the switch above it. Plain-language
   conversation, where the system chooses (the router), is roadmap Phase 4.
-- Review decisions are built with the owner's shared key as the only reviewer (ADR-027). Per-person tokens
-  (2.1), the linked job after an approval (2.3), the n8n intake and reviewer notifications (2.5) are open.
+- Review decisions (ADR-027), personal tokens and roles (2.1, ADR-034) and the linked job after an approval
+  (2.3, ADR-030) are built. On Render's free plan the tokens are lost at every sleep, restart and deploy, so the
+  owner issues new ones; real use with other people needs the disk (D1). The n8n intake and reviewer
+  notifications (2.5) are open.

@@ -1,8 +1,8 @@
 # Security policy
 
 System Neuron Flow AI is an early prototype kept by one person. It holds synthetic data only. The online
-demo at https://neuron-flow.onrender.com answers `/v1` requests only with an access key that is not
-published.
+demo at https://neuron-flow.onrender.com answers `/v1` requests only with the owner's access key or a personal
+token the owner issued, with a role (ADR-034); neither is published.
 
 > ภาษาไทย: ถ้าพบช่องโหว่ อย่าเปิด issue สาธารณะ ให้แจ้งแบบส่วนตัวผ่านแท็บ Security → Report a vulnerability
 

@@ -24,7 +24,7 @@
     <section class="gate" aria-labelledby="gate-title">
       <div class="brand"><span class="brand-mark" aria-hidden="true"></span><span class="brand-name">Neuron Flow</span></div>
       <h1 id="gate-title">ใส่รหัสเข้าใช้</h1>
-      <p class="muted">หน้านี้เปิดให้เฉพาะเจ้าของระบบ ใช้รหัสจากหน้าตั้งค่าของบริการ (Render: แท็บ Environment → <code>NEURON_FLOW_ACCESS_KEY</code>)</p>
+      <p class="muted">เจ้าของระบบใช้รหัสเข้าใช้ร่วมจากหน้าตั้งค่าของบริการ (Render: แท็บ Environment → <code>NEURON_FLOW_ACCESS_KEY</code>) ผู้ตรวจหรือผู้ส่งเคสใช้รหัสรายคนที่เจ้าของระบบสร้างให้ (ขึ้นต้นด้วย <code>nf_</code>)</p>
       <form id="gate-form" autocomplete="off">
         <label for="gate-key">รหัสเข้าใช้ (access key)</label>
         <input id="gate-key" class="input" type="password" required minlength="16" spellcheck="false" autocapitalize="off">
@@ -64,6 +64,7 @@
       <p class="side-empty" id="queue-empty" hidden>ยังไม่มีเคส ลองพิมพ์เคสแรกในช่องแชท</p>
       <button type="button" class="btn btn-ghost more" id="queue-more" hidden>โหลดเพิ่ม</button>
       <div class="system-box" id="system">
+        <div class="sys-row"><span class="sys-label">เข้าใช้เป็น</span><span class="sys-value" id="sys-me">…</span></div>
         <div class="sys-row"><span class="sys-label">AI</span><span class="sys-value" id="sys-ai">…</span></div>
         <div class="sys-row"><span class="sys-label">ที่เก็บข้อมูล</span><span class="sys-value" id="sys-storage">…</span></div>
         <div class="sys-row"><span class="sys-label">ตัวรันงาน</span><span class="sys-value" id="sys-runner">…</span></div>
@@ -92,6 +93,8 @@
 
       <section class="view view-chat" id="view-chat" role="tabpanel" aria-labelledby="tab-chat">
         <div class="thread" id="thread" tabindex="-1"></div>
+        <!-- Shown instead of the composer for a token that cannot send cases (a reviewer's, ADR-034). -->
+        <p class="note role-note" id="role-note" hidden></p>
         <form class="composer" id="case-form" novalidate>
           <div class="composer-top">
             <!-- What the next message becomes. Shown when the service offers the study guide (roadmap 3.4);
@@ -135,7 +138,12 @@
         </form>
       </section>
 
-      <section class="view view-settings" id="view-settings" role="tabpanel" aria-labelledby="tab-settings" hidden></section>
+      <section class="view view-settings" id="view-settings" role="tabpanel" aria-labelledby="tab-settings" hidden>
+        <!-- The owner's "จัดการผู้ใช้" (roadmap 2.1, ADR-034), apart from the read-only panels below, so a status
+             refresh never redraws it while the owner types or reads a new token. -->
+        <div class="users-section" id="users-section" hidden></div>
+        <div id="settings-body"></div>
+      </section>
     </main>
 
     <!-- Right: the steps of the selected case (Flow) and its history (Trace). A sheet on small screens. -->

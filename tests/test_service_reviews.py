@@ -179,7 +179,7 @@ class DecisionTests(ApiTestCase):
         decision = body["decision"]
         self.assertEqual((decision["decision"], decision["final_category"], decision["final_queue"], decision["version"]),
                          ("APPROVE", "upload", "upload_review", 1))
-        self.assertEqual(decision["reviewer"], {"token_id": "shared-access-key", "role": "owner"})
+        self.assertEqual(decision["reviewer"], {"token_id": "shared-access-key", "role": "owner", "name": None})
         self.assertEqual(decision["reason"], REASON)
         self.assertEqual((body["review"]["state"], body["review"]["version"], body["review"]["decidable"]),
                          ("APPROVED", 2, False))
@@ -400,8 +400,8 @@ class MigrationTests(unittest.TestCase):
         store = QueueStore(self.path)
         store.migrate()
         with raw_db(self.path) as db:
-            db.execute("UPDATE meta SET value='4' WHERE key='schema_version'")
-        with self.assertRaisesRegex(RuntimeError, "schema 4 is not supported"):
+            db.execute("UPDATE meta SET value='5' WHERE key='schema_version'")
+        with self.assertRaisesRegex(RuntimeError, "schema 5 is not supported"):
             store.migrate()
 
 
@@ -435,7 +435,9 @@ class RetentionTests(ApiTestCase):
         self.assertEqual(status["retention"]["persistent"], True)
         self.assertEqual(status["retention"]["lost_on"], [])
         self.assertEqual(status["reviews"]["categories"], ["access", "upload", "billing", "other"])
-        self.assertEqual(status["reviews"]["reviewer_role"], "owner")
+        # Since roadmap 2.1 (ADR-034) the owner and reviewers with their own token decide; the credential says who.
+        self.assertEqual(status["reviews"]["decide_roles"], ["owner", "reviewer"])
+        self.assertIs(status["reviews"]["per_person_tokens"], True)
 
 
 class RunnerReviewTests(unittest.TestCase):

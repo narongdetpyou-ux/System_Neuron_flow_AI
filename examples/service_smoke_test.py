@@ -4,8 +4,10 @@ CI runs it against the Docker container; you can point it at the online service 
 
     python -m examples.service_smoke_test --url https://<your-service>.onrender.com --key <access key>
 
-First run: submit a case, check duplicates and conflicts, wait for the result, save its job id.
-With ``--after-restart``: check that the saved job is still there and that new work still runs.
+First run: submit a case, check duplicates and conflicts, wait for the result, approve a case and follow its
+handoff, issue a reviewer token, decide with it and revoke it (roadmap 2.1), and save the job and token ids.
+With ``--after-restart``: check that the saved job is still there, that the revoked token is still revoked and that
+new work still runs.
 With ``--first-case-only``: submit one case to a service that has just started and report how long it
 took (effectiveness plan E1). That mode reports and never fails on a time or on the case's outcome.
 It only uses synthetic text, and it never prints the access key.
@@ -190,8 +192,41 @@ def first_run(client, state_file, timeout_s, summary=None):
           == ("general_review", "disagree", "elevated", "PENDING_HUMAN_REVIEW"),
           "a real rules/mock disagreement is still raised and waits for a person")
     applied = approval_hands_on(client, mismatch["job_id"], timeout_s)
-    if state_file:
-        Path(state_file).write_text(json.dumps({"job_id": job["job_id"], "apply_job_id": applied}), encoding="utf-8")
+    token_id = personal_tokens(client, timeout_s)
+    if state_file:  # ids only: the token itself is never written down or printed
+        Path(state_file).write_text(json.dumps({"job_id": job["job_id"], "apply_job_id": applied,
+                                                "token_id": token_id}), encoding="utf-8")
+
+
+def personal_tokens(client, timeout_s):
+    """Roadmap 2.1 (ADR-034): the owner issues a reviewer token, the reviewer decides with it, the owner revokes it."""
+    status, issued = client.call("POST", "/v1/tokens", {"display_name": "smoke reviewer", "role": "reviewer"})
+    check(status == 201 and issued.get("shown_once") is True and str(issued.get("token", "")).startswith("nf_"),
+          "the owner issues a reviewer token, shown once")
+    reviewer = Client(client.url, issued["token"])
+    status, me = reviewer.call("GET", "/v1/me")
+    check(status == 200 and me.get("role") == "reviewer" and me["can"]["review"] and not me["can"]["submit"],
+          "the token signs in as a reviewer")
+    body = {"workflow_type": "case_triage.v2", "idempotency_key": f"smoke-{uuid.uuid4()}",
+            "input": {"case_id": "SMOKE-TOKEN-01", "summary": "I was charged twice this month, please refund"}}
+    status, refused = reviewer.call("POST", "/v1/jobs", body)
+    check(status == 403 and refused.get("error") == "forbidden", "a reviewer's token cannot send cases (403)")
+    status, job = client.call("POST", "/v1/jobs", body)
+    waiting = wait_for_result(client, job["job_id"], timeout_s)
+    check(waiting["status"] == "REVIEW_REQUIRED", "the owner's case waits for a person")
+    decision = {"decision": "APPROVE", "reason": "smoke test: approved by a reviewer token", "expected_version": 1,
+                "idempotency_key": f"smoke-decide-{uuid.uuid4()}"}
+    status, decided = reviewer.call("POST", f"/v1/reviews/rev_{job['job_id'][len('job_'):]}/decisions", decision)
+    who = (decided.get("decision") or {}).get("reviewer") or {}
+    check(status == 201 and (who.get("role"), who.get("token_id")) == ("reviewer", issued["token_info"]["token_id"])
+          and [h.get("state") for h in decided.get("handoffs") or []] == ["STARTED"],
+          "the reviewer's decision records the token and hands on like the owner's")
+    token_id = issued["token_info"]["token_id"]
+    status, revoked = client.call("POST", f"/v1/tokens/{token_id}/revoke", {})
+    check(status == 200 and revoked.get("changed") is True, "the owner revokes the token")
+    status, _ = reviewer.call("GET", "/v1/me")
+    check(status == 401, "the revoked token is refused at once (401)")
+    return token_id
 
 
 def approval_hands_on(client, job_id, timeout_s):
@@ -226,6 +261,11 @@ def after_restart(client, state_file, timeout_s):
         status, applied = client.call("GET", f"/v1/jobs/{saved['apply_job_id']}")
         check(status == 200 and applied["status"] == "COMPLETED" and applied["handoff"]["from"] is not None,
               "the apply job and its handoff survive the restart")
+    if saved.get("token_id"):
+        status, listed = client.call("GET", "/v1/tokens")
+        kept = [item for item in listed.get("tokens", []) if item.get("token_id") == saved["token_id"]]
+        check(status == 200 and len(kept) == 1 and kept[0]["active"] is False,
+              "the revoked token is still revoked after the restart (persistent storage)")
     body = {"workflow_type": "case_triage.v2", "idempotency_key": f"smoke-{uuid.uuid4()}",
             "input": {"case_id": "SMOKE-EN-02", "summary": "I cannot sign in to my account"}}
     status, fresh = client.call("POST", "/v1/jobs", body)

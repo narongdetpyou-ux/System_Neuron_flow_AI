@@ -1,13 +1,13 @@
 """The common language of the skill-handoff exchange (ADR-030): facts from one versioned vocabulary.
 
-A fact is ``{"value": …, "origin": …}`` under a name from ``vocabulary_v1.json``. The vocabulary says, for each
+A fact is ``{"value": …, "origin": …}`` under a name from ``vocabulary_v2.json``. The vocabulary says, for each
 name, its type (``text``, ``id``, ``choice``), its limits and the origins it may come from:
 
 * ``input``: typed by a person; ``rules``: made by code; ``person``: a reviewer's decision;
 * ``ai``: a model's answer after its checks. It is data only: no route ever depends on it.
 
 The vocabulary is versioned data. Its tag carries the complete SHA-256 of the file
-(``vocabulary-v1@sha256:…``), and every handoff records it, so a changed file is visibly a new language.
+(``vocabulary-v2@sha256:…``), and every handoff records it, so a changed file is visibly a new language.
 """
 
 from dataclasses import dataclass
@@ -17,7 +17,7 @@ from pathlib import Path
 import re
 
 HERE = Path(__file__).resolve().parent
-VOCABULARY_FILE = HERE / "vocabulary_v1.json"
+VOCABULARY_FILE = HERE / "vocabulary_v2.json"  # v2 (ADR-034): a reviewer may decide, not only the owner
 TYPES = ("text", "id", "choice")
 _CONTROL = re.compile(r"[\x00-\x08\x0b-\x1f\x7f]")
 

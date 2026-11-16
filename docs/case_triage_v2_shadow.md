@@ -10,8 +10,8 @@ the GitHub runner on 2026-11-08, was correct on 58/61 and raised all 32 of the r
 `ANTHROPIC_API_KEY`, D2). Synthetic data only.
 It is not a production service: since round 2 it runs behind the intake API and the web page as a
 single-owner pilot on Render's free plan. Since 2026-11-10 a person approves or rejects each waiting case on the
-page or through `POST /v1/reviews/{review_id}/decisions` (roadmap 2.2, ADR-027); per-person reviewer identity is
-still Milestone C (2.1). No Core (`neuron_flow/`) file was changed. Design principles:
+page or through `POST /v1/reviews/{review_id}/decisions` (roadmap 2.2, ADR-027); since 2026-11-16 a reviewer can
+decide with a personal token, recorded by its id (roadmap 2.1, ADR-034). No Core (`neuron_flow/`) file was changed. Design principles:
 [design_philosophy.md](design_philosophy.md).
 
 ## ภาพรวมการทำงาน (สรุปภาษาไทย)

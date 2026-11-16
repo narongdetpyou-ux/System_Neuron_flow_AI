@@ -303,14 +303,15 @@ class DemoAndCheckTests(unittest.TestCase):
 
 
 class MigrationTests(ApiTestCase):
-    def test_a_version_2_queue_is_upgraded_to_3_and_keeps_its_jobs(self):
+    def test_a_version_2_queue_is_upgraded_to_the_current_version_and_keeps_its_jobs(self):
         job_id = waiting_job(self.store, "key-upgrade-v2-001")
         with raw_db(self.store.path) as db:
-            db.executescript("DROP TABLE handoffs; UPDATE meta SET value='2' WHERE key='schema_version';")
+            db.executescript("DROP TABLE handoffs; DROP TABLE access_tokens;"
+                             " UPDATE meta SET value='2' WHERE key='schema_version';")
         store = QueueStore(self.store.path)
         store.migrate()
-        with raw_db(self.store.path) as db:
-            self.assertEqual(db.execute("SELECT value FROM meta WHERE key='schema_version'").fetchone()[0], "3")
+        with raw_db(self.store.path) as db:  # 2 -> 3 (handoffs) -> 4 (access tokens, ADR-034)
+            self.assertEqual(db.execute("SELECT value FROM meta WHERE key='schema_version'").fetchone()[0], "4")
         self.assertEqual(store.get(job_id)["status"], "REVIEW_REQUIRED")
         self.assertEqual(store.handoff_counts(), {"STARTED": 0, "REFUSED": 0})
         self.assertEqual(body_of(decide(ApiApp(self.settings, store), review_id_for(job_id)))["handoffs"][0]["state"],

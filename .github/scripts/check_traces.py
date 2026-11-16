@@ -8,13 +8,15 @@ requests, their encoding is right. This script then checks the content:
 2. the case the smoke test submitted is one trace: the request that admitted it, the job, the queue wait,
    the run, each step and the AI call, linked parent to child, with the steps inside the run;
 3. the health check and the page are not traced; the refused requests (401, 400, 409) are;
-4. no case text, case id or key appears anywhere in what was sent.
+4. no case text, case id or key appears anywhere in what was sent, and no personal token (roadmap 2.1, ADR-034: the
+   smoke test issues one, decides with it and revokes it).
 It writes the trace as a table to the job summary (in Thai and English) so it can be read without Honeycomb.
 """
 
 import json
 import os
 from pathlib import Path
+import re
 import sys
 
 EXPECTED = ["POST /v1/jobs", "job case_triage.v2", "queue wait", "run", "step classify_rules",
@@ -25,6 +27,7 @@ PARENT = {"job case_triage.v2": "POST /v1/jobs", "queue wait": "job case_triage.
 # What the smoke test sent (examples/service_smoke_test.py) and must never come back out.
 PRIVATE = ["อัปโหลดไฟล์แนบไม่ได้ ค้างที่ 99%", "อัปโหลด", "SMOKE-TH-01", "SMOKE-2", "a different problem altogether",
            "SMOKE-DISAGREE-01", "Please add dark mode for users in Billings."]
+TOKEN = re.compile(r"nf_[0-9a-f]{16}_[A-Za-z0-9_-]{43}")  # a personal token (app/services/access.py)
 
 
 def attributes(item):
@@ -102,6 +105,8 @@ def main(collector_file, state_file):
     for text in PRIVATE + [os.environ.get("ACCESS_KEY", ""), os.environ.get("HONEYCOMB_API_KEY", "placeholder")]:
         if text and (text in raw or json.dumps(text)[1:-1] in raw):
             problems.append("private text or a key reached the collector")
+    if TOKEN.search(raw):
+        problems.append("a personal token reached the collector")
     if problems:
         fail(problems)
 
