@@ -545,7 +545,8 @@ Notes for cloud sessions (claude.ai/code):
     (roadmap 0.4).
   - The rest of the roadmap is open.
 - **Next:** [docs/ROADMAP.md](docs/ROADMAP.md), the first item that is not ✅ and whose needs are met.
-  - **The owner's fine-tuned Typhoon 4B is on hold by the owner (2026-11-13). Do nothing with it until the owner asks.**
+  - **The owner's fine-tuned Typhoon 4B is on hold by the owner (2026-11-13, again on 2026-11-16). Do nothing with it
+    until the owner asks.**
     - What it is: the owner's QLoRA fine-tune of `typhoon-ai/typhoon2.5-qwen3-4b` (revision
       `ce0a7416fe82d4404b2b4a253ce3ac095ab1252c`) for case triage, merged and quantized to Q4_K_M:
       `nf_typhoon4b_v01_q4_k_m.gguf`, 2,497,278,816 bytes, SHA-256
@@ -563,6 +564,15 @@ Notes for cloud sessions (claude.ai/code):
       PR; restore or rebuild only when the owner asks. Its one real-model run (the publisher's 4B on a GitHub runner, run
       43421904358): end-to-end 70/70 checks, first answer after loading 36.5 s, then about 8 to 10 s a case, peak memory
       8.8 GB.
+    - 2026-11-16: the owner asked to continue with it, then chose to keep it on hold before a route was chosen. Done
+      first, read only: `conversion_receipt.json` (status `GGUF_SMOKE_PASSED`) matches every value above, compared by a
+      program, and its `llama_cpp_commit` is the lane's `LLAMA_CPP_COMMIT`. The folder also holds `SHA256SUMS.txt` and
+      a `llama-server` binary built in Colab (`llama_server_b12198_cpu`); never run that binary, the lane builds
+      llama.cpp itself. Nothing was downloaded, shared or changed. The two routes put to the owner, for next time: a
+      Drive link in a repository secret (fewest steps for the owner; anyone holding the link could download the file)
+      or a private Hugging Face repository with a read-only token (more private, more steps; `fetch_model.py` already
+      reads Hugging Face). The scope offered: download, check the size and SHA-256, five triage cases on a GitHub
+      runner, report, and ask again before a full run.
     - Before touching it again:
       1. Ask the owner first how their file may be reached or shared (a Drive link they share, or a private Hugging Face
          repository with a token): it is their decision. When a connector cannot see a file, stop and ask which account
@@ -570,11 +580,11 @@ Notes for cloud sessions (claude.ai/code):
       2. The owner's usage credits are limited. Agree on the scope and the size of the work before starting, build in
          small steps the owner confirms, and never start long runs or wide changes unasked.
       3. Copy hashes and ids from the owner's text with a program, never by hand: a hand-typed pin was wrong once.
-      4. First step when asked: read `conversion_receipt.json` (read only), then ask one question about the route and the
-         scope.
-  - **Attention is built and measured in PR #67 (2026-11-11), pending merge** (ADR-032, ADR-033, roadmap 5.10).
+      4. First step when asked: read `conversion_receipt.json` (read only; done on 2026-11-16, so read it again only if
+         its modified time in Drive changed), then ask one question about the route and the scope.
+  - **Attention was built and measured in PR #67, merged on 2026-11-11** (ADR-032, ADR-033, roadmap 5.10).
     The owner said to plan anew, not from the repository's plan, with one expectation: better effectiveness; after
-    the first version (signals v1) the owner said it was not enough and asked for more capability. Now in the PR:
+    the first version (signals v1) the owner said it was not enough and asked for more capability. Built:
     signals v2 (wording from the development half of the open data, measured once on the sealed half) and the
     AI's `attention` flag (prompt `triage_classify_v2`, `shadow-3`). One live Typhoon run of ten sets, 1,780 cases
     from commit `1e5d13c`, every case waiting for a person: `needs_person` raised 38/38 on the hard set (6/38
@@ -584,14 +594,13 @@ Notes for cloud sessions (claude.ai/code):
     each), AI flags on 12 of 200 ordinary sealed requests
     ([evidence](docs/evidence/2026-11-11-attention-signals.md)). The first live runs found two prompt defects (an
     attention value written as the category; a worse category on injected instructions), fixed from development
-    cases only. It changes `app/`, so the merge redeploys Render (queued cases are lost on the free plan). The
+    cases only. Its merge redeployed Render (live at 18:06 UTC that day). The
     page's mock AI always answers `none`: the page gets the AI's flag only with a real model (0.4, the owner's
     choice). Next after it: roadmap 5.10, "Next"; measure a prompt wording several times before changing it.
-  - **The auto-approve limits are built in PR #66 (2026-11-11), pending merge** (ADR-031, roadmap 5.6, 5.9 and the
+  - **The auto-approve limits were built in PR #66, merged on 2026-11-11** (ADR-031, roadmap 5.6, 5.9 and the
     first injection measurement of 5.7): the hard set, the open-benchmark builder, the simulation, the CI step with
-    the mock, the manual workflow and the first Typhoon run. After the merge: the owner's run of *Auto-approve
-    limits* by hand. It also changes `app/eval/`, which is part of the image, so the merge redeploys Render (on the
-    free plan the queued cases are lost, as with every deploy); the service never imports the simulation, so what
+    the mock, the manual workflow and the first Typhoon run. Left: the owner's run of *Auto-approve limits* by hand
+    (not started as of 2026-11-16). Its merge redeployed Render; the service never imports the simulation, so what
     the page does is unchanged.
   - **The skill-handoff exchange was built in PR #65 and merged on 2026-11-11** (ADR-030, roadmap
     H1–H3 and H5's page part). The owner paused new study-guide work, asked for skills that stay separate and pass
@@ -603,9 +612,11 @@ Notes for cloud sessions (claude.ai/code):
     ([evidence](docs/evidence/2026-11-11-skill-handoff.md)). Next: the owner's test on the live page.
   - Waiting on the owner: 0.2 and 1.4 (D1, paid Render plan), 0.3 path B and 0.4 with Claude (D2, Claude
     API key); 0.4 with Typhoon is free but sends what is typed on the page to Typhoon, so it is the owner's
-    choice too; an open model behind the page needs a paid machine (D7); the owner test of 2.4 on the live page
-    after the merge; the owner test of the skill handoff (H3) on the live page after its merge; the first new
-    skill (H4). D8 is decided (2026-11-10): the e-mail history stays as it is; do not propose a rewrite.
+    choice too; an open model behind the page needs a paid machine (D7); the owner tests on the live page of 2.4,
+    the skill handoff (H3) and attention (5.10); the first new skill (H4). Render's log (read 2026-11-16) has no
+    case submitted (`POST /v1/jobs`) since the E1 deploy on 2026-11-10, so those tests and E1's measurement on
+    Render have no data yet.
+    D8 is decided (2026-11-10): the e-mail history stays as it is; do not propose a rewrite.
   - **The study guide is paused (owner, 2026-11-11):** no new study-guide work (E4, E6 or changes to
     `app/domains/study_guide/`) until the owner resumes it; its checks keep running.
   - **E2 is built and measured in PR #64, merged on 2026-11-11**, from PR #62's held-out-set commit `a30de92`, preserved in
