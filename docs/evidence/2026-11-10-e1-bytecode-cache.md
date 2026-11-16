@@ -124,7 +124,7 @@ case per start (`examples/service_smoke_test.py --first-case-only`).
 | Start on Render | `run` span of the first job | Source |
 |---|---|---|
 | Before E1 (4 observations) | 9.0 to 10.5 s | [baseline](2026-11-10-effectiveness-baseline.md) |
-| Right after a deploy that carries E1 | not measured: no case was sent between such a deploy and the next sleep | Honeycomb: no `POST /v1/jobs` from 2026-11-09 to 2026-11-16 06:19 UTC |
+| Right after a deploy that carries E1 (2026-11-16, PR #72) | **2,865 ms** (one observation) | Honeycomb, trace `d5c389ed450137969f0280ce5497a89a`; [the owner's test of 2.1](2026-11-16-personal-tokens-live.md) |
 | After one free-plan sleep (2026-11-16) | **3,158 ms** (one observation) | Honeycomb, trace `c032092743134c895e53b59b0dc35e65` |
 
 **The case.** The owner sent one synthetic case on the live page at 06:19:56 UTC, for the owner tests of 2.4, H3
@@ -154,6 +154,11 @@ E1's cache. Mock AI.
   ran in 42 ms: a warm job, like the baseline's later jobs (0.1 to 0.4 s).
 - `POST /v1/jobs` took 86.5 ms, against 12.8 to 13.8 ms in the baseline. One observation, the API process's
   first case after a start; not investigated.
-- **Limits:** one observation of one synthetic case with the mock AI, on Render's free instance as it was that
-  minute. Task 5 of E1 (starting the workers ahead) was planned only if the first case still feels slow to the
+- **Right after a deploy** (added the same day): the owner's first case after the deploy of PR #72 (07:22 UTC) was
+  the first job of the new Runner process, five minutes later and without a sleep between: `run` 2,865 ms
+  (`classify_rules` 2,492 ms, `classify_llm` 1,115 ms, `screen` 281 ms, `compare` and `prepare` 14 ms each),
+  `queue wait` 417 ms, `POST /v1/jobs` 13.0 ms. The same five-step workflow, so the two Render figures after E1
+  are 2.9 s and 3.2 s.
+- **Limits:** one observation of each start, synthetic cases with the mock AI, on Render's free instance as it was
+  that minute. Task 5 of E1 (starting the workers ahead) was planned only if the first case still feels slow to the
   owner.
