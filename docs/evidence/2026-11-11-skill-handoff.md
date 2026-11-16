@@ -3,8 +3,9 @@
 **Date:** 2026-11-11. **Where:** a Claude Code cloud session (Python 3.10, 3.12 and 3.13), before the pull request's
 CI runs. **What:** roadmap H1–H3 and H5's page part ([skill_handoff.md](../skill_handoff.md)): an approval of a
 `case_triage.v2` case hands on to `case_triage.v2.apply` through the exchange. **Data:** the three existing
-synthetic triage sets and a few synthetic cases; the offline mock AI. **Not in this note:** Render (not merged or
-deployed), a live model (the exchange and its translators use no AI), and the trace link (not built).
+synthetic triage sets and a few synthetic cases; the offline mock AI. **Not in this note:** a live model (the
+exchange and its translators use no AI) and the trace link (not built). **Added 2026-11-16:** the owner's test on
+Render's live page, in section 6.
 
 ## สรุปสำหรับเจ้าของโปรเจกต์
 
@@ -17,7 +18,8 @@ deployed), a live model (the exchange and its translators use no AI), and the tr
 - **ชุดทดสอบเดิมทั้งหมดได้ผลเหมือนเดิม:** ข้อสอบคัดแยกเคส ข้อสอบผู้ช่วยแนะนำแหล่งเรียน และด่านความทนทาน (239 จาก 270 ข้อ 0 bug เท่าเดิม)
 - **ชุดทดสอบอัตโนมัติ 448 ข้อผ่านทั้งหมด** บน Python 3.10 และ 3.12 (ใหม่ 37 ข้อ)
 - **ระบบจริงที่รันด้วยคำสั่งเดียวกับบน Render (นอก Docker):** อนุมัติแล้วส่งต่อ งานบันทึกผลเสร็จพร้อมใบรับ คนข้างนอกเรียกตรง ๆ ไม่ได้ และหลังรีสตาร์ทยังอยู่ครบ
-- **ยังไม่ได้ทำ:** ลองบนหน้าเว็บจริงบน Render (ต้องรวมโค้ดก่อน)
+- **บนหน้าเว็บจริง (16 พ.ย.):** คุณส่งเคส 1 เคสแล้วกด "อนุมัติ" หน้าเว็บขึ้นกล่อง "ส่งต่อแล้ว" ครบทุกขั้น
+  ระบบสร้างงาน "บันทึกผลหลังอนุมัติ" 1 งานในจังหวะเดียวกับการตัดสิน และงานนั้นเสร็จใน 0.04 วินาที (ส่วนที่ 6)
 
 ## 1. The existing case sets, end to end
 
@@ -73,7 +75,24 @@ suggestion, the case text) and the in-translator; the apply job showed "บั�
 
 ## 5. Limits
 
-- One session, synthetic data, the mock AI. Render has not run it; the owner's test on the live page is after the
-  merge and the deploy (on the free plan the deploy empties the queue).
+- One session, synthetic data, the mock AI. Render ran it later, once (section 6).
 - The traces of the two jobs are not linked yet (H5).
 - The check's decisions are scripted, not a person's.
+
+## 6. On the live page (2026-11-16)
+
+The owner's test on Render's free plan with the mock AI (service `0.4.1+45f27f4659e3`, the merge of PR #67), from
+the owner's three screenshots of the page and from Honeycomb:
+
+- One synthetic case, `WEB-261116-UTV7`, sent at 06:19:56 UTC (`POST /v1/jobs` 202): `REVIEW_REQUIRED` in 3.2 s,
+  with the rules and the AI agreeing on billing. It was the first job after a free-plan sleep; its timing is E1's
+  figure on Render ([E1 note](2026-11-10-e1-bytecode-cache.md)).
+- At 06:20:58 UTC the owner approved it on the decision card, with the rules' category and a reason of their own
+  (`POST /v1/reviews/{review_id}/decisions` 201 in 10.6 ms). The page showed the decision as final.
+- In the same moment the exchange admitted one `case_triage.v2.apply` job. The page showed "ส่งต่อแล้ว" as in
+  section 4: the out-translator, the five facts with their origins, the three left out and the in-translator,
+  with route `triage-approved-to-apply`, table `routes-v1` and handoff number 1.
+- The apply job waited 296 ms, ran 42 ms (`step record_routing` 13 ms) and ended `COMPLETED`, Core `SUCCEEDED`, after
+  one claim. Honeycomb holds exactly one such job for the case, in a trace of its own (no link yet, H5).
+- Not on the screenshots: the opened apply job ("เปิดงานที่ส่งต่อไป") and the "รอรีวิว" box after the decision.
+  The free plan forgets both jobs, the decision and the handoff at the next sleep.
