@@ -1,12 +1,16 @@
 # Benchmarking plan: robustness, open benchmarks, attacks and live conditions
 
-**Status (2026-11-11):**
+**Status (2026-11-19):**
 - Stage 1, the robustness gate, is built and runs in CI on every push (roadmap 5.4, PR #41). Its first run found 8 bugs,
   45 gaps and 11 notes ([evidence note](evidence/2026-11-07-robustness-stage1.md)).
 - The 8 bugs were fixed in PR #42 (roadmap 5.5): 215/270 own items passed, with 0 bugs and 44 gaps.
-  After E2 in PR #64, 239/270 own items pass, with 0 bugs, 20 gaps and 11 notes; none of 4,680 sweep checks
+  After E2 in PR #64, 239/270 own items passed, with 0 bugs, 20 gaps and 11 notes; none of 4,680 sweep checks
   violate a promise. E2 fixes 24 of the original 27 rules gaps and retains three measured limits.
-  Deciding the other gaps is the rest of 5.5.
+  On 2026-11-19 the invisible-text gaps were fixed (bidi controls refused in a case, invisible characters not
+  counted towards the minimum, invisible characters removed from the AI's free text): 246/270 pass, 0 bugs, 13 gaps
+  ([evidence](evidence/2026-11-07-robustness-stage1.md#invisible-and-direction-changing-characters-2026-11-19-roadmap-55)).
+  An end-to-end item may now expect a refusal at admission (`"job": "REFUSED"`). The masking gaps and NFC are the
+  rest of 5.5.
 - E2 (PR #64) replaces the shadow workflow's official rules and this benchmark's `rules` layer with
   versioned Thai/English rules. The original v1 demo remains available. The [E2 evidence](evidence/2026-11-11-e2-rules-v2.md)
   records each of the original 27 rules-gap decisions and the new baseline: `SYN-RUL-009` (cross-script

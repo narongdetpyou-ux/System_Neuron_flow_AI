@@ -17,11 +17,17 @@ Flow for one call:
 5. clean free-text fields: no control characters, at most 200 characters, and no lone surrogates (half of an
    emoji, written by the model as an escape such as ``\\ud800``). They become U+FFFD, because Core cannot store
    them: before this, one such character failed the whole case instead of reaching review (robustness
-   benchmark, SYN-E2E-029).
+   benchmark, SYN-E2E-029);
+6. remove invisible format characters (Unicode category Cf: bidi controls such as U+202E, zero-width spaces and
+   joiners) from free-text fields, so the reviewer reads what the model wrote and not a reordered or hidden text
+   (SYN-AIR-041, SYN-E2E-030). A free-text field that is then empty, or holds no letter, digit or sign, is
+   ``InvalidModelOutput``: a second opinion without a reason is not one (SYN-AIR-042, SYN-AIR-043). Like any
+   invalid answer, it is asked once more, and then the case goes to review with the rules' suggestion (ADR-012).
 """
 
 import re
 import time
+import unicodedata
 
 from neuron_flow.model import decode
 
@@ -84,6 +90,14 @@ def parse_answer(text, schema):
             if item not in spec["enum"]:
                 raise InvalidModelOutput(f"The model answer has an unknown {name} value")
         else:
-            item = " ".join(_CONTROL.sub(" ", _LONE_SURROGATE.sub("\ufffd", item)).split())[:TEXT_LIMIT]
+            item = _without_format_characters(_LONE_SURROGATE.sub("\ufffd", item))
+            item = " ".join(_CONTROL.sub(" ", item).split())[:TEXT_LIMIT]
+            if not any(unicodedata.category(character)[0] in "LNPS" for character in item):
+                raise InvalidModelOutput(f"The model answer field {name} is empty")
         result[name] = item
     return result
+
+
+def _without_format_characters(text):
+    """``text`` without invisible format characters (Unicode category Cf), which a reader cannot see."""
+    return "".join(character for character in text if unicodedata.category(character) != "Cf")

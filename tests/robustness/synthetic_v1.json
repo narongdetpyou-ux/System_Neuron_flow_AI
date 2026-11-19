@@ -4732,8 +4732,8 @@
   {
    "id": "SYN-E2E-002",
    "layer": "e2e",
-   "title_th": "เคสมีแต่ตัวล่องหน ผ่านทั้งระบบ",
-   "title_en": "zero-width text end to end",
+   "title_th": "เคสมีแต่ตัวล่องหน: ถูกปฏิเสธตั้งแต่รับเข้า ไม่ถึง Core",
+   "title_en": "zero-width text end to end: refused at admission",
    "checklist": "MFT",
    "capability": "invisible_text",
    "lang": "none",
@@ -4743,15 +4743,14 @@
     "summary": "\u200b\u200b\u200b\u200b\u200b\u200b\u200b\u200b\u200b\u200b"
    },
    "expect": {
-    "job": "SUCCEEDED",
-    "decision": "PENDING_HUMAN_REVIEW"
+    "job": "REFUSED"
    }
   },
   {
    "id": "SYN-E2E-003",
    "layer": "e2e",
-   "title_th": "เคสมีแต่วรรณยุกต์ลอย ผ่านทั้งระบบ",
-   "title_en": "Thai combining marks end to end",
+   "title_th": "เคสมีแต่วรรณยุกต์ลอย: ถูกปฏิเสธตั้งแต่รับเข้า ไม่ถึง Core",
+   "title_en": "Thai combining marks end to end: refused at admission",
    "checklist": "MFT",
    "capability": "thai_script",
    "lang": "th",
@@ -4761,15 +4760,14 @@
     "summary": "็็็็็็็็็็"
    },
    "expect": {
-    "job": "SUCCEEDED",
-    "decision": "PENDING_HUMAN_REVIEW"
+    "job": "REFUSED"
    }
   },
   {
    "id": "SYN-E2E-004",
    "layer": "e2e",
-   "title_th": "เคสมีตัวกลับทิศ ผ่านทั้งระบบ",
-   "title_en": "a bidi override end to end",
+   "title_th": "เคสมีตัวกลับทิศ: ถูกปฏิเสธตั้งแต่รับเข้า ไม่ถึง Core",
+   "title_en": "a bidi override end to end: refused at admission",
    "checklist": "MFT",
    "capability": "bidi",
    "lang": "en",
@@ -4779,8 +4777,7 @@
     "summary": "refund \u202edenied si tnemyap\u202c please"
    },
    "expect": {
-    "job": "SUCCEEDED",
-    "decision": "PENDING_HUMAN_REVIEW"
+    "job": "REFUSED"
    }
   },
   {
@@ -4991,8 +4988,8 @@
   {
    "id": "SYN-E2E-016",
    "layer": "e2e",
-   "title_th": "กฎล้วน (v1): ตัวกลับทิศ",
-   "title_en": "rules only (v1): bidi override",
+   "title_th": "กฎล้วน (v1): ตัวกลับทิศถูกปฏิเสธตั้งแต่รับเข้า",
+   "title_en": "rules only (v1): a bidi override is refused at admission",
    "checklist": "MFT",
    "capability": "bidi",
    "lang": "en",
@@ -5002,8 +4999,7 @@
     "summary": "refund \u202edenied si tnemyap\u202c please"
    },
    "expect": {
-    "job": "SUCCEEDED",
-    "decision": "PENDING_HUMAN_REVIEW"
+    "job": "REFUSED"
    }
   },
   {

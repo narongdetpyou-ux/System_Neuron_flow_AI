@@ -192,7 +192,7 @@ If a task seems to need breaking a rule:
 ## 4. Checking your work
 
 ```bash
-python -m unittest discover -s tests -v        # all tests (550 on 2026-11-19); CI: Python 3.10 and 3.12
+python -m unittest discover -s tests -v        # all tests (561 on 2026-11-19); CI: Python 3.10 and 3.12
 python -m examples.case_triage_demo            # v1 rules, one synthetic case
 python -m examples.case_triage_shadow_demo     # v2 shadow mode with the offline mock AI
 python -m examples.study_guide_demo            # the study guide's answers to four synthetic requests
@@ -542,6 +542,14 @@ Notes for cloud sessions (claude.ai/code):
     reason or token in the reply; no workflow, agent, translator or the Runner reads it (a test). Checked by
     `tests/test_service_review_labels.py`, the page's contract tests, the container smoke test (before and after the
     restart) and a headless-browser walk as owner, reviewer and submitter.
+  - 5.5's invisible-text gaps, fixed on 2026-11-19 after the owner said "ทำต่อ" again: a case summary with bidi
+    controls (U+202E and the like) is refused at admission, its minimum length counts only characters that are not
+    invisible format characters (Cf), and it needs one letter, digit or sign (`app/domains/case_triage/workflow.py`);
+    the gateway removes Cf characters from the AI's free text and refuses a field left empty, so an empty rationale
+    is asked once more and then the case goes on with the rules alone (`app/llm/gateway.py`). Zero-width spaces
+    inside real Thai text and emoji joined by U+200D are kept. Robustness gate 246/270, 0 bugs, 13 gaps (239 and 20
+    before); SYN-E2E-002/003/004/016 now expect `REFUSED`, which the benchmark can express since then. No golden
+    case is refused, so every eval baseline is unchanged. The study guide's `message` was left alone (paused).
   - The answer to the first independent review (2026-11-10, of `main` @ `f38c926`; all four findings, one PR;
     `docs/evidence/2026-11-10-independent-review-response.md`):
     - review decisions (2.2) and the page's decision card and "รอรีวิว" list (2.4), built before 2.1 with the
@@ -658,7 +666,8 @@ Notes for cloud sessions (claude.ai/code):
     another version and new evidence.
   - 5.8's first full run is recorded: the owner chooses its branch (not good enough, close or good enough;
     roadmap 5.8, "After the first full run", step 2), then follow it.
-  - Buildable now without an owner decision: the rest of 5.5 (decide and fix the stage-1 gaps), 5.6 and 5.7,
+  - Buildable now without an owner decision: the rest of 5.5 (the ten masking gaps, which need new masking rules,
+    and NFC, which needs an ADR; the invisible-text gaps were fixed on 2026-11-19), 5.6 and 5.7,
     the rest of Phase 2 (2.1 to 2.4 and 2.8 are built; 2.5 needs D3, 2.6 and 2.7 when needed), H5's trace link, and Phase 4 (4.1 first; Phase 3, which it
     needs, is built). The rest of 7.1 (who can read the AI key) needs an ADR first.
   - The effectiveness track (2026-11-10, PR #50, [docs/effectiveness_plan.md](docs/effectiveness_plan.md)): E1
