@@ -16,7 +16,9 @@ what the service and the study guide promise:
    keeps only the access key and job ids, never case text; and who decides is never sent from the page;
 7. personal tokens and roles (roadmap 2.1, ADR-034): every role and token error has Thai words, a new token is
    shown from memory and never stored, only checked token ids reach an address, a status refresh never redraws
-   the owner's section, and the page hides what the signed-in role cannot do.
+   the owner's section, and the page hides what the signed-in role cannot do;
+8. the reviewer-label scorecard (roadmap 2.8): only a role that may decide reads it, the lock forgets it, it is read
+   again only when a decision was recorded or the queue started empty, and its panel keeps the limits of its numbers.
 
 A headless-browser walkthrough of the page itself is described in docs/intake_queue.md.
 """
@@ -341,3 +343,45 @@ class AccessTests(unittest.TestCase):
         self.assertIn('!can("review")', decision_card[:decision_card.index("\n  }\n")])
         inbox = SCRIPT[SCRIPT.index("async function refreshInbox"):]
         self.assertIn('can("review")', inbox[:inbox.index("\n  }\n")])
+
+
+class ReviewerLabelTests(unittest.TestCase):
+    """Rules and AI against people's decisions on the page (roadmap 2.8, app/services/review_labels.py)."""
+
+    def test_every_language_group_has_thai_words(self):
+        from app.services.review_labels import LANGUAGES
+        groups = js_table("LABEL_LANGUAGE")
+        self.assertEqual(set(groups), set(LANGUAGES))
+        self.assertTrue(all(re.search(r"[฀-๿]", word) for word in groups.values()))
+
+    def test_only_a_role_that_may_decide_reads_it_and_the_lock_forgets_it(self):
+        self.assertEqual(SCRIPT.count('call("GET", "/v1/reviews/scorecard")'), 1)  # read in one place only
+        refresh = SCRIPT[SCRIPT.index("async function refreshLabels"):]
+        refresh = refresh[:refresh.index("\n  }\n")]
+        self.assertIn('can("review")', refresh)
+        self.assertIn("labels !== state.labels", refresh)  # a reply that arrives after the lock is dropped
+        settings_view = SCRIPT[SCRIPT.index("function renderSettings"):]
+        self.assertIn('can("review") ? labelsPanel(status) : null', settings_view[:settings_view.index("\n  }\n")])
+        lock = SCRIPT[SCRIPT.index('$("lock").addEventListener'):]
+        self.assertIn("state.labels = freshLabels()", lock[:lock.index("\n    });\n")])
+
+    def test_it_is_read_again_only_when_the_decisions_change(self):
+        basis = SCRIPT[SCRIPT.index("function labelsBasis"):]
+        basis = basis[:basis.index("\n  }\n")]
+        for part in ("store_id", "APPROVED", "REJECTED"):
+            with self.subTest(part=part):
+                self.assertIn(part, basis)
+        apply = SCRIPT[SCRIPT.index("function applyStatus"):]
+        self.assertIn("state.labels.basis !== labelsBasis()", apply[:apply.index("\n  }\n")])
+
+    def test_the_panel_keeps_the_limits_of_its_numbers(self):
+        panel = SCRIPT[SCRIPT.index("function labelsPanel"):]
+        panel = panel[:panel.index("\n  }\n")]
+        for limit in ("เอนเอียง",              # the person saw the proposal first
+                      "ข้อมูลสมมติ",           # synthetic cases: not real-world accuracy
+                      "AI จำลอง",              # the mock is not an AI
+                      "ชั่วคราว",              # the free plan forgets the decisions
+                      "การตัดสินใจของเจ้าของระบบ",  # the numbers change nothing by themselves (D6)
+                      "Wilson"):              # the interval, said in words
+            with self.subTest(limit=limit):
+                self.assertIn(limit, panel)

@@ -1,6 +1,6 @@
 # Intake API, job queue, Runner and web page (round 2, Milestone B)
 
-**Status:** built in PR #11 and tested offline (534 tests on 2026-11-16, including killing the Runner
+**Status:** built in PR #11 and tested offline (550 tests on 2026-11-19, including killing the Runner
 mid-step). The container build is checked on every push by *Actions → Service container*. Live on
 Render's free plan since 2026-11-01 (`render.yaml`). Railway was the first choice, but it has paused new
 sign-ups since 22 Oct 2026 after a security incident; `railway.json` stays in the repository for later.
@@ -26,6 +26,10 @@ Personal tokens and roles (2026-11-16, roadmap 2.1, ADR-034): the owner issues t
 on the page, every route checks the caller's role, and decisions record whose token it was (queue schema 4, an
 `access_tokens` table with a tested 3 → 4 upgrade; see "รหัสรายคน" and "Access: the shared key, personal tokens
 and roles" below).
+Rules and AI against people's decisions (2026-11-19, roadmap 2.8): `GET /v1/reviews/scorecard` and a panel in the
+settings tab count how often the rules' suggestion and the AI's opinion named the category a person recorded, per
+proposal version and split by Thai text or not; counts only, nothing changes because of them (see "กฎกับ AI
+เทียบกับคำตัดสินของคน" and "Reviewer-label scorecard" below).
 Design principles: [design_philosophy.md](design_philosophy.md).
 
 ## ภาพรวมการทำงาน (ภาษาไทย)
@@ -91,7 +95,7 @@ Design principles: [design_philosophy.md](design_philosophy.md).
 
 **ที่เก็บชั่วคราว (Render แผนฟรี)** หน้าเว็บไม่พูดว่า "บันทึกถาวร" เตือนในการ์ดยืนยันก่อนส่งและบนเคสที่รอตัดสิน และจำ "รหัสงาน" ของสิ่งที่ส่งจากเครื่องนี้ไว้ในเบราว์เซอร์ (ไม่จำข้อความเคส) ถ้าระบบเริ่มใหม่ด้วยที่เก็บว่าง จะขึ้นแถบสีเหลืองว่าหายไปกี่รายการ แทนที่เคสจะหายไปเงียบ ๆ ทางที่ทำให้ไม่หายคือแผนเสียเงินพร้อมดิสก์ (D1)
 
-แท็บ "ตั้งค่า" **ดูอย่างเดียว**: ขั้นตอนและตัวทำงาน (agent) ของแต่ละประเภทงาน, AI ที่ใช้อยู่และวิธีเปลี่ยนใน Render, กติกาการตัดสิน, ที่เก็บข้อมูลและขีดจำกัด, "ตัวเลขการทำงาน" (ดูหัวข้อถัดไป) และ "เส้นทางงานใน Honeycomb" (เปิดหรือปิด ส่งไปที่ไหน การส่งล่าสุดสำเร็จไหม และวิธีเปิดใน Render ดู [observability_tracing.md](observability_tracing.md)) เมื่อเปิดส่งเส้นทางงานแล้ว "รายละเอียดเชิงเทคนิค" ของแต่ละเคสจะมี "รหัสเส้นทางใน Honeycomb (trace id)" ด้วย หน้าเว็บแก้ค่าเหล่านี้ไม่ได้โดยตั้งใจ: คีย์อยู่ใน Render เท่านั้น ตัวทำงานเปลี่ยนได้ผ่าน PR เท่านั้น และคนต้องเป็นผู้ตัดสินเสมอ
+แท็บ "ตั้งค่า" **ดูอย่างเดียว**: ขั้นตอนและตัวทำงาน (agent) ของแต่ละประเภทงาน, AI ที่ใช้อยู่และวิธีเปลี่ยนใน Render, กติกาการตัดสิน, ที่เก็บข้อมูลและขีดจำกัด, "ตัวเลขการทำงาน" (ดูหัวข้อถัดไป), "กฎกับ AI เทียบกับคำตัดสินของคน" (เฉพาะเจ้าของระบบและผู้ตรวจ ดูหัวข้อ "กฎกับ AI เทียบกับคำตัดสินของคน") และ "เส้นทางงานใน Honeycomb" (เปิดหรือปิด ส่งไปที่ไหน การส่งล่าสุดสำเร็จไหม และวิธีเปิดใน Render ดู [observability_tracing.md](observability_tracing.md)) เมื่อเปิดส่งเส้นทางงานแล้ว "รายละเอียดเชิงเทคนิค" ของแต่ละเคสจะมี "รหัสเส้นทางใน Honeycomb (trace id)" ด้วย หน้าเว็บแก้ค่าเหล่านี้ไม่ได้โดยตั้งใจ: คีย์อยู่ใน Render เท่านั้น ตัวทำงานเปลี่ยนได้ผ่าน PR เท่านั้น และคนต้องเป็นผู้ตัดสินเสมอ
 
 ### รหัสรายคน: ให้คนอื่นช่วยตรวจหรือส่งเคส (ขั้น 2.1)
 
@@ -126,6 +130,28 @@ Design principles: [design_philosophy.md](design_philosophy.md).
 - แผนฟรีของ Render ล้างคิวทุกครั้งที่ระบบหลับ รีสตาร์ท หรืออัปเดต ตัวเลขจึงเริ่มนับใหม่ทุกครั้ง
 - ตัวเลขมีแค่เวลา จำนวน ชื่อประเภทงาน และรหัสสาเหตุ ไม่มีข้อความเคสหรือรหัสงาน
 - ตอนนี้ระบบใช้ AI จำลอง เวลาที่เห็นจึงยังไม่ใช่เวลาของ Claude จริง
+
+### กฎกับ AI เทียบกับคำตัดสินของคน (ขั้น 2.8)
+
+ตั้งแต่ 19 พ.ย. ทุกครั้งที่คนตัดสินเคส หมวดที่คนบันทึกไว้นับเป็น "เฉลยจากคน" 1 ข้อ ระบบนับว่าข้อเสนอของกฎ (ข้อเสนอหลัก) และความเห็นที่สองของ AI ตรงกับเฉลยนั้นกี่เคส นี่คือหลักฐานที่ต้องมีก่อนคิดเปลี่ยนบทบาทของ AI (ข้อตัดสินใจ D6 ของคุณ) ส่วนนี้ **นับอย่างเดียว** ไม่เปลี่ยนหมวด ไม่เปลี่ยนลำดับ และคนยังตัดสินทุกเคส
+
+ดูได้ที่แท็บ "ตั้งค่า" → "กฎกับ AI เทียบกับคำตัดสินของคน" (เห็นเฉพาะเจ้าของระบบและผู้ตรวจ ผู้ส่งเคสไม่เห็น) หรือ `GET /v1/reviews/scorecard`
+
+| ตัวเลข | ความหมาย |
+|---|---|
+| ใช้เป็นเฉลยได้ | การตัดสินที่มีหมวด: "อนุมัติ" ทุกครั้ง (ไม่เลือกหมวด = ใช้หมวดที่กฎเสนอ) และ "ไม่อนุมัติ" ที่ระบุหมวดที่ถูก ถ้าไม่อนุมัติโดยไม่ระบุหมวด จะไม่นับ |
+| กฎเสนอหมวดตรงกับคน | กี่เคสจากเคสที่มีเฉลย |
+| AI ให้ความเห็นได้ / AI เสนอหมวดตรงกับคน | AI ตอบได้กี่เคส และตรงกี่เคส นับเฉพาะเคสที่ AI ตอบได้ |
+| เมื่อกฎกับ AI เห็นไม่ตรงกัน | คนบันทึกหมวดเดียวกับ AI กี่เคส เดียวกับกฎกี่เคส หรือไม่ตรงทั้งคู่ |
+| เคสที่มีอักษรไทย / ไม่มีอักษรไทย | แยกตามภาษา โดยดูว่าข้อความมีตัวอักษรไทยไหม (ระบบดูเอง เพราะเคสจริงไม่มีป้ายภาษา) |
+| ช่วงที่เป็นไปได้ | ช่วงความเชื่อมั่น 95% (วิธี Wilson) เคสยิ่งน้อย ช่วงยิ่งกว้าง เช่น ตรง 2 จาก 2 เคส ยังไม่ได้แปลว่าตรง 100% |
+
+ข้อควรรู้:
+- ถ้ากฎ รุ่น AI หรือ prompt เปลี่ยน ระบบแยกนับเป็นชุดใหม่ ไม่รวมตัวเลขของต่างรุ่นเข้าด้วยกัน ชุดล่าสุดอยู่บนสุด
+- คนตัดสินเห็นข้อเสนอของกฎและความเห็นของ AI ก่อนตัดสิน และ "อนุมัติ" โดยไม่เปลี่ยนหมวดนับว่าตรงกับกฎ ตัวเลขจึงเอนเอียงไปทางข้อเสนอของกฎ
+- ทุกเคสเป็นข้อมูลสมมติ ตัวเลขนี้จึงยังไม่ใช่ความแม่นยำในงานจริง และถ้าใช้ AI จำลอง ตัวเลขของ AI ก็ไม่ใช่ของ AI จริง
+- บน Render แผนฟรี คำตัดสินหายทุกครั้งที่ระบบหลับ รีสตาร์ท หรืออัปเดต ตัวเลขจึงนับเฉพาะรอบปัจจุบัน จะสะสมข้ามวันได้ต้องมีดิสก์ถาวร (D1)
+- นับจากเคสที่ตัดสินแล้วล่าสุดไม่เกิน 500 เคส ไม่มีข้อความเคสหรือเหตุผลของผู้ตัดสินในตัวเลขนี้
 
 ### ถามเรื่องที่อยากเรียน (ขั้น 3.4)
 
@@ -365,6 +391,7 @@ app runs, carries an `X-Request-Id` header:
 | `GET /v1/reviews?state=PENDING&limit=20&after=<cursor>` | Reviews in one state (`PENDING`, `APPROVED`, `REJECTED`). Pending: elevated first, then the oldest; decided: newest first. `next_after` is the next cursor; `counts` has every state and `elevated_pending` | 200 | 400, 401 |
 | `GET /v1/reviews/{review_id}` | The case, the proposal (rules, AI second opinion, why it was raised), `proposal_sha256`, `version`, `decidable`, and every decision | 200 | 401, 404 `review_not_found` |
 | `POST /v1/reviews/{review_id}/decisions` | A person's decision, below | 201 new, 200 the same decision again | 400, 401, 403, 404, 409, 413, 415, 429 |
+| `GET /v1/reviews/scorecard` | The owner and reviewers: the rules and the AI against the categories people recorded (roadmap 2.8), below | 200 | 401, 403 |
 | `GET /v1/me` | Who the credential is (`token_id`, `role`, `display_name`, `shared_key`) and what its role may do (`can`: `submit`, `cancel`, `review`, `manage_tokens`) | 200 | 401, 429 |
 | `GET /v1/tokens` | The owner: every personal token (never a secret or its hash), `active`, the limits and `retention` | 200 | 401, 403 |
 | `POST /v1/tokens` | The owner: issue a token, `{"display_name": "…", "role": "reviewer"\|"submitter"}`; the reply's `token` is the only copy (`shown_once`) | 201 | 400, 401, 403, 409 `too_many_tokens`, 413, 415, 429 |
@@ -388,6 +415,26 @@ hex) in the same transaction. A job view (`GET /v1/jobs/{job_id}`) has `human_re
 - other codes: `invalid_decision`, `invalid_category`, `invalid_reason`, `invalid_version`,
   `invalid_idempotency_key`, `invalid_fields`, `not_reviewable` (the job left `REVIEW_REQUIRED` behind the
   review's back; the transaction rolls back), `review_not_found`, `rate_limited`.
+
+**Reviewer-label scorecard (roadmap 2.8, `app/services/review_labels.py`).** `GET /v1/reviews/scorecard` reads the
+newest 500 decided reviews (`QueueStore.decided_reviews`, one snapshot) and counts; it changes nothing, and no
+workflow, agent, translator or the Runner reads it (a test checks).
+- A **label** is a decision's `final_category`: every approval has one, a rejection only when the person named the
+  right category. A rejection without one is `unlabelled` and stays out of every rate.
+- `groups`: one per proposal source, newest first: `workflow_type`, `rules` (the suggestion source, with the
+  keyword list's complete SHA-256) and `ai` (`provider`, `model`, `prompt_id`, `prompt_sha256`, `simulated`;
+  `null` for a rules-only workflow). Figures of two versions are never added together.
+- Each group: `decided`, `approved`, `rejected`, `labelled`, `unlabelled`; `rules_match` (over the labelled cases),
+  `ai_answered` (over the labelled cases), `ai_match` (over the labelled cases the AI answered), `rules_ai_agree`,
+  `when_disagreeing` (`total`, `ai_match`, `rules_match`, `neither`), `by_language` (`th` when the case text holds a
+  Thai letter, else `non_th`; the text itself is never returned) and the first and last decision times. The AI's
+  figures are `null`, not 0, for a workflow without an AI.
+- Every rate is `{numerator, denominator, rate, low_95, high_95}`: the 95% Wilson score interval, so 2 of 2 reads
+  as 34–100%, not 100%.
+- `totals` (the same counts, `by_role` and `reviewers`: how many different credentials decided), `window`
+  (`limit`, `decided`, `decided_total`, `truncated`), `label_scope` (what a label is and is not) and `retention`.
+- Never in the reply: case text, a reviewer's reason, a token. Labels lean towards the proposal (the person saw it
+  first, and approving as proposed keeps the rules' category); on synthetic cases no rate is real-world accuracy.
 
 **Access: the shared key, personal tokens and roles (roadmap 2.1, ADR-034).**
 - A token is `nf_<token_id>_<secret>`: 16 hex digits of id and 43 URL-safe characters of secret. The queue keeps

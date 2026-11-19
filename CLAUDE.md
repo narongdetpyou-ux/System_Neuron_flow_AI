@@ -13,7 +13,9 @@ trusted agents in bounded child processes, retries, recovers after a crash and w
   (shadow mode), and a person always decides: since 2026-11-10 on the page's decision card or through
   `POST /v1/reviews/{review_id}/decisions` (roadmap 2.2, 2.4; ADR-027). Since 2026-11-16 the owner issues personal
   tokens for reviewers and submitters on the page, and every route checks the caller's role; the shared key stays
-  the owner's (roadmap 2.1, ADR-034);
+  the owner's (roadmap 2.1, ADR-034). Since 2026-11-19 the categories people record are counted as labels: the
+  rules and the AI against them, per proposal version, on `GET /v1/reviews/scorecard` and in the settings tab; counts
+  only, never a reason to change anything by itself (roadmap 2.8; D6 stays the owner's);
 - an AI gateway (an offline mock, Claude, Typhoon: SCB 10X's Thai-first model, free within rate limits;
   ADR-021, or `local`: an open-weight model on a server we run ourselves, today llama.cpp with Typhoon 2.5 4B
   on the GitHub runner; ADR-026);
@@ -190,7 +192,7 @@ If a task seems to need breaking a rule:
 ## 4. Checking your work
 
 ```bash
-python -m unittest discover -s tests -v        # all tests (534 on 2026-11-16); CI: Python 3.10 and 3.12
+python -m unittest discover -s tests -v        # all tests (550 on 2026-11-19); CI: Python 3.10 and 3.12
 python -m examples.case_triage_demo            # v1 rules, one synthetic case
 python -m examples.case_triage_shadow_demo     # v2 shadow mode with the offline mock AI
 python -m examples.study_guide_demo            # the study guide's answers to four synthetic requests
@@ -358,7 +360,7 @@ Notes for cloud sessions (claude.ai/code):
 | `app/observability/sentry.py` | Sentry reporting: step failures, degraded AI, Runner recoveries |
 | `app/observability/tracing.py`, `job_spans.py` | tracing: the OTLP/JSON exporter with its attribute allow-list, and a finished job's spans (ADR-017) |
 | `app/persistence/queue_store.py` | the application queue in its own SQLite file (`<data>/app/queue.sqlite3`, schema 4): jobs, events, the Runner heartbeat, reviews and append-only decisions, skill handoffs, personal access tokens (the secret's SHA-256, never the secret; ADR-034), and the store id that shows when the queue started empty |
-| `app/services/` | workflow catalog, admission, Runner with reconciliation, result summaries, queue and run-time figures, review decisions (`reviews.py`), who may call the API and what each role may do (`access.py`: the shared key, personal tokens and the role table, ADR-034) |
+| `app/services/` | workflow catalog, admission, Runner with reconciliation, result summaries, queue and run-time figures, review decisions (`reviews.py`), the rules and the AI against people's decisions (`review_labels.py`, roadmap 2.8: counts only, nothing reads it to decide), who may call the API and what each role may do (`access.py`: the shared key, personal tokens and the role table, ADR-034) |
 | `app/api/`, `app/web/` | standard-library HTTP API and the Thai web page (chat layout with a case / study-question switch, the study guide's layered answer, Flow and Trace, read-only settings); `tests/test_web_page.py` holds the page to its contracts |
 | `app/boot.py` | the image's process 1: takes the data folder as root, switches to `neuron`, becomes tini |
 | `app/settings.py`, `app/serve.py` | settings from the environment; the launcher (API + supervised Runner) |
@@ -526,6 +528,19 @@ Notes for cloud sessions (claude.ai/code):
     deploy (they fail closed). Checked by `tests/test_service_access.py`, the page's contract tests, the container
     smoke test (issue, decide, revoke, and the revocation kept across a restart) and a headless-browser walk as
     owner, reviewer and submitter. The owner test on the live page is left.
+  - The reviewer-label scorecard (roadmap 2.8), built on 2026-11-19 as the next item of Phase 2 whose needs were met,
+    after the owner said "ทำต่อ" (continue). `app/services/review_labels.py` reads the newest 500 decided reviews
+    in one snapshot (`QueueStore.decided_reviews`) and counts how often the rules' suggestion and the AI's opinion
+    named the category the person recorded: one group per proposal version (workflow, rules with the keyword list's
+    SHA-256, AI provider, model and prompt hash; never added together), split by Thai text or not, every rate as
+    numerator/denominator with a 95% Wilson interval. A rejection without a category is `unlabelled`, never a miss.
+    `GET /v1/reviews/scorecard` serves it to the owner and reviewers (403 for a submitter); the settings tab shows it
+    in Thai with its limits: the labels lean towards the proposal (the person saw it first; approving as proposed
+    keeps the rules' category), the cases are synthetic, the mock's figures are a keyword simulation's, and on the
+    free plan the decisions vanish at every sleep, so they cannot add up to D6's evidence without D1. No case text,
+    reason or token in the reply; no workflow, agent, translator or the Runner reads it (a test). Checked by
+    `tests/test_service_review_labels.py`, the page's contract tests, the container smoke test (before and after the
+    restart) and a headless-browser walk as owner, reviewer and submitter.
   - The answer to the first independent review (2026-11-10, of `main` @ `f38c926`; all four findings, one PR;
     `docs/evidence/2026-11-10-independent-review-response.md`):
     - review decisions (2.2) and the page's decision card and "รอรีวิว" list (2.4), built before 2.1 with the
@@ -548,8 +563,8 @@ Notes for cloud sessions (claude.ai/code):
     wrong on 13, 12 of them `high`, so its own confidence cannot carry a button; no policy holds the cases that
     must see a person ([evidence](docs/evidence/2026-11-11-autosend-limits.md)). No real button exists or is planned
     (D9).
-  - The n8n intake (2.5) is not built; review decisions (ADR-027), personal tokens and roles (2.1, ADR-034) and the
-    linked job after an approval (2.3, ADR-030) are.
+  - The n8n intake (2.5) is not built; review decisions (ADR-027), personal tokens and roles (2.1, ADR-034), the
+    linked job after an approval (2.3, ADR-030) and the reviewer-label scorecard (2.8) are.
   - The first new skill on the exchange (H4) waits for the owner's choice; the link between two handed-off jobs'
     traces (H5) is not built.
   - The live page uses the mock AI unless the owner adds Typhoon (or Claude) in Render's Environment tab
@@ -642,7 +657,7 @@ Notes for cloud sessions (claude.ai/code):
   - 5.8's first full run is recorded: the owner chooses its branch (not good enough, close or good enough;
     roadmap 5.8, "After the first full run", step 2), then follow it.
   - Buildable now without an owner decision: the rest of 5.5 (decide and fix the stage-1 gaps), 5.6 and 5.7,
-    the rest of Phase 2 (2.1 to 2.4 are built; 2.5 needs D3, 2.6 to 2.8 when needed), H5's trace link, and Phase 4 (4.1 first; Phase 3, which it
+    the rest of Phase 2 (2.1 to 2.4 and 2.8 are built; 2.5 needs D3, 2.6 and 2.7 when needed), H5's trace link, and Phase 4 (4.1 first; Phase 3, which it
     needs, is built). The rest of 7.1 (who can read the AI key) needs an ADR first.
   - The effectiveness track (2026-11-10, PR #50, [docs/effectiveness_plan.md](docs/effectiveness_plan.md)): E1
     is built (PR #60) and measured on Render (3.2 s after a sleep, 9.0 to 10.5 s before; its task 5 only if the

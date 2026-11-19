@@ -702,6 +702,30 @@ class QueueStore:
                 counts["elevated_pending"] = row["elevated"] or 0
         return counts
 
+    def decided_reviews(self, limit):
+        """The newest ``limit`` decided reviews, newest first, each with the decision that closed it, and how many
+        decided reviews there are in all: ``(reviews, total)``, read in one snapshot.
+
+        For the reviewer-label scorecard (roadmap 2.8). A row holds the job's workflow type, input and result, and
+        the decision's verdict, category, time and who made it; never the person's reason. The decision is the one
+        the review's current state came from (its version is one below the review's), so a review that could be
+        decided again later would still count once. The caller reads the case text only to tell its language.
+        """
+        with self._connect() as db:
+            db.execute("BEGIN")  # one snapshot, so the total never counts a decision the rows do not hold
+            try:
+                rows = db.execute(
+                    "SELECT r.review_id, r.state, r.suggested_category, j.workflow_type, j.input, j.result,"
+                    " d.decision, d.final_category, d.reviewer_token_id, d.reviewer_role, d.created_at AS decision_at"
+                    " FROM review_decisions d JOIN reviews r ON r.review_id = d.review_id"
+                    " AND r.version = d.version + 1 JOIN jobs j ON j.job_id = r.job_id"
+                    " WHERE r.state IN (?, ?) ORDER BY d.seq DESC LIMIT ?", (APPROVED, REJECTED, limit)).fetchall()
+                total = db.execute("SELECT COUNT(*) FROM reviews WHERE state IN (?, ?)",
+                                   (APPROVED, REJECTED)).fetchone()[0]
+            finally:
+                db.execute("COMMIT")
+        return [self._review(row) for row in rows], total
+
     def decide(self, review_id, *, decision, final_category, reason, expected_version, idempotency_key,
                request_sha256, reviewer_token_id, reviewer_role, request_id=None, handoff=None, now=None):
         """Record a person's decision. Returns ``(decision_row, created)``.

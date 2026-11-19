@@ -57,6 +57,7 @@ PERMISSIONS = {
     ("GET", "/v1/jobs/{job_id}/events"): _EVERYONE,
     ("POST", "/v1/jobs/{job_id}/cancel"): _SENDS,
     ("GET", "/v1/reviews"): _DECIDES,
+    ("GET", "/v1/reviews/scorecard"): _DECIDES,
     ("GET", "/v1/reviews/{review_id}"): _DECIDES,
     ("POST", "/v1/reviews/{review_id}/decisions"): _DECIDES,
     ("GET", "/v1/tokens"): _OWNER,

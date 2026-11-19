@@ -23,7 +23,7 @@ differs, this file and architecture.md win.
   - ถ้าสองฝ่ายเห็นไม่ตรงกัน โค้ดเจอสัญญาณ หรือ AI ชี้ เคสจะถูกยกให้คนดูก่อน พร้อมบอกเหตุผล (ขั้น 5.10)
 - ถ้าเครื่องดับกลางทาง ระบบทำต่อได้ ส่งซ้ำก็ไม่เกิดงานซ้ำ
 - ยกเลิกเคสที่ยังรอคิวได้ และทุกคำขอมีรหัสคำขอ (request id) ไว้ไล่ดูใน log (ขั้น 1.2, 1.3)
-- ผ่านชุดทดสอบอัตโนมัติ 534 ข้อ และเปิดใช้ออนไลน์บน Render แล้ว ระบบปิดตัวอย่างเรียบร้อย และการแก้แค่เอกสารไม่ทำให้ Render ขึ้นเวอร์ชันใหม่ (ขั้น 0.1, 0.5)
+- ผ่านชุดทดสอบอัตโนมัติ 550 ข้อ และเปิดใช้ออนไลน์บน Render แล้ว ระบบปิดตัวอย่างเรียบร้อย และการแก้แค่เอกสารไม่ทำให้ Render ขึ้นเวอร์ชันใหม่ (ขั้น 0.1, 0.5)
 - หน้าเว็บเป็นแบบแชท: พิมพ์เคส ดูขั้นตอนก่อนส่ง กดยืนยัน แล้วติดตามใน Flow และประวัติเหตุการณ์ (ขั้น 1.6)
 - หน้าเว็บบอกว่ามีเคสรอกี่เคส เคสที่รอนานสุดรอมานานเท่าไร ปกติแต่ละเคสใช้เวลาเท่าไร และเคสที่ไม่สำเร็จล้มเพราะอะไร (ขั้น 5.3)
 - ถ้ามีคนแก้กฎหรือ prompt แล้วคำตอบของเคสทดสอบเคสไหนเปลี่ยน ช่องตรวจบน GitHub จะเป็นสีแดงและบอกว่าเคสไหนเปลี่ยนอะไร (ขั้น 5.2)
@@ -47,6 +47,7 @@ differs, this file and architecture.md win.
 
 - **ทักษะแยกกัน ส่งงานผ่านตัวกลาง (11 พ.ย. ตามที่คุณขอ, ADR-030):** แต่ละทักษะไม่เรียกโค้ดของกัน ส่งงานให้กันผ่านตัวกลาง (exchange) ตามตารางเส้นทางที่มีเลขรุ่น ระหว่างทางมีล่ามขาออกแปลเป็นภาษากลาง และล่ามขาเข้าแปลเป็นภาษาของทักษะปลายทาง เส้นทางแรกใช้งานแล้ว: กด "อนุมัติ" เคส → ระบบสร้างงาน "บันทึกผลหลังอนุมัติ" ทันทีในครั้งเดียวกับการตัดสิน บันทึกว่าเคสไปคิวไหน ใครอนุมัติ พร้อมใบรับจาก Core (นี่คือขั้น 2.3) ข้อความเคสไม่ถูกส่งต่อ ไม่อนุมัติก็ไม่ส่งต่อ ทดสอบกับชุดเคสเดิมทั้ง 3 ชุด 217 เคส ผ่านทุกข้อ และชุดทดสอบเดิมได้ผลเหมือนเดิมทุกข้อ ([แบบและวิธีทดสอบ](skill_handoff.md), [บันทึกหลักฐาน](evidence/2026-11-11-skill-handoff.md)) คุณลองบนหน้าเว็บจริงแล้วเมื่อ 16 พ.ย.: อนุมัติ 1 เคส ระบบส่งต่อ 1 งาน และงานนั้นเสร็จ
 - **รหัสรายคน (16 พ.ย. ตามที่คุณสั่ง, ขั้น 2.1, ADR-034):** คุณสร้างรหัสเข้าใช้ให้ผู้ตรวจหรือผู้ส่งเคสแต่ละคนได้ในแท็บ "ตั้งค่า" ส่วน "จัดการผู้ใช้" รหัสแสดงครั้งเดียว ผู้ตรวจตัดสินเคสได้แต่ส่งเคสไม่ได้ ผู้ส่งเคสส่งเคสได้แต่ตัดสินไม่ได้ ทุกการตัดสินบันทึกว่าเป็นรหัสของใคร และกดเพิกถอนแล้วรหัสนั้นใช้ไม่ได้ทันทีโดยไม่กระทบคนอื่น รหัสเข้าใช้ร่วมของคุณยังเป็นของเจ้าของระบบเหมือนเดิม ข้อจำกัด: บน Render แผนฟรี รหัสรายคนหายไปพร้อมเคสทุกครั้งที่ระบบหลับ รีสตาร์ท หรืออัปเดต (หายแบบปลอดภัย: ใช้ไม่ได้อีก) ถ้าจะใช้กับคนอื่นจริงต้องมีดิสก์ถาวร (D1) ([วิธีใช้](intake_queue.md))
+- **กฎกับ AI เทียบกับคำตัดสินของคน (19 พ.ย., ขั้น 2.8):** ทุกครั้งที่คนตัดสินเคส หมวดที่คนบันทึกไว้นับเป็น "เฉลยจากคน" แท็บ "ตั้งค่า" มีส่วนใหม่ที่นับว่ากฎและ AI เสนอหมวดตรงกับคนกี่เคส แยกตามรุ่นของกฎ รุ่น AI และ prompt และแยกเคสที่มีอักษรไทยกับไม่มี ทุกตัวเลขบอกเป็น "กี่เคสจากกี่เคส" พร้อมช่วงที่เป็นไปได้ เพราะเคสน้อยยังสรุปไม่ได้ ส่วนนี้นับอย่างเดียว ไม่เปลี่ยนการทำงานของระบบ และคนยังตัดสินทุกเคส ข้อจำกัด: คนเห็นข้อเสนอก่อนตัดสิน ตัวเลขจึงเอนไปทางข้อเสนอ ทุกเคสเป็นข้อมูลสมมติ และบนแผนฟรีคำตัดสินหายทุกครั้งที่ระบบหลับ จึงยังสะสมเป็นหลักฐานสำหรับ D6 ไม่ได้จนกว่าจะมีดิสก์ (D1) ([วิธีอ่าน](intake_queue.md#กฎกับ-ai-เทียบกับคำตัดสินของคน-ขั้น-28))
 - **ผู้ช่วยแนะนำแหล่งเรียน: หยุดพัฒนาไว้ก่อน (11 พ.ย. ตามที่คุณสั่ง):** ของเดิมยังใช้ได้และช่องตรวจยังรัน
 - **ขีดสุดของระบบ ถ้ามี "ปุ่มอนุมัติเอง" (11 พ.ย. ตามที่คุณขอ, ADR-031):** ผมจำลองปุ่มนี้บนกระดาษจากคำตอบจริงของ Typhoon
   กับข้อสอบกลางจากข้อมูลเปิด (CLINC150, BANKING77, MASSIVE ไทย-อังกฤษ, คำสั่งแอบแฝง BIPIA) ชุดเคสยากที่เขียนใหม่ 128 เคส และชุดเดิม 3 ชุด
@@ -60,7 +61,7 @@ differs, this file and architecture.md win.
 |---|---|---|---|
 | 0 | เปิดใช้ออนไลน์บน Render และวัดผล AI จริงครั้งแรก | ใส่เคสบนหน้าเว็บจริง และอ่านผลวัดของ AI จริง | ออนไลน์แล้ว; วัดผล AI จริงครั้งแรกแล้วด้วย Typhoon (0.3, 6 พ.ย.); ที่เหลือรอคุณตัดสินใจ: D1 แผน Render แบบเสียเงิน, D2 API key ของ Claude และ 0.4 กับ Typhoon (ฟรี แต่ข้อความที่พิมพ์บนหน้าเว็บจะถูกส่งไป Typhoon) |
 | 1 | เก็บงานเล็ก ๆ ให้ระบบแน่นขึ้น | ยกเลิกเคสที่ยังรอคิวได้ | เสร็จ ยกเว้น 1.4 (สำรองข้อมูล) ที่ต้องใช้แผน Render แบบเสียเงิน |
-| 2 | ให้คนรีวิวได้จริง: ผู้รีวิวมีรหัสของตัวเอง กดอนุมัติหรือไม่อนุมัติได้ และ n8n แจ้งเตือน | กล่อง "รอรีวิว" บนหน้าเว็บ และข้อความแจ้งเตือน | เริ่มแล้ว (10 พ.ย. ตามข้อ 4 ของผู้ตรวจสอบอิสระ): 2.2 บันทึกการตัดสินและ 2.4 การ์ดตัดสินกับรายการ "รอรีวิว" ทำแล้ว โดยผู้ตัดสินคือผู้ถือรหัสเข้าใช้ร่วม (คุณ); 2.3 งานต่อเนื่องหลังอนุมัติทำแล้ว (11 พ.ย.) เป็นเส้นทางแรกของตัวกลาง (ขั้น H); คุณลองบนหน้าเว็บจริงแล้ว (16 พ.ย.): อนุมัติ 1 เคส เกิดงานต่อเนื่อง 1 งานและเสร็จ ส่วนป้าย "ด่วน" และการกด "ไม่อนุมัติ" โดยไม่ใส่เหตุผลยังไม่ได้ลอง; 2.1 รหัสรายคนของผู้ตรวจและผู้ส่งเคสทำแล้ว (16 พ.ย.) รอคุณลองบนหน้าเว็บจริง; 2.5 n8n ยังไม่ทำ |
+| 2 | ให้คนรีวิวได้จริง: ผู้รีวิวมีรหัสของตัวเอง กดอนุมัติหรือไม่อนุมัติได้ และ n8n แจ้งเตือน | กล่อง "รอรีวิว" บนหน้าเว็บ และข้อความแจ้งเตือน | เริ่มแล้ว (10 พ.ย. ตามข้อ 4 ของผู้ตรวจสอบอิสระ): 2.2 บันทึกการตัดสินและ 2.4 การ์ดตัดสินกับรายการ "รอรีวิว" ทำแล้ว โดยผู้ตัดสินคือผู้ถือรหัสเข้าใช้ร่วม (คุณ); 2.3 งานต่อเนื่องหลังอนุมัติทำแล้ว (11 พ.ย.) เป็นเส้นทางแรกของตัวกลาง (ขั้น H); คุณลองบนหน้าเว็บจริงแล้ว (16 พ.ย.): อนุมัติ 1 เคส เกิดงานต่อเนื่อง 1 งานและเสร็จ ส่วนป้าย "ด่วน" และการกด "ไม่อนุมัติ" โดยไม่ใส่เหตุผลยังไม่ได้ลอง; 2.1 รหัสรายคนของผู้ตรวจและผู้ส่งเคสทำแล้ว (16 พ.ย.) รอคุณลองบนหน้าเว็บจริง; 2.8 นับว่ากฎกับ AI ตรงกับคำตัดสินของคนกี่เคส ทำแล้ว (19 พ.ย.); 2.5 n8n ยังไม่ทำ |
 | 3 | ผู้ช่วยแนะนำแหล่งเรียน (`study_guide.v1`) ตามหลักปรัชญาของคุณ | พิมพ์เรื่องที่อยากรู้ด้วยคำธรรมดา แล้วได้แหล่งเรียนไม่เกิน 5 แหล่งพร้อมลำดับการเรียน | สร้างครบทุกขั้นแล้ว (คุณเลือกขั้นนี้ก่อนขั้น 2 เมื่อ 5 พ.ย.): 3.1 คลังแหล่งเรียน 3.2 ตัวผู้ช่วย และ 3.3 ชุดข้อสอบ ทำแล้ว (ดูตัวอย่างคำตอบและผลข้อสอบใน Actions ได้); 3.4 ช่อง "อยากเรียน" บนหน้าเว็บ สร้างและ merge แล้ว (7 พ.ย.) คุณลองบนหน้าเว็บจริงผ่านแล้ว (8 พ.ย.); รันกับ AI จริง (Typhoon) แล้ว หาหัวข้อถูก 46 จาก 48 ข้อ ไม่มีลิงก์นอกคลัง (Claude รอ D2); **หยุดพัฒนาเพิ่มไว้ก่อนตามที่คุณสั่ง (11 พ.ย.)**: ของที่มีอยู่ยังใช้ได้และช่องตรวจยังรันเหมือนเดิม |
 | 4 | ช่องคุยภาษาธรรมดา: ระบบเข้าใจว่าคุณขออะไร บอกตรง ๆ เมื่อเรื่องอยู่นอกกรอบ และถามกลับ 1 คำถามเมื่อข้อมูลไม่พอ | คุยกับระบบได้เลย ไม่ต้องเลือกประเภทงานเอง | ยังไม่เริ่ม (ขั้น 3 สร้างครบแล้ว เริ่มได้เมื่อคุณเลือก) |
 | 5 | ติดตามเส้นทางของแต่ละงาน (เวลา token จุดที่ช้า) ด่านตรวจผลรายเคส และแผนทดสอบ 3 ขั้นด้วยข้อมูลเปิด | ตัวเลขคิวและเวลาบนหน้าเว็บ ช่องตรวจบน PR แล้วต่อด้วยเส้นทางงานใน Honeycomb; ผลด่านความทนทานในหน้าสรุปของ *Core logic tests* | เสร็จแล้วทั้ง 5.1, 5.2, 5.3 และ 5.4; เส้นทางงานแรกเข้า Honeycomb เมื่อ 4 พ.ย. 00:23 น.; ด่านความทนทาน (5.4) รวมเข้า main แล้ว 7 พ.ย.; แก้ 8 bug ที่เจอแล้ว (5.5, PR #42 รวมแล้วเมื่อ 8 พ.ย.); E2 ใน PR #64 แก้จุดอ่อนของกฎได้ 24 จุด เหลือจุดอ่อนทั้งหมด 20 จุด ขั้นข้อสอบกลาง (5.6) สร้างและวัดกับ Typhoon แล้ว 11 พ.ย. พร้อมการจำลองปุ่มอนุมัติเอง (5.9) และวัดคำสั่งแอบแฝงครั้งแรก (ส่วนหนึ่งของ 5.7); ส่วนที่เหลือของ 5.7 ยังไม่ทำ; 5.8 โมเดลเปิดที่รันเองบนเครื่องทดสอบของ GitHub สร้างแล้วใน PR #46 และรันเต็มรอบแรกแล้ว 8 พ.ย. (ดันเคสที่กฎผิดขึ้นคิวด่วนครบ 32/32) รอเจ้าของโปรเจกต์เลือกทาง |
@@ -128,7 +129,7 @@ owner.
 | 2.5 | n8n intake and reviewer notifications | ⬜ | 2.1, 2.2, D3 |
 | 2.6 | Side-effect contract | ⬜ when needed | before any outward action |
 | 2.7 | Artifact store with hash checks | ⬜ when needed | — |
-| 2.8 | Measure rules vs AI against reviewer labels | ⬜ | 2.2, 0.3 |
+| 2.8 | Measure rules vs AI against reviewer labels | ✅ built on 2026-11-19: `GET /v1/reviews/scorecard` and a panel in the settings tab (owner and reviewers) count, over the newest 500 decided cases, how often the rules and the AI named the category a person recorded, per proposal version (rules, AI, prompt), split by Thai text or not, every rate with its counts and a 95% Wilson interval; counts only. Evidence for D6 needs labels that last (D1) and are not led by the proposal | 2.2, 0.3 |
 | 3.1 | Topic catalog and verified resource library | ✅ PR #32; links checked by *Study library link check* on the PR ([evidence note](evidence/2026-11-05-study-library-links.md)); the weekly run starts after the merge | — |
 | 3.2 | `study_guide.v1` workflow | ✅ PR #33; first live run with Typhoon in PR #38 (topic correct 46/48, 0 of 142 links outside the library); Claude needs D2 | 3.1 |
 | 3.3 | Study-guide evaluation set and scorecard | ✅ PR #34 with the mock in CI (an eval gate); first live run with Typhoon on 2026-11-06 (PR #38): topic correct 46/48, 0 of 142 links outside the library; Claude after D2 | 3.2 |
@@ -677,6 +678,28 @@ person ends at `REVIEW_REQUIRED`, and nothing else can happen to it.
   - split by language.
 - **Why:** this is the evidence ADR-010 asks for before the AI's role can change (owner decision D6).
 - **Caveat:** say clearly that reviewer labels on synthetic cases are still not real-world accuracy.
+- **Status (2026-11-19): built**, as the next item of Phase 2 whose needs were met (2.5 needs D3, 2.6 and 2.7 wait
+  until needed). `app/services/review_labels.py` reads the newest 500 decided reviews in one snapshot
+  (`QueueStore.decided_reviews`) and counts; `GET /v1/reviews/scorecard` serves it to the owner and reviewers (403
+  for a submitter), and the settings tab shows it in Thai. Choices made, each written in the module and in
+  [intake_queue.md](intake_queue.md):
+  - a label is a decision's `final_category`; a rejection without one is counted as `unlabelled`, never as a miss;
+  - one group per proposal source (workflow type, rules version with the keyword list's SHA-256, AI provider,
+    model and prompt hash), because a number that mixed two versions would describe neither (rule 5);
+  - the language split is code's: a Thai letter in the case text or not, since a live case has no language label.
+    The text is read for that and never returned;
+  - every rate keeps its numerator and denominator and carries the 95% Wilson interval, so few cases read as wide
+    ranges (2 of 2 is 34–100%);
+  - it decides nothing: no workflow, agent, translator or the Runner reads it (a test), and the page says that
+    changing the AI's role is the owner's decision (D6).
+  Checked by `tests/test_service_review_labels.py` (12 tests, numbers worked out by hand, plus real cases through
+  the Runner with the mock), the page's contract tests, the container smoke test (both decisions of its first run
+  are counted, before and after the restart) and a headless-browser walk as owner, reviewer and submitter on a local
+  service. Limits, said on the page: the person saw the proposal before deciding and approving as proposed keeps the
+  rules' category, so the labels lean towards the rules; the cases are synthetic; with the mock the AI's figures
+  are a keyword simulation's; on the free plan the decisions vanish at every sleep, so the labels cannot add up to
+  D6's evidence until there is a disk (D1). Blind labels (a person deciding before seeing the proposal) are a later
+  option, not built.
 
 ---
 
@@ -1625,7 +1648,7 @@ of H5 were built ([evidence](evidence/2026-11-11-skill-handoff.md)).
 | D3 | Who reviews, and how they are told | 2.5 | Owner only · named reviewers; e-mail, LINE or Slack | Owner only, no notifications |
 | D4 | Real data | 7.5 | Synthetic only · consented pilot | Synthetic only |
 | D5 | Public repository and funding application | 7.4 | Stay private · publish an approved snapshot · publish this repository with its full history (chosen on 2026-11-08) | Public since 2026-11-08 |
-| D6 | The AI's role in triage | after 2.8 has enough reviewed cases | Keep shadow mode · AI suggestion first, still with human review | Shadow mode (ADR-010) |
+| D6 | The AI's role in triage | after 2.8 has enough reviewed cases (the scorecard is built since 2026-11-19; on the free plan its labels vanish at every sleep, so they add up only with D1) | Keep shadow mode · AI suggestion first, still with human review | Shadow mode (ADR-010) |
 | D8 | The personal e-mail address in 53 public commits | — (the setting in 7.6 stops new ones now) | Keep the history (chosen by the owner on 2026-11-10) · rewrite it and ask GitHub Support to purge the old commits · re-create the repository from the rewritten history (7.6) | Decided: kept as it is; new commits checked in CI |
 | D7 | An open model behind the online page | 5.8 step 4 | Mock (today) · Typhoon through 0.4 (free; what is typed goes to SCB 10X) · the local model on a paid machine with room for it (prices checked at the time) | The mock on the page; the local model only in GitHub Actions, for measuring |
 | D9 | Sending a case without a person (an auto-approve button) | not planned; it would change rule 4 and ADR-010 | No (today) · a narrow trial for one low-risk action with undo, only after a confidence that can be checked (E5), a check for text that talks to the system, and reviewer labels (2.8); see 5.9 | Simulation only (ADR-031): every case waits for a person |
@@ -1784,3 +1807,8 @@ of H5 were built ([evidence](evidence/2026-11-11-skill-handoff.md)).
   met). The queue is at schema 4, and the exchange's vocabulary at v2 so a reviewer's approval hands on. Two
   limits are written down rather than hidden: on the free plan the tokens vanish at every sleep (fail closed),
   and there are no passwords, expiry dates or single sign-on.
+- 2026-11-19: 2.8 built, the next item of Phase 2 whose needs were met: a scorecard of the rules and the AI against
+  the categories people recorded, from the queue database, on the API (`GET /v1/reviews/scorecard`) and in the
+  settings tab. It groups by proposal version instead of adding versions together, splits by Thai text or not, gives
+  every rate a 95% interval, and says on the page why its labels are not accuracy. It counts only. D6 gained a note:
+  on the free plan the labels vanish at every sleep, so its evidence needs D1.
