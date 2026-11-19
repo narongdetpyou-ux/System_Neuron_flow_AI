@@ -92,6 +92,8 @@ def evaluate(golden, config=None, *, limit=None, max_workers=3, min_interval_s=0
             "provenance": {"generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
                            "git_sha": os.environ.get("GITHUB_SHA") or _git_sha(),
                            "python": platform.python_version(), "llm": config.to_params(),
+                           # The AI agent's whole version, the gateway's answer checks included (ADR-035).
+                           "agent_version": config.version_tag(prompt),
                            "prompt": {"id": prompt.id, "sha256": prompt.sha256},
                            "rules": {"version": rule_version()},
                            "signals": {"version": signal_version()},
@@ -306,6 +308,13 @@ def attention_lines(a):
     return lines
 
 
+def _settings_part(version):
+    """The parts of an agent version the header's AI and prompt do not show; a report made before ADR-035 has none."""
+    if not version:
+        return "ไม่ทราบ (รายงานนี้ทำก่อนระบบเก็บรุ่นของ AI)"
+    return ";".join(part for part in version.split(";") if not part.startswith(("llm=", "prompt=")))
+
+
 def summary_markdown(report):
     m, p = report["metrics"], report["provenance"]
     llm = p["llm"]
@@ -320,6 +329,7 @@ def summary_markdown(report):
     lines += [f"ชุดเคส `{p['golden']['name']}` ({p['golden']['cases']} เคส) · AI `{llm['provider']}/{llm['model']}` · "
               f"prompt `{p['prompt']['id']}` (`{p['prompt']['sha256'][:12]}`) · commit `{(p['git_sha'] or 'unknown')[:12]}`",
               f"กฎที่ใช้: `{p['rules']['version']}` · สัญญาณ \"ต้องดูก่อน\": `{p['signals']['version'][:23]}…`",
+              f"รุ่นของ AI (agent version): `{_settings_part(p.get('agent_version'))}`",
               "", "| สิ่งที่วัด | ผล |", "|---|---|",
               f"| งานที่ทำจบครบทุกขั้น | {_fmt(m['jobs_completed'])} |",
               f"| กฎเดิมจัดหมวดถูก | {_fmt(m['rules_correct'])} |",

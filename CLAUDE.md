@@ -14,8 +14,9 @@ trusted agents in bounded child processes, retries, recovers after a crash and w
   `POST /v1/reviews/{review_id}/decisions` (roadmap 2.2, 2.4; ADR-027). Since 2026-11-16 the owner issues personal
   tokens for reviewers and submitters on the page, and every route checks the caller's role; the shared key stays
   the owner's (roadmap 2.1, ADR-034). Since 2026-11-19 the categories people record are counted as labels: the
-  rules and the AI against them, per proposal version, on `GET /v1/reviews/scorecard` and in the settings tab; counts
-  only, never a reason to change anything by itself (roadmap 2.8; D6 stays the owner's);
+  rules and the AI against them, per proposal version (the AI's whole version as Core checked it, since the quality
+  report of 2026-11-19; ADR-035), on `GET /v1/reviews/scorecard` and in the settings tab; counts only, never a reason
+  to change anything by itself (roadmap 2.8; D6 stays the owner's);
 - an AI gateway (an offline mock, Claude, Typhoon: SCB 10X's Thai-first model, free within rate limits;
   ADR-021, or `local`: an open-weight model on a server we run ourselves, today llama.cpp with Typhoon 2.5 4B
   on the GitHub runner; ADR-026);
@@ -155,6 +156,11 @@ Read in this order when you need depth:
    - Agents come from the registry.
    - An agent's version includes provider, model, prompt hash, max_tokens and effort, and is frozen per
      job. A changed prompt or model is a new version.
+   - An AI agent's version also names the masking rules (`redact-v2`), the gateway's answer checks
+     (`config.ANSWER_CHECKS_VERSION`, ADR-035) and, for Typhoon and the local model, the answer format (ADR-022).
+     Any change to what `app/llm/gateway.py` does with a reply is a new checks version:
+     `tests/test_answer_checks_version.py` fails until it is named, and a released version's pin is never edited.
+     PR #42 and PR #74 changed the checks without one; the quality report of 2026-11-19 found it.
    - A prompt completed from versioned data (the study guide's catalog) also carries that data's version,
      here the library tag (ADR-019).
    - Shadow triage rules use `triage.classify_rules` with the complete SHA-256 of `keywords_v2.json` in
@@ -192,7 +198,7 @@ If a task seems to need breaking a rule:
 ## 4. Checking your work
 
 ```bash
-python -m unittest discover -s tests -v        # all tests (561 on 2026-11-19); CI: Python 3.10 and 3.12
+python -m unittest discover -s tests -v        # all tests (571 on 2026-11-19); CI: Python 3.10 and 3.12
 python -m examples.case_triage_demo            # v1 rules, one synthetic case
 python -m examples.case_triage_shadow_demo     # v2 shadow mode with the offline mock AI
 python -m examples.study_guide_demo            # the study guide's answers to four synthetic requests
@@ -550,6 +556,18 @@ Notes for cloud sessions (claude.ai/code):
     inside real Thai text and emoji joined by U+200D are kept. Robustness gate 246/270, 0 bugs, 13 gaps (239 and 20
     before); SYN-E2E-002/003/004/016 now expect `REFUSED`, which the benchmark can express since then. No golden
     case is refused, so every eval baseline is unchanged. The study guide's `message` was left alone (paused).
+  - The answer to the quality report of 2026-11-19 (of `main` @ `3a4b97f`, 7 pages in Thai, shared by the owner with
+    "read it point by point and plan to start work"; `docs/evidence/2026-11-19-quality-report-response.md`). Every
+    point was checked against the code and agrees. Its three code findings (page 5) are fixed in one PR:
+    - the gateway's answer checks are part of every AI agent's version (`;checks=answer-checks-v3`, ADR-035) and
+      pinned by a hash of 31 fixed replies and 7 stop reasons; reproduced first: an interrupted job resumed under
+      other checks finished as `REVIEW_REQUIRED`, and now fails as `configuration_changed`;
+    - the Runner records the AI step's version as Core checked it (`result.ai.agent_version`); the reviewer-label
+      scorecard groups by it, and a result without one is its own group, shown as "ไม่ทราบรุ่น";
+    - a case counts as Thai only when it holds a Thai letter (not ฿, Thai digits or tone marks alone).
+    No answer changed: every eval gate and the robustness gate are as before. Page 4's two findings (storage marked
+    persistent from the settings alone; `/healthz` 200 while the Runner is `blocked_config`) were reproduced on a
+    local service and are roadmap 1.7; the other points became 1.8, 2.9, 2.10 and additions to 1.4, 5.7, 7.2 and 7.5.
   - The answer to the first independent review (2026-11-10, of `main` @ `f38c926`; all four findings, one PR;
     `docs/evidence/2026-11-10-independent-review-response.md`):
     - review decisions (2.2) and the page's decision card and "รอรีวิว" list (2.4), built before 2.1 with the
@@ -666,10 +684,16 @@ Notes for cloud sessions (claude.ai/code):
     another version and new evidence.
   - 5.8's first full run is recorded: the owner chooses its branch (not good enough, close or good enough;
     roadmap 5.8, "After the first full run", step 2), then follow it.
-  - Buildable now without an owner decision: the rest of 5.5 (the ten masking gaps, which need new masking rules,
-    and NFC, which needs an ADR; the invisible-text gaps were fixed on 2026-11-19), 5.6 and 5.7,
-    the rest of Phase 2 (2.1 to 2.4 and 2.8 are built; 2.5 needs D3, 2.6 and 2.7 when needed), H5's trace link, and Phase 4 (4.1 first; Phase 3, which it
-    needs, is built). The rest of 7.1 (who can read the AI key) needs an ADR first.
+  - **From the quality report of 2026-11-19, planned next: roadmap 1.7** (storage marked persistent only on a
+    confirmed mount; `GET /readyz` beside `/healthz`, which stays liveness for Render; a Sentry event when the Runner
+    is blocked). Then 1.8 (a browser walk in CI on a phone-sized screen). 2.9 (blind labels) waits for the owner's
+    go-ahead; 2.10 (reviewer time) is buildable. Never "fix" the report's held-out example `HO-TH-UPL-05` with a
+    keyword (rule 5).
+  - Buildable now without an owner decision: 1.7, 1.8 and 2.10 (above), the rest of 5.5 (the ten masking gaps, which
+    need new masking rules, and NFC, which needs an ADR; the invisible-text gaps were fixed on 2026-11-19), 5.6 and
+    5.7, the rest of Phase 2 (2.1 to 2.4 and 2.8 are built; 2.5 needs D3, 2.6 and 2.7 when needed), H5's trace link,
+    and Phase 4 (4.1 first; Phase 3, which it needs, is built). The rest of 7.1 (who can read the AI key) needs an
+    ADR first.
   - The effectiveness track (2026-11-10, PR #50, [docs/effectiveness_plan.md](docs/effectiveness_plan.md)): E1
     is built (PR #60) and measured on Render (3.2 s after a sleep, 9.0 to 10.5 s before; its task 5 only if the
     owner still finds the first case slow); E2 (Thai/English

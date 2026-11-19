@@ -23,6 +23,12 @@ Flow for one call:
    (SYN-AIR-041, SYN-E2E-030). A free-text field that is then empty, or holds no letter, digit or sign, is
    ``InvalidModelOutput``: a second opinion without a reason is not one (SYN-AIR-042, SYN-AIR-043). Like any
    invalid answer, it is asked once more, and then the case goes to review with the rules' suggestion (ADR-012).
+
+Steps 3 to 6 are the answer checks. They are versioned as ``config.ANSWER_CHECKS_VERSION``, which is part of every
+AI agent's version (ADR-035), and ``tests/test_answer_checks_version.py`` pins what each version does: a change here
+fails that test until the version changes too, so a job caught mid-way by the change fails as
+``configuration_changed`` instead of finishing under other checks, and scorecards of two behaviours never share one
+version.
 """
 
 import re

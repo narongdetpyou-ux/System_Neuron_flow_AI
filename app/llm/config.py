@@ -2,7 +2,7 @@
 
 The configuration travels inside the step ``params`` (so it is recorded with the
 job and covered by the job fingerprint) and inside the agent ``version`` (so Core
-refuses to run an old job with a different model or prompt). API keys are never
+refuses to run an old job with a different model, prompt or answer checks). API keys are never
 part of it: the agent reads the provider's key from the environment at call time
 (``ANTHROPIC_API_KEY`` for Claude, ``TYPHOON_API_KEY`` for Typhoon, ``NEURON_FLOW_LOCAL_API_KEY`` for a
 local server that asks for one).
@@ -56,7 +56,16 @@ DEFAULT_BASE_URLS = {"anthropic": DEFAULT_ANTHROPIC_BASE_URL, "typhoon": DEFAULT
 # agent version: change it whenever the text changes. A local llama.cpp server does enforce ``response_format``
 # (it turns the schema into a grammar), and gets the same words too: small models follow it better (ADR-026).
 ANSWER_FORMATS = {"typhoon": "json-instruction-v1", "local": "json-instruction-v1"}
-_MODEL = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,99}$")
+# What the gateway does with a model's reply before a step returns it (``gateway.parse_answer`` and the stop reasons
+# ``structured_answer`` refuses): the strict JSON parse, the schema check, and how free text is cleaned and cut. The
+# same reply gives another result under other checks, so their version is part of every AI agent's version (ADR-035),
+# like the masking rules and the answer format. ``tests/test_answer_checks_version.py`` pins what each version does:
+# change the checks, and this name and that pin change with them. The first two versions were never written into an
+# agent version (the quality report of 2026-11-19 found the gap); they are named here so the history reads in order:
+# v1 until 2026-11-07; v2 turned lone surrogates into U+FFFD (PR #42); v3 removes invisible format characters (Cf)
+# and refuses a free-text field left without a letter, digit or sign (PR #74, 2026-11-19).
+ANSWER_CHECKS_VERSION = "answer-checks-v3"
+_MODEL =re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,99}$")
 _LOOPBACK = {"127.0.0.1", "localhost", "::1"}
 _PARAM_KEYS = {"provider", "model", "max_tokens", "request_timeout_s", "effort", "base_url"}
 
@@ -138,10 +147,11 @@ class LLMConfig:
         return cls(**data)
 
     def version_tag(self, prompt):
-        """Agent version string: changing model, prompt, answer budget, masking rules or the answer-format text a
-        client adds (ADR-022) means a new version."""
+        """Agent version string: changing model, prompt, answer budget, masking rules, the gateway's answer checks
+        (ADR-035) or the answer-format text a client adds (ADR-022) means a new version."""
         tag = (f"llm={self.provider}/{self.model};prompt={prompt.id}@sha256:{prompt.sha256};"
-               f"max_tokens={self.max_tokens};effort={self.effort or 'default'};redaction={REDACTION_VERSION}")
+               f"max_tokens={self.max_tokens};effort={self.effort or 'default'};redaction={REDACTION_VERSION};"
+               f"checks={ANSWER_CHECKS_VERSION}")
         if self.provider in ANSWER_FORMATS:
             tag += f";format={ANSWER_FORMATS[self.provider]}"
         return tag

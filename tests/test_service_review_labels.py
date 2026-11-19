@@ -9,15 +9,18 @@ import hashlib
 import json
 import re
 import tempfile
+import unicodedata
 import unittest
 from pathlib import Path
 
 from app.api.routes import ApiApp, Request, route_template
 from app.domains.case_triage.contracts import QUEUE_FOR
+from app.llm import LLMConfig
 from app.persistence import QueueStore, review_id_for
 from app.services import access, review_labels
 from app.services.reviews import decide
 from app.services.runner import Runner
+from app.services.workflows import CATALOG, agents_for
 from tests.service_fixtures import KEY, case_body, settings
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -25,9 +28,14 @@ AUTH = {"authorization": f"Bearer {KEY}"}
 JSON = {"content-type": "application/json", **AUTH}
 RULES_A = "rules:keywords-v2:" + "a" * 64
 RULES_C = "rules:keywords-v2:" + "c" * 64
+# An AI agent's version as Core records it (config.version_tag): what tells two setups apart (ADR-035).
+TYPHOON_VERSION = ("llm=typhoon/typhoon-v2.5-30b-a3b-instruct;prompt=triage_classify_v2@sha256:" + "b" * 64 +
+                   ";max_tokens=2048;effort=default;redaction=redact-v2;checks=answer-checks-v3;format=json-instruction-v1")
 TYPHOON = {"provider": "typhoon", "model": "typhoon-v2.5-30b-a3b-instruct", "prompt_id": "triage_classify_v2",
-           "prompt_sha256": "b" * 64, "redaction": "redact-v2"}
-LOCAL = dict(TYPHOON, provider="local", model="typhoon2.5-qwen3-4b:0123456789ab")
+           "prompt_sha256": "b" * 64, "redaction": "redact-v2", "agent_version": TYPHOON_VERSION}
+LOCAL = dict(TYPHOON, provider="local", model="typhoon2.5-qwen3-4b:0123456789ab",
+             agent_version=TYPHOON_VERSION.replace("typhoon/typhoon-v2.5-30b-a3b-instruct",
+                                                   "local/typhoon2.5-qwen3-4b:0123456789ab"))
 REVIEWER_1 = {"token_id": "1" * 16, "role": "reviewer"}
 REVIEWER_2 = {"token_id": "2" * 16, "role": "reviewer"}
 
@@ -118,7 +126,8 @@ class ReportTests(LabelsTestCase):
         self.assertEqual(group["when_disagreeing"], {"total": 1, "ai_match": 1, "rules_match": 0, "neither": 0})
         self.assertEqual((group["workflow_type"], group["rules"]), ("case_triage.v2", RULES_A))
         self.assertEqual(group["ai"], {"provider": "typhoon", "model": TYPHOON["model"], "prompt_id": "triage_classify_v2",
-                                       "prompt_sha256": "b" * 64, "simulated": False})
+                                       "prompt_sha256": "b" * 64, "agent_version": TYPHOON_VERSION,
+                                       "version_known": True, "simulated": False})
 
     def test_every_rate_keeps_its_counts_and_its_95_percent_interval(self):
         self.assertEqual(review_labels.interval_95(0, 0), (None, None))
@@ -148,6 +157,43 @@ class ReportTests(LabelsTestCase):
         for key in ("ai", "ai_answered", "ai_match", "rules_ai_agree", "when_disagreeing"):
             self.assertIsNone(rules_only[key], key)
         self.assertEqual(rules_only["by_language"]["non_th"]["ai_match"], None)
+
+    def test_two_answer_budgets_or_two_versions_of_the_checks_are_two_groups(self):
+        # Quality report of 2026-11-19, finding 2: the same model and prompt with another max_tokens made one group.
+        short = dict(TYPHOON, agent_version=TYPHOON_VERSION.replace("max_tokens=2048", "max_tokens=256"))
+        older_checks = dict(TYPHOON, agent_version=TYPHOON_VERSION.replace("answer-checks-v3", "answer-checks-v2"))
+        self.decided(rules="billing", ai="billing")
+        self.decided(rules="billing", ai="billing", provenance=short)
+        self.decided(rules="billing", ai="upload", provenance=older_checks)
+        groups = self.report()["groups"]
+        self.assertEqual([g["ai"]["agent_version"] for g in groups],  # newest first
+                         [older_checks["agent_version"], short["agent_version"], TYPHOON_VERSION])
+        self.assertEqual([g["decided"] for g in groups], [1, 1, 1])
+        self.assertTrue(all(g["ai"]["version_known"] for g in groups))
+        self.assertEqual({(g["ai"]["provider"], g["ai"]["model"], g["ai"]["prompt_sha256"]) for g in groups},
+                         {("typhoon", TYPHOON["model"], "b" * 64)})  # the old key could not tell them apart
+
+    def test_a_result_recorded_before_the_version_was_kept_says_its_version_is_unknown(self):
+        unknown = {key: value for key, value in TYPHOON.items() if key != "agent_version"}
+        self.decided(rules="billing", ai="billing", provenance=unknown)
+        self.decided(rules="billing", ai="billing")
+        groups = self.report()["groups"]
+        self.assertEqual([(g["ai"]["version_known"], g["ai"]["agent_version"], g["decided"]) for g in groups],
+                         [(True, TYPHOON_VERSION, 1), (False, None, 1)])  # never added to a known version
+
+    def test_the_baht_sign_thai_digits_and_marks_alone_do_not_make_a_case_thai(self):
+        # Quality report of 2026-11-19, finding 3: "฿" made an English sentence a Thai case.
+        expected = {"I was charged 500 twice": "non_th", "I was charged ฿500 twice": "non_th",
+                    "Refund ฿1,250 to the card ending ๑๒๓๔": "non_th", "่้ !!": "non_th",
+                    "I was charged ฿500 twice ค่ะ": "th", "โดนหัก ฿500 สองครั้ง": "th", "Login ไม่ได้": "th"}
+        self.assertEqual({text: review_labels.language_of(text) for text in expected}, expected)
+        # Exactly the letters of the Thai block, by Unicode category, make a case Thai.
+        block = [chr(code) for code in range(0x0E00, 0x0E80)]
+        self.assertEqual({ch for ch in block if review_labels.language_of(ch) == "th"},
+                         {ch for ch in block if unicodedata.category(ch) in ("Lo", "Lm")})
+        self.decided(summary="I was charged ฿500 twice this month")
+        (group,) = self.report()["groups"]
+        self.assertEqual(set(group["by_language"]), {"non_th"})
 
     def test_cases_are_split_by_whether_the_text_holds_a_thai_letter(self):
         self.decided(summary="เดือนนี้ถูกหักค่าบริการสองครั้ง ขอคืนเงินด้วยครับ")
@@ -266,6 +312,10 @@ class ApiTests(LabelsTestCase):
         (group,) = reply["groups"]
         self.assertEqual((group["ai"]["provider"], group["ai"]["simulated"], group["ai"]["prompt_id"]),
                          ("mock", True, "triage_classify_v2"))
+        # The version Core checked, recorded with each result by the Runner (ADR-035).
+        registry = {agent.name: agent.version for agent in agents_for(CATALOG, LLMConfig())}
+        self.assertEqual((group["ai"]["agent_version"], group["ai"]["version_known"]),
+                         (registry["triage.classify_llm"], True))
         self.assertTrue(group["rules"].startswith("rules:keywords-v2:"))
         self.assertEqual(figures(group["rules_match"]), (2, 3))
         self.assertEqual(figures(group["ai_match"]), (1, 3))
@@ -274,6 +324,24 @@ class ApiTests(LabelsTestCase):
         self.assertEqual(figures(group["by_language"]["th"]["rules_match"]), (0, 1))
         self.assertEqual(figures(group["by_language"]["non_th"]["ai_match"]), (1, 2))
         self.assertNotIn("ถูกหักค่าบริการ", json.dumps(reply, ensure_ascii=False))
+
+    def test_the_same_mock_with_two_answer_budgets_is_counted_as_two_versions(self):
+        # Quality report of 2026-11-19, finding 2, end to end: one mock, max_tokens 256 then 2048, two decisions.
+        for number, budget in enumerate((256, 2048)):
+            response = self.call("POST", "/v1/jobs", case_body(f"key-labels-budget-{number}", case_id=f"BUDGET-{number}",
+                                                               summary="I cannot upload an attachment"))
+            self.assertEqual(response.status, 202)
+            job_id = json.loads(response.body)["job_id"]
+            Runner(self.settings, store=self.store, llm_config=LLMConfig(max_tokens=budget)).drain()
+            body = {"decision": "APPROVE", "reason": "ตรวจแล้ว", "expected_version": 1,
+                    "idempotency_key": f"key-labels-budget-decision-{number}"}
+            self.assertEqual(self.call("POST", f"/v1/reviews/{review_id_for(job_id)}/decisions", body).status, 201)
+            detail = json.loads(self.call("GET", f"/v1/jobs/{job_id}").body)
+            self.assertIn(f";max_tokens={budget};", detail["result"]["ai"]["agent_version"])
+        groups = json.loads(self.call("GET", "/v1/reviews/scorecard").body)["groups"]
+        self.assertEqual(len(groups), 2)  # one group before ADR-035: the key had no answer budget
+        self.assertEqual([(g["decided"], f";max_tokens={budget};" in g["ai"]["agent_version"])
+                          for g, budget in zip(groups, (2048, 256))], [(1, True), (1, True)])
 
 
 if __name__ == "__main__":

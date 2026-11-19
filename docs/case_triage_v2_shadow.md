@@ -107,7 +107,7 @@ caused by the rules rather than a second model answer. The offline mock's keywor
 | AI answer off-contract (unknown value, broken JSON, cut off at `max_tokens`) | tries once more, then `unavailable: invalid_model_output` | same as above | warning |
 | AI declines (`stop_reason: refusal`) | `unavailable: model_declined` at once (no pointless retry) | same as above | warning |
 | Missing or rejected API key (401/403), unknown model (404), rejected request (400/413) | AI step **fails**; job `FAILED` | no proposal until fixed | error → email |
-| Prompt, model or rules list changed after a job was submitted | the old job refuses to run (`Agent version changed`) | — | exception |
+| Prompt, model, rules list or the gateway's answer checks (ADR-035) changed after a job was submitted | the old job refuses to run (`Agent version changed`) | — | exception |
 
 Setup problems fail loudly on purpose. They hit every case the same way, and if
 they were degraded quietly, a broken setup could go unnoticed.
@@ -188,8 +188,9 @@ On GitHub, every push shows this table on the Actions run page, using the mock A
 
 The labels of this scorecard are the developer's. Since 2026-11-19 the running service also counts the rules and the
 AI against the categories **people recorded** when they decided cases (roadmap 2.8, ADR-010's measurement):
-`GET /v1/reviews/scorecard` and the settings tab's "กฎกับ AI เทียบกับคำตัดสินของคน", per proposal version and split
-by Thai text or not, with a 95% interval on every rate. Those labels lean towards the proposal (the person saw it
+`GET /v1/reviews/scorecard` and the settings tab's "กฎกับ AI เทียบกับคำตัดสินของคน", per proposal version (the AI's
+whole version as Core checked it, ADR-035) and split by whether the text holds a Thai letter, with a 95% interval on
+every rate. Those labels lean towards the proposal (the person saw it
 first) and, on Render's free plan, vanish at every sleep; see [intake_queue.md](intake_queue.md) ("Reviewer-label
 scorecard").
 
