@@ -527,7 +527,8 @@ Notes for cloud sessions (claude.ai/code):
     reviewer's approval hand on. On Render's free plan the tokens go with the queue at every sleep, restart and
     deploy (they fail closed). Checked by `tests/test_service_access.py`, the page's contract tests, the container
     smoke test (issue, decide, revoke, and the revocation kept across a restart) and a headless-browser walk as
-    owner, reviewer and submitter. The owner test on the live page is left.
+    owner, reviewer and submitter. The owner's test on the live page passed every step on 2026-11-16 (confirmed by
+    the owner on 2026-11-19); its steps 4 and 5 also passed 2.4's step 1.
   - The reviewer-label scorecard (roadmap 2.8), built on 2026-11-19 as the next item of Phase 2 whose needs were met,
     after the owner said "ทำต่อ" (continue). `app/services/review_labels.py` reads the newest 500 decided reviews
     in one snapshot (`QueueStore.decided_reviews`) and counts how often the rules' suggestion and the AI's opinion
@@ -639,8 +640,9 @@ Notes for cloud sessions (claude.ai/code):
   - Waiting on the owner: 0.2 and 1.4 (D1, paid Render plan), 0.3 path B and 0.4 with Claude (D2, Claude
     API key); 0.4 with Typhoon is free but sends what is typed on the page to Typhoon, so it is the owner's
     choice too; an open model behind the page needs a paid machine (D7); the rest of the owner tests on the live
-    page (2.1's tokens, 2.4's steps 1 and 4, attention 5.10); the first new skill (H4). The owner's first case since
-    2026-11-10, on 2026-11-16, passed H3 and 2.4's steps 2 and 3 and gave E1's Render figure.
+    page (2.4's step 4, attention 5.10, and 2.8's scorecard after its merge); the first new skill (H4). The owner's
+    first case since 2026-11-10, on 2026-11-16, passed H3 and 2.4's steps 2 and 3 and gave E1's Render figure; the
+    same day 2.1's owner test passed every step, 2.4's step 1 with it (confirmed by the owner on 2026-11-19).
     D8 is decided (2026-11-10): the e-mail history stays as it is; do not propose a rewrite.
   - **The study guide is paused (owner, 2026-11-11):** no new study-guide work (E4, E6 or changes to
     `app/domains/study_guide/`) until the owner resumes it; its checks keep running.

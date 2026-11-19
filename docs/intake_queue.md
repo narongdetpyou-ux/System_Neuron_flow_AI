@@ -25,7 +25,7 @@ Skill handoffs (2026-11-11, ADR-030, [skill_handoff.md](skill_handoff.md)): an a
 Personal tokens and roles (2026-11-16, roadmap 2.1, ADR-034): the owner issues tokens for reviewers and submitters
 on the page, every route checks the caller's role, and decisions record whose token it was (queue schema 4, an
 `access_tokens` table with a tested 3 → 4 upgrade; see "รหัสรายคน" and "Access: the shared key, personal tokens
-and roles" below).
+and roles" below). The owner's test on the live page passed every step the same day.
 Rules and AI against people's decisions (2026-11-19, roadmap 2.8): `GET /v1/reviews/scorecard` and a panel in the
 settings tab count how often the rules' suggestion and the AI's opinion named the category a person recorded, per
 proposal version and split by Thai text or not; counts only, nothing changes because of them (see "กฎกับ AI
