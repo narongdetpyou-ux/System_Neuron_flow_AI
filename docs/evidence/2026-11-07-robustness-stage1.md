@@ -180,3 +180,56 @@ only SYN-COR-040 and SYN-COR-041 would fail again. If the owner does not want a 
 and the baseline regenerated.
 
 **Limits:** as in stage 1. No real model was called, and the items and their expectations are the developer's.
+
+## Invisible and direction-changing characters (2026-11-19, roadmap 5.5)
+
+**Where:** a Claude Code cloud session, on `main` @ `b9e0af9` plus the branch `claude/wonderful-volta-ibylal`.
+Python 3.12.3 for the figures below; the unit tests also pass on 3.10.20.
+
+**Data:** `synthetic_v1.json` is now SHA-256 `15d9adf7…` (was `aa83bd4b…`), because four expectations changed
+(below). `open_extract_v1.json` is unchanged (`510483c1…`), and so is the 116-case export for live runs.
+
+### สรุปสำหรับเจ้าของโปรเจกต์
+
+- **เคสที่เขียนเอง 270 ข้อ ผ่าน 246** (เดิม 239) ปัญหาร้ายแรง (bug) **0** จุดอ่อน (gap) **13** (เดิม 20) ข้อสังเกต (info) 11
+  เท่าเดิม กวาดข้อมูลเปิด 4,680 ครั้งยังไม่ผิดคำสัญญาเลย
+- **ข้อความเคสที่มีตัวกลับทิศ (bidi) ถูกปฏิเสธตั้งแต่รับเข้า** เพราะทำให้คนตรวจอ่านเห็นข้อความต่างจากที่กฎและ AI อ่าน
+- **ตัวที่มองไม่เห็นไม่นับเป็นความยาวขั้นต่ำ** และข้อความที่มีแต่วรรณยุกต์ลอยไม่นับเป็นเคส ส่วนข้อความไทยธรรมดา
+  (รวมที่มีตัวเว้นคำล่องหนติดมา) และอีโมจิส่งได้เหมือนเดิม
+- **เหตุผลของ AI ถูกลบตัวที่มองไม่เห็นออกก่อนถึงคนตรวจ** และถ้าเหตุผลว่างเปล่า ระบบถาม AI ใหม่ 1 ครั้ง แล้วส่งเคสให้คนตรวจพร้อมข้อเสนอของกฎ
+
+### What changed, item by item
+
+Exactly 11 items changed in `tests/baselines/robustness_v1.json`, plus the set's hash.
+
+| Item | Before | Now | Fix |
+|---|---|---|---|
+| SYN-INT-044 (gap) | 10 zero-width spaces accepted (202) | 400 `invalid_input` | the minimum length counts only characters that are not invisible format characters (Unicode Cf) |
+| SYN-INT-045 (gap) | 10 Thai tone marks without a consonant accepted (202) | 400 `invalid_input` | a summary needs at least one letter, digit or sign |
+| SYN-INT-046 (gap) | a summary with U+202E accepted (202) | 400 `invalid_input` | bidi controls are refused in a summary |
+| SYN-AIR-041 (gap) | a rationale with U+202E kept as written | accepted, the controls removed | `parse_answer` removes invisible format characters from free-text fields |
+| SYN-AIR-042 (gap) | a rationale of zero-width spaces accepted | `invalid` | a free-text field must hold a visible character |
+| SYN-AIR-043 (gap) | an empty rationale accepted | `invalid` | the same check |
+| SYN-E2E-030 (gap) | the reviewer saw the reordered rationale | `SUCCEEDED`, `PENDING_HUMAN_REVIEW`, second opinion `ok`, rationale without format characters | the gateway's cleaning |
+| SYN-E2E-002, 003, 004, 016 (bug) | each expected the job to complete | each expects, and gets, a refusal at admission (`REFUSED`) | expectation changed on purpose, below |
+
+**Four expectations changed, on purpose.** SYN-E2E-002, 003, 004 and 016 send the same three texts as
+SYN-INT-044, 045 and 046 end to end, and expected the job to reach review. They were written when such text was
+admitted, to show that Core carries it without breaking. The intake items said the opposite (refuse it), so the set
+held two expectations that could not both pass. With the input contract tightened, the end-to-end items now expect
+`REFUSED`: they fail if any of these texts reaches Core. The benchmark gained that expectation (`_one_job`): a
+refusal passes only where it is expected, and an admitted case fails an item that expects a refusal.
+
+**What did not change:** no golden case of the scorecards (61 development, 40 held-out, 128 hard, 64 attention, 116
+edge) is refused by the new contract, so every eval baseline is unchanged; zero-width spaces inside real text
+(Thai copied from some websites) and emoji joined by U+200D are still admitted as written (SYN-E2E-005 still
+passes); the AI's fixed choices are still compared exactly, never cleaned into a valid value.
+
+**Still open:** 13 gaps. Three are the rules' measured limits kept by E2 (SYN-RUL-009, 032, 033). Ten are masking
+gaps that need new masking rules (a new `REDACTION_VERSION`): a phone number split by double spaces, zero-width
+spaces or slashes, all-capital or lower-case names, a name like O'Neil or McDonald, a Thai-domain e-mail, an
+e-mail written as "at … dot", and "my name is …" in lower case. The documented masking limits (names without a
+title, addresses and the like) stay info items. NFC normalization of the request fingerprint (SYN-INT-055,
+SYN-COR-051) needs an ADR first, because it changes which requests count as the same.
+
+**Limits:** as in stage 1. No real model was called, and the items and their expectations are the developer's.

@@ -119,7 +119,12 @@ they were degraded quietly, a broken setup could go unnoticed.
   official suggestion stays with the rules.
 - **Case text is untrusted.** It is sent as a JSON string, and the prompt says to ignore instructions inside it.
   Answers are limited to fixed choices, first by the API and then again by our code. The tests include
-  injected instructions in English and Thai.
+  injected instructions in English and Thai. A case that holds bidi controls (text a reviewer would read in another
+  order) is refused at admission, and so is one with fewer than 8 visible characters (2026-11-19, roadmap 5.5).
+- **The reviewer reads what the AI wrote, as written.** The gateway removes invisible format characters (bidi
+  controls, zero-width spaces and joiners) from the rationale, and an answer whose rationale is then empty is
+  invalid: asked once more, then the case goes to review with the rules' suggestion and the reason
+  `llm_unavailable` (2026-11-19, roadmap 5.5).
 - **Personal data is masked before the AI sees the case** (roadmap 7.1). E-mail addresses, phone numbers,
   Thai ID numbers (check digit verified), card-like numbers (Luhn), other runs of 9+ digits, and names after
   a title or label (Mr/Ms/Dr, "my name is", `Name:`; นาย, นาง, นางสาว, น.ส., ด.ช., ด.ญ., นามสกุล, คุณ + an

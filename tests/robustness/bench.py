@@ -524,10 +524,14 @@ def _one_job(runtime, item, config):
     workflow = CATALOG[inp["workflow"]]
     raw = {"message": expand(inp["message"])} if workflow.name == "study_guide.v1" else \
         {"case_id": "RB-" + item["id"].split("-")[-1], "summary": expand(inp["summary"])}
+    expect_refusal = item["expect"].get("job") == "REFUSED"  # the input contract must stop it before Core
     try:
         normalized = workflow.check_input(raw)
     except SpecError as exc:
-        return {"job": "REFUSED", "refused": str(exc)[:80]}, ["refused at admission, so it never reached Core"]
+        observed = {"job": "REFUSED", "refused": str(exc)[:80]}
+        return observed, [] if expect_refusal else ["refused at admission, so it never reached Core"]
+    if expect_refusal:
+        return {"job": "ADMITTED"}, ["expected a refusal at admission, the case was admitted"]
     snapshot, preserved = run_job(runtime, workflow, "rb_" + item["id"].lower().replace("-", "_"), normalized, config)
     observed, final = e2e_observed(workflow, snapshot, preserved)
     return observed, check_e2e(item["expect"], observed, final)

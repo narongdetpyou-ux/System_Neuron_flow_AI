@@ -1,6 +1,6 @@
 # Intake API, job queue, Runner and web page (round 2, Milestone B)
 
-**Status:** built in PR #11 and tested offline (550 tests on 2026-11-19, including killing the Runner
+**Status:** built in PR #11 and tested offline (561 tests on 2026-11-19, including killing the Runner
 mid-step). The container build is checked on every push by *Actions → Service container*. Live on
 Render's free plan since 2026-11-01 (`render.yaml`). Railway was the first choice, but it has paused new
 sign-ups since 22 Oct 2026 after a security incident; `railway.json` stays in the repository for later.
@@ -37,7 +37,7 @@ Design principles: [design_philosophy.md](design_philosophy.md).
 ### เมื่อมีคนส่งเคส 1 เคส ระบบทำอะไรบ้าง
 
 1. **ส่งเคส** ผ่านหน้าเว็บ หรือผ่าน API (`POST /v1/jobs`) พร้อม "รหัสส่งงาน" (idempotency key) หนึ่งรหัสต่อการกดส่งหนึ่งครั้ง หน้าเว็บสร้างรหัสนี้ให้เอง
-2. **ตรวจก่อนรับ** ระบบตรวจรหัสเข้าใช้ ขนาดคำขอ และข้อมูลเคส (รหัสเคส + ข้อความ 8–500 ตัวอักษร) ถ้าไม่ผ่าน ระบบตอบกลับทันทีและยังไม่สร้างงานใด ๆ
+2. **ตรวจก่อนรับ** ระบบตรวจรหัสเข้าใช้ ขนาดคำขอ และข้อมูลเคส (รหัสเคส + ข้อความ 8–500 ตัวอักษร ตัวที่มองไม่เห็นไม่นับ ต้องมีตัวอักษร ตัวเลข หรือเครื่องหมายอย่างน้อย 1 ตัว และห้ามมีตัวกลับทิศข้อความ (bidi) เพราะทำให้คนตรวจอ่านเห็นข้อความต่างจากที่ระบบอ่าน; ตั้งแต่ 19 พ.ย.) ถ้าไม่ผ่าน ระบบตอบกลับทันทีและยังไม่สร้างงานใด ๆ
 3. **บันทึกลงคิวก่อนตอบ** ระบบตอบว่า "รับแล้ว" (202) หลังบันทึกเสร็จเท่านั้น และคำตอบบอกด้วยว่าที่เก็บเป็นแบบถาวรหรือชั่วคราว (`retention`) บน Render แผนฟรีเป็นแบบชั่วคราว: "รับแล้ว" หมายถึงเก็บไว้จนกว่าระบบจะหลับ รีสตาร์ท หรืออัปเดต
    - ส่งซ้ำด้วยรหัสส่งงานเดิมและข้อความเดิม → ได้งานเดิมกลับมา (200) ไม่เกิดงานซ้ำ
    - รหัสส่งงานเดิมแต่ข้อความต่าง → ปฏิเสธ (409)
@@ -499,7 +499,11 @@ Error bodies look like `{"error": "<code>", "message": "<English text>"}`. Codes
 `invalid_parameter`, `job_not_found`, `not_cancellable`, `method_not_allowed`, `not_found`, `internal_error`.
 Input the parser cannot read (for example a number past Python's 4,300-digit limit) is `invalid_json`, and
 text that cannot be stored (half of an emoji, a lone surrogate) is `invalid_input`; neither is ever a 500
-(robustness benchmark, roadmap 5.5).
+(robustness benchmark, roadmap 5.5). Since 2026-11-19 a case's `summary` is also `invalid_input` when it holds a
+bidi control (U+202A–U+202E, U+2066–U+2069, U+200E, U+200F, U+061C: text a reviewer would read in another order),
+when fewer than 8 of its characters are visible (invisible format characters such as zero-width spaces do not
+count), or when it has no letter, digit or sign (Thai tone marks alone). Zero-width spaces inside real text and emoji
+joined by U+200D are kept as written. The study guide's `message` is unchanged while the study guide is paused.
 
 ### Queue and run-time figures (roadmap 5.3)
 
