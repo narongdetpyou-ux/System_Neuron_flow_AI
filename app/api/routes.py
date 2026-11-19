@@ -11,6 +11,7 @@
   POST /v1/jobs/{job_id}/cancel   withdraw a job that is still QUEUED: 200, or 409 not_cancellable
   GET  /v1/reviews                cases waiting for a person: ?state=PENDING|APPROVED|REJECTED&limit=1-100&after=
   GET  /v1/reviews/{review_id}    the case, the proposal (rules, AI second opinion, why raised), every decision
+  GET  /v1/reviews/scorecard      rules and AI against the categories people recorded (roadmap 2.8); counts only
   POST /v1/reviews/{review_id}/decisions   approve or reject: 201 new, 200 the same decision again, 400/404/409
   GET  /v1/me                     who the credential is and what its role may do
   GET  /v1/tokens                 the owner: every personal token, without secrets
@@ -65,6 +66,7 @@ from app.services import access
 from app.services.admission import AdmissionError, admit
 from app.services.metrics import queue_metrics
 from app.services.results import plan_view
+from app.services import review_labels
 from app.services import reviews as review_service
 from app.services.workflows import CATALOG, DEFAULT_WORKFLOW, preview_spec
 from app.settings import MIN_ACCESS_KEY_LENGTH
@@ -77,6 +79,7 @@ JOB_PATH = re.compile(r"^/v1/jobs/(job_[0-9a-f]{24})(/events|/cancel)?$")
 JOB_ID_TEXT = re.compile(r"(?:job|rev)_[0-9a-f]{24}")  # a review id is named after its job, so it counts as one
 REVIEW_PATH = re.compile(r"^/v1/reviews/(rev_[0-9a-f]{24})(/decisions)?$")
 TOKEN_PATH = re.compile(r"^/v1/tokens/([0-9a-f]{16})/revoke$")
+SCORECARD_PATH = "/v1/reviews/scorecard"
 LOST_ON = ("sleep", "restart", "deploy")  # what wipes a data folder that is not persistent (Render's free plan)
 # A client may send its own id: 1-64 characters, letters, digits, '.', '_' or '-'. Nothing else reaches the logs.
 REQUEST_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$")
@@ -218,6 +221,8 @@ class ApiApp:
             return self._list(request) if reading else _not_allowed("GET, HEAD, POST")
         if path == "/v1/reviews":
             return self._reviews(request) if reading else _not_allowed("GET, HEAD")
+        if path == SCORECARD_PATH:
+            return self._scorecard() if reading else _not_allowed("GET, HEAD")
         review_match = REVIEW_PATH.fullmatch(path)
         if review_match is not None:
             if review_match.group(2):
@@ -387,6 +392,11 @@ class ApiApp:
         if review is None:
             return error(404, "review_not_found", "No review with this id")
         return json_response(200, review_service.review_detail(review))
+
+    def _scorecard(self):
+        """Rules and AI against the categories people recorded (roadmap 2.8): counts and rates, never case text.
+        It says what its labels are (``label_scope``) and how long the decisions it counts will last."""
+        return json_response(200, {**review_labels.report(self.store), "retention": self._retention()})
 
     def _decide(self, request, review_id, identity):
         """A person's decision. The reviewer comes from the credential (the owner's shared key or a reviewer's
@@ -580,7 +590,7 @@ def route_template(path):
     """The route of an API path as a fixed template (``/v1/jobs/{job_id}``), or ``None`` for an unknown path.
 
     Spans carry this, never the path itself, so a path a client made up cannot carry text into a trace."""
-    if path in ("/v1/status", "/v1/jobs", "/v1/reviews", "/v1/me", "/v1/tokens"):
+    if path in ("/v1/status", "/v1/jobs", "/v1/reviews", SCORECARD_PATH, "/v1/me", "/v1/tokens"):
         return path
     if TOKEN_PATH.fullmatch(path):
         return "/v1/tokens/{token_id}/revoke"

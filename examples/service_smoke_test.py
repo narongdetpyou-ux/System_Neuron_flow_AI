@@ -5,9 +5,10 @@ CI runs it against the Docker container; you can point it at the online service 
     python -m examples.service_smoke_test --url https://<your-service>.onrender.com --key <access key>
 
 First run: submit a case, check duplicates and conflicts, wait for the result, approve a case and follow its
-handoff, issue a reviewer token, decide with it and revoke it (roadmap 2.1), and save the job and token ids.
-With ``--after-restart``: check that the saved job is still there, that the revoked token is still revoked and that
-new work still runs.
+handoff, issue a reviewer token, decide with it and revoke it (roadmap 2.1), check that the scorecard counts both
+decisions against the rules and the AI (roadmap 2.8), and save the job and token ids.
+With ``--after-restart``: check that the saved job is still there, that the revoked token is still revoked, that the
+scorecard still counts both decisions and that new work still runs.
 With ``--first-case-only``: submit one case to a service that has just started and report how long it
 took (effectiveness plan E1). That mode reports and never fails on a time or on the case's outcome.
 It only uses synthetic text, and it never prints the access key.
@@ -193,6 +194,7 @@ def first_run(client, state_file, timeout_s, summary=None):
           "a real rules/mock disagreement is still raised and waits for a person")
     applied = approval_hands_on(client, mismatch["job_id"], timeout_s)
     token_id = personal_tokens(client, timeout_s)
+    reviewer_labels(client, "after the two decisions")
     if state_file:  # ids only: the token itself is never written down or printed
         Path(state_file).write_text(json.dumps({"job_id": job["job_id"], "apply_job_id": applied,
                                                 "token_id": token_id}), encoding="utf-8")
@@ -227,6 +229,21 @@ def personal_tokens(client, timeout_s):
     status, _ = reviewer.call("GET", "/v1/me")
     check(status == 401, "the revoked token is refused at once (401)")
     return token_id
+
+
+def reviewer_labels(client, when):
+    """Roadmap 2.8: the two decisions of the first run are counted against the rules and the AI (counts only).
+
+    The approval in ``approval_hands_on`` keeps the rules' "other" where the mock said billing; the reviewer's approval
+    in ``personal_tokens`` keeps billing, where both agreed. So: 2 labels, rules 2 of 2, the mock 1 of 2."""
+    status, card = client.call("GET", "/v1/reviews/scorecard")
+    totals, groups = card.get("totals") or {}, card.get("groups") or []
+    group = groups[0] if len(groups) == 1 else {}
+    figures = [(group.get(key) or {}).get(part) for key in ("rules_match", "ai_match") for part in ("numerator", "denominator")]
+    check(status == 200 and (totals.get("decided"), totals.get("labelled")) == (2, 2) and figures == [2, 2, 1, 2]
+          and (group.get("ai") or {}).get("simulated") is True
+          and group.get("when_disagreeing") == {"total": 1, "ai_match": 0, "rules_match": 1, "neither": 0},
+          f"the scorecard counts both decisions against the rules and the mock AI ({when})")
 
 
 def approval_hands_on(client, job_id, timeout_s):
@@ -266,6 +283,7 @@ def after_restart(client, state_file, timeout_s):
         kept = [item for item in listed.get("tokens", []) if item.get("token_id") == saved["token_id"]]
         check(status == 200 and len(kept) == 1 and kept[0]["active"] is False,
               "the revoked token is still revoked after the restart (persistent storage)")
+        reviewer_labels(client, "after the restart")
     body = {"workflow_type": "case_triage.v2", "idempotency_key": f"smoke-{uuid.uuid4()}",
             "input": {"case_id": "SMOKE-EN-02", "summary": "I cannot sign in to my account"}}
     status, fresh = client.call("POST", "/v1/jobs", body)

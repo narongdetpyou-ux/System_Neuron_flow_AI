@@ -498,6 +498,8 @@ details.layer > .kv { padding: 0; }
 .rows { display: grid; grid-template-columns: minmax(7rem, 10rem) minmax(0, 1fr); gap: 6px 14px; font-size: 13px; }
 .rows > span:nth-child(odd) { color: var(--muted); }
 .rows > span:nth-child(even) { overflow-wrap: anywhere; }
+/* The reviewer-label scorecard's labels are whole phrases, so its label column is wider. */
+.labels-rows { grid-template-columns: minmax(7rem, 14rem) minmax(0, 1fr); }
 .metric-item { display: block; }
 .metric-item + .metric-item { margin-top: 2px; }
 .steps-howto { margin: 0; padding-left: 20px; font-size: 13px; color: var(--text-2); }

@@ -25,7 +25,8 @@ UNKNOWN_ID = "ab" * 8  # a well-formed token id that no token has
 SAMPLES = {
     "/v1/status": "/v1/status", "/v1/me": "/v1/me", "/v1/jobs": "/v1/jobs", "/v1/jobs/{job_id}": f"/v1/jobs/{JOB}",
     "/v1/jobs/{job_id}/events": f"/v1/jobs/{JOB}/events", "/v1/jobs/{job_id}/cancel": f"/v1/jobs/{JOB}/cancel",
-    "/v1/reviews": "/v1/reviews", "/v1/reviews/{review_id}": f"/v1/reviews/{REVIEW}",
+    "/v1/reviews": "/v1/reviews", "/v1/reviews/scorecard": "/v1/reviews/scorecard",
+    "/v1/reviews/{review_id}": f"/v1/reviews/{REVIEW}",
     "/v1/reviews/{review_id}/decisions": f"/v1/reviews/{REVIEW}/decisions", "/v1/tokens": "/v1/tokens",
     "/v1/tokens/{token_id}/revoke": f"/v1/tokens/{UNKNOWN_ID}/revoke",
 }

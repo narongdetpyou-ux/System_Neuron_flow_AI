@@ -26,7 +26,11 @@
  * Personal tokens (roadmap 2.1, ADR-034): the gate takes the owner's shared key or a personal token. The page asks
  * /v1/me who that is and shows only what the role may do (the server refuses the rest anyway). The owner gets
  * "จัดการผู้ใช้" in the settings tab: create a token (shown once, kept only in this tab's memory, never stored), list
- * the tokens and revoke one at once. */
+ * the tokens and revoke one at once.
+ *
+ * Rules and AI against people's decisions (roadmap 2.8): the settings tab shows, for a role that may decide, how
+ * often the rules' suggestion and the AI's opinion named the category a person recorded. The server counts
+ * (GET /v1/reviews/scorecard) and sends no case text; the page adds what the numbers cannot say for themselves. */
 (function () {
   const KEY_STORAGE = "neuronflow.accessKey";
   const SENT_STORAGE = "neuronflow.sent";  // { store_id, jobs: [job id, ...] }: ids only, never case text
@@ -143,6 +147,8 @@
   const PRIORITY_TH = { prerequisite: "พื้นฐานที่ควรรู้ก่อน (ข้ามได้ถ้ารู้แล้ว)", core: "สำคัญที่สุด", later: "อ่านทีหลังได้" };
   const LANGUAGE_TH = { th: "ภาษาไทย", en: "ภาษาอังกฤษ" };
   const ACCESS_TH = { free: "ฟรี", paid: "เสียเงิน" };
+  /* The reviewer-label scorecard splits cases by code (app/services/review_labels.py): a Thai letter in the text or not. */
+  const LABEL_LANGUAGE = { th: "เคสที่มีอักษรไทย", non_th: "เคสที่ไม่มีอักษรไทย" };
   const KIND_TH = {
     course: "คอร์สเรียน", roadmap: "แผนที่การเรียน (roadmap)", article: "บทความ", documentation: "เอกสารคู่มือ",
     paper: "งานวิจัย (paper)", dataset: "ชุดข้อมูล (dataset)", standard: "มาตรฐาน", guidelines: "แนวปฏิบัติ (guidelines)",
@@ -238,6 +244,7 @@
     lost: null,      // { count, since } when the queue started empty again since this browser last sent something
     me: null,        // who the credential is and what its role may do (GET /v1/me, ADR-034)
     users: freshUsers(),  // the owner's "จัดการผู้ใช้" section
+    labels: freshLabels(),  // rules and AI against people's decisions (GET /v1/reviews/scorecard)
     keys: { thread: null, side: null, flow: null, inbox: null },
     graph: { nodes: new Map(), edges: [] },
     refreshTimer: null, jobTimer: null,
@@ -248,6 +255,11 @@
   function freshUsers() {
     return { name: "", role: "reviewer", created: null, revokeAsk: null, tokens: null, active: 0, max: 50,
       sending: false, error: null };
+  }
+
+  /* The reviewer-label scorecard: ``basis`` is what the queue held when ``report`` was read (see labelsBasis). */
+  function freshLabels() {
+    return { report: null, basis: null, loading: false };
   }
 
   /* What this credential's role may do (GET /v1/me). The server checks every request anyway; the page only hides
@@ -576,7 +588,10 @@
     applyComposerMode();
     renderCounts(status.queue || {});
     renderTimes(status.metrics || {});
-    if (state.view === "settings") renderSettings();
+    if (state.view === "settings") {
+      renderSettings();
+      if (state.labels.basis !== labelsBasis()) refreshLabels();
+    }
   }
 
   /* Who is signed in, and only the parts of the page that role may use (ADR-034). */
@@ -2188,6 +2203,121 @@
     return node;
   }
 
+  /* Rules and AI against the categories people recorded (roadmap 2.8; app/services/review_labels.py). The server
+   * sends counts only. Read when the settings tab opens and when a decision is recorded or the queue starts empty
+   * (labelsBasis), never on every status refresh. */
+  function labelsBasis() {
+    const reviews = (state.status || {}).reviews || {};
+    return [((state.status || {}).retention || {}).store_id || "", reviews.APPROVED || 0, reviews.REJECTED || 0].join(":");
+  }
+
+  async function refreshLabels() {
+    const labels = state.labels;
+    if (!can("review") || labels.loading) return;
+    const basis = labelsBasis();
+    labels.loading = true;
+    let result = null;
+    try { result = await call("GET", "/v1/reviews/scorecard"); } catch (_) { result = null; }
+    labels.loading = false;
+    if (labels !== state.labels) return;  // locked meanwhile: this reply belongs to the earlier sign-in
+    if (!result || handleAccessProblem(result) || result.status !== 200) return;  // the next status refresh tries again
+    labels.report = result.data;
+    labels.basis = basis;
+    if (state.view === "settings") renderSettings();
+  }
+
+  function shareText(value) {
+    if (!value || !value.denominator) return "—";
+    return `${value.numerator} จาก ${value.denominator} เคส (${Math.round(value.rate * 100)}%)`;
+  }
+
+  /* The 95% interval in plain words: with few cases it is wide, and the page says so instead of a bare percent. */
+  function rangeText(value) {
+    if (!value || !value.denominator || typeof value.low_95 !== "number") return "";
+    return ` · ช่วงที่เป็นไปได้ ${Math.round(value.low_95 * 100)}–${Math.round(value.high_95 * 100)}%`;
+  }
+
+  function labelsGroup(group) {
+    const ai = group.ai;
+    const split = group.when_disagreeing;
+    const rows = [
+      el("span", { text: "กฎที่ใช้" }), el("span", { class: "mono", text: shortVersion(String(group.rules || "—").replace(/^rules:/, "").replace(/:([0-9a-f]{64})$/, "@sha256:$1")) }),
+      el("span", { text: "AI ที่ใช้" }), ai
+        ? el("span", {}, [aiLabel(ai), ai.simulated ? " — จับคำสำคัญ ไม่ใช่ AI จริง" : "", ai.prompt_id ? el("span", { class: "mono muted", text: ` ${ai.prompt_id}` }) : null])
+        : el("span", { text: "ไม่มี (งานนี้ใช้กฎอย่างเดียว)" }),
+      el("span", { text: "ตัดสินในช่วง" }), el("span", { text: `${fullTime(group.first_decision_at)} ถึง ${fullTime(group.last_decision_at)}` }),
+      el("span", { text: "ใช้เป็นเฉลยได้" }), el("span", { text: `${group.labelled} จาก ${group.decided} เคสที่ตัดสิน` }),
+      el("span", { text: "กฎเสนอหมวดตรงกับคน" }), el("span", { text: shareText(group.rules_match) + rangeText(group.rules_match) }),
+    ];
+    if (ai) {
+      rows.push(
+        el("span", { text: "AI ให้ความเห็นได้" }), el("span", { text: shareText(group.ai_answered) }),
+        el("span", { text: "AI เสนอหมวดตรงกับคน" }), el("span", { text: shareText(group.ai_match) + rangeText(group.ai_match) +
+          (group.ai_match && group.ai_match.denominator ? " · นับเฉพาะเคสที่ AI ตอบได้" : "") }),
+        el("span", { text: "กฎกับ AI เห็นตรงกัน" }), el("span", { text: shareText(group.rules_ai_agree) }),
+        el("span", { text: "เมื่อกฎกับ AI เห็นไม่ตรงกัน" }), el("span", { text: split && split.total
+          ? `${split.total} เคส: คนบันทึกหมวดเดียวกับ AI ${split.ai_match} · เดียวกับกฎ ${split.rules_match} · ไม่ตรงทั้งคู่ ${split.neither}`
+          : "ยังไม่มีเคสแบบนี้" }),
+      );
+    }
+    for (const [language, score] of Object.entries(group.by_language || {})) {
+      rows.push(el("span", { text: LABEL_LANGUAGE[language] || language }), el("span", { text: `มีเฉลย ${score.labelled} เคส · กฎตรง ${shareText(score.rules_match)}` +
+        (ai ? ` · AI ตรง ${shareText(score.ai_match)}` : "") }));
+    }
+    return [
+      el("h3", {}, [WORKFLOW[group.workflow_type] || group.workflow_type, el("span", { class: "mono muted", text: group.workflow_type })]),
+      el("div", { class: "rows labels-rows" }, rows),
+    ];
+  }
+
+  function labelsPanel(status) {
+    const report = state.labels.report;
+    const parts = [el("p", { class: "lead", text: "ทุกครั้งที่คนตัดสินเคส หมวดที่คนบันทึกไว้คือ \"เฉลยจากคน\" 1 ข้อ ส่วนนี้นับว่าข้อเสนอของกฎ และความเห็นที่สองของ AI " +
+      "ตรงกับเฉลยนั้นกี่เคส เป็นตัวเลขที่ต้องมีก่อนคิดเปลี่ยนบทบาทของ AI (ตอนนี้ AI เป็นแค่ความเห็นที่สอง) ส่วนนี้นับอย่างเดียว ไม่เปลี่ยนการทำงานของระบบ" })];
+    if (!report) {
+      parts.push(el("p", { class: "muted", text: "กำลังโหลดตัวเลข…" }));
+    } else {
+      const counted = report.window || {};
+      const totals = report.totals || {};
+      const groups = report.groups || [];
+      const roles = Object.entries(totals.by_role || {}).map(([role, n]) => `${role === "owner" ? "เจ้าของระบบ" : ROLE_TH[role] || role} ${n} เคส`);
+      parts.push(el("div", { class: "rows labels-rows" }, [
+        el("span", { text: "นับจาก" }), el("span", { text: `${counted.decided || 0} เคสล่าสุดที่คนตัดสินแล้ว` +
+          (counted.truncated ? ` จากทั้งหมด ${counted.decided_total} เคส (นับสูงสุด ${counted.limit} เคส)` : "") }),
+        el("span", { text: "ผลการตัดสิน" }), el("span", { text: `อนุมัติ ${totals.approved || 0} เคส · ไม่อนุมัติ ${totals.rejected || 0} เคส` }),
+        el("span", { text: "ใช้เป็นเฉลยได้" }), el("span", { text: `${totals.labelled || 0} เคส` +
+          (totals.unlabelled ? ` · อีก ${totals.unlabelled} เคสไม่อนุมัติโดยไม่ระบุหมวด จึงไม่นับ` : "") }),
+        el("span", { text: "ผู้ตัดสิน" }), el("span", { text: totals.reviewers ? `${totals.reviewers} รหัส (${roles.join(" · ")})` : "—" }),
+      ]));
+      if (!groups.length) {
+        parts.push(el("p", { class: "lead", text: "ยังไม่มีเคสที่คนตัดสินในข้อมูลชุดนี้ ลองส่งเคสแล้วตัดสินในแท็บ \"แชท\" จากนั้นกลับมาดูที่นี่" }));
+      }
+      if (groups.length > 1) {
+        parts.push(el("p", { class: "lead", text: "มีข้อเสนอมากกว่า 1 ชุด (กฎ รุ่น AI หรือ prompt เปลี่ยนระหว่างทาง) ระบบจึงแยกนับทีละชุด ไม่รวมตัวเลขของต่างรุ่นเข้าด้วยกัน ชุดล่าสุดอยู่บนสุด" }));
+      }
+      groups.forEach((group) => parts.push(...labelsGroup(group)));
+      const notes = [
+        "วิธีอ่าน: \"ตรงกับคน\" = หมวดที่กฎหรือ AI เสนอ เป็นหมวดเดียวกับที่คนตัดสินบันทึก · \"ช่วงที่เป็นไปได้\" คือช่วงความเชื่อมั่น 95% (วิธี Wilson): " +
+          "เคสยิ่งน้อย ช่วงยิ่งกว้าง เช่น ตรง 2 จาก 2 เคส ยังไม่ได้แปลว่าตรง 100%",
+        "ข้อควรระวัง: คนตัดสินเห็นข้อเสนอของกฎและความเห็นของ AI ก่อนตัดสิน และการกด \"อนุมัติ\" โดยไม่เปลี่ยนหมวดนับว่าตรงกับกฎ " +
+          "ตัวเลขจึงเอนเอียงไปทางข้อเสนอของกฎ ไม่ใช่การเฉลยแบบไม่เห็นคำตอบก่อน",
+        "ทุกเคสเป็นข้อมูลสมมติ ตัวเลขนี้จึงยังไม่ใช่ความแม่นยำในงานจริง ไม่ว่าจะมีกี่เคส",
+      ];
+      if (groups.some((group) => group.ai && group.ai.simulated)) {
+        notes.push("AI ในชุดที่เขียนว่า \"AI จำลอง\" เป็นตัวจำลองที่จับคำสำคัญ ตัวเลขของ AI ในชุดนั้นจึงไม่ใช่ของ AI จริง");
+      }
+      if (!(status.storage || {}).persistent) {
+        notes.push("ที่เก็บข้อมูลเป็นแบบชั่วคราว (Render แผนฟรี): คำตัดสินหายทุกครั้งที่ระบบหลับ รีสตาร์ท หรืออัปเดต ตัวเลขนี้จึงนับเฉพาะรอบปัจจุบัน " +
+          `(เริ่มเมื่อ ${fullTime((report.retention || {}).store_started_at)}) จะสะสมข้ามวันได้ต้องมีดิสก์ถาวร`);
+      }
+      notes.push("การเปลี่ยนบทบาทของ AI เป็นการตัดสินใจของเจ้าของระบบ ระบบไม่เปลี่ยนเองจากตัวเลขนี้ และคนยังตัดสินทุกเคส");
+      parts.push(...notes.map((text) => el("p", { class: "lead", text })));
+    }
+    const node = panel("กฎกับ AI เทียบกับคำตัดสินของคน", parts);
+    node.id = "labels-panel";
+    return node;
+  }
+
   /* Tracing to Honeycomb (roadmap 5.1). The export figures are those of the part that answers this page (the
    * API); the Runner sends each case's spans the same way, to the same place. */
   const TRACING_OFF = {
@@ -2262,25 +2392,26 @@
     const runner = status.runner || {};
     const key = JSON.stringify([status.ai, status.storage, status.limits, status.workflows, status.default_workflow,
       runner.state, runner.alive, Math.round((runner.heartbeat_age_s || 0) / 10), status.version,
-      tracingSetup(status.tracing)]);
-    const figures = JSON.stringify([status.metrics || null, tracingFigures(status.tracing)]);
+      tracingSetup(status.tracing), can("review")]);
+    const figures = JSON.stringify([status.metrics || null, tracingFigures(status.tracing), state.labels.report]);
     if (view.dataset.key !== key) {
       view.dataset.key = key;
       view.dataset.figures = figures;
-      view.replaceChildren(
+      view.replaceChildren(...[
         el("p", { class: "settings-intro", text: "ดูอย่างเดียว — ค่าเหล่านี้มาจากโค้ด (ผ่านการทดสอบและ PR) และจากแท็บ Environment ของ Render หน้าเว็บแก้ไม่ได้โดยตั้งใจ เพื่อไม่ให้ใครเปลี่ยนตัวทำงาน AI หรือคีย์จากหน้าเว็บ" }),
         agentsPanel(status),
         el("div", { class: "panel-grid" }, [aiPanel(status.ai || {}), approvalPanel()]),
         systemPanel(status),
         metricsPanel(status),
+        can("review") ? labelsPanel(status) : null,  // a role that cannot decide cannot read the scorecard either
         tracingPanel(status),
-      );
+      ].filter(Boolean));
       return;
     }
     // Only the figures changed: redraw those panels, so the rest of the view (and its scroll) stays put.
     if (view.dataset.figures === figures) return;
     view.dataset.figures = figures;
-    for (const [id, build] of [["metrics-panel", metricsPanel], ["tracing-panel", tracingPanel]]) {
+    for (const [id, build] of [["metrics-panel", metricsPanel], ["labels-panel", labelsPanel], ["tracing-panel", tracingPanel]]) {
       const old = $(id);
       if (old) old.replaceWith(build(status));
     }
@@ -2302,6 +2433,7 @@
     if (!chat) {
       renderSettings();
       refreshUsers();
+      refreshLabels();
     }
     renderHeader();
   }
@@ -2900,6 +3032,7 @@
       state.inbox = [];
       state.me = null;
       state.users = freshUsers();  // a new token on screen goes with the lock: it was never stored
+      state.labels = freshLabels();
       renderUsers();
       state.keys = { thread: null, side: null, flow: null, inbox: null };
       showGate(null);

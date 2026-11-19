@@ -181,6 +181,13 @@ v2 workflow and reports each rate as numerator/denominator:
 
 On GitHub, every push shows this table on the Actions run page, using the mock AI.
 
+The labels of this scorecard are the developer's. Since 2026-11-19 the running service also counts the rules and the
+AI against the categories **people recorded** when they decided cases (roadmap 2.8, ADR-010's measurement):
+`GET /v1/reviews/scorecard` and the settings tab's "กฎกับ AI เทียบกับคำตัดสินของคน", per proposal version and split
+by Thai text or not, with a 95% interval on every rate. Those labels lean towards the proposal (the person saw it
+first) and, on Render's free plan, vanish at every sleep; see [intake_queue.md](intake_queue.md) ("Reviewer-label
+scorecard").
+
 ### The eval gate (roadmap 5.2)
 
 Every push and pull request also checks each case's answer against a committed baseline:
