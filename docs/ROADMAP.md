@@ -23,7 +23,7 @@ differs, this file and architecture.md win.
   - ถ้าสองฝ่ายเห็นไม่ตรงกัน โค้ดเจอสัญญาณ หรือ AI ชี้ เคสจะถูกยกให้คนดูก่อน พร้อมบอกเหตุผล (ขั้น 5.10)
 - ถ้าเครื่องดับกลางทาง ระบบทำต่อได้ ส่งซ้ำก็ไม่เกิดงานซ้ำ
 - ยกเลิกเคสที่ยังรอคิวได้ และทุกคำขอมีรหัสคำขอ (request id) ไว้ไล่ดูใน log (ขั้น 1.2, 1.3)
-- ผ่านชุดทดสอบอัตโนมัติ 561 ข้อ และเปิดใช้ออนไลน์บน Render แล้ว ระบบปิดตัวอย่างเรียบร้อย และการแก้แค่เอกสารไม่ทำให้ Render ขึ้นเวอร์ชันใหม่ (ขั้น 0.1, 0.5)
+- ผ่านชุดทดสอบอัตโนมัติ 571 ข้อ และเปิดใช้ออนไลน์บน Render แล้ว ระบบปิดตัวอย่างเรียบร้อย และการแก้แค่เอกสารไม่ทำให้ Render ขึ้นเวอร์ชันใหม่ (ขั้น 0.1, 0.5)
 - หน้าเว็บเป็นแบบแชท: พิมพ์เคส ดูขั้นตอนก่อนส่ง กดยืนยัน แล้วติดตามใน Flow และประวัติเหตุการณ์ (ขั้น 1.6)
 - หน้าเว็บบอกว่ามีเคสรอกี่เคส เคสที่รอนานสุดรอมานานเท่าไร ปกติแต่ละเคสใช้เวลาเท่าไร และเคสที่ไม่สำเร็จล้มเพราะอะไร (ขั้น 5.3)
 - ถ้ามีคนแก้กฎหรือ prompt แล้วคำตอบของเคสทดสอบเคสไหนเปลี่ยน ช่องตรวจบน GitHub จะเป็นสีแดงและบอกว่าเคสไหนเปลี่ยนอะไร (ขั้น 5.2)
@@ -54,13 +54,19 @@ differs, this file and architecture.md win.
   ระบบจริงไม่มีปุ่มนี้ และยังให้คนตัดสินทุกเคส ผลหลัก: ความมั่นใจที่ AI บอกเองใช้แยกถูกผิดไม่ได้ (ในชุดเคสยาก AI บอก "มั่นใจสูง" 122 จาก 128 เคส
   รวมเคสที่ตอบผิด 12 จาก 13 เคส) และไม่มีกติกาไหนในระบบตอนนี้ที่รู้ว่า "เคสนี้ต้องให้คนดู" เคสบัญชีถูกแฮ็ก เรื่องกฎหมาย หรือคำสั่งแอบแฝงจึงหลุดได้
   ([วิธีวัด](autosend_simulation.md), [ผลวัด](evidence/2026-11-11-autosend-limits.md))
+- **รายงานประเมินคุณภาพโครงการ (19 พ.ย. ที่คุณส่งมา):** ตรวจทุกข้อกับโค้ดจริงแล้ว ตรงทุกข้อ ([คำตอบทีละข้อ](evidence/2026-11-19-quality-report-response.md))
+  - แก้แล้ว 3 ข้อที่พบในโค้ด (หน้า 5 ของรายงาน):
+    - รุ่นของ AI ตอนนี้รวม "ด่านตรวจคำตอบ" ด้วย ถ้าวันหลังมีคนแก้ด่านนี้แต่ลืมเปลี่ยนรุ่น ช่องตรวจบน GitHub จะแดง และงานที่ค้างกลางทางจะไม่ถูกรันต่อด้วยกติกาใหม่แบบเงียบ ๆ
+    - ทุกเคสบันทึกรุ่นของ AI แบบครบ (รวมความยาวคำตอบสูงสุด) ตารางเทียบกับคำตัดสินของคนจึงไม่รวมตัวเลขต่างรุ่นกัน เคสเก่าที่ไม่รู้รุ่นแสดงว่า "ไม่ทราบรุ่น"
+    - เคสภาษาอังกฤษที่มี ฿ ไม่ถูกนับเป็นเคสไทยแล้ว (นับเป็นเคสไทยเมื่อมีตัวอักษรไทยจริง)
+  - ข้ออื่นเป็นแผนงาน: 1.7 (ป้าย "ถาวร" ต้องตรวจจริง และสัญญาณแยกเมื่อตัวรันงานติด ทำต่อเป็นงานถัดไป) 1.8 (ทดสอบกดจริงบนจอขนาดมือถือใน GitHub) 2.9 (ให้คนเลือกหมวดก่อนเห็นข้อเสนอ ต้องรอคุณเห็นชอบ) 2.10 (เวลาที่คนใช้ตัดสินแต่ละเคส) และเพิ่มเกณฑ์ใน 1.4, 5.7, 7.2, 7.5 ส่วนที่ต้องให้คุณตัดสินใจ: D1 (ดิสก์ถาวร) และข้อมูลจริง (D4)
 
 **ลำดับต่อจากนี้** แต่ละขั้นจบด้วยสิ่งที่คุณลองเองได้
 
 | ขั้น | ทำอะไร | คุณจะได้ลองอะไร | สถานะ (16 พ.ย. 2026) |
 |---|---|---|---|
 | 0 | เปิดใช้ออนไลน์บน Render และวัดผล AI จริงครั้งแรก | ใส่เคสบนหน้าเว็บจริง และอ่านผลวัดของ AI จริง | ออนไลน์แล้ว; วัดผล AI จริงครั้งแรกแล้วด้วย Typhoon (0.3, 6 พ.ย.); ที่เหลือรอคุณตัดสินใจ: D1 แผน Render แบบเสียเงิน, D2 API key ของ Claude และ 0.4 กับ Typhoon (ฟรี แต่ข้อความที่พิมพ์บนหน้าเว็บจะถูกส่งไป Typhoon) |
-| 1 | เก็บงานเล็ก ๆ ให้ระบบแน่นขึ้น | ยกเลิกเคสที่ยังรอคิวได้ | เสร็จ ยกเว้น 1.4 (สำรองข้อมูล) ที่ต้องใช้แผน Render แบบเสียเงิน |
+| 1 | เก็บงานเล็ก ๆ ให้ระบบแน่นขึ้น | ยกเลิกเคสที่ยังรอคิวได้ | เสร็จ ยกเว้น 1.4 (สำรองข้อมูล) ที่ต้องใช้แผน Render แบบเสียเงิน; เพิ่มจากรายงานคุณภาพ 19 พ.ย.: 1.7 (สถานะที่ตรวจจริง ทำต่อเป็นงานถัดไป) และ 1.8 (ทดสอบกดจริงบนจอมือถือ) |
 | 2 | ให้คนรีวิวได้จริง: ผู้รีวิวมีรหัสของตัวเอง กดอนุมัติหรือไม่อนุมัติได้ และ n8n แจ้งเตือน | กล่อง "รอรีวิว" บนหน้าเว็บ และข้อความแจ้งเตือน | เริ่มแล้ว (10 พ.ย. ตามข้อ 4 ของผู้ตรวจสอบอิสระ): 2.2 บันทึกการตัดสินและ 2.4 การ์ดตัดสินกับรายการ "รอรีวิว" ทำแล้ว โดยผู้ตัดสินคือผู้ถือรหัสเข้าใช้ร่วม (คุณ); 2.3 งานต่อเนื่องหลังอนุมัติทำแล้ว (11 พ.ย.) เป็นเส้นทางแรกของตัวกลาง (ขั้น H); คุณลองบนหน้าเว็บจริงแล้ว (16 พ.ย.): อนุมัติ 1 เคส เกิดงานต่อเนื่อง 1 งานและเสร็จ ป้าย "ด่วน" ผ่านแล้วระหว่างทดสอบรหัสรายคน ส่วนการกด "ไม่อนุมัติ" โดยไม่ใส่เหตุผลยังไม่ได้ลอง; 2.1 รหัสรายคนของผู้ตรวจและผู้ส่งเคสทำแล้ว (16 พ.ย.) และคุณลองบนหน้าเว็บจริงผ่านครบทุกขั้นแล้ว (16 พ.ย.); 2.8 นับว่ากฎกับ AI ตรงกับคำตัดสินของคนกี่เคส ทำแล้ว (19 พ.ย.); 2.5 n8n ยังไม่ทำ |
 | 3 | ผู้ช่วยแนะนำแหล่งเรียน (`study_guide.v1`) ตามหลักปรัชญาของคุณ | พิมพ์เรื่องที่อยากรู้ด้วยคำธรรมดา แล้วได้แหล่งเรียนไม่เกิน 5 แหล่งพร้อมลำดับการเรียน | สร้างครบทุกขั้นแล้ว (คุณเลือกขั้นนี้ก่อนขั้น 2 เมื่อ 5 พ.ย.): 3.1 คลังแหล่งเรียน 3.2 ตัวผู้ช่วย และ 3.3 ชุดข้อสอบ ทำแล้ว (ดูตัวอย่างคำตอบและผลข้อสอบใน Actions ได้); 3.4 ช่อง "อยากเรียน" บนหน้าเว็บ สร้างและ merge แล้ว (7 พ.ย.) คุณลองบนหน้าเว็บจริงผ่านแล้ว (8 พ.ย.); รันกับ AI จริง (Typhoon) แล้ว หาหัวข้อถูก 46 จาก 48 ข้อ ไม่มีลิงก์นอกคลัง (Claude รอ D2); **หยุดพัฒนาเพิ่มไว้ก่อนตามที่คุณสั่ง (11 พ.ย.)**: ของที่มีอยู่ยังใช้ได้และช่องตรวจยังรันเหมือนเดิม |
 | 4 | ช่องคุยภาษาธรรมดา: ระบบเข้าใจว่าคุณขออะไร บอกตรง ๆ เมื่อเรื่องอยู่นอกกรอบ และถามกลับ 1 คำถามเมื่อข้อมูลไม่พอ | คุยกับระบบได้เลย ไม่ต้องเลือกประเภทงานเอง | ยังไม่เริ่ม (ขั้น 3 สร้างครบแล้ว เริ่มได้เมื่อคุณเลือก) |
@@ -119,9 +125,11 @@ owner.
 | 1.1 | Neutral telemetry phase names (the one planned Core change) | ✅ PR #21 | — |
 | 1.2 | Request ids to follow a request through the logs | ✅ PR #22 | — |
 | 1.3 | Cancel a job that is still queued | ✅ PR #23 | — |
-| 1.4 | Backup, restore and retention | ⬜ | D1 = paid (disk) |
+| 1.4 | Backup, restore and retention | ⬜; the quality report of 2026-11-19 adds its acceptance: cases, decisions, receipts and token states read back after a deploy and after a restore into new storage | D1 = paid (disk) |
 | 1.5 | Docs truth checks in CI | ✅ PR #24 | — |
 | 1.6 | New look for the web page from the owner's mockup: chat intake with a confirm step, Flow and Trace, read-only settings | ✅ PR #18, merged and deployed 2026-11-03; the owner reported the owner test passed on the live page | — |
+| 1.7 | Storage and Runner status that are checked, not assumed: `persistent` only on a confirmed mount, `/readyz` beside `/healthz`, a Sentry signal when the Runner is blocked | ⬜ planned next (quality report of 2026-11-19, page 4) | — |
+| 1.8 | A browser walk in CI on a phone-sized screen: send a case, decide it | ⬜ planned (quality report of 2026-11-19, page 6) | — |
 | 2.1 | Personal access tokens and roles (replaces the shared key) | ✅ built on 2026-11-16 (ADR-034): the owner issues reviewer and submitter tokens on the page (shown once), revokes them at once, and every route checks the role; on the free plan tokens are lost at every sleep (fail closed); the owner's test on the live page passed every step on 2026-11-16 (confirmed by the owner on 2026-11-19) | — |
 | 2.2 | Review ledger and decisions API | ✅ built on 2026-11-10 before 2.1 (ADR-027); since 2.1 (2026-11-16) a reviewer's token decides, recorded by its id, and a revoked token or the wrong role is denied | — |
 | 2.3 | Linked phase-B job on approval | ✅ built on 2026-11-11 as the first route of the skill-handoff exchange (H3, ADR-030): one approval starts exactly one `case_triage.v2.apply` job with a Core receipt ([evidence](evidence/2026-11-11-skill-handoff.md)); on the live page on 2026-11-16 the owner's approval started one, which completed in 42 ms | 2.2 |
@@ -129,7 +137,9 @@ owner.
 | 2.5 | n8n intake and reviewer notifications | ⬜ | 2.1, 2.2, D3 |
 | 2.6 | Side-effect contract | ⬜ when needed | before any outward action |
 | 2.7 | Artifact store with hash checks | ⬜ when needed | — |
-| 2.8 | Measure rules vs AI against reviewer labels | ✅ built on 2026-11-19: `GET /v1/reviews/scorecard` and a panel in the settings tab (owner and reviewers) count, over the newest 500 decided cases, how often the rules and the AI named the category a person recorded, per proposal version (rules, AI, prompt), split by Thai text or not, every rate with its counts and a 95% Wilson interval; counts only. Evidence for D6 needs labels that last (D1) and are not led by the proposal | 2.2, 0.3 |
+| 2.8 | Measure rules vs AI against reviewer labels | ✅ built on 2026-11-19: `GET /v1/reviews/scorecard` and a panel in the settings tab (owner and reviewers) count, over the newest 500 decided cases, how often the rules and the AI named the category a person recorded, per proposal version (rules, AI, prompt), split by Thai text or not, every rate with its counts and a 95% Wilson interval; counts only. Evidence for D6 needs labels that last (D1) and are not led by the proposal. Fixed the same day from the quality report: groups by the AI agent's whole version (ADR-035; unknown for older results) and counts a case as Thai only by a Thai letter | 2.2, 0.3 |
+| 2.9 | Blind labels: the person picks a category before seeing the proposal | ⬜ planned (quality report of 2026-11-19) | the owner's go-ahead; D1 |
+| 2.10 | Reviewer time per case, from opening it to deciding | ⬜ planned (quality report of 2026-11-19) | real figures need D3 and D1 |
 | 3.1 | Topic catalog and verified resource library | ✅ PR #32; links checked by *Study library link check* on the PR ([evidence note](evidence/2026-11-05-study-library-links.md)); the weekly run starts after the merge | — |
 | 3.2 | `study_guide.v1` workflow | ✅ PR #33; first live run with Typhoon in PR #38 (topic correct 46/48, 0 of 142 links outside the library); Claude needs D2 | 3.1 |
 | 3.3 | Study-guide evaluation set and scorecard | ✅ PR #34 with the mock in CI (an eval gate); first live run with Typhoon on 2026-11-06 (PR #38): topic correct 46/48, 0 of 142 links outside the library; Claude after D2 | 3.2 |
@@ -144,7 +154,7 @@ owner.
 | 5.4 | Robustness benchmark, stage 1: open and synthetic edge cases as a CI gate | ✅ PR #41 (2026-11-07), merged after the owner checked the run page; first run: 206/270 own items pass, 8 bugs, 0 of 4,680 sweep checks broke a promise ([evidence note](evidence/2026-11-07-robustness-stage1.md)) | — |
 | 5.5 | Fix what stage 1 found (the 8 bugs, then the gaps) | 🟡 the 8 bugs fixed in PR #42, merged 2026-11-08 (after the deploy the owner's case on the live page still reached review): 239/270 own items pass after E2 (215 after PR #42), 0 bugs, 20 gaps; one small Core change (ADR-025); E2 in PR #64 fixes 24 of the 27 original rules gaps and records the three retained limits ([evidence](evidence/2026-11-11-e2-rules-v2.md)); on 2026-11-19 the invisible-text gaps were fixed: 246/270, 0 bugs, 13 gaps ([evidence](evidence/2026-11-07-robustness-stage1.md#invisible-and-direction-changing-characters-2026-11-19-roadmap-55)); left: the masking gaps (new masking rules) and NFC (an ADR) | 5.4 |
 | 5.6 | Stage 2: open benchmarks (CLINC150, BANKING77, MASSIVE th-TH/en-US) with Typhoon | ✅ built in PR #66 (2026-11-11): the sets are built at run time from pinned sources (`tests/open_benchmarks/`, SHA-256 checked, nothing downloaded committed), the mock run is a PR check of *Auto-approve limits*, and the first Typhoon run is in the [evidence note](evidence/2026-11-11-autosend-limits.md); the study guide's part waits while it is paused | 5.4 |
-| 5.7 | Stage 3: prompt injection, personal data, load and restarts, weekly live drift | 🟡 the first injection measurement in PR #66 (BIPIA's 75 attacks and 16 steering or approval attempts, [evidence](evidence/2026-11-11-autosend-limits.md)); personal data, load, restarts and drift not built | 5.4; drift schedule is the owner's choice |
+| 5.7 | Stage 3: prompt injection, personal data, load and restarts, weekly live drift | 🟡 the first injection measurement in PR #66 (BIPIA's 75 attacks and 16 steering or approval attempts, [evidence](evidence/2026-11-11-autosend-limits.md)); personal data, load, restarts and drift not built; the quality report of 2026-11-19 adds the load measures (95th percentile of the queue wait and of send-to-result, backlog and failures together) | 5.4; drift schedule is the owner's choice; the target volume is the owner's |
 | 5.9 | Auto-approve limits: a simulated "send it myself" button on the open benchmarks and a hard set (ADR-031, [design](autosend_simulation.md)) | ✅ PR #66 (2026-11-11), asked for by the owner: a replay of saved answers, never wired into the service; on the 128-case hard set Typhoon said `high` on 122 and was wrong on 13, 12 of them `high`; every policy lets cases that must see a person through ([evidence](evidence/2026-11-11-autosend-limits.md)) | 5.6 |
 | 5.10 | Attention: raise the cases a person should see first, by code signals and the AI's flag (ADR-032, ADR-033) | ✅ built and measured in PR #67 (2026-11-11), the session's own plan after the owner said to plan anew with one expectation, better effectiveness, and then asked for more capability. Built: the `screen` step and signals v1 then v2 (v2 from the development half of the open data, measured on a sealed half), the prompt `triage_classify_v2` with an `attention` answer that can only add a flag, scorecard figures, a replay, the `screened` policy, CI steps. Live with Typhoon, 1,780 cases, all waiting for a person: `needs_person` raised 38/38 (development) and 32/32 (the developer's held-out set; 12/32 before); sealed open security requests 183/196; BIPIA 51/75 (sealed half 14/30; 0/75 before). Costs: raised cases 234 → 379 of 1,320, about twice the input tokens, the AI's category right 1,157 → 1,147 of 1,513 ([evidence](evidence/2026-11-11-attention-signals.md)). The page's mock AI never flags. Merging redeploys Render | 5.9 |
 | 5.8 | Local open-model lane: llama.cpp and Typhoon 2.5 4B on the GitHub runner (ADR-026) | ✅ built in PR #46, with two smoke runs ([evidence note](evidence/2026-11-08-first-local-model-smoke.md)); first full run on `main` on 2026-11-08: rule mistakes raised 32/32 (Typhoon 32/32), triage AI correct 58/61 (Typhoon 60/61), topic correct 44/48 (Typhoon 46/48), 0 of 142 links outside the library, about 7 times Typhoon's latency ([evidence note](evidence/2026-11-08-first-local-model-full.md)); next, the owner chooses a branch (5.8, "After the first full run", step 2) | — |
@@ -152,10 +162,10 @@ owner.
 | 6.2 | Pattern B: planner → checked plan → linked job | ⬜ | 2.2, 4.2 |
 | 6.3 | MCP server (submit, get, list; never review decisions) | ⬜ | 2.1 |
 | 7.1 | Mask personal data before AI calls; narrow key exposure | 🟡 masking built in PR #28, enforced by the gateway itself since 2026-11-10 (`redact-v2`, ADR-028); key exposure: design note only | before any real data |
-| 7.2 | Production HTTP server and authentication hardening | ⬜ | before other users |
+| 7.2 | Production HTTP server and authentication hardening | ⬜; measurable service targets added by the quality report of 2026-11-19 | before other users |
 | 7.3 | Independent security review | ⬜ owner; a first independent review of the code and docs on 2026-11-10 found four problems, all answered ([evidence](evidence/2026-11-10-independent-review-response.md)); the threat model and a test of the running service are left | 7.1, 7.2 |
 | 7.4 | Public-release checklist | ✅ public since 2026-11-08 with its full history (D5): history audited, the 7 run logs that could print the old DSN deleted, read-only workflow tokens, README section for visitors and SECURITY.md (PR #44); the owner replaced the Sentry DSN, deleted the merged branches, switched the visibility and turned on secret scanning, push protection and private vulnerability reporting | — |
-| 7.5 | Consented pilot with real volunteers | ⬜ owner decision D4 | 7.1–7.3 |
+| 7.5 | Consented pilot with real volunteers | ⬜ owner decision D4; before the first real case the quality report of 2026-11-19 asks for the data kinds, who sees which case and how long data stays, each tested | 7.1–7.3 |
 | 7.6 | The personal e-mail address in the public history | ✅ new commits checked in CI (2026-11-10); D8 decided the same day: the history stays as it is | — |
 | E1 | First case after a start: seconds, not ten ([effectiveness plan](effectiveness_plan.md)) | ✅ built in PR #60 (2026-11-10): the image had no bytecode cache (0 of the 141 modules the Runner imports) and now carries one, required by *Service container*; in CI the first case went from 0.989 s to 0.256 s, and from 14.4 s to 3.1 s with the container held to 0.1 CPU ([evidence note](evidence/2026-11-10-e1-bytecode-cache.md)); on Render it was 9.0 to 10.5 s before and 3.2 s for the first job after a free-plan sleep on 2026-11-16 (one observation, the five-step workflow) | — |
 | E2 | Rules v2: an official suggestion that reads Thai (also decides the 27 rules gaps of 5.5) | ✅ built and measured in PR #64, merged on 2026-11-11: rules 61/61 development (Thai 26/26), 105/116 edge, 22/40 held-out; Typhoon answered all 217 cases, no v1-correct case regressed, code checks passed; 24 original rules gaps fixed, 3 retained. Fewer elevated flags leave 8 jointly wrong edge cases unflagged as before (E5 open). [Evidence and same-answer comparison](evidence/2026-11-11-e2-rules-v2.md) | — |
@@ -445,7 +455,48 @@ decisions would vanish on every sleep. Since 2026-11-10 the API and the page say
      a design note before deleting any Core data; check what `neuron_flow/storage.py` supports.
 - **Done when:** the restore drill passes in CI, and the steps are written in intake_queue.md with a Thai
   summary.
+- **Acceptance added by the quality report of 2026-11-19:** after a deploy, and after a backup is restored into new
+  storage, the same cases, decisions, Core receipts and token states (a revoked token still refused) read back; the
+  queue database and Core's workspace are restored together, from one pass.
+- **Note:** the CI drill (Docker volumes, a fresh container) costs nothing and could be built before D1; on Render
+  it means something only with the disk. Build it before D1 only if the owner asks.
 - **Don't:** let the API process read Core's SQLite files (ADR-001).
+
+### 1.7 Storage and Runner status that are checked, not assumed (planned next; from the quality report of 2026-11-19)
+
+- **Why (report, page 4, both rated high):**
+  - storage: `persistent` comes from the settings alone (`NEURON_FLOW_DATA_DIR` set means "persistent"), so a wrong
+    path or a missing disk would make the page say "บันทึกถาวรแล้ว" while every deploy still empties the queue;
+  - readiness: with Typhoon chosen and no key, `/healthz` answers 200 `ok: true` while the Runner is
+    `blocked_config`, so whoever watches only the health check cannot see that cases wait.
+- **Tasks:**
+  1. `persistent` only when it is checked: the data folder sits on a filesystem mounted on its own (on Linux, the
+     longest mount point in `/proc/self/mountinfo` that holds it) that is not the container's root, `overlay`,
+     `tmpfs` or `ramfs`. Otherwise the reply says the folder is configured but not confirmed, and `lost_on` stays
+     the free plan's list. `/v1/status` says why (`storage.check`), and the page says "ถาวร" only when confirmed.
+  2. Readiness of its own: `GET /readyz` (no key, no detail): 200 while the Runner's heartbeat is fresh and its state
+     is `idle` or `running`; 503 with a state code (`blocked_config`, `not_alive`, `starting`) otherwise. `/healthz`
+     stays liveness for Render's health check: a blocked Runner must not make Render restart the service, which on
+     the free plan would empty the queue, and the API keeps admitting cases as its policy says.
+  3. A signal: the Runner reports `blocked_config` to Sentry once per start (the error type, never a key or a
+     value), so the owner hears about it without watching the page.
+  4. Tests: mount-table parsing; the container smoke test with a volume (confirmed) and with a plain folder (not);
+     Typhoon without a key (`/healthz` 200, `/readyz` 503, one Sentry event), then the same volume with the setting
+     fixed (the queued case runs).
+- **Done when:** the report's acceptance holds: a separate signal when the Runner cannot go on, cases still
+  admitted, and no claim of persistent storage that was not checked.
+- **Owner test (Thai, after the merge):** เปิด https://neuron-flow.onrender.com/readyz ต้องเห็น `{"ok":true,...}`
+  และแท็บ "ตั้งค่า" ยังบอกว่าที่เก็บข้อมูลเป็นแบบ "ชั่วคราว" เหมือนเดิม (แผนฟรีไม่มีดิสก์)
+- **Optional, the owner's choice:** an uptime monitor on `/readyz` in the owner's Sentry account (it creates
+  something in that account, so the owner decides).
+
+### 1.8 A browser walk in CI: send a case and decide it on a phone-sized screen (planned)
+
+- **Why:** most page tests read the page's source (quality report of 2026-11-19, page 6), so a button that cannot be
+  clicked would pass while its text is still there. The walks with a headless browser so far were done by hand.
+- **Idea:** a CI job starts the service, opens the page in Chromium at a phone's width, sends a case, waits for
+  review, approves it, and checks the linked job and the scorecard; a screenshot goes to the run page.
+- **Needs:** a CI-only test dependency (Playwright), with its reason in the PR (rule 8); nothing in the image.
 
 ### 1.5 Docs truth checks in CI (optional)
 
@@ -703,6 +754,36 @@ person ends at `REVIEW_REQUIRED`, and nothing else can happen to it.
   are a keyword simulation's; on the free plan the decisions vanish at every sleep, so the labels cannot add up to
   D6's evidence until there is a disk (D1). Blind labels (a person deciding before seeing the proposal) are a later
   option, not built.
+- **Fixed on 2026-11-19 (later), from the quality report of that day** (findings 2 and 3,
+  [response](evidence/2026-11-19-quality-report-response.md)):
+  - the AI part of a group is now the AI agent's whole version as Core checked it (`result.ai.agent_version`, which
+    the Runner records with each result: provider, model, prompt, `max_tokens`, effort, masking rules, the gateway's
+    answer checks and the answer format; ADR-035). Before, the same mock with `max_tokens` 256 and 2,048 made one
+    group. A result recorded before this has no version: it stays a group of its own, shown as "ไม่ทราบรุ่น"
+    (`version_known: false`), never added to a known version;
+  - a case counts as `th` only when it holds a Thai letter (Unicode Lo or Lm in the Thai block). Before, the whole
+    block counted, so "I was charged ฿500 twice" was `th`, and so were Thai digits or tone marks alone. No case in a
+    committed set changes language (checked over every golden and robustness file).
+
+### 2.9 Blind labels: the person picks a category before seeing the proposal (planned, needs the owner's go-ahead)
+
+- **Why:** 2.8's labels lean towards the proposal, because the person sees it first and approving as proposed keeps
+  the rules' category. The quality report of 2026-11-19 asks for labels given before the proposal is seen before any
+  score is used to choose an AI (D6).
+- **Idea:** an option on the decision card (for example on a share of cases, or when the owner switches it on): the
+  card first asks for the category with the rules' and the AI's proposals hidden, records that blind label with the
+  decision, then shows the proposals and the usual approve or reject. The scorecard counts blind labels separately.
+- **Needs:** the owner's go-ahead, because it changes how a reviewer works (one more step on those cases), and a disk
+  (D1) for the labels to add up.
+
+### 2.10 Reviewer time per case (planned)
+
+- **Why:** raising more cases for a person (5.10) costs reviewer time, which nothing measures yet (quality report of
+  2026-11-19). Before more users: compare how long a person takes from opening a case to deciding it, and how often
+  they change the rules' category, with the way the work is done today.
+- **Idea:** the page sends, with the decision, how many seconds the card was open (a number only, never text); the
+  scorecard reports the median and the 95th percentile per group, beside the category-change rate it already has.
+- **Needs:** nothing to build; real figures need real reviewers (D3) and a disk (D1).
 
 ---
 
@@ -1200,6 +1281,11 @@ workflow types.
   claim an approval. The structural promise held: no job was decided without a person. The AI's answers are in
   the [evidence note](evidence/2026-11-11-autosend-limits.md). Personal data, load, restarts and drift are not
   built.
+- **Load, as the quality report of 2026-11-19 asks it (before more users):** several cases at once at a target
+  volume, measuring the 95th percentile of the wait in the queue and of the time from sending to seeing the result,
+  with the backlog and the failures counted together. One Runner works one case at a time (ADR-001, ADR-003), so the
+  question is how long cases wait, not how many machines. The target volume (cases a day, reviewers) is the owner's
+  to give; without one, the first run uses a small team's day and says so.
 
 ### 5.8 Local open-model lane (asked by the owner on 2026-11-08)
 
@@ -1452,6 +1538,9 @@ workflow types.
 - **Server:** when real traffic starts, replace `app/api/server.py` with a small WSGI adapter around
   `ApiApp`, served by a production server such as waitress. Keep the same routes and tests.
 - **Authentication:** add token expiry, an audit log of owner actions, and per-token limits.
+- **Service targets (quality report of 2026-11-19):** before a public service, write measurable targets (for
+  example the share of time `/readyz` is ready, and the 95th percentile of the time from sending a case to its
+  review) and measure them (1.7, 5.7).
 
 ### 7.3 Independent security review (owner)
 
@@ -1534,6 +1623,13 @@ workflow types.
 - **Only after 7.1–7.3,** with written consent, a disclosed task scope and approved data.
 - **Never** use real customer tickets without permission.
 - Results go to the evidence track, separate from synthetic numbers.
+- **Before the first real case (quality report of 2026-11-19), decided with the owner and then built and tested:**
+  - which kinds of personal data the pilot will receive, with synthetic examples of each kind in the masking tests
+    (7.1; ten masking gaps are open in the robustness gate today);
+  - who sees which case: today every token may read every case (`GET /v1/jobs` is open to all three roles), which
+    suits one team sharing one queue; with outside submitters, a submitter should read only the cases it sent;
+  - how long case text and reviewers' reasons stay in the queue database, and a tested deletion (1.4's retention).
+  - Several organisations on one service is multi-tenancy, a P2 item: not planned.
 
 ### 7.6 The personal e-mail address in the public history (owner decision D8)
 
@@ -1826,3 +1922,12 @@ of H5 were built ([evidence](evidence/2026-11-11-skill-handoff.md)).
   characters (an empty one is invalid). The robustness gate: 246/270, 0 bugs, 13 gaps (239 and 20 before); four
   end-to-end items now expect a refusal at admission, and the benchmark gained that expectation. The masking gaps
   and NFC are left. The study guide's question box was not touched (paused).
+- 2026-11-19: the owner shared a quality report of the project at `main` @ `3a4b97f` (7 pages, in Thai) and asked
+  for it to be read point by point and a plan to start. Every finding was checked against the code and agrees
+  ([response](evidence/2026-11-19-quality-report-response.md)). The three code findings of its page 5 are fixed in
+  one pull request: the gateway's answer checks are part of every AI agent's version and pinned by a test (ADR-035;
+  PR #74 and PR #42 had changed them under the same version), each result records the AI agent's version as Core
+  checked it and 2.8 groups by it, and a case counts as Thai only by a Thai letter (not ฿, Thai digits or marks
+  alone). Its other points became plan items: 1.7 (storage status checked, not assumed; `/readyz` beside `/healthz`;
+  a Sentry signal when the Runner is blocked), planned next; 1.8 (a browser walk in CI); 2.9 (blind labels, the
+  owner's go-ahead); 2.10 (reviewer time); and acceptance or measures added to 1.4, 5.7, 7.2 and 7.5.

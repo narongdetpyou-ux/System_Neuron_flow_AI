@@ -1,6 +1,6 @@
 # Intake API, job queue, Runner and web page (round 2, Milestone B)
 
-**Status:** built in PR #11 and tested offline (561 tests on 2026-11-19, including killing the Runner
+**Status:** built in PR #11 and tested offline (571 tests on 2026-11-19, including killing the Runner
 mid-step). The container build is checked on every push by *Actions → Service container*. Live on
 Render's free plan since 2026-11-01 (`render.yaml`). Railway was the first choice, but it has paused new
 sign-ups since 22 Oct 2026 after a security incident; `railway.json` stays in the repository for later.
@@ -143,11 +143,12 @@ Design principles: [design_philosophy.md](design_philosophy.md).
 | กฎเสนอหมวดตรงกับคน | กี่เคสจากเคสที่มีเฉลย |
 | AI ให้ความเห็นได้ / AI เสนอหมวดตรงกับคน | AI ตอบได้กี่เคส และตรงกี่เคส นับเฉพาะเคสที่ AI ตอบได้ |
 | เมื่อกฎกับ AI เห็นไม่ตรงกัน | คนบันทึกหมวดเดียวกับ AI กี่เคส เดียวกับกฎกี่เคส หรือไม่ตรงทั้งคู่ |
-| เคสที่มีอักษรไทย / ไม่มีอักษรไทย | แยกตามภาษา โดยดูว่าข้อความมีตัวอักษรไทยไหม (ระบบดูเอง เพราะเคสจริงไม่มีป้ายภาษา) |
+| รุ่นของ AI | การตั้งค่าของ AI ที่ระบบตรวจไว้กับผลของเคส เช่น ความยาวคำตอบสูงสุด (`max_tokens`) และรุ่นของด่านตรวจคำตอบ (`checks`) ถ้าเป็น "ไม่ทราบรุ่น" คือเคสที่เสร็จก่อนระบบเริ่มเก็บรุ่นนี้ (19 พ.ย.) ซึ่งแยกนับเป็นชุดของตัวเอง |
+| เคสที่มีอักษรไทย / ไม่มีอักษรไทย | แยกตามภาษา โดยดูว่าข้อความมีตัวอักษรไทยไหม (ระบบดูเอง เพราะเคสจริงไม่มีป้ายภาษา) เครื่องหมาย ฿ เลขไทย หรือวรรณยุกต์อย่างเดียวไม่นับเป็นเคสไทย เช่น "I was charged ฿500 twice" นับเป็นเคสที่ไม่มีอักษรไทย |
 | ช่วงที่เป็นไปได้ | ช่วงความเชื่อมั่น 95% (วิธี Wilson) เคสยิ่งน้อย ช่วงยิ่งกว้าง เช่น ตรง 2 จาก 2 เคส ยังไม่ได้แปลว่าตรง 100% |
 
 ข้อควรรู้:
-- ถ้ากฎ รุ่น AI หรือ prompt เปลี่ยน ระบบแยกนับเป็นชุดใหม่ ไม่รวมตัวเลขของต่างรุ่นเข้าด้วยกัน ชุดล่าสุดอยู่บนสุด
+- ถ้ากฎ AI prompt หรือการตั้งค่าของ AI (เช่น ความยาวคำตอบสูงสุด หรือด่านตรวจคำตอบ) เปลี่ยน ระบบแยกนับเป็นชุดใหม่ ไม่รวมตัวเลขของต่างรุ่นเข้าด้วยกัน ชุดล่าสุดอยู่บนสุด (แก้ตามรายงานประเมินคุณภาพ 19 พ.ย.: ก่อนหน้านี้ความยาวคำตอบที่ต่างกันถูกนับรวมเป็นชุดเดียว)
 - คนตัดสินเห็นข้อเสนอของกฎและความเห็นของ AI ก่อนตัดสิน และ "อนุมัติ" โดยไม่เปลี่ยนหมวดนับว่าตรงกับกฎ ตัวเลขจึงเอนเอียงไปทางข้อเสนอของกฎ
 - ทุกเคสเป็นข้อมูลสมมติ ตัวเลขนี้จึงยังไม่ใช่ความแม่นยำในงานจริง และถ้าใช้ AI จำลอง ตัวเลขของ AI ก็ไม่ใช่ของ AI จริง
 - บน Render แผนฟรี คำตัดสินหายทุกครั้งที่ระบบหลับ รีสตาร์ท หรืออัปเดต ตัวเลขจึงนับเฉพาะรอบปัจจุบัน จะสะสมข้ามวันได้ต้องมีดิสก์ถาวร (D1)
@@ -385,7 +386,7 @@ app runs, carries an `X-Request-Id` header:
 | `GET /v1/status` | Runner heartbeat, queue counts, queue and run-time figures (`metrics`, below), AI mode, tracing (`tracing`: on or off and why, where spans go, the last export), storage, limits (`summary_min_chars`/`summary_max_chars` for a case, `message_min_chars`/`message_max_chars` for a study question, the queue and body caps), and each workflow's steps (`workflows[].steps`) | 200 | 401, 429 |
 | `POST /v1/jobs` | Admit a job | 202 new, 200 duplicate | 400, 401, 409, 411, 413, 415, 429, 503 |
 | `GET /v1/jobs?limit=20&before=<seq>` | Newest first; `next_before` is the next cursor | 200 | 400, 401 |
-| `GET /v1/jobs/{job_id}` | Status, the step plan frozen at claim (`plan`, `null` while queued), reviewer proposal, step timeline, AI provenance, receipt hash, the admitting `request_id`, and `trace_id` (the job's trace in Honeycomb; `null` when tracing was off) | 200 | 401, 404 |
+| `GET /v1/jobs/{job_id}` | Status, the step plan frozen at claim (`plan`, `null` while queued), reviewer proposal, step timeline, AI provenance (with `agent_version`, the AI step's version as Core checked it, ADR-035; `null` for results recorded before 2026-11-19), receipt hash, the admitting `request_id`, and `trace_id` (the job's trace in Honeycomb; `null` when tracing was off) | 200 | 401, 404 |
 | `GET /v1/jobs/{job_id}/events?after=<seq>&limit=50` | History in bounded pages (`limit` 1–100) | 200 | 400, 401, 404 |
 | `POST /v1/jobs/{job_id}/cancel` | Withdraw a job that is still `QUEUED`. The body is empty or `{}`. Returns the job view plus `changed` (`false` when it was already cancelled) | 200 | 400, 401, 404, 409 `not_cancellable` (with `job_status`), 415 |
 | `GET /v1/reviews?state=PENDING&limit=20&after=<cursor>` | Reviews in one state (`PENDING`, `APPROVED`, `REJECTED`). Pending: elevated first, then the oldest; decided: newest first. `next_after` is the next cursor; `counts` has every state and `elevated_pending` | 200 | 400, 401 |
@@ -422,12 +423,18 @@ workflow, agent, translator or the Runner reads it (a test checks).
 - A **label** is a decision's `final_category`: every approval has one, a rejection only when the person named the
   right category. A rejection without one is `unlabelled` and stays out of every rate.
 - `groups`: one per proposal source, newest first: `workflow_type`, `rules` (the suggestion source, with the
-  keyword list's complete SHA-256) and `ai` (`provider`, `model`, `prompt_id`, `prompt_sha256`, `simulated`;
-  `null` for a rules-only workflow). Figures of two versions are never added together.
+  keyword list's complete SHA-256) and `ai` (`provider`, `model`, `prompt_id`, `prompt_sha256`, `agent_version`,
+  `version_known`, `simulated`; `null` for a rules-only workflow). Figures of two versions are never added together.
+  The AI part of the key is `agent_version`, the version Core checked for the AI step, which the Runner records with
+  each result (`result.ai.agent_version`): provider, model, prompt, `max_tokens`, effort, masking rules, the
+  gateway's answer checks and the answer format (ADR-035). A result recorded before that (2026-11-19) has
+  `agent_version: null` and `version_known: false`; it is grouped by provider, model and prompt, apart from every
+  known version.
 - Each group: `decided`, `approved`, `rejected`, `labelled`, `unlabelled`; `rules_match` (over the labelled cases),
   `ai_answered` (over the labelled cases), `ai_match` (over the labelled cases the AI answered), `rules_ai_agree`,
   `when_disagreeing` (`total`, `ai_match`, `rules_match`, `neither`), `by_language` (`th` when the case text holds a
-  Thai letter, else `non_th`; the text itself is never returned) and the first and last decision times. The AI's
+  Thai letter, Unicode Lo or Lm in the Thai block, else `non_th`: the baht sign, Thai digits or tone marks alone do
+  not count; the text itself is never returned) and the first and last decision times. The AI's
   figures are `null`, not 0, for a workflow without an AI.
 - Every rate is `{numerator, denominator, rate, low_95, high_95}`: the 95% Wilson score interval, so 2 of 2 reads
   as 34–100%, not 100%.

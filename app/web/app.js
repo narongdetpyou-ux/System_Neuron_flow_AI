@@ -149,6 +149,8 @@
   const ACCESS_TH = { free: "ฟรี", paid: "เสียเงิน" };
   /* The reviewer-label scorecard splits cases by code (app/services/review_labels.py): a Thai letter in the text or not. */
   const LABEL_LANGUAGE = { th: "เคสที่มีอักษรไทย", non_th: "เคสที่ไม่มีอักษรไทย" };
+  /* A result finished before the AI's full version was kept with it (2026-11-19, ADR-035). */
+  const AGENT_VERSION_UNKNOWN = "ไม่ทราบรุ่น (บันทึกก่อนระบบเริ่มเก็บรุ่นของ AI ไว้กับผล)";
   const KIND_TH = {
     course: "คอร์สเรียน", roadmap: "แผนที่การเรียน (roadmap)", article: "บทความ", documentation: "เอกสารคู่มือ",
     paper: "งานวิจัย (paper)", dataset: "ชุดข้อมูล (dataset)", standard: "มาตรฐาน", guidelines: "แนวปฏิบัติ (guidelines)",
@@ -1418,6 +1420,7 @@
       kv.push(["AI ที่ใช้", `${ai.provider}/${ai.model}` + (ai.served_model && ai.served_model !== ai.model ? ` (ตอบโดย ${ai.served_model})` : "")]);
       kv.push(["prompt", `${ai.prompt_id}@${String(ai.prompt_sha256 || "").slice(0, 12)}`]);
       if (ai.redaction) kv.push(["กฎปิดข้อมูลส่วนตัว (redaction)", ai.redaction]);
+      kv.push(["รุ่นของ AI ที่ระบบตรวจ (agent version)", agentSettingsText(ai.agent_version)]);
       if (ai.usage) kv.push(["token (เข้า/ออก)", `${ai.usage.input_tokens}/${ai.usage.output_tokens}` + (ai.usage.estimated ? " (ประมาณ)" : "")]);
       if (typeof ai.latency_ms === "number") kv.push(["เวลาที่ AI ตอบ", `${Math.round(ai.latency_ms)} ms`]);
     }
@@ -1450,6 +1453,13 @@
     return (handoffInfo().routes || []).find((route) => route.from === workflow && route.on === on) || null;
   }
   function shortVersion(tag) { return String(tag || "").replace(/@sha256:([0-9a-f]{12})[0-9a-f]*$/, "@$1…"); }
+  /* An AI agent's version as Core recorded it (ADR-035), in short: the parts the AI and prompt rows do not show
+     (answer budget, effort, masking rules, the gateway's answer checks, answer format). */
+  function agentSettingsText(version) {
+    if (!version) return AGENT_VERSION_UNKNOWN;
+    const parts = String(version).split(";").filter((part) => !/^(llm|prompt)=/.test(part));
+    return parts.length ? parts.join(" · ") : String(version);
+  }
   function factValue(item) {
     if (typeof item.chars === "number") return `ข้อความ ${item.chars} ตัวอักษร (ไม่แสดง)`;
     const value = String(item.value);
@@ -2245,6 +2255,7 @@
       el("span", { text: "AI ที่ใช้" }), ai
         ? el("span", {}, [aiLabel(ai), ai.simulated ? " — จับคำสำคัญ ไม่ใช่ AI จริง" : "", ai.prompt_id ? el("span", { class: "mono muted", text: ` ${ai.prompt_id}` }) : null])
         : el("span", { text: "ไม่มี (งานนี้ใช้กฎอย่างเดียว)" }),
+      ...(ai ? [el("span", { text: "รุ่นของ AI" }), el("span", { class: ai.version_known ? "mono" : "", text: agentSettingsText(ai.agent_version) })] : []),
       el("span", { text: "ตัดสินในช่วง" }), el("span", { text: `${fullTime(group.first_decision_at)} ถึง ${fullTime(group.last_decision_at)}` }),
       el("span", { text: "ใช้เป็นเฉลยได้" }), el("span", { text: `${group.labelled} จาก ${group.decided} เคสที่ตัดสิน` }),
       el("span", { text: "กฎเสนอหมวดตรงกับคน" }), el("span", { text: shareText(group.rules_match) + rangeText(group.rules_match) }),
@@ -2293,7 +2304,8 @@
         parts.push(el("p", { class: "lead", text: "ยังไม่มีเคสที่คนตัดสินในข้อมูลชุดนี้ ลองส่งเคสแล้วตัดสินในแท็บ \"แชท\" จากนั้นกลับมาดูที่นี่" }));
       }
       if (groups.length > 1) {
-        parts.push(el("p", { class: "lead", text: "มีข้อเสนอมากกว่า 1 ชุด (กฎ รุ่น AI หรือ prompt เปลี่ยนระหว่างทาง) ระบบจึงแยกนับทีละชุด ไม่รวมตัวเลขของต่างรุ่นเข้าด้วยกัน ชุดล่าสุดอยู่บนสุด" }));
+        parts.push(el("p", { class: "lead", text: "มีข้อเสนอมากกว่า 1 ชุด (กฎ AI prompt หรือการตั้งค่าของ AI เช่น ความยาวคำตอบสูงสุดหรือด่านตรวจคำตอบ เปลี่ยนระหว่างทาง) " +
+          "ระบบจึงแยกนับทีละชุด ไม่รวมตัวเลขของต่างรุ่นเข้าด้วยกัน ชุดล่าสุดอยู่บนสุด" }));
       }
       groups.forEach((group) => parts.push(...labelsGroup(group)));
       const notes = [
@@ -2306,6 +2318,11 @@
       if (groups.some((group) => group.ai && group.ai.simulated)) {
         notes.push("AI ในชุดที่เขียนว่า \"AI จำลอง\" เป็นตัวจำลองที่จับคำสำคัญ ตัวเลขของ AI ในชุดนั้นจึงไม่ใช่ของ AI จริง");
       }
+      if (groups.some((group) => group.ai && !group.ai.version_known)) {
+        notes.push("ชุดที่เขียนว่า \"ไม่ทราบรุ่น\" เป็นคำตัดสินของเคสที่เสร็จก่อนระบบเริ่มเก็บรุ่นของ AI ไว้กับผล จึงแยกได้แค่ตาม AI และ prompt " +
+          "และไม่รวมกับชุดที่รู้รุ่น");
+      }
+      notes.push("แยกภาษาโดยดูว่าข้อความเคสมีตัวอักษรไทยไหม: เครื่องหมาย ฿ เลขไทย หรือวรรณยุกต์อย่างเดียว ไม่นับเป็นเคสไทย");
       if (!(status.storage || {}).persistent) {
         notes.push("ที่เก็บข้อมูลเป็นแบบชั่วคราว (Render แผนฟรี): คำตัดสินหายทุกครั้งที่ระบบหลับ รีสตาร์ท หรืออัปเดต ตัวเลขนี้จึงนับเฉพาะรอบปัจจุบัน " +
           `(เริ่มเมื่อ ${fullTime((report.retention || {}).store_started_at)}) จะสะสมข้ามวันได้ต้องมีดิสก์ถาวร`);

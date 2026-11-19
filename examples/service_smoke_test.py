@@ -242,8 +242,11 @@ def reviewer_labels(client, when):
     figures = [(group.get(key) or {}).get(part) for key in ("rules_match", "ai_match") for part in ("numerator", "denominator")]
     check(status == 200 and (totals.get("decided"), totals.get("labelled")) == (2, 2) and figures == [2, 2, 1, 2]
           and (group.get("ai") or {}).get("simulated") is True
+          # One AI version, recorded with each result by the Runner (ADR-035), the gateway's checks included.
+          and (group.get("ai") or {}).get("version_known") is True
+          and ";checks=" in str((group.get("ai") or {}).get("agent_version"))
           and group.get("when_disagreeing") == {"total": 1, "ai_match": 0, "rules_match": 1, "neither": 0},
-          f"the scorecard counts both decisions against the rules and the mock AI ({when})")
+          f"the scorecard counts both decisions against the rules and the mock AI, one AI version ({when})")
 
 
 def approval_hands_on(client, job_id, timeout_s):

@@ -44,18 +44,32 @@ def review_view(output):
             "mode": "rules_only"}
 
 
-def ai_view(output):
-    """Where the AI second opinion came from, what it cost in tokens and how long it took."""
+def ai_view(output, agent_version=None):
+    """Where the AI second opinion came from, what it cost in tokens and how long it took.
+
+    ``agent_version`` is the version Core recorded for the AI step's agent when it accepted the job: provider, model,
+    prompt, answer budget, effort, masking rules, the gateway's answer checks and the answer format (ADR-035). The
+    provenance fields alone do not tell two answer budgets or two versions of the checks apart; this does. ``None``
+    when the spec did not carry it."""
     if not isinstance(output, dict) or output.get("status") not in {"ok", "unavailable"}:
         return None
     view = {"status": output["status"], **{key: (output.get("provenance") or {}).get(key) for key in _AI_PROVENANCE},
-            "attempt": output.get("attempt"), "masked": output.get("masked")}
+            "agent_version": agent_version, "attempt": output.get("attempt"), "masked": output.get("masked")}
     if output["status"] == "ok":
         view.update(served_model=output.get("served_model"), usage=output.get("usage"),
                     latency_ms=output.get("latency_ms"))
     else:
         view.update(reason=output.get("reason"), error_type=output.get("error_type"))
     return view
+
+
+def recorded_version(spec, step_id):
+    """The version string Core recorded for the agent of ``step_id`` (the spec's ``agent_versions``, which Core adds
+    when it accepts a job; the Runner passes Core's copy), or ``None`` when the spec does not carry one."""
+    agent = next((step["agent"] for step in spec["steps"] if step["id"] == step_id), None)
+    recorded = (spec.get("agent_versions") or {}).get(agent)
+    version = recorded.get("version") if isinstance(recorded, dict) else None
+    return version if isinstance(version, str) else None
 
 
 def step_timeline(snapshot, spec):
@@ -83,7 +97,7 @@ def summarize(snapshot, spec, workflow):
     ai_step = getattr(workflow, "ai_step", None)
     llm_state = snapshot["steps"].get(ai_step) if ai_step else None
     if llm_state and llm_state.get("status") == "SUCCEEDED":
-        result["ai"] = ai_view(llm_state.get("output"))
+        result["ai"] = ai_view(llm_state.get("output"), agent_version=recorded_version(spec, ai_step))
     if core_status == "DELIVERY_FAILED":
         return "DELIVERY_FAILED", result, {"reason": "delivery_failed"}
     if core_status == "FAILED":

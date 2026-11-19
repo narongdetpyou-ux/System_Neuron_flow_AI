@@ -13,12 +13,17 @@ What counts:
 * **AI answered**: the AI gave a category (it was not ``unavailable``), over the labelled cases. **AI match**: its
   category equals the label, over the labelled cases it answered (the scorecards' convention, ``app/eval``);
 * **when rules and AI disagree**: whose category the person recorded, or neither one's;
-* **by language**: ``th`` when the case text holds a Thai letter, otherwise ``non_th``. Code decides, because a live
-  case has no language label. The text is read here and never returned.
+* **by language**: ``th`` when the case text holds a Thai letter, otherwise ``non_th``. A Thai letter is a letter of
+  the Thai script (Unicode categories Lo and Lm in U+0E00-U+0E7F): the baht sign, Thai digits and tone marks alone do
+  not make a case Thai, so "I was charged ฿500 twice" is ``non_th`` (quality report of 2026-11-19, finding 3). Code
+  decides, because a live case has no language label. The text is read here and never returned.
 
-One group per proposal source: the workflow type, the rules version, and the AI's provider, model and prompt.
-Figures of two versions are never added together. A changed keyword list, model or prompt is a new version
-(rule 5), and a number that mixed two would describe neither.
+One group per proposal source: the workflow type, the rules version, and the AI agent's version as Core recorded it
+(``ai.agent_version`` in the job's result: provider, model, prompt, answer budget, effort, masking rules, the gateway's
+answer checks and the answer format; ADR-035). Figures of two versions are never added together. A changed keyword
+list, model, prompt, answer budget or set of checks is a new version (rule 5), and a number that mixed two would
+describe neither. A result recorded before the agent version was kept (2026-11-19) has none: its group keeps the
+provider, model and prompt apart as before, and says that the version is unknown (``version_known`` false).
 
 Every rate keeps its numerator and denominator, and carries the 95% Wilson score interval: with few cases it is
 wide, which is the point (2 of 2 is not 100%).
@@ -45,13 +50,22 @@ LABEL_SCOPE = ("Each label is the category a person recorded for a synthetic cas
                "suggestion and the AI's opinion; approving as proposed keeps the rules' category. Not blind labels, "
                "not independent ground truth and not real-world accuracy.")
 Z_95 = 1.959963984540054  # the 97.5th percentile of the standard normal distribution
-_THAI = re.compile(r"[฀-๿]")
+# The letters of the Thai script (Lo and Lm): not U+0E31 and U+0E34-U+0E3A or U+0E47-U+0E4E (vowel and tone marks),
+# U+0E3F (the baht sign), U+0E50-U+0E59 (Thai digits) or U+0E4F, U+0E5A, U+0E5B (signs).
+_THAI_LETTER = re.compile(r"[ก-ะาำเ-ๆ]")
 _AI_FIELDS = ("provider", "model", "prompt_id", "prompt_sha256")
 
 
 def language_of(text):
     """``th`` for text that holds a Thai letter, otherwise ``non_th`` (the scorecards' rule for a Thai case)."""
-    return "th" if isinstance(text, str) and _THAI.search(text) else "non_th"
+    return "th" if isinstance(text, str) and _THAI_LETTER.search(text) else "non_th"
+
+
+def _ai_key(provenance):
+    """What tells two AI setups apart: the agent version Core recorded (ADR-035), then the provider, model and prompt.
+    A result recorded before the version was kept has ``None`` first, so it never joins a group of a known version."""
+    version = provenance.get("agent_version")
+    return (version if isinstance(version, str) else None, *(provenance.get(field) for field in _AI_FIELDS))
 
 
 def interval_95(numerator, denominator):
@@ -82,7 +96,7 @@ def _row(review):
     return {"workflow_type": review["workflow_type"],
             "rules": proposal.get("suggestion_source"),
             "rules_category": review["suggested_category"],
-            "ai": tuple(provenance.get(field) for field in _AI_FIELDS) if has_ai else None,
+            "ai": _ai_key(provenance) if has_ai else None,
             "ai_answered": answered,
             "ai_category": second.get("category") if answered else None,
             "decision": review["decision"],
@@ -119,7 +133,8 @@ def _group(rows):
     disagreeing = [r for r in answered if r["ai_category"] != r["rules_category"]]
     ai = None
     if has_ai:
-        ai = dict(zip(_AI_FIELDS, first["ai"]))
+        version, *fields = first["ai"]
+        ai = {**dict(zip(_AI_FIELDS, fields)), "agent_version": version, "version_known": version is not None}
         ai["simulated"] = ai["provider"] == "mock"
     return {"workflow_type": first["workflow_type"], "rules": first["rules"], "ai": ai,
             **_counts(rows), **{key: value for key, value in _scores(rows, has_ai).items()

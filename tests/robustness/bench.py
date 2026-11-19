@@ -138,7 +138,9 @@ def file_sha256(path):
 
 
 def thai(text):
-    return any("฀" <= ch <= "๿" for ch in text)
+    """A Thai letter in the text (Unicode Lo or Lm in U+0E00-U+0E7F), the same rule as the reviewer-label scorecard
+    (``app.services.review_labels.language_of``): the baht sign, Thai digits or tone marks alone are not Thai text."""
+    return any("฀" <= ch <= "๿" and unicodedata.category(ch) in ("Lo", "Lm") for ch in text)
 
 
 # --- loading --------------------------------------------------------------------------------------------------

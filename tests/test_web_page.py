@@ -374,6 +374,23 @@ class ReviewerLabelTests(unittest.TestCase):
         apply = SCRIPT[SCRIPT.index("function applyStatus"):]
         self.assertIn("state.labels.basis !== labelsBasis()", apply[:apply.index("\n  }\n")])
 
+    def test_each_group_names_its_ai_version_or_says_it_is_unknown(self):
+        # Quality report of 2026-11-19, findings 2 and 3 (ADR-035).
+        group = SCRIPT[SCRIPT.index("function labelsGroup"):]
+        group = group[:group.index("\n  }\n")]
+        self.assertIn("agentSettingsText(ai.agent_version)", group)
+        settings_text = SCRIPT[SCRIPT.index("function agentSettingsText"):]
+        settings_text = settings_text[:settings_text.index("\n  }\n")]
+        self.assertIn("AGENT_VERSION_UNKNOWN", settings_text)
+        self.assertRegex(SCRIPT, r'const AGENT_VERSION_UNKNOWN = "ไม่ทราบรุ่น[^"]*";')
+        panel = SCRIPT[SCRIPT.index("function labelsPanel"):]
+        panel = panel[:panel.index("\n  }\n")]
+        for words in ("version_known", "ไม่ทราบรุ่น", "฿", "ความยาวคำตอบ"):
+            with self.subTest(words=words):
+                self.assertIn(words, panel)
+        technical = SCRIPT[SCRIPT.index("function technicalRows"):]
+        self.assertIn("agentSettingsText(ai.agent_version)", technical[:technical.index("\n  }\n")])
+
     def test_the_panel_keeps_the_limits_of_its_numbers(self):
         panel = SCRIPT[SCRIPT.index("function labelsPanel"):]
         panel = panel[:panel.index("\n  }\n")]

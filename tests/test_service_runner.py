@@ -218,6 +218,22 @@ class ReconciliationTests(RunnerTestCase):
             stored = self.store.get(job["job_id"])
             self.assertEqual((stored["status"], stored["failure"]["reason"]), ("FAILED", "configuration_changed"), key)
 
+    def test_new_answer_checks_never_finish_an_interrupted_job_silently(self):
+        # The gateway's checks are part of the AI agent's version (ADR-035): a job Core accepted under the old checks
+        # and that was caught mid-way fails instead of running its AI step under the new ones (quality report of
+        # 2026-11-19, finding 1). The model, prompt and budget stay the same; only the checks' version moves.
+        config = LLMConfig()
+        job = self.admit("key-checks-1")
+        self.assertEqual(self.store.claim_next("old-runner")["job_id"], job["job_id"])
+        spec = CATALOG["case_triage.v2"].build_spec(job["job_id"], job["input"], config)
+        self.store.freeze_spec(job["job_id"], spec)
+        with Runtime(self.settings.core_dir, agents=agents_for(CATALOG, config)) as runtime:
+            runtime.submit(spec)
+        with mock.patch("app.llm.config.ANSWER_CHECKS_VERSION", "answer-checks-test"):
+            Runner(self.settings, store=self.store, llm_config=config).drain()
+        stored = self.store.get(job["job_id"])
+        self.assertEqual((stored["status"], stored["failure"]["reason"]), ("FAILED", "configuration_changed"))
+
     def test_a_job_that_keeps_stopping_the_runner_is_eventually_failed(self):
         job = self.admit("key-poison-1")
         self.store.claim_next("runner-a")

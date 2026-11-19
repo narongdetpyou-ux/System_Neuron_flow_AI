@@ -14,6 +14,7 @@ from app.domains.case_triage.contracts import CATEGORIES, CONFIDENCE_LEVELS
 from app.llm import (InvalidModelOutput, LLMConfig, LLMConfigError, LLMRequestError, LLMTransientError,
                      ModelDeclined, load_prompt, mask, structured_answer)
 from app.llm import prompts as prompts_module
+from app.llm.config import ANSWER_CHECKS_VERSION
 from app.llm.gateway import TEXT_LIMIT, parse_answer
 from app.llm.providers import mock
 from tests.fake_anthropic import FakeAnthropic, error, message
@@ -89,7 +90,8 @@ class PromptAndConfigTests(unittest.TestCase):
         tag = LLMConfig().version_tag(PROMPT)
         self.assertIn("llm=mock/mock-keyword-1", tag)
         self.assertIn(PROMPT.sha256, tag)
-        self.assertTrue(tag.endswith(";redaction=redact-v2"))  # the masking rules are part of the version
+        # The masking rules and the gateway's answer checks are part of the version (ADR-028, ADR-035).
+        self.assertTrue(tag.endswith(f";redaction=redact-v2;checks={ANSWER_CHECKS_VERSION}"), tag)
         self.assertNotEqual(tag, LLMConfig(model="mock-keyword-2").version_tag(PROMPT))
 
 

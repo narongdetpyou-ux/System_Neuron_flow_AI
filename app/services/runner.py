@@ -53,8 +53,9 @@ def _with_core_versions(runtime, job_id, spec):
     """The frozen spec with the agent versions Core recorded when it accepted the job.
 
     Core adds ``agent_versions`` to its own copy of the spec on submit; the queue keeps the spec as the
-    Runner built it, without them. Only the trace reads this. When Core never saw the job, or its copy
-    cannot be read, the queue's spec is returned unchanged and the step spans carry no version.
+    Runner built it, without them. The trace reads this, and so does the job's result, which records the AI
+    step's version (ADR-035). When Core never saw the job, or its copy cannot be read, the queue's spec is
+    returned unchanged: the step spans carry no version, and the result's ``ai.agent_version`` is ``None``.
     """
     try:
         versions = runtime.store.job(job_id)["spec"].get("agent_versions")
@@ -181,7 +182,8 @@ class Runner:
                 except ValueError as exc:  # SpecError: "Agent version changed" or "no longer registered"
                     self._configuration_changed(job, type(exc).__name__)
                     return
-            status, result, failure = summarize(snapshot, spec, workflow)
+            # Core's copy carries the agent versions it checked; the result records the AI step's (ADR-035).
+            status, result, failure = summarize(snapshot, _with_core_versions(runtime, job_id, spec), workflow)
             self.store.finish(job_id, status, result=result, failure=failure, step_events=step_events(result),
                               handoff=self.exchange.prepare)
             log.info("runner: %s %s in %.1fs", job_id, status, time.monotonic() - started)
