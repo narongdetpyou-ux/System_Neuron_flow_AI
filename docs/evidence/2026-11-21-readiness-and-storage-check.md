@@ -71,6 +71,14 @@ The first-case timing container, started without a data folder, logged `storage=
 A named volume on GitHub's runner is a bind of the host's `ext4` disk; Render's disk is a different thing, see the
 first limit below.
 
+## On Render (the owner, after the merge)
+
+PR #76 was merged on 2026-11-21 (merge commit `dc322a7`) and Render deployed it after the checks on `main`. The
+owner then ran the owner test on the live page and confirmed it passed. Their phone screenshot of the settings tab
+shows the storage row unchanged ("ชั่วคราว — เคส ผล และการตัดสินหายเมื่อระบบหลับ รีสตาร์ท หรืออัปเดต (Render แผนฟรี)"),
+the Runner "พร้อม" with a heartbeat 1.5 s old, version 0.4.1, and a data set that started at 14:24:55 Thai time
+(07:24:55 UTC), after the deploy. The screenshot does not show `/readyz` itself; that step rests on the owner's word.
+
 ## Limits
 
 - No Render disk has been seen (D1). Render's disks are expected to appear as a mount of their own; the first deploy

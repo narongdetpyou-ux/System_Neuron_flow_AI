@@ -1,6 +1,6 @@
 # Intake API, job queue, Runner and web page (round 2, Milestone B)
 
-**Status:** built in PR #11 and tested offline (601 tests on 2026-11-21, including killing the Runner
+**Status:** built in PR #11 and tested offline (602 tests on 2026-11-21, including killing the Runner
 mid-step). The container build is checked on every push by *Actions → Service container*. Live on
 Render's free plan since 2026-11-01 (`render.yaml`). Railway was the first choice, but it has paused new
 sign-ups since 22 Oct 2026 after a security incident; `railway.json` stays in the repository for later.
@@ -194,6 +194,19 @@ Design principles: [design_philosophy.md](design_philosophy.md).
 
 **ลองเอง:** เปิด https://neuron-flow.onrender.com/readyz ถ้าระบบเพิ่งตื่นอาจเห็น `"state":"starting"` ให้รอ 10 วินาทีแล้วรีเฟรช จะเห็น `{"ok":true,"state":"idle"}`
 
+### GitHub ลองกดหน้าเว็บบนจอขนาดมือถือให้ทุกครั้ง (ขั้น 1.8)
+
+ตั้งแต่ 21 พ.ย. ทุกครั้งที่ส่งโค้ด ช่องตรวจ *Service container* จะเปิดหน้าเว็บด้วยเบราว์เซอร์อัตโนมัติ (headless browser) บนจอขนาดมือถือ แล้วกดเหมือนคน:
+
+1. ใส่รหัสเข้าใช้
+2. พิมพ์เคส กด "ส่ง" แล้วกด "ยืนยันและส่ง" บนการ์ด
+3. เปิดเมนู ☰ แล้วเปิดเคสจากกล่อง "รอรีวิว"
+4. กด "อนุมัติ" ใส่เหตุผล แล้วกดบันทึก
+5. เปิดงานที่ส่งต่อไป แล้วรอจนงานนั้นบันทึกผลเสร็จ
+6. เปิดแท็บ "ตั้งค่า" แล้วดูว่าคำตัดสินถูกนับแล้ว
+
+ถ้าปุ่มไหนกดไม่ได้ หน้าจอล้นออกด้านข้าง หรือหน้าเว็บมีข้อผิดพลาด ช่องตรวจจะเป็นสีแดง และ Render จะไม่อัปเดตระบบ **ดูผลเอง:** เปิดหน้า run ของ *Service container* → ส่วน Summary → หัวข้อ "เดินหน้าเว็บด้วยเบราว์เซอร์บนจอขนาดมือถือ" และรูปหน้าจอทุกขั้นอยู่ใน artifact ชื่อ `browser-walk` ท้ายหน้า run (เก็บไว้ 14 วัน) ยังไม่ได้ลองบน Safari หรือ Firefox
+
 ### สิ่งที่ต้องทำเพื่อเปิดใช้บน Render (ครั้งแรก ทำครั้งเดียว)
 
 ไฟล์ `render.yaml` ในโปรเจกต์บอก Render ไว้หมดแล้วว่าต้องสร้างอะไร คุณจึงแค่กดยืนยัน
@@ -347,6 +360,20 @@ container: app.boot (root) ─becomes─► tini ─► python -m app.serve
   Since 2026-11-10 also: every job status, decision and review error has Thai words, "บันทึกถาวร" is never
   said without checking the storage, the browser stores only the key and job ids, and a decision's body
   never names who decides.
+- **Walked in a browser in CI (since 2026-11-21, roadmap 1.8):** `tests/browser_walk.py` clicks through the page
+  like a person on Playwright's "Pixel 7" (412 × 839 CSS pixels, touch, Chromium), against a fresh container of
+  the image in the *Service container* job: sign in on the gate, type a case and send it, confirm it on the card,
+  open the drawer (☰) and open the case from "รอรีวิว", approve it with a reason, see "ส่งต่อแล้ว" and open the
+  job it started until it has recorded the approval, then find the decision counted in the settings tab; last, the
+  same over the API. Every screen must not scroll sideways, and the page must raise no script error and get no
+  5xx reply; a click only succeeds on an element that is visible, enabled, still and not covered. Each screen is
+  kept as a picture in the run's `browser-walk` artifact (14 days), with a Thai line per step on the run page.
+  Playwright 1.63.0 is installed in that CI step only, with its headless Chromium cached; nothing in the image or
+  the app imports it, and `tests/test_web_page.py` checks that every id, action, class and text the walk relies
+  on is still on the page. To run it in a cloud session: `pip install "playwright==1.63.0"` into a virtual
+  environment (the session's browser is the one that version expects), start `python -m app.serve` with an empty
+  data folder, then `python -m tests.browser_walk --url http://127.0.0.1:<port> --key <key> --out <folder>`.
+  Not covered: other browsers (Safari's WebKit, Firefox), the study box, and personal tokens.
 
 ### Job states
 

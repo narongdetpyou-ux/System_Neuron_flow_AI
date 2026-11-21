@@ -19,9 +19,12 @@ what the service and the study guide promise:
    shown from memory and never stored, only checked token ids reach an address, a status refresh never redraws
    the owner's section, and the page hides what the signed-in role cannot do;
 8. the reviewer-label scorecard (roadmap 2.8): only a role that may decide reads it, the lock forgets it, it is read
-   again only when a decision was recorded or the queue started empty, and its panel keeps the limits of its numbers.
+   again only when a decision was recorded or the queue started empty, and its panel keeps the limits of its numbers;
+9. the browser walk (roadmap 1.8): every id, action, class and text that ``tests/browser_walk.py`` relies on is still
+   on the page.
 
-A headless-browser walkthrough of the page itself is described in docs/intake_queue.md.
+Since roadmap 1.8 the page itself is also walked in a real browser on a phone-sized screen, in CI's Service container
+job (``tests/browser_walk.py``; docs/intake_queue.md).
 """
 
 from html.parser import HTMLParser
@@ -254,6 +257,32 @@ class ReviewAndRetentionTests(unittest.TestCase):
         self.assertIn("storageText(storage).row", SCRIPT)
         self.assertNotIn('storage.persistent ? "ถาวร"', SCRIPT)
         self.assertNotIn('setSys("sys-storage", "ถาวร"', SCRIPT)
+
+    def test_the_browser_walk_finds_what_it_clicks(self):
+        # Roadmap 1.8: tests/browser_walk.py clicks through the page in CI (the Service container job). A renamed
+        # id, action, class or text should fail here, in the fast unit tests, not only in that job.
+        walk = (Path(__file__).resolve().parent / "browser_walk.py").read_text(encoding="utf-8")
+        ids = set(re.findall(r'"#([a-z][a-z-]+)', walk))
+        self.assertGreaterEqual(len(ids), 10)
+        for element_id in sorted(ids):
+            with self.subTest(id=element_id):
+                self.assertTrue(f'id="{element_id}"' in PAGE or f'id: "{element_id}"' in SCRIPT, element_id)
+        actions = set(re.findall(r'data-action="([a-z-]+)"', walk))
+        self.assertEqual(actions, {"confirm", "review-choose", "review-submit", "open-job"})
+        for action in sorted(actions):
+            with self.subTest(action=action):
+                self.assertIn(f'action: "{action}"', SCRIPT)
+        for made in ('class: "decide"', 'class: "handoff"', "inbox-item", 'class: "panel"'):
+            with self.subTest(made=made):
+                self.assertIn(made, SCRIPT)
+        # Texts the walk waits for. Two are built from a template on the page; their templates must still be there.
+        templates = {"บันทึก: อนุมัติ": "`บันทึก: ${DECISION[form.decision]}`",
+                     "อนุมัติ 1 เคส": "`อนุมัติ ${totals.approved || 0} เคส"}
+        texts = set(re.findall(r'to_(?:have|contain)_text\("([^"]+)"', walk)) | {"กฎกับ AI เทียบกับคำตัดสินของคน"}
+        self.assertGreaterEqual(len(texts), 8)
+        for text in sorted(texts):
+            with self.subTest(text=text):
+                self.assertIn(templates.get(text, text), SCRIPT)
 
     def test_the_browser_keeps_the_key_and_job_ids_only(self):
         writes = re.findall(r"(localStorage|sessionStorage)\.setItem\(([A-Z_]+)", SCRIPT)

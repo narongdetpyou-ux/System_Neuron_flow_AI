@@ -23,7 +23,7 @@ differs, this file and architecture.md win.
   - ถ้าสองฝ่ายเห็นไม่ตรงกัน โค้ดเจอสัญญาณ หรือ AI ชี้ เคสจะถูกยกให้คนดูก่อน พร้อมบอกเหตุผล (ขั้น 5.10)
 - ถ้าเครื่องดับกลางทาง ระบบทำต่อได้ ส่งซ้ำก็ไม่เกิดงานซ้ำ
 - ยกเลิกเคสที่ยังรอคิวได้ และทุกคำขอมีรหัสคำขอ (request id) ไว้ไล่ดูใน log (ขั้น 1.2, 1.3)
-- ผ่านชุดทดสอบอัตโนมัติ 601 ข้อ และเปิดใช้ออนไลน์บน Render แล้ว ระบบปิดตัวอย่างเรียบร้อย และการแก้แค่เอกสารไม่ทำให้ Render ขึ้นเวอร์ชันใหม่ (ขั้น 0.1, 0.5)
+- ผ่านชุดทดสอบอัตโนมัติ 602 ข้อ และเปิดใช้ออนไลน์บน Render แล้ว ระบบปิดตัวอย่างเรียบร้อย และการแก้แค่เอกสารไม่ทำให้ Render ขึ้นเวอร์ชันใหม่ (ขั้น 0.1, 0.5)
 - หน้าเว็บเป็นแบบแชท: พิมพ์เคส ดูขั้นตอนก่อนส่ง กดยืนยัน แล้วติดตามใน Flow และประวัติเหตุการณ์ (ขั้น 1.6)
 - หน้าเว็บบอกว่ามีเคสรอกี่เคส เคสที่รอนานสุดรอมานานเท่าไร ปกติแต่ละเคสใช้เวลาเท่าไร และเคสที่ไม่สำเร็จล้มเพราะอะไร (ขั้น 5.3)
 - ถ้ามีคนแก้กฎหรือ prompt แล้วคำตอบของเคสทดสอบเคสไหนเปลี่ยน ช่องตรวจบน GitHub จะเป็นสีแดงและบอกว่าเคสไหนเปลี่ยนอะไร (ขั้น 5.2)
@@ -59,15 +59,16 @@ differs, this file and architecture.md win.
     - รุ่นของ AI ตอนนี้รวม "ด่านตรวจคำตอบ" ด้วย ถ้าวันหลังมีคนแก้ด่านนี้แต่ลืมเปลี่ยนรุ่น ช่องตรวจบน GitHub จะแดง และงานที่ค้างกลางทางจะไม่ถูกรันต่อด้วยกติกาใหม่แบบเงียบ ๆ
     - ทุกเคสบันทึกรุ่นของ AI แบบครบ (รวมความยาวคำตอบสูงสุด) ตารางเทียบกับคำตัดสินของคนจึงไม่รวมตัวเลขต่างรุ่นกัน เคสเก่าที่ไม่รู้รุ่นแสดงว่า "ไม่ทราบรุ่น"
     - เคสภาษาอังกฤษที่มี ฿ ไม่ถูกนับเป็นเคสไทยแล้ว (นับเป็นเคสไทยเมื่อมีตัวอักษรไทยจริง)
-  - ข้ออื่นเป็นแผนงาน: 1.7 (ป้าย "ถาวร" ต้องตรวจจริง และสัญญาณแยกเมื่อตัวรันงานติด ทำแล้ว 21 พ.ย. ดูข้อถัดไป) 1.8 (ทดสอบกดจริงบนจอขนาดมือถือใน GitHub เป็นงานถัดไป) 2.9 (ให้คนเลือกหมวดก่อนเห็นข้อเสนอ ต้องรอคุณเห็นชอบ) 2.10 (เวลาที่คนใช้ตัดสินแต่ละเคส) และเพิ่มเกณฑ์ใน 1.4, 5.7, 7.2, 7.5 ส่วนที่ต้องให้คุณตัดสินใจ: D1 (ดิสก์ถาวร) และข้อมูลจริง (D4)
-- **ป้าย "ถาวร" และสถานะตัวรันงาน มาจากการตรวจจริง (21 พ.ย., ขั้น 1.7, ADR-036):** ตอนเริ่มระบบ ระบบดูตารางดิสก์ของเครื่อง (mount table) แล้วเรียกที่เก็บว่า "ถาวร" เฉพาะเมื่อโฟลเดอร์ข้อมูลอยู่บนดิสก์ที่ต่อแยกจริง ถ้าตั้งไว้แต่ดิสก์ไม่ได้ต่อ แท็บ "ตั้งค่า" บอก "ชั่วคราว" พร้อมเหตุผล มีหน้าตรวจความพร้อมใหม่ `/readyz` ที่บอกว่าตัวรันงานพร้อมทำเคสไหม (ตั้งค่า AI ไม่ครบจะได้ `blocked_config`) ส่วน `/healthz` เดิมไม่เปลี่ยน เพราะ Render ใช้ตัดสินการรีสตาร์ท และตัวรันงานที่ติดแจ้ง Sentry 1 ครั้งต่อการเริ่มระบบ บนแผนฟรีหน้าเว็บยังบอก "ชั่วคราว" เหมือนเดิม ([บันทึกหลักฐาน](evidence/2026-11-21-readiness-and-storage-check.md), [วิธีใช้](intake_queue.md))
+  - ข้ออื่นเป็นแผนงาน: 1.7 (ป้าย "ถาวร" ต้องตรวจจริง และสัญญาณแยกเมื่อตัวรันงานติด ทำแล้ว 21 พ.ย. ดูข้อถัดไป) 1.8 (ทดสอบกดจริงบนจอขนาดมือถือใน GitHub ทำแล้ว 21 พ.ย. ดูข้อถัดไป) 2.9 (ให้คนเลือกหมวดก่อนเห็นข้อเสนอ ต้องรอคุณเห็นชอบ) 2.10 (เวลาที่คนใช้ตัดสินแต่ละเคส) และเพิ่มเกณฑ์ใน 1.4, 5.7, 7.2, 7.5 ส่วนที่ต้องให้คุณตัดสินใจ: D1 (ดิสก์ถาวร) และข้อมูลจริง (D4)
+- **ป้าย "ถาวร" และสถานะตัวรันงาน มาจากการตรวจจริง (21 พ.ย., ขั้น 1.7, ADR-036):** ตอนเริ่มระบบ ระบบดูตารางดิสก์ของเครื่อง (mount table) แล้วเรียกที่เก็บว่า "ถาวร" เฉพาะเมื่อโฟลเดอร์ข้อมูลอยู่บนดิสก์ที่ต่อแยกจริง ถ้าตั้งไว้แต่ดิสก์ไม่ได้ต่อ แท็บ "ตั้งค่า" บอก "ชั่วคราว" พร้อมเหตุผล มีหน้าตรวจความพร้อมใหม่ `/readyz` ที่บอกว่าตัวรันงานพร้อมทำเคสไหม (ตั้งค่า AI ไม่ครบจะได้ `blocked_config`) ส่วน `/healthz` เดิมไม่เปลี่ยน เพราะ Render ใช้ตัดสินการรีสตาร์ท และตัวรันงานที่ติดแจ้ง Sentry 1 ครั้งต่อการเริ่มระบบ บนแผนฟรีหน้าเว็บยังบอก "ชั่วคราว" เหมือนเดิม คุณลองบนหน้าเว็บจริงหลังอัปเดตแล้วและยืนยันว่าผ่าน (21 พ.ย.) ([บันทึกหลักฐาน](evidence/2026-11-21-readiness-and-storage-check.md), [วิธีใช้](intake_queue.md))
+- **GitHub กดหน้าเว็บบนจอขนาดมือถือให้ทุกครั้ง (21 พ.ย., ขั้น 1.8):** ทุกครั้งที่ส่งโค้ด ช่องตรวจ *Service container* เปิดหน้าเว็บด้วยเบราว์เซอร์อัตโนมัติบนจอขนาดมือถือ แล้วกดเหมือนคน: ใส่รหัส ส่งเคส ยืนยัน เปิดเคสจากกล่อง "รอรีวิว" กดอนุมัติ เปิดงานที่ส่งต่อ และดูว่าแท็บ "ตั้งค่า" นับคำตัดสินแล้ว ถ้าปุ่มไหนกดไม่ได้ หน้าจอล้นออกด้านข้าง หรือหน้าเว็บมีข้อผิดพลาด ช่องตรวจจะเป็นสีแดงและ Render จะไม่อัปเดต รูปหน้าจอทุกขั้นอยู่ใน artifact `browser-walk` ของหน้า run ([วิธีดู](intake_queue.md#github-ลองกดหน้าเว็บบนจอขนาดมือถือให้ทุกครั้ง-ขั้น-18))
 
 **ลำดับต่อจากนี้** แต่ละขั้นจบด้วยสิ่งที่คุณลองเองได้
 
 | ขั้น | ทำอะไร | คุณจะได้ลองอะไร | สถานะ (21 พ.ย. 2026) |
 |---|---|---|---|
 | 0 | เปิดใช้ออนไลน์บน Render และวัดผล AI จริงครั้งแรก | ใส่เคสบนหน้าเว็บจริง และอ่านผลวัดของ AI จริง | ออนไลน์แล้ว; วัดผล AI จริงครั้งแรกแล้วด้วย Typhoon (0.3, 6 พ.ย.); ที่เหลือรอคุณตัดสินใจ: D1 แผน Render แบบเสียเงิน, D2 API key ของ Claude และ 0.4 กับ Typhoon (ฟรี แต่ข้อความที่พิมพ์บนหน้าเว็บจะถูกส่งไป Typhoon) |
-| 1 | เก็บงานเล็ก ๆ ให้ระบบแน่นขึ้น | ยกเลิกเคสที่ยังรอคิวได้ และเปิด `/readyz` ดูว่าตัวรันงานพร้อมไหม | เสร็จ ยกเว้น 1.4 (สำรองข้อมูล) ที่ต้องใช้แผน Render แบบเสียเงิน; เพิ่มจากรายงานคุณภาพ 19 พ.ย.: 1.7 (สถานะที่ตรวจจริง) ทำแล้ว (21 พ.ย.) และ 1.8 (ทดสอบกดจริงบนจอมือถือ) เป็นงานถัดไป |
+| 1 | เก็บงานเล็ก ๆ ให้ระบบแน่นขึ้น | ยกเลิกเคสที่ยังรอคิวได้ เปิด `/readyz` ดูว่าตัวรันงานพร้อมไหม และดูรูปหน้าจอมือถือที่ GitHub กดให้ | เสร็จ ยกเว้น 1.4 (สำรองข้อมูล) ที่ต้องใช้แผน Render แบบเสียเงิน; เพิ่มจากรายงานคุณภาพ 19 พ.ย.: 1.7 (สถานะที่ตรวจจริง) ทำแล้วและคุณลองผ่านแล้ว (21 พ.ย.) และ 1.8 (ทดสอบกดจริงบนจอมือถือ) ทำแล้ว (21 พ.ย.) |
 | 2 | ให้คนรีวิวได้จริง: ผู้รีวิวมีรหัสของตัวเอง กดอนุมัติหรือไม่อนุมัติได้ และ n8n แจ้งเตือน | กล่อง "รอรีวิว" บนหน้าเว็บ และข้อความแจ้งเตือน | เริ่มแล้ว (10 พ.ย. ตามข้อ 4 ของผู้ตรวจสอบอิสระ): 2.2 บันทึกการตัดสินและ 2.4 การ์ดตัดสินกับรายการ "รอรีวิว" ทำแล้ว โดยผู้ตัดสินคือผู้ถือรหัสเข้าใช้ร่วม (คุณ); 2.3 งานต่อเนื่องหลังอนุมัติทำแล้ว (11 พ.ย.) เป็นเส้นทางแรกของตัวกลาง (ขั้น H); คุณลองบนหน้าเว็บจริงแล้ว (16 พ.ย.): อนุมัติ 1 เคส เกิดงานต่อเนื่อง 1 งานและเสร็จ ป้าย "ด่วน" ผ่านแล้วระหว่างทดสอบรหัสรายคน ส่วนการกด "ไม่อนุมัติ" โดยไม่ใส่เหตุผลยังไม่ได้ลอง; 2.1 รหัสรายคนของผู้ตรวจและผู้ส่งเคสทำแล้ว (16 พ.ย.) และคุณลองบนหน้าเว็บจริงผ่านครบทุกขั้นแล้ว (16 พ.ย.); 2.8 นับว่ากฎกับ AI ตรงกับคำตัดสินของคนกี่เคส ทำแล้ว (19 พ.ย.); 2.5 n8n ยังไม่ทำ |
 | 3 | ผู้ช่วยแนะนำแหล่งเรียน (`study_guide.v1`) ตามหลักปรัชญาของคุณ | พิมพ์เรื่องที่อยากรู้ด้วยคำธรรมดา แล้วได้แหล่งเรียนไม่เกิน 5 แหล่งพร้อมลำดับการเรียน | สร้างครบทุกขั้นแล้ว (คุณเลือกขั้นนี้ก่อนขั้น 2 เมื่อ 5 พ.ย.): 3.1 คลังแหล่งเรียน 3.2 ตัวผู้ช่วย และ 3.3 ชุดข้อสอบ ทำแล้ว (ดูตัวอย่างคำตอบและผลข้อสอบใน Actions ได้); 3.4 ช่อง "อยากเรียน" บนหน้าเว็บ สร้างและ merge แล้ว (7 พ.ย.) คุณลองบนหน้าเว็บจริงผ่านแล้ว (8 พ.ย.); รันกับ AI จริง (Typhoon) แล้ว หาหัวข้อถูก 46 จาก 48 ข้อ ไม่มีลิงก์นอกคลัง (Claude รอ D2); **หยุดพัฒนาเพิ่มไว้ก่อนตามที่คุณสั่ง (11 พ.ย.)**: ของที่มีอยู่ยังใช้ได้และช่องตรวจยังรันเหมือนเดิม |
 | 4 | ช่องคุยภาษาธรรมดา: ระบบเข้าใจว่าคุณขออะไร บอกตรง ๆ เมื่อเรื่องอยู่นอกกรอบ และถามกลับ 1 คำถามเมื่อข้อมูลไม่พอ | คุยกับระบบได้เลย ไม่ต้องเลือกประเภทงานเอง | ยังไม่เริ่ม (ขั้น 3 สร้างครบแล้ว เริ่มได้เมื่อคุณเลือก) |
@@ -129,8 +130,8 @@ owner.
 | 1.4 | Backup, restore and retention | ⬜; the quality report of 2026-11-19 adds its acceptance: cases, decisions, receipts and token states read back after a deploy and after a restore into new storage | D1 = paid (disk) |
 | 1.5 | Docs truth checks in CI | ✅ PR #24 | — |
 | 1.6 | New look for the web page from the owner's mockup: chat intake with a confirm step, Flow and Trace, read-only settings | ✅ PR #18, merged and deployed 2026-11-03; the owner reported the owner test passed on the live page | — |
-| 1.7 | Storage and Runner status that are checked, not assumed: `persistent` only on a confirmed mount, `/readyz` beside `/healthz`, a Sentry signal when the Runner is blocked | ✅ built on 2026-11-21 (ADR-036): the start reads the mount table and calls the storage persistent only for a folder on a disk of its own; `GET /readyz` (no key) answers 503 with `blocked_config`, `starting`, `not_alive` or `queue_unavailable` while `/healthz` stays Render's liveness check; a blocked Runner sends one Sentry event per start; *Service container* runs a volume, a folder with no disk, a tmpfs, and a blocked Runner that recovers with its case ([evidence](evidence/2026-11-21-readiness-and-storage-check.md)); the owner's look at `/readyz` after the merge is left | — |
-| 1.8 | A browser walk in CI on a phone-sized screen: send a case, decide it | ⬜ planned next (quality report of 2026-11-19, page 6) | — |
+| 1.7 | Storage and Runner status that are checked, not assumed: `persistent` only on a confirmed mount, `/readyz` beside `/healthz`, a Sentry signal when the Runner is blocked | ✅ built on 2026-11-21 (ADR-036): the start reads the mount table and calls the storage persistent only for a folder on a disk of its own; `GET /readyz` (no key) answers 503 with `blocked_config`, `starting`, `not_alive` or `queue_unavailable` while `/healthz` stays Render's liveness check; a blocked Runner sends one Sentry event per start; *Service container* runs a volume, a folder with no disk, a tmpfs, and a blocked Runner that recovers with its case ([evidence](evidence/2026-11-21-readiness-and-storage-check.md)); the owner confirmed the owner test on the live page the same day, after the deploy (their screenshot of the settings tab: storage still "ชั่วคราว … (Render แผนฟรี)", the Runner ready) | — |
+| 1.8 | A browser walk in CI on a phone-sized screen: send a case, decide it | ✅ built on 2026-11-21: `tests/browser_walk.py` (Playwright 1.63.0, CI only) walks a fresh container of the image on a "Pixel 7" in *Service container*: sign in, send and confirm a case, open it from the drawer's "รอรีวิว", approve it, open the linked job, find the decision counted in the settings tab, then the same over the API; no sideways scroll, no script error, no 5xx; a picture of each screen in the `browser-walk` artifact; `tests/test_web_page.py` holds the page to what the walk relies on | — |
 | 2.1 | Personal access tokens and roles (replaces the shared key) | ✅ built on 2026-11-16 (ADR-034): the owner issues reviewer and submitter tokens on the page (shown once), revokes them at once, and every route checks the role; on the free plan tokens are lost at every sleep (fail closed); the owner's test on the live page passed every step on 2026-11-16 (confirmed by the owner on 2026-11-19) | — |
 | 2.2 | Review ledger and decisions API | ✅ built on 2026-11-10 before 2.1 (ADR-027); since 2.1 (2026-11-16) a reviewer's token decides, recorded by its id, and a revoked token or the wrong role is denied | — |
 | 2.3 | Linked phase-B job on approval | ✅ built on 2026-11-11 as the first route of the skill-handoff exchange (H3, ADR-030): one approval starts exactly one `case_triage.v2.apply` job with a Core receipt ([evidence](evidence/2026-11-11-skill-handoff.md)); on the live page on 2026-11-16 the owner's approval started one, which completed in 42 ms | 2.2 |
@@ -504,13 +505,23 @@ decisions would vanish on every sleep. Since 2026-11-10 the API and the page say
     page's words; *Service container* runs a volume, a folder with no disk, a tmpfs, and Typhoon without a key
     then the mock on the same volume. The Sentry event is checked with a stub SDK only (no DSN in CI).
 
-### 1.8 A browser walk in CI: send a case and decide it on a phone-sized screen (planned next)
+### 1.8 A browser walk in CI: send a case and decide it on a phone-sized screen (built 2026-11-21)
 
 - **Why:** most page tests read the page's source (quality report of 2026-11-19, page 6), so a button that cannot be
   clicked would pass while its text is still there. The walks with a headless browser so far were done by hand.
 - **Idea:** a CI job starts the service, opens the page in Chromium at a phone's width, sends a case, waits for
   review, approves it, and checks the linked job and the scorecard; a screenshot goes to the run page.
 - **Needs:** a CI-only test dependency (Playwright), with its reason in the PR (rule 8); nothing in the image.
+- **Built on 2026-11-21** (after the owner's "ทำขั้น 1.8 ต่อได้เลย"):
+  - `tests/browser_walk.py`, Python Playwright pinned at 1.63.0 (released 2026-09-15) and installed in the CI step
+    only, with its headless Chromium cached (`actions/cache`); the device is Playwright's "Pixel 7";
+  - a step at the end of the *Service container* job, against a fresh container of the image, so a page that cannot
+    be used blocks Render's deploy like any other failed check; pictures in the `browser-walk` artifact (14 days)
+    and a Thai line per step in the run's summary;
+  - each screen: no sideways scroll, no script error, no 5xx reply; a click needs an element that is visible,
+    enabled, still and not covered;
+  - `tests/test_web_page.py` checks that the ids, actions, classes and texts the walk relies on are on the page;
+  - not covered: Safari's WebKit and Firefox, the study box, personal tokens and other screen sizes.
 
 ### 1.5 Docs truth checks in CI (optional)
 
@@ -1950,3 +1961,9 @@ of H5 were built ([evidence](evidence/2026-11-11-skill-handoff.md)).
   /readyz` reports the Runner's readiness apart from `/healthz` (which stays Render's liveness check), and a
   Runner blocked by its AI settings sends one Sentry event per start (ADR-036). *Service container* gained a step
   with a volume, a folder with no disk, a tmpfs, and a blocked Runner that recovers with its case. 1.8 is next.
+- 2026-11-21: 1.7's owner test passed on the live page (the owner's confirmation and screenshot after the deploy),
+  and 1.8 was built after the owner said "ทำขั้น 1.8 ต่อได้เลย": `tests/browser_walk.py` walks a fresh container of
+  the image on a phone-sized screen in *Service container* (sign in, send and confirm a case, open it from
+  "รอรีวิว", approve it, open the linked job, find the decision counted), then checks the same over the API, with a
+  picture of each screen in the run's artifact. Playwright 1.63.0 is a CI-only test dependency. Next buildable
+  without an owner decision: 2.10 (reviewer time per case).
