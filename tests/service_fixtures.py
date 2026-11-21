@@ -14,13 +14,16 @@ from neuron_flow import AgentDefinition
 
 from app.llm import LLMConfig
 from app.services.workflows import CATALOG, WorkflowType, check_case
-from app.settings import Settings
+from app.settings import Settings, StorageCheck
 
 KEY = "test-access-key-0123456789"
+# The tests model the paid plan's disk: a data folder the start found on a filesystem of its own (roadmap 1.7).
+CONFIRMED_DISK = StorageCheck("confirmed", "ext4")
 
 
 def settings(data_dir, **overrides):
-    values = {"data_dir": Path(data_dir), "storage": "configured", "access_key": KEY, "runner_poll_s": 0.05}
+    values = {"data_dir": Path(data_dir), "storage": "configured", "storage_check": CONFIRMED_DISK, "access_key": KEY,
+              "runner_poll_s": 0.05}
     values.update(overrides)
     return Settings(**values)
 

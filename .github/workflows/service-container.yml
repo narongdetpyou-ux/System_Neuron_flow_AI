@@ -6,6 +6,8 @@ name: Service container (same build as Render)
 # It also checks that the image carries a bytecode cache for all its code (effectiveness plan E1), and
 # reports the image's size and how long a process start and the first case after a start take, at the
 # runner's full speed and with 0.1 CPU. Times are reported, never gated.
+# Since roadmap 1.7 it also checks that storage is called persistent only when the start finds a disk of its own,
+# and that a Runner blocked by its AI settings shows on /readyz while /healthz stays 200 for Render.
 # The access key below is a throwaway value used only inside this job.
 on:
   push:
@@ -84,9 +86,10 @@ jobs:
             -e NEURON_FLOW_DATA_DIR=/var/data \
             -v nf-data:/var/data neuron-flow:ci
       - name: Submit cases over HTTP and wait for the results
+        # --expect-storage: the start must find the volume and call the storage persistent (roadmap 1.7).
         run: |
           python -m examples.service_smoke_test --url http://127.0.0.1:8000 --key "$ACCESS_KEY" --state smoke.json \
-            --summary "$GITHUB_STEP_SUMMARY"
+            --summary "$GITHUB_STEP_SUMMARY" --expect-storage confirmed
       - name: Check the service runs without root and owns its data
         run: |
           docker exec -i nf python - <<'EOF'
@@ -122,7 +125,8 @@ jobs:
       - name: Restart the container and check nothing was lost
         run: |
           docker restart -t 30 nf
-          python -m examples.service_smoke_test --url http://127.0.0.1:8000 --key "$ACCESS_KEY" --state smoke.json --after-restart
+          python -m examples.service_smoke_test --url http://127.0.0.1:8000 --key "$ACCESS_KEY" --state smoke.json --after-restart \
+            --expect-storage confirmed
       - name: Stop gracefully, and check the restart above was graceful too
         run: |
           docker stop -t 30 nf
@@ -139,6 +143,51 @@ jobs:
             test "$count" -ge 2 || { echo "::error::expected \"$line\" after the restart and after the stop"; exit 1; }
           done
           if grep -q "$ACCESS_KEY" <<<"$logs"; then echo "::error::the access key appeared in the logs"; exit 1; fi
+      - name: Storage checked at start, and a Runner blocked by its AI settings (roadmap 1.7)
+        # The quality report of 2026-11-19, page 4: storage was called persistent from the settings alone, and
+        # /healthz said "ok" while the Runner could not work. Each container runs briefly on port 8002 and is removed:
+        # a volume (persistent), a folder that is set but has no disk (temporary), a tmpfs (temporary), then Typhoon
+        # chosen without a key (/healthz 200, /readyz 503, the case waits) and the same volume with the mock (the case
+        # runs). The Sentry event of a blocked Runner is checked by the unit tests (no DSN here).
+        run: |
+          echo "### ที่เก็บข้อมูลและความพร้อมของตัวรันงาน (ขั้น 1.7)" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          start() {  # a container name, then its docker run options
+            local name="$1"; shift
+            docker run -d --name "$name" -p 8002:8000 --cap-drop KILL -e NEURON_FLOW_ACCESS_KEY="$ACCESS_KEY" \
+              -e NEURON_FLOW_DATA_DIR=/var/data "$@" neuron-flow:ci > /dev/null
+          }
+          smoke() {  # a container name, then the smoke test's mode; prints the container's log if it fails
+            local name="$1"; shift
+            if ! python -m examples.service_smoke_test --url http://127.0.0.1:8002 --key "$ACCESS_KEY" \
+                --summary "$GITHUB_STEP_SUMMARY" "$@"; then
+              docker logs "$name" 2>&1 | tail -n 40 || true
+              exit 1
+            fi
+          }
+          docker volume create nf-volume > /dev/null
+          start nf-volume -v nf-volume:/var/data
+          smoke nf-volume --storage-check confirmed --label "ดิสก์ที่ต่อแยก (volume) แบบแผนเสียเงินใน render.yaml"
+          docker rm -f nf-volume > /dev/null
+          start nf-plain
+          smoke nf-plain --storage-check root_filesystem --label "ตั้งโฟลเดอร์ไว้ แต่ไม่ได้ต่อดิสก์"
+          docker rm -f nf-plain > /dev/null
+          start nf-tmpfs --tmpfs /var/data
+          smoke nf-tmpfs --storage-check temporary_filesystem --label "โฟลเดอร์บนพื้นที่ในหน่วยความจำ (tmpfs)"
+          docker rm -f nf-tmpfs > /dev/null
+          docker volume create nf-blocked > /dev/null
+          start nf-blocked -v nf-blocked:/var/data -e NEURON_FLOW_LLM_PROVIDER=typhoon
+          smoke nf-blocked --blocked --state blocked.json
+          docker stop -t 30 nf-blocked > /dev/null
+          logs="$(docker logs nf-blocked 2>&1)"
+          grep -q "runner: not starting jobs, the AI settings cannot work" <<<"$logs" \
+            || { echo "::error::the blocked Runner did not say why in its log"; echo "$logs" | tail -n 40; exit 1; }
+          if grep -q "$ACCESS_KEY" <<<"$logs"; then echo "::error::the access key appeared in the logs"; exit 1; fi
+          docker rm nf-blocked > /dev/null
+          start nf-fixed -v nf-blocked:/var/data
+          smoke nf-fixed --after-fix --state blocked.json
+          docker rm -f nf-fixed > /dev/null
+          docker volume rm nf-volume nf-blocked > /dev/null
       - name: Service logs
         if: always()
         run: docker logs nf 2>&1 | tail -n 80 || true

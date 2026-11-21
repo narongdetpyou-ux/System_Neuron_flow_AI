@@ -24,7 +24,9 @@ trusted agents in bounded child processes, retries, recovers after a crash and w
   original `keywords-v1` with versioned Thai/English `keywords-v2` using the same saved AI answers;
 - Sentry reporting, and tracing to Honeycomb (one trace per case; off until a key is set);
 - since round 2, an HTTP API, a durable job queue, a single Runner with crash recovery and a Thai web page,
-  shipped as one container for Render;
+  shipped as one container for Render; since 2026-11-21 the storage is called persistent only when the start finds
+  the data folder on a disk of its own, and `GET /readyz` reports the Runner's readiness beside `/healthz`, which
+  stays Render's liveness check (roadmap 1.7, ADR-036);
 - a second domain, the study guide (`study_guide.v1`): a versioned topic catalog, a verified resource
   library with a weekly link check, and a five-step workflow that answers a plain-language request with at
   most 5 library resources in study order (roadmap 3.1, 3.2). It ends `COMPLETED` without review (ADR-018).
@@ -198,7 +200,7 @@ If a task seems to need breaking a rule:
 ## 4. Checking your work
 
 ```bash
-python -m unittest discover -s tests -v        # all tests (571 on 2026-11-19); CI: Python 3.10 and 3.12
+python -m unittest discover -s tests -v        # all tests (601 on 2026-11-21); CI: Python 3.10 and 3.12
 python -m examples.case_triage_demo            # v1 rules, one synthetic case
 python -m examples.case_triage_shadow_demo     # v2 shadow mode with the offline mock AI
 python -m examples.study_guide_demo            # the study guide's answers to four synthetic requests
@@ -239,6 +241,10 @@ GitHub Actions (the owner can open these; the first three run on every push and 
   - builds the same container as Render and submits cases over HTTP;
   - restarts it and checks that nothing was lost;
   - checks that it runs without root and stops cleanly;
+  - checks the storage check and readiness (roadmap 1.7): a volume must read `confirmed`, a folder with no disk
+    `root_filesystem` and a tmpfs `temporary_filesystem`; Typhoon chosen without a key must give `/healthz` 200,
+    `/readyz` 503 `blocked_config` and a case that waits, and the same volume with the mock must work that case;
+    the Thai lines are on the run page;
   - fails when a file under `app/` or `neuron_flow/` or in the installed packages, or a module the Runner
     imports, has no bytecode cache in the image or one that does not match its source
     (`.github/scripts/check_image_bytecode.py`, run inside the image; effectiveness plan E1);
@@ -369,7 +375,7 @@ Notes for cloud sessions (claude.ai/code):
 | `app/services/` | workflow catalog, admission, Runner with reconciliation, result summaries, queue and run-time figures, review decisions (`reviews.py`), the rules and the AI against people's decisions (`review_labels.py`, roadmap 2.8: counts only, nothing reads it to decide), who may call the API and what each role may do (`access.py`: the shared key, personal tokens and the role table, ADR-034) |
 | `app/api/`, `app/web/` | standard-library HTTP API and the Thai web page (chat layout with a case / study-question switch, the study guide's layered answer, Flow and Trace, read-only settings); `tests/test_web_page.py` holds the page to its contracts |
 | `app/boot.py` | the image's process 1: takes the data folder as root, switches to `neuron`, becomes tini |
-| `app/settings.py`, `app/serve.py` | settings from the environment; the launcher (API + supervised Runner) |
+| `app/settings.py`, `app/serve.py` | settings from the environment, with the start's storage check from the mount table (roadmap 1.7, ADR-036); the launcher (API + supervised Runner) |
 | `Dockerfile`, `render.yaml`, `railway.json` | the container, the Render Blueprint, the Railway config kept for later |
 | `tests/open_benchmarks/` | stage 2 of the benchmarking plan (roadmap 5.6): `build_sets.py` builds the CLINC150, BANKING77, MASSIVE th/en and BIPIA case sets at run time from pinned sources (standard library, run with `python -I`; refuses any SHA-256 it does not expect), `manifest_v1.json` (the sources and every built file's SHA-256; `--check`), `NOTICE.md` (licences), and `attention_open_check.py` (the development and sealed halves of the same sources for the attention signals; the sealed half prints counts only and can be written as a case file at run time). Nothing downloaded is committed |
 | `tests/robustness/` | the robustness benchmark (docs/benchmarking.md): the synthetic set, the pinned open extract with its licences (`NOTICE.md`), the runner `bench.py`, the extract builder (`build_open_extract.py verify` re-checks the upstream files) and the 116-case file for live runs |
@@ -568,6 +574,20 @@ Notes for cloud sessions (claude.ai/code):
     No answer changed: every eval gate and the robustness gate are as before. Page 4's two findings (storage marked
     persistent from the settings alone; `/healthz` 200 while the Runner is `blocked_config`) were reproduced on a
     local service and are roadmap 1.7; the other points became 1.8, 2.9, 2.10 and additions to 1.4, 5.7, 7.2 and 7.5.
+  - Roadmap 1.7, the rest of that report's page 4, built on 2026-11-21 after the owner asked to have the next work
+    explained ("อธิบายงาน") and approved its plan (ADR-036;
+    [evidence](docs/evidence/2026-11-21-readiness-and-storage-check.md)):
+    - `app.settings.check_storage` reads `/proc/self/mountinfo` at start; the storage is persistent only when the
+      data folder's mount is its own and not `overlay`, `aufs`, `tmpfs`, `ramfs` or `devtmpfs`; `/v1/status` gives
+      `storage.check` and `storage.filesystem` (never a path), and the page says why a folder that is set is not
+      "ถาวร". Settings built by hand are `not_checked`, never persistent; the test fixture passes a confirmed disk;
+    - `GET /readyz` (no key, a code only): 200 `idle` or `running`; 503 `blocked_config`, `starting`, `not_alive` or
+      `queue_unavailable`. Only heartbeats written since this API process started count; `serve.main` builds the API
+      before it starts the Runner. `/healthz` is unchanged and stays `healthCheckPath`;
+    - a Runner blocked by its AI settings sends one Sentry event per start (`report_runner_blocked`, the class name
+      only); checked with a stub SDK, since CI has no DSN;
+    - on Render's free plan nothing the owner sees changes except the new `/readyz`. No Render disk has been seen yet:
+      the first deploy after D1 must show "ถาวร" in the settings tab.
   - The answer to the first independent review (2026-11-10, of `main` @ `f38c926`; all four findings, one PR;
     `docs/evidence/2026-11-10-independent-review-response.md`):
     - review decisions (2.2) and the page's decision card and "รอรีวิว" list (2.4), built before 2.1 with the
@@ -666,8 +686,9 @@ Notes for cloud sessions (claude.ai/code):
   - Waiting on the owner: 0.2 and 1.4 (D1, paid Render plan), 0.3 path B and 0.4 with Claude (D2, Claude
     API key); 0.4 with Typhoon is free but sends what is typed on the page to Typhoon, so it is the owner's
     choice too; an open model behind the page needs a paid machine (D7); the rest of the owner tests on the live
-    page (2.4's step 4, attention 5.10, and 2.8's scorecard after its merge); the first new skill (H4). The owner's
-    first case since 2026-11-10, on 2026-11-16, passed H3 and 2.4's steps 2 and 3 and gave E1's Render figure; the
+    page (2.4's step 4, attention 5.10, 2.8's scorecard after its merge, and `/readyz` after 1.7's merge); the first
+    new skill (H4). The owner's first case since 2026-11-10, on 2026-11-16, passed H3 and 2.4's steps 2 and 3 and
+    gave E1's Render figure; the
     same day 2.1's owner test passed every step, 2.4's step 1 with it (confirmed by the owner on 2026-11-19).
     D8 is decided (2026-11-10): the e-mail history stays as it is; do not propose a rewrite.
   - **The study guide is paused (owner, 2026-11-11):** no new study-guide work (E4, E6 or changes to
@@ -684,12 +705,11 @@ Notes for cloud sessions (claude.ai/code):
     another version and new evidence.
   - 5.8's first full run is recorded: the owner chooses its branch (not good enough, close or good enough;
     roadmap 5.8, "After the first full run", step 2), then follow it.
-  - **From the quality report of 2026-11-19, planned next: roadmap 1.7** (storage marked persistent only on a
-    confirmed mount; `GET /readyz` beside `/healthz`, which stays liveness for Render; a Sentry event when the Runner
-    is blocked). Then 1.8 (a browser walk in CI on a phone-sized screen). 2.9 (blind labels) waits for the owner's
-    go-ahead; 2.10 (reviewer time) is buildable. Never "fix" the report's held-out example `HO-TH-UPL-05` with a
-    keyword (rule 5).
-  - Buildable now without an owner decision: 1.7, 1.8 and 2.10 (above), the rest of 5.5 (the ten masking gaps, which
+  - **From the quality report of 2026-11-19: 1.7 is built (2026-11-21); planned next: roadmap 1.8** (a browser walk
+    in CI on a phone-sized screen; Playwright as a CI-only test dependency, with its reason in the PR, rule 8). 2.9
+    (blind labels) waits for the owner's go-ahead; 2.10 (reviewer time) is buildable. Never "fix" the report's
+    held-out example `HO-TH-UPL-05` with a keyword (rule 5).
+  - Buildable now without an owner decision: 1.8 and 2.10 (above), the rest of 5.5 (the ten masking gaps, which
     need new masking rules, and NFC, which needs an ADR; the invisible-text gaps were fixed on 2026-11-19), 5.6 and
     5.7, the rest of Phase 2 (2.1 to 2.4 and 2.8 are built; 2.5 needs D3, 2.6 and 2.7 when needed), H5's trace link,
     and Phase 4 (4.1 first; Phase 3, which it needs, is built). The rest of 7.1 (who can read the AI key) needs an

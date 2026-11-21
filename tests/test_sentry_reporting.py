@@ -119,6 +119,21 @@ class SentryReportingTests(unittest.TestCase):
         self.assertEqual(sdk.events[0]["exception"], "SpecError")
         self.assertEqual(sdk.events[0]["tags"]["neuron_flow.event"], "runtime_exception")
 
+    def test_a_blocked_runner_is_one_event_with_the_error_class_only(self):
+        # Roadmap 1.7: the Runner starts no jobs because the AI settings cannot work.
+        sdk = StubSdk()
+        self.assertEqual(SentryReporter(sdk=sdk).report_runner_blocked("LLMConfigError"), "evt1")
+        self.assertEqual(sdk.events, [{
+            "message": "Neuron Flow Runner blocked: the AI settings cannot work (LLMConfigError)", "level": "error",
+            "tags": {"neuron_flow.event": "runner_blocked", "neuron_flow.error_type": "LLMConfigError"},
+            "context": {"state": "blocked_config", "error_type": "LLMConfigError"},
+            "fingerprint": ["neuron-flow", "runner-blocked", "LLMConfigError"]}])
+        # Anything that is not a class name is replaced, so a message can never travel in its place.
+        SentryReporter(sdk=sdk).report_runner_blocked("TYPHOON_API_KEY is not set")
+        self.assertEqual(sdk.events[1]["tags"]["neuron_flow.error_type"], "Unknown")
+        self.assertNotIn("TYPHOON_API_KEY", json.dumps(sdk.events[1]))
+        self.assertIsNone(SentryReporter(sdk=StubSdk(active=False)).report_runner_blocked("LLMConfigError"))
+
     def test_before_send_strips_locals_and_user_data(self):
         event = {"user": {"email": SECRET_INPUT}, "request": {"data": SECRET_INPUT},
                  "exception": {"values": [{"stacktrace": {"frames": [{"vars": {"x": SECRET_INPUT}}]}}]}}

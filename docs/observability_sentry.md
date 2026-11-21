@@ -20,6 +20,7 @@ Sentry's automatic exception capture would miss almost every real failure.
 | Job `DELIVERY_FAILED` | one `error` event | `neuron-flow / delivery-failed / <error type>` |
 | Step `SUCCEEDED` but degraded: output `{"status": "unavailable", "reason": "<code>"}` (e.g. AI second opinion unavailable) | one `warning` event | `neuron-flow / step-degraded / <agent> / <reason>` |
 | `Runtime.run` raises (e.g. agent version drift, unknown agent) | exception event, then re-raised | Sentry default |
+| The Runner starts no jobs because the AI settings cannot work (`blocked_config`, e.g. Typhoon chosen without a key; roadmap 1.7) | one `error` event per Runner start | `neuron-flow / runner-blocked / <error type>` |
 
 Tags: `neuron_flow.event`, `neuron_flow.agent`, `neuron_flow.agent_version`,
 `neuron_flow.error_type`, `neuron_flow.retries_exhausted`, and `neuron_flow.degraded_reason`
@@ -92,6 +93,15 @@ and finds a job that a stopped Runner left unfinished, it also calls `report_rec
 | `configuration_changed` | error | The model, prompt or code changed while the job was interrupted, so it was failed instead of re-run under other settings |
 
 Only the job id, the outcome code and the claim count are sent.
+
+When the AI settings cannot work, the Runner stays up, starts no jobs and reports `blocked_config`
+(queued cases wait; `/readyz` answers 503 `blocked_config` while `/healthz` stays 200, roadmap 1.7). It
+then calls `report_runner_blocked` once, so the owner hears about it without watching the page:
+message `Neuron Flow Runner blocked: the AI settings cannot work (<error type>)`, tags
+`neuron_flow.event=runner_blocked` and `neuron_flow.error_type`, context `state` and `error_type`. Only the
+error's class name is sent (anything else becomes `Unknown`), never its message, a key or a setting's value;
+the page and `/v1/status` show the reason. A restart of the Runner reports again, once. The alert in
+"Alerts" above already emails on a new issue, so no rule is needed for it.
 
 ## Limits
 

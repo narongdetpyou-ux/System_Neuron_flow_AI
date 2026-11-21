@@ -17,7 +17,8 @@ What it does, in order:
 
 If the AI settings cannot work (for example ``anthropic`` without an API key), the Runner starts no
 jobs. It stays up, reports ``blocked_config`` with the reason, and queued jobs wait until the
-settings are fixed. Nothing is dropped.
+settings are fixed. Nothing is dropped. It also sends one Sentry event per start (the error's class
+only), and ``/readyz`` answers 503 ``blocked_config`` while ``/healthz`` stays 200 (roadmap 1.7).
 
 Run it with ``python -m app.services.runner``; ``python -m app.serve`` starts it for you.
 """
@@ -94,13 +95,16 @@ class Runner:
             log.error("runner: not starting jobs, the AI settings cannot work: %s", exc)
             with self._heartbeat():
                 self._set("blocked_config", detail=str(exc)[:300])
+                # Once per start, so the owner hears about it without watching the page: the class name only.
+                self.reporter.report_runner_blocked(type(exc).__name__)
                 self.stop_event.wait()
             return
         # The workspace lock comes first: a Runner that cannot get it never writes a heartbeat,
         # so it cannot overwrite the status of the Runner that is working.
         with Runtime(self.settings.core_dir, agents=agents,
                      max_workers=self.settings.runner_workers) as runtime, self._heartbeat():
-            log.info("runner: started (ai=%s/%s, storage=%s)", config.provider, config.model, self.settings.storage)
+            log.info("runner: started (ai=%s/%s, storage=%s, %s)", config.provider, config.model, self.settings.storage,
+                     self.settings.storage_check.result)
             self.reconcile(runtime, config)
             self._set("idle")
             while not self.stop_event.is_set():

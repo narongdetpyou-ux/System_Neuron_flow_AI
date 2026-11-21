@@ -18,9 +18,9 @@ from app.api import ApiApp, make_server
 from app.api.limits import RateLimiter
 from app.boot import drop_privileges
 from app.persistence import QueueStore
-from app.serve import RunnerSupervisor
+from app.serve import RunnerSupervisor, log_storage
 from app.services.runner import Runner
-from app.settings import Settings, SettingsError
+from app.settings import NOT_CONFIGURED, Settings, SettingsError, StorageCheck
 from tests.service_fixtures import KEY, case_body, settings, wait_for
 
 
@@ -71,6 +71,10 @@ class LiveServerTests(unittest.TestCase):
         self.assertEqual(headers["Server"], "neuron-flow")
         status, _headers, body = self.request("HEAD", "/healthz")
         self.assertEqual((status, body), (200, b""))
+        # Readiness (roadmap 1.7): no Runner here, so it answers 503 with a code, and a HEAD carries no body.
+        status, _headers, body = self.request("GET", "/readyz", headers={"Authorization": ""})
+        self.assertEqual((status, json.loads(body)["ok"]), (503, False))
+        self.assertEqual(self.request("HEAD", "/readyz", headers={"Authorization": ""})[::2], (503, b""))
 
     def test_oversized_body_is_refused_before_it_is_read(self):
         jobs_before = self.store.counts()
@@ -119,12 +123,12 @@ class LiveServerTests(unittest.TestCase):
 
     def test_every_response_gets_a_fresh_id_when_none_is_sent(self):
         seen = set()
-        for path, auth in (("/", ""), ("/healthz", ""), ("/v1/status", None), ("/v1/nope", None)):
+        for path, auth in (("/", ""), ("/healthz", ""), ("/readyz", ""), ("/v1/status", None), ("/v1/nope", None)):
             headers = {"Authorization": auth} if auth is not None else {}
             status, response_headers, _body = self.request("GET", path, headers=headers)
             self.assertRegex(response_headers.get("X-Request-Id", ""), r"^req_[0-9a-f]{16}$", path)
             seen.add(response_headers["X-Request-Id"])
-        self.assertEqual(len(seen), 4)
+        self.assertEqual(len(seen), 5)
         # Refused before the app runs (no Content-Length): still answered with an id.
         with socket.create_connection(self.server.server_address[:2], timeout=5) as connection:
             connection.sendall(b"POST /v1/jobs HTTP/1.0\r\nContent-Type: application/json\r\n"
@@ -169,9 +173,29 @@ class LimiterTests(unittest.TestCase):
 
 class LauncherTests(unittest.TestCase):
     def test_settings_find_the_railway_volume_and_validate_numbers(self):
-        found = Settings.from_env({"RAILWAY_VOLUME_MOUNT_PATH": "/var/data", "NEURON_FLOW_ACCESS_KEY": KEY, "PORT": "9000"})
+        # Persistent only when the mount table shows the volume (roadmap 1.7; tests/test_storage_check.py).
+        mounts = "1 0 0:1 / / rw - overlay overlay rw\n2 1 8:1 /v /var/data rw - ext4 /dev/sda1 rw\n"
+        found = Settings.from_env({"RAILWAY_VOLUME_MOUNT_PATH": "/var/data", "NEURON_FLOW_ACCESS_KEY": KEY,
+                                   "PORT": "9000"}, mountinfo=mounts)
         self.assertEqual((found.data_dir, found.storage, found.persistent, found.port),
                          (Path("/var/data"), "railway_volume", True, 9000))
+        unmounted = Settings.from_env({"RAILWAY_VOLUME_MOUNT_PATH": "/var/data"}, mountinfo=mounts.splitlines()[0])
+        self.assertEqual((unmounted.storage, unmounted.persistent), ("railway_volume", False))
+
+    def test_the_start_says_what_the_storage_check_found_without_the_path(self):
+        folder = "/srv/private-folder-name"
+        for value, level, words in (
+                (settings(folder), "INFO", "storage confirmed persistent: the data folder is on a filesystem of its own (ext4)"),
+                (settings(folder, storage_check=StorageCheck("root_filesystem", "overlay")), "WARNING",
+                 "the data folder is set but not confirmed persistent (root_filesystem, overlay)"),
+                (settings(folder, storage="local_default", storage_check=NOT_CONFIGURED), "WARNING",
+                 "no persistent storage configured")):
+            with self.subTest(words=words), self.assertLogs("neuron_flow.serve", level="INFO") as logs:
+                log_storage(value)
+            self.assertEqual(len(logs.records), 1)
+            self.assertEqual(logs.records[0].levelname, level)
+            self.assertIn(words, logs.output[0])
+            self.assertNotIn("private-folder-name", logs.output[0])
         self.assertEqual(Settings.from_env({"NEURON_FLOW_DATA_DIR": "/srv/data", "RAILWAY_VOLUME_MOUNT_PATH": "/x"}).storage,
                          "configured")
         local = Settings.from_env({})

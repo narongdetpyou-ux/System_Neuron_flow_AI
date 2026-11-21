@@ -23,7 +23,7 @@ differs, this file and architecture.md win.
   - ถ้าสองฝ่ายเห็นไม่ตรงกัน โค้ดเจอสัญญาณ หรือ AI ชี้ เคสจะถูกยกให้คนดูก่อน พร้อมบอกเหตุผล (ขั้น 5.10)
 - ถ้าเครื่องดับกลางทาง ระบบทำต่อได้ ส่งซ้ำก็ไม่เกิดงานซ้ำ
 - ยกเลิกเคสที่ยังรอคิวได้ และทุกคำขอมีรหัสคำขอ (request id) ไว้ไล่ดูใน log (ขั้น 1.2, 1.3)
-- ผ่านชุดทดสอบอัตโนมัติ 571 ข้อ และเปิดใช้ออนไลน์บน Render แล้ว ระบบปิดตัวอย่างเรียบร้อย และการแก้แค่เอกสารไม่ทำให้ Render ขึ้นเวอร์ชันใหม่ (ขั้น 0.1, 0.5)
+- ผ่านชุดทดสอบอัตโนมัติ 601 ข้อ และเปิดใช้ออนไลน์บน Render แล้ว ระบบปิดตัวอย่างเรียบร้อย และการแก้แค่เอกสารไม่ทำให้ Render ขึ้นเวอร์ชันใหม่ (ขั้น 0.1, 0.5)
 - หน้าเว็บเป็นแบบแชท: พิมพ์เคส ดูขั้นตอนก่อนส่ง กดยืนยัน แล้วติดตามใน Flow และประวัติเหตุการณ์ (ขั้น 1.6)
 - หน้าเว็บบอกว่ามีเคสรอกี่เคส เคสที่รอนานสุดรอมานานเท่าไร ปกติแต่ละเคสใช้เวลาเท่าไร และเคสที่ไม่สำเร็จล้มเพราะอะไร (ขั้น 5.3)
 - ถ้ามีคนแก้กฎหรือ prompt แล้วคำตอบของเคสทดสอบเคสไหนเปลี่ยน ช่องตรวจบน GitHub จะเป็นสีแดงและบอกว่าเคสไหนเปลี่ยนอะไร (ขั้น 5.2)
@@ -59,14 +59,15 @@ differs, this file and architecture.md win.
     - รุ่นของ AI ตอนนี้รวม "ด่านตรวจคำตอบ" ด้วย ถ้าวันหลังมีคนแก้ด่านนี้แต่ลืมเปลี่ยนรุ่น ช่องตรวจบน GitHub จะแดง และงานที่ค้างกลางทางจะไม่ถูกรันต่อด้วยกติกาใหม่แบบเงียบ ๆ
     - ทุกเคสบันทึกรุ่นของ AI แบบครบ (รวมความยาวคำตอบสูงสุด) ตารางเทียบกับคำตัดสินของคนจึงไม่รวมตัวเลขต่างรุ่นกัน เคสเก่าที่ไม่รู้รุ่นแสดงว่า "ไม่ทราบรุ่น"
     - เคสภาษาอังกฤษที่มี ฿ ไม่ถูกนับเป็นเคสไทยแล้ว (นับเป็นเคสไทยเมื่อมีตัวอักษรไทยจริง)
-  - ข้ออื่นเป็นแผนงาน: 1.7 (ป้าย "ถาวร" ต้องตรวจจริง และสัญญาณแยกเมื่อตัวรันงานติด ทำต่อเป็นงานถัดไป) 1.8 (ทดสอบกดจริงบนจอขนาดมือถือใน GitHub) 2.9 (ให้คนเลือกหมวดก่อนเห็นข้อเสนอ ต้องรอคุณเห็นชอบ) 2.10 (เวลาที่คนใช้ตัดสินแต่ละเคส) และเพิ่มเกณฑ์ใน 1.4, 5.7, 7.2, 7.5 ส่วนที่ต้องให้คุณตัดสินใจ: D1 (ดิสก์ถาวร) และข้อมูลจริง (D4)
+  - ข้ออื่นเป็นแผนงาน: 1.7 (ป้าย "ถาวร" ต้องตรวจจริง และสัญญาณแยกเมื่อตัวรันงานติด ทำแล้ว 21 พ.ย. ดูข้อถัดไป) 1.8 (ทดสอบกดจริงบนจอขนาดมือถือใน GitHub เป็นงานถัดไป) 2.9 (ให้คนเลือกหมวดก่อนเห็นข้อเสนอ ต้องรอคุณเห็นชอบ) 2.10 (เวลาที่คนใช้ตัดสินแต่ละเคส) และเพิ่มเกณฑ์ใน 1.4, 5.7, 7.2, 7.5 ส่วนที่ต้องให้คุณตัดสินใจ: D1 (ดิสก์ถาวร) และข้อมูลจริง (D4)
+- **ป้าย "ถาวร" และสถานะตัวรันงาน มาจากการตรวจจริง (21 พ.ย., ขั้น 1.7, ADR-036):** ตอนเริ่มระบบ ระบบดูตารางดิสก์ของเครื่อง (mount table) แล้วเรียกที่เก็บว่า "ถาวร" เฉพาะเมื่อโฟลเดอร์ข้อมูลอยู่บนดิสก์ที่ต่อแยกจริง ถ้าตั้งไว้แต่ดิสก์ไม่ได้ต่อ แท็บ "ตั้งค่า" บอก "ชั่วคราว" พร้อมเหตุผล มีหน้าตรวจความพร้อมใหม่ `/readyz` ที่บอกว่าตัวรันงานพร้อมทำเคสไหม (ตั้งค่า AI ไม่ครบจะได้ `blocked_config`) ส่วน `/healthz` เดิมไม่เปลี่ยน เพราะ Render ใช้ตัดสินการรีสตาร์ท และตัวรันงานที่ติดแจ้ง Sentry 1 ครั้งต่อการเริ่มระบบ บนแผนฟรีหน้าเว็บยังบอก "ชั่วคราว" เหมือนเดิม ([บันทึกหลักฐาน](evidence/2026-11-21-readiness-and-storage-check.md), [วิธีใช้](intake_queue.md))
 
 **ลำดับต่อจากนี้** แต่ละขั้นจบด้วยสิ่งที่คุณลองเองได้
 
-| ขั้น | ทำอะไร | คุณจะได้ลองอะไร | สถานะ (16 พ.ย. 2026) |
+| ขั้น | ทำอะไร | คุณจะได้ลองอะไร | สถานะ (21 พ.ย. 2026) |
 |---|---|---|---|
 | 0 | เปิดใช้ออนไลน์บน Render และวัดผล AI จริงครั้งแรก | ใส่เคสบนหน้าเว็บจริง และอ่านผลวัดของ AI จริง | ออนไลน์แล้ว; วัดผล AI จริงครั้งแรกแล้วด้วย Typhoon (0.3, 6 พ.ย.); ที่เหลือรอคุณตัดสินใจ: D1 แผน Render แบบเสียเงิน, D2 API key ของ Claude และ 0.4 กับ Typhoon (ฟรี แต่ข้อความที่พิมพ์บนหน้าเว็บจะถูกส่งไป Typhoon) |
-| 1 | เก็บงานเล็ก ๆ ให้ระบบแน่นขึ้น | ยกเลิกเคสที่ยังรอคิวได้ | เสร็จ ยกเว้น 1.4 (สำรองข้อมูล) ที่ต้องใช้แผน Render แบบเสียเงิน; เพิ่มจากรายงานคุณภาพ 19 พ.ย.: 1.7 (สถานะที่ตรวจจริง ทำต่อเป็นงานถัดไป) และ 1.8 (ทดสอบกดจริงบนจอมือถือ) |
+| 1 | เก็บงานเล็ก ๆ ให้ระบบแน่นขึ้น | ยกเลิกเคสที่ยังรอคิวได้ และเปิด `/readyz` ดูว่าตัวรันงานพร้อมไหม | เสร็จ ยกเว้น 1.4 (สำรองข้อมูล) ที่ต้องใช้แผน Render แบบเสียเงิน; เพิ่มจากรายงานคุณภาพ 19 พ.ย.: 1.7 (สถานะที่ตรวจจริง) ทำแล้ว (21 พ.ย.) และ 1.8 (ทดสอบกดจริงบนจอมือถือ) เป็นงานถัดไป |
 | 2 | ให้คนรีวิวได้จริง: ผู้รีวิวมีรหัสของตัวเอง กดอนุมัติหรือไม่อนุมัติได้ และ n8n แจ้งเตือน | กล่อง "รอรีวิว" บนหน้าเว็บ และข้อความแจ้งเตือน | เริ่มแล้ว (10 พ.ย. ตามข้อ 4 ของผู้ตรวจสอบอิสระ): 2.2 บันทึกการตัดสินและ 2.4 การ์ดตัดสินกับรายการ "รอรีวิว" ทำแล้ว โดยผู้ตัดสินคือผู้ถือรหัสเข้าใช้ร่วม (คุณ); 2.3 งานต่อเนื่องหลังอนุมัติทำแล้ว (11 พ.ย.) เป็นเส้นทางแรกของตัวกลาง (ขั้น H); คุณลองบนหน้าเว็บจริงแล้ว (16 พ.ย.): อนุมัติ 1 เคส เกิดงานต่อเนื่อง 1 งานและเสร็จ ป้าย "ด่วน" ผ่านแล้วระหว่างทดสอบรหัสรายคน ส่วนการกด "ไม่อนุมัติ" โดยไม่ใส่เหตุผลยังไม่ได้ลอง; 2.1 รหัสรายคนของผู้ตรวจและผู้ส่งเคสทำแล้ว (16 พ.ย.) และคุณลองบนหน้าเว็บจริงผ่านครบทุกขั้นแล้ว (16 พ.ย.); 2.8 นับว่ากฎกับ AI ตรงกับคำตัดสินของคนกี่เคส ทำแล้ว (19 พ.ย.); 2.5 n8n ยังไม่ทำ |
 | 3 | ผู้ช่วยแนะนำแหล่งเรียน (`study_guide.v1`) ตามหลักปรัชญาของคุณ | พิมพ์เรื่องที่อยากรู้ด้วยคำธรรมดา แล้วได้แหล่งเรียนไม่เกิน 5 แหล่งพร้อมลำดับการเรียน | สร้างครบทุกขั้นแล้ว (คุณเลือกขั้นนี้ก่อนขั้น 2 เมื่อ 5 พ.ย.): 3.1 คลังแหล่งเรียน 3.2 ตัวผู้ช่วย และ 3.3 ชุดข้อสอบ ทำแล้ว (ดูตัวอย่างคำตอบและผลข้อสอบใน Actions ได้); 3.4 ช่อง "อยากเรียน" บนหน้าเว็บ สร้างและ merge แล้ว (7 พ.ย.) คุณลองบนหน้าเว็บจริงผ่านแล้ว (8 พ.ย.); รันกับ AI จริง (Typhoon) แล้ว หาหัวข้อถูก 46 จาก 48 ข้อ ไม่มีลิงก์นอกคลัง (Claude รอ D2); **หยุดพัฒนาเพิ่มไว้ก่อนตามที่คุณสั่ง (11 พ.ย.)**: ของที่มีอยู่ยังใช้ได้และช่องตรวจยังรันเหมือนเดิม |
 | 4 | ช่องคุยภาษาธรรมดา: ระบบเข้าใจว่าคุณขออะไร บอกตรง ๆ เมื่อเรื่องอยู่นอกกรอบ และถามกลับ 1 คำถามเมื่อข้อมูลไม่พอ | คุยกับระบบได้เลย ไม่ต้องเลือกประเภทงานเอง | ยังไม่เริ่ม (ขั้น 3 สร้างครบแล้ว เริ่มได้เมื่อคุณเลือก) |
@@ -128,8 +129,8 @@ owner.
 | 1.4 | Backup, restore and retention | ⬜; the quality report of 2026-11-19 adds its acceptance: cases, decisions, receipts and token states read back after a deploy and after a restore into new storage | D1 = paid (disk) |
 | 1.5 | Docs truth checks in CI | ✅ PR #24 | — |
 | 1.6 | New look for the web page from the owner's mockup: chat intake with a confirm step, Flow and Trace, read-only settings | ✅ PR #18, merged and deployed 2026-11-03; the owner reported the owner test passed on the live page | — |
-| 1.7 | Storage and Runner status that are checked, not assumed: `persistent` only on a confirmed mount, `/readyz` beside `/healthz`, a Sentry signal when the Runner is blocked | ⬜ planned next (quality report of 2026-11-19, page 4) | — |
-| 1.8 | A browser walk in CI on a phone-sized screen: send a case, decide it | ⬜ planned (quality report of 2026-11-19, page 6) | — |
+| 1.7 | Storage and Runner status that are checked, not assumed: `persistent` only on a confirmed mount, `/readyz` beside `/healthz`, a Sentry signal when the Runner is blocked | ✅ built on 2026-11-21 (ADR-036): the start reads the mount table and calls the storage persistent only for a folder on a disk of its own; `GET /readyz` (no key) answers 503 with `blocked_config`, `starting`, `not_alive` or `queue_unavailable` while `/healthz` stays Render's liveness check; a blocked Runner sends one Sentry event per start; *Service container* runs a volume, a folder with no disk, a tmpfs, and a blocked Runner that recovers with its case ([evidence](evidence/2026-11-21-readiness-and-storage-check.md)); the owner's look at `/readyz` after the merge is left | — |
+| 1.8 | A browser walk in CI on a phone-sized screen: send a case, decide it | ⬜ planned next (quality report of 2026-11-19, page 6) | — |
 | 2.1 | Personal access tokens and roles (replaces the shared key) | ✅ built on 2026-11-16 (ADR-034): the owner issues reviewer and submitter tokens on the page (shown once), revokes them at once, and every route checks the role; on the free plan tokens are lost at every sleep (fail closed); the owner's test on the live page passed every step on 2026-11-16 (confirmed by the owner on 2026-11-19) | — |
 | 2.2 | Review ledger and decisions API | ✅ built on 2026-11-10 before 2.1 (ADR-027); since 2.1 (2026-11-16) a reviewer's token decides, recorded by its id, and a revoked token or the wrong role is denied | — |
 | 2.3 | Linked phase-B job on approval | ✅ built on 2026-11-11 as the first route of the skill-handoff exchange (H3, ADR-030): one approval starts exactly one `case_triage.v2.apply` job with a Core receipt ([evidence](evidence/2026-11-11-skill-handoff.md)); on the live page on 2026-11-16 the owner's approval started one, which completed in 42 ms | 2.2 |
@@ -462,7 +463,7 @@ decisions would vanish on every sleep. Since 2026-11-10 the API and the page say
   it means something only with the disk. Build it before D1 only if the owner asks.
 - **Don't:** let the API process read Core's SQLite files (ADR-001).
 
-### 1.7 Storage and Runner status that are checked, not assumed (planned next; from the quality report of 2026-11-19)
+### 1.7 Storage and Runner status that are checked, not assumed (built 2026-11-21; from the quality report of 2026-11-19)
 
 - **Why (report, page 4, both rated high):**
   - storage: `persistent` comes from the settings alone (`NEURON_FLOW_DATA_DIR` set means "persistent"), so a wrong
@@ -488,9 +489,22 @@ decisions would vanish on every sleep. Since 2026-11-10 the API and the page say
 - **Owner test (Thai, after the merge):** เปิด https://neuron-flow.onrender.com/readyz ต้องเห็น `{"ok":true,...}`
   และแท็บ "ตั้งค่า" ยังบอกว่าที่เก็บข้อมูลเป็นแบบ "ชั่วคราว" เหมือนเดิม (แผนฟรีไม่มีดิสก์)
 - **Optional, the owner's choice:** an uptime monitor on `/readyz` in the owner's Sentry account (it creates
-  something in that account, so the owner decides).
+  something in that account, so the owner decides; on the free plan its calls would also keep the service from
+  sleeping).
+- **Built on 2026-11-21 (ADR-036; [evidence](evidence/2026-11-21-readiness-and-storage-check.md)):**
+  - `app.settings.check_storage` reads `/proc/self/mountinfo` at start; `/v1/status` gives `storage.check`
+    (`confirmed`, `root_filesystem`, `temporary_filesystem`, `mount_table_unreadable`, `not_configured`,
+    `not_checked`) and `storage.filesystem`, never a path; `devtmpfs` counts as temporary too. The page's status
+    bar and settings row say why a folder that is set is not "ถาวร";
+  - `GET /readyz` counts only heartbeats written since this API process started (`starting` until the new
+    Runner's first one, then `not_alive` after 15 s without one), maps `reconciling` to `starting` and an
+    unreadable queue to `queue_unavailable`;
+  - `SentryReporter.report_runner_blocked`, called once per start in the Runner's `blocked_config` branch;
+  - tests: `tests/test_storage_check.py`, `ReadinessTests`, a blocked Runner end to end, the Sentry event, the
+    page's words; *Service container* runs a volume, a folder with no disk, a tmpfs, and Typhoon without a key
+    then the mock on the same volume. The Sentry event is checked with a stub SDK only (no DSN in CI).
 
-### 1.8 A browser walk in CI: send a case and decide it on a phone-sized screen (planned)
+### 1.8 A browser walk in CI: send a case and decide it on a phone-sized screen (planned next)
 
 - **Why:** most page tests read the page's source (quality report of 2026-11-19, page 6), so a button that cannot be
   clicked would pass while its text is still there. The walks with a headless browser so far were done by hand.
@@ -1931,3 +1945,8 @@ of H5 were built ([evidence](evidence/2026-11-11-skill-handoff.md)).
   alone). Its other points became plan items: 1.7 (storage status checked, not assumed; `/readyz` beside `/healthz`;
   a Sentry signal when the Runner is blocked), planned next; 1.8 (a browser walk in CI); 2.9 (blind labels, the
   owner's go-ahead); 2.10 (reviewer time); and acceptance or measures added to 1.4, 5.7, 7.2 and 7.5.
+- 2026-11-21: 1.7 built after the owner asked what the next work was ("อธิบายงาน") and approved its plan. The
+  storage is persistent only when the start finds the data folder on a disk of its own (the mount table), `GET
+  /readyz` reports the Runner's readiness apart from `/healthz` (which stays Render's liveness check), and a
+  Runner blocked by its AI settings sends one Sentry event per start (ADR-036). *Service container* gained a step
+  with a volume, a folder with no disk, a tmpfs, and a blocked Runner that recovers with its case. 1.8 is next.

@@ -1,6 +1,6 @@
 # Intake API, job queue, Runner and web page (round 2, Milestone B)
 
-**Status:** built in PR #11 and tested offline (571 tests on 2026-11-19, including killing the Runner
+**Status:** built in PR #11 and tested offline (601 tests on 2026-11-21, including killing the Runner
 mid-step). The container build is checked on every push by *Actions → Service container*. Live on
 Render's free plan since 2026-11-01 (`render.yaml`). Railway was the first choice, but it has paused new
 sign-ups since 22 Oct 2026 after a security incident; `railway.json` stays in the repository for later.
@@ -30,6 +30,10 @@ Rules and AI against people's decisions (2026-11-19, roadmap 2.8): `GET /v1/revi
 settings tab count how often the rules' suggestion and the AI's opinion named the category a person recorded, per
 proposal version and split by Thai text or not; counts only, nothing changes because of them (see "กฎกับ AI
 เทียบกับคำตัดสินของคน" and "Reviewer-label scorecard" below).
+Storage and readiness checked, not assumed (2026-11-21, roadmap 1.7, ADR-036): the storage is called persistent
+only when the start finds the data folder on a disk of its own, and `GET /readyz` says whether the Runner can work
+cases while `/healthz` stays the host's liveness check (see "ตรวจความพร้อม" and "Readiness and the storage
+check" below).
 Design principles: [design_philosophy.md](design_philosophy.md).
 
 ## ภาพรวมการทำงาน (ภาษาไทย)
@@ -59,7 +63,7 @@ Design principles: [design_philosophy.md](design_philosophy.md).
 | เปลี่ยนรุ่น AI หรือ prompt ระหว่างที่เคสค้างอยู่ | ไม่รันต่อด้วยค่าใหม่โดยไม่บอก | "ตั้งค่า AI หรือ prompt ถูกเปลี่ยนหลังรับเคส" |
 | เคสเดิมทำให้ตัวรันงานล่มซ้ำ 3 ครั้ง | พักเคสนั้นไว้ เพื่อไม่ให้วนล่มไม่จบ | "ตัวรันงานหยุดกลางคันระหว่างทำเคสนี้หลายครั้ง" |
 | ตัวรันงานล่ม | ตัวเปิดระบบเปิดตัวรันงานใหม่ให้ใน 1–30 วินาที ระหว่างนั้นยังรับเคสเข้าคิวได้ | ป้าย "ตัวรันงาน: ไม่ตอบ" ชั่วคราว |
-| ตั้งค่า AI ไม่ครบ (เช่น เลือก Claude แต่ไม่ใส่ key) | ไม่เริ่มงานใด ๆ เคสรอในคิวจนกว่าจะแก้ | แถบเตือนสีเหลืองบอกสาเหตุ |
+| ตั้งค่า AI ไม่ครบ (เช่น เลือก Claude แต่ไม่ใส่ key) | ไม่เริ่มงานใด ๆ เคสรอในคิวจนกว่าจะแก้ `/readyz` ตอบ 503 `blocked_config` (ส่วน `/healthz` ยังตอบ 200) และแจ้ง Sentry 1 ครั้ง (ถ้าตั้งไว้) | แถบเตือนสีเหลืองบอกสาเหตุ |
 | คิวเต็ม หรือส่งถี่เกินไป | ปฏิเสธชั่วคราว (503 / 429) | "คิวเต็ม" หรือ "ส่งถี่เกินไป รอ N วินาที" |
 | ใส่รหัสเข้าใช้ผิด 10 ครั้งในหนึ่งนาที | พักการลองจากเครื่องนั้นชั่วคราว (429) | "ลองรหัสผิดหลายครั้งเกินไป" |
 | กดบันทึกการตัดสินซ้ำ หรือเน็ตหลุดแล้วกดใหม่ | ใช้การตัดสินเดิม (200) ไม่บันทึกซ้ำ | "บันทึกการตัดสินแล้ว" ครั้งเดียว |
@@ -67,6 +71,7 @@ Design principles: [design_philosophy.md](design_philosophy.md).
 | ใช้รหัสรายคนที่ถูกเพิกถอน หรือหายไปเพราะระบบเริ่มใหม่ด้วยที่เก็บว่าง | ปฏิเสธ (401) นับเป็นการลองรหัสผิด | กลับไปหน้าใส่รหัส พร้อมบอกว่าให้ขอรหัสใหม่จากเจ้าของระบบ |
 | บทบาทของรหัสไม่มีสิทธิ์ (เช่น ผู้ตรวจส่งเคส) | ปฏิเสธ (403 `forbidden`) ไม่เปลี่ยนอะไร | หน้าเว็บซ่อนปุ่มที่ใช้ไม่ได้ไว้ก่อน ถ้าเรียกผ่าน API จะได้ "บัญชีนี้ทำสิ่งนี้ไม่ได้" |
 | ล่ามแปลข้อมูลของเคสที่อนุมัติไม่ได้ | ไม่เดา บันทึกว่า "ส่งต่อไม่ได้" พร้อมเหตุผล การอนุมัติยังอยู่ | กล่อง "ส่งต่อไม่ได้" สีแดงใต้เคส บอกเหตุผล |
+| ตั้งโฟลเดอร์ข้อมูลไว้ แต่ดิสก์ไม่ได้ต่อ (หรือที่อยู่ไม่ตรงกับดิสก์) | ไม่เรียกว่า "ถาวร" ทุกคำตอบบอกว่าเคสหายเมื่อหลับ รีสตาร์ท หรืออัปเดต | ที่เก็บข้อมูล: "ชั่วคราว: ยังไม่พบดิสก์ถาวร" พร้อมเหตุผลในแท็บ "ตั้งค่า" |
 | ระบบเริ่มใหม่ด้วยที่เก็บว่าง (แผนฟรี: หลับ รีสตาร์ท อัปเดต) | เคส ผล และการตัดสินเก่าหายทั้งหมด รหัสชุดข้อมูล (`store_id`) เปลี่ยน | แถบสีเหลืองบอกว่าเคสที่ส่งจากเครื่องนี้หายไปกี่รายการ กด "รับทราบ" เพื่อปิด |
 
 **ตามรอยคำขอ (request id)** ทุกคำตอบจากระบบมี "รหัสคำขอ" ติดมาด้วย (หัวข้อ `X-Request-Id`) รหัสเดียวกันนี้อยู่ในบันทึกการเข้าใช้ (access log) และในเหตุการณ์แรกของงาน ("รับเข้าคิว") เมื่อมีปัญหา ให้เปิดเคสนั้น → "รายละเอียดเชิงเทคนิค" → ดู "รหัสคำขอที่ส่งเคสนี้" แล้วส่งรหัสนี้ให้ Claude ไล่ดูใน log ได้ตรงคำขอนั้นทันที ถ้าระบบขัดข้องฝั่งเซิร์ฟเวอร์ ข้อความเตือนบนหน้าเว็บก็จะบอกรหัสคำขอด้วย รหัสนี้ไม่มีข้อความเคสหรือรหัสลับ
@@ -172,6 +177,23 @@ Design principles: [design_philosophy.md](design_philosophy.md).
 - ปุ่มหยุดงานที่กำลังทำอยู่ → ทำไม่ได้ เพราะแกนระบบหยุดงานกลางทางไม่ได้ (ยกเลิกได้เฉพาะเคสที่ยังรอคิว ทำแล้วในขั้น 1.3), ปุ่มอนุมัติ/ไม่อนุมัติ → ขั้น 2.4
 - ช่องใส่ API key, เปลี่ยน AI, ตั้งจำนวนครั้งลองใหม่, ตัวเลือก "ไม่ต้องถาม" และปุ่ม "แก้ไข JSON" → จะไม่ทำ เพราะขัดกฎของโปรเจกต์ (CLAUDE.md ข้อ 4–7)
 
+### ตรวจความพร้อม (`/readyz`) และป้าย "ถาวร" ที่ตรวจจริง (ขั้น 1.7)
+
+ตั้งแต่ 21 พ.ย. ระบบไม่เชื่อตามค่าที่ตั้งไว้ แต่ตรวจของจริง 2 เรื่อง (จากรายงานคุณภาพ 19 พ.ย. หน้า 4):
+
+1. **ที่เก็บข้อมูลถาวรจริงไหม** ตอนเริ่มระบบ ระบบดูตารางดิสก์ของเครื่อง (mount table) ว่าโฟลเดอร์ข้อมูลอยู่บนดิสก์ที่ต่อแยกจริงไหม
+   - ถ้าใช่ แท็บ "ตั้งค่า" บอก "ถาวร — ตรวจตอนเริ่มระบบแล้วว่าโฟลเดอร์ข้อมูลอยู่บนดิสก์ที่ต่อแยก"
+   - ถ้าตั้งโฟลเดอร์ไว้แต่ดิสก์ไม่ได้ต่อ (หรือที่อยู่ไม่ตรงกับดิสก์) จะบอก "ชั่วคราว" พร้อมเหตุผล แทนที่จะบอก "ถาวร" ผิด ๆ
+   - บน Render แผนฟรีตอนนี้ไม่มีอะไรเปลี่ยน: ยังบอก "ชั่วคราว (Render แผนฟรี)" เหมือนเดิม
+2. **ตัวรันงานพร้อมทำเคสไหม** มีหน้าตรวจใหม่ `/readyz` (ตรวจความพร้อม, readiness) เปิดได้โดยไม่ต้องใช้รหัสเข้าใช้
+   - พร้อม: `{"ok":true,"state":"idle"}` (ว่างอยู่) หรือ `"state":"running"` (กำลังทำเคส)
+   - ไม่พร้อม: ตอบรหัส 503 พร้อมเหตุผลสั้น ๆ คือ `blocked_config` (ตั้งค่า AI ไม่ครบ), `starting` (เพิ่งเริ่ม รอไม่กี่วินาที), `not_alive` (ตัวรันงานไม่ส่งสัญญาณชีพ) หรือ `queue_unavailable` (อ่านคิวไม่ได้)
+   - หน้าตรวจชีพจรเดิม `/healthz` ไม่เปลี่ยน เพราะ Render ใช้มันตัดสินว่าจะรีสตาร์ทไหม ถ้าให้มันตอบว่าไม่ปกติตอนตัวรันงานติด Render จะรีสตาร์ท และบนแผนฟรีเคสจะหายหมด
+   - ระหว่างที่ตัวรันงานติด ระบบยังรับเคสเข้าคิวได้ เคสรอจนแก้ค่าแล้วจึงถูกทำ
+   - ถ้าตั้ง `SENTRY_DSN` ไว้ ตัวรันงานที่ติดเพราะตั้งค่า AI ไม่ครบจะแจ้ง Sentry 1 ครั้งต่อการเริ่มระบบ (ส่งแค่ชนิดของข้อผิดพลาด ไม่ส่งคีย์หรือค่าใด ๆ)
+
+**ลองเอง:** เปิด https://neuron-flow.onrender.com/readyz ถ้าระบบเพิ่งตื่นอาจเห็น `"state":"starting"` ให้รอ 10 วินาทีแล้วรีเฟรช จะเห็น `{"ok":true,"state":"idle"}`
+
 ### สิ่งที่ต้องทำเพื่อเปิดใช้บน Render (ครั้งแรก ทำครั้งเดียว)
 
 ไฟล์ `render.yaml` ในโปรเจกต์บอก Render ไว้หมดแล้วว่าต้องสร้างอะไร คุณจึงแค่กดยืนยัน
@@ -188,7 +210,7 @@ Design principles: [design_philosophy.md](design_philosophy.md).
 
 **แผนฟรีควรรู้:** ระบบหลับเมื่อไม่มีคนเข้า 15 นาที เปิดครั้งถัดไปรอประมาณ 1 นาที และไม่มีดิสก์ถาวร เคสเก่าจึงหายทุกครั้งที่ระบบหลับ รีสตาร์ท หรืออัปเดต (หน้าเว็บจะขึ้นป้ายเตือน) ระบบยังทำงานครบทุกขั้นตามปกติ
 
-**ถ้าอยากให้เคสไม่หาย:** แผน `0.5c-512mb` ($7/เดือน) + ดิสก์ 1 GB ($0.25/เดือน) ต้องผูกบัตร บอก Claude ให้แก้ `render.yaml` (เปลี่ยนแผน เปิดดิสก์ที่ `/var/data` และตั้ง `NEURON_FLOW_DATA_DIR`) แล้ว merge ห้ามแก้แผนในหน้า Dashboard เพราะ Blueprint จะเขียนทับค่าที่ขัดกับไฟล์
+**ถ้าอยากให้เคสไม่หาย:** แผน `0.5c-512mb` ($7/เดือน) + ดิสก์ 1 GB ($0.25/เดือน) ต้องผูกบัตร บอก Claude ให้แก้ `render.yaml` (เปลี่ยนแผน เปิดดิสก์ที่ `/var/data` และตั้ง `NEURON_FLOW_DATA_DIR`) แล้ว merge ห้ามแก้แผนในหน้า Dashboard เพราะ Blueprint จะเขียนทับค่าที่ขัดกับไฟล์ หลังอัปเดตครั้งแรกที่มีดิสก์ ให้เปิดแท็บ "ตั้งค่า": ที่เก็บข้อมูลต้องบอก "ถาวร — ตรวจตอนเริ่มระบบแล้ว…" ถ้ายังบอก "ชั่วคราว" แปลว่าดิสก์ยังไม่ได้ต่อกับโฟลเดอร์ข้อมูล ให้บอก Claude (ขั้น 1.7)
 
 ไม่บังคับ (เพิ่มในแท็บ Environment ได้เลย Blueprint จะไม่ลบตัวแปรที่ไฟล์ไม่ได้กำหนด):
 - ใช้ Claude จริงแทน AI จำลอง: เพิ่ม `NEURON_FLOW_LLM_PROVIDER=anthropic` และ `ANTHROPIC_API_KEY` (เสียค่า API ประมาณ 1 คำขอสั้น ๆ ต่อเคส)
@@ -213,6 +235,13 @@ container: app.boot (root) ─becomes─► tini ─► python -m app.serve
 
 - `<data>` is `NEURON_FLOW_DATA_DIR` (on Render, the disk's mount path), else Railway's
   `RAILWAY_VOLUME_MOUNT_PATH`, else `./neuron_workspace` (not persistent in a container).
+- Persistent only when checked (roadmap 1.7, ADR-036): at start `app.settings.check_storage` reads
+  `/proc/self/mountinfo` and takes the longest mount point that holds `<data>`. It is `confirmed` only when that
+  mount is not `/` and its type is not `overlay`, `aufs`, `tmpfs`, `ramfs` or `devtmpfs`; otherwise the result
+  says why (`root_filesystem`, `temporary_filesystem`, `mount_table_unreadable`; `not_configured` for the local
+  default), `persistent` is false and `retention.lost_on` lists the free plan's wipes. The launcher's first log
+  lines say the result and the filesystem type, never the path. A folder on the root disk of a machine that is not
+  a container reads as not confirmed: the check prefers saying "temporary" wrongly to saying "persistent" wrongly.
 - The container starts as root only to take ownership of the disk (hosts may mount it as root).
   `app/boot.py` (process 1) does that, switches to the unprivileged `neuron` user, then replaces itself
   with tini (same process, now `neuron`). tini, the launcher and the Runner all run as `neuron`, and
@@ -286,7 +315,9 @@ container: app.boot (root) ─becomes─► tini ─► python -m app.serve
   "รอรีวิว" box in the left column lists pending reviews from `GET /v1/reviews` (elevated first, marked "ด่วน"),
   loaded only while `status.reviews.PENDING` is above 0. A decided case shows "คนตัดสินแล้ว" with the queue,
   the reason, who and when; the Trace names `review.approved` and `review.rejected`.
-- **Retention (ADR-029):** the words "บันทึกถาวร" appear only when `status.storage.persistent` is true. On
+- **Retention (ADR-029):** the words "บันทึกถาวร" appear only when `status.storage.persistent` is true, which since
+  roadmap 1.7 means the start found the data folder on a disk of its own; the status bar and the settings row take
+  their words from `storageText()`, which says why a folder that is set is not "ถาวร" (`status.storage.check`). On
   temporary storage the confirm card and every waiting case say what a sleep, restart or deploy wipes, and the
   settings show when the current data started. The page remembers the ids of the jobs it sent with the
   queue's `store_id` (local storage `neuronflow.sent`, ids only); when `status.retention.store_id` changes, a
@@ -382,8 +413,9 @@ app runs, carries an `X-Request-Id` header:
 
 | Method and path | What it does | Success | Errors |
 |---|---|---|---|
-| `GET /healthz` | Liveness for the host's health check (no key); also says whether an access key is set | 200 `{"ok": true, "access_key": "configured"}` | 503 |
-| `GET /v1/status` | Runner heartbeat, queue counts, queue and run-time figures (`metrics`, below), AI mode, tracing (`tracing`: on or off and why, where spans go, the last export), storage, limits (`summary_min_chars`/`summary_max_chars` for a case, `message_min_chars`/`message_max_chars` for a study question, the queue and body caps), and each workflow's steps (`workflows[].steps`) | 200 | 401, 429 |
+| `GET /healthz` | Liveness for the host's health check (no key); also says whether an access key is set. Render's health check: it fails only when the queue cannot be read, never because the Runner is blocked (roadmap 1.7) | 200 `{"ok": true, "access_key": "configured"}` | 503 |
+| `GET /readyz` | Readiness (no key, roadmap 1.7, ADR-036): whether the Runner can work cases now, as a state code and nothing else; not traced | 200 `{"ok": true, "state": "idle"}` or `"running"` | 503 `{"ok": false, "state": …}`: `blocked_config`, `starting`, `not_alive`, `queue_unavailable` |
+| `GET /v1/status` | Runner heartbeat, queue counts, queue and run-time figures (`metrics`, below), AI mode, tracing (`tracing`: on or off and why, where spans go, the last export), storage (`kind`, `persistent`, and since roadmap 1.7 `check` and `filesystem`: what the start found about the data folder, never a path), limits (`summary_min_chars`/`summary_max_chars` for a case, `message_min_chars`/`message_max_chars` for a study question, the queue and body caps), and each workflow's steps (`workflows[].steps`) | 200 | 401, 429 |
 | `POST /v1/jobs` | Admit a job | 202 new, 200 duplicate | 400, 401, 409, 411, 413, 415, 429, 503 |
 | `GET /v1/jobs?limit=20&before=<seq>` | Newest first; `next_before` is the next cursor | 200 | 400, 401 |
 | `GET /v1/jobs/{job_id}` | Status, the step plan frozen at claim (`plan`, `null` while queued), reviewer proposal, step timeline, AI provenance (with `agent_version`, the AI step's version as Core checked it, ADR-035; `null` for results recorded before 2026-11-19), receipt hash, the admitting `request_id`, and `trace_id` (the job's trace in Honeycomb; `null` when tracing was off) | 200 | 401, 404 |
@@ -512,6 +544,37 @@ when fewer than 8 of its characters are visible (invisible format characters suc
 count), or when it has no letter, digit or sign (Thai tone marks alone). Zero-width spaces inside real text and emoji
 joined by U+200D are kept as written. The study guide's `message` is unchanged while the study guide is paused.
 
+### Readiness and the storage check (roadmap 1.7)
+
+Built on 2026-11-21 (ADR-036), from page 4 of the quality report of 2026-11-19, which found that any
+`NEURON_FLOW_DATA_DIR` made the storage "persistent" and that `/healthz` answered 200 while the Runner was
+`blocked_config` ([response](evidence/2026-11-19-quality-report-response.md#page-4-data-after-a-restart-and-the-runners-status),
+[evidence](evidence/2026-11-21-readiness-and-storage-check.md)).
+
+- **Storage.** `GET /v1/status` → `storage: {"kind": "configured", "persistent": false, "check": "root_filesystem",
+  "filesystem": "overlay"}` for a folder that is set with no disk attached, and `"check": "confirmed", "filesystem":
+  "ext4"` (persistent) on a volume. The check runs once per process start (see "Processes and data"); `retention`
+  follows it.
+- **Readiness.** `GET /readyz` (no key, `GET` or `HEAD`) answers from the Runner's heartbeat in the queue. Only a
+  heartbeat written after this API process started counts, so after a restart the last Runner's row is not
+  borrowed: until the new Runner beats, the state is `starting`, and `not_alive` once `runner_stale_s` (15 s) has
+  passed without one. `reconciling` reads as `starting`, a stale heartbeat or `stopped` as `not_alive`, and an
+  unreadable queue as `queue_unavailable`. The reply never carries the Runner's `detail` text (it may name a
+  setting); `/v1/status` has it, behind the key.
+- **Why two checks.** `/healthz` stays `healthCheckPath` in `render.yaml` (and `.github/scripts/check_render_blueprint.py`
+  still requires it): Render restarts a service whose health check fails, and on the free plan a restart empties the
+  queue, so a blocked Runner must not fail it. `/readyz` is for people and monitors. A Sentry uptime monitor on it is
+  possible but is the owner's choice (it creates something in the owner's account, and calling the free service
+  every few minutes would also keep it from sleeping).
+- **Signal.** A Runner whose AI settings cannot work sends one Sentry event per start (`runner_blocked`, the
+  error's class only; [observability_sentry.md](observability_sentry.md)).
+- **Checked by** `tests/test_storage_check.py` (the mount table), `tests/test_service_api.py` (`ReadinessTests`),
+  `tests/test_service_runner.py` (a blocked Runner: one Sentry event, the case waits, then runs once the settings are
+  fixed) and the *Service container* job: a volume (`confirmed`), a folder with no disk (`root_filesystem`), a tmpfs
+  (`temporary_filesystem`), Typhoon chosen without a key (`/healthz` 200, `/readyz` 503 `blocked_config`, the case
+  admitted and waiting), then the same volume with the mock (`/readyz` 200, the case worked). Its Thai lines are on the
+  run page under "ที่เก็บข้อมูลและความพร้อมของตัวรันงาน (ขั้น 1.7)".
+
 ### Queue and run-time figures (roadmap 5.3)
 
 `GET /v1/status` includes `metrics`, computed from the queue database on each request
@@ -576,7 +639,7 @@ The linked phase-B job after an approval (roadmap 2.3) is checked in `tests/test
 | Variable | Default | Meaning |
 |---|---|---|
 | `NEURON_FLOW_ACCESS_KEY` | none (the API refuses `/v1`) | The owner's shared access key, at least 16 characters: the bootstrap credential that issues personal tokens (ADR-034) |
-| `NEURON_FLOW_DATA_DIR` | Railway volume, else `./neuron_workspace` | Where the queue and Core data live; on Render, the disk's mount path (`/var/data`) |
+| `NEURON_FLOW_DATA_DIR` | Railway volume, else `./neuron_workspace` | Where the queue and Core data live; on Render, the disk's mount path (`/var/data`). Persistent only when the start finds it on a disk of its own (roadmap 1.7) |
 | `PORT` / `NEURON_FLOW_HOST` | `8000` / `0.0.0.0` | Listening address |
 | `NEURON_FLOW_LLM_PROVIDER`, `NEURON_FLOW_LLM_MODEL`, `ANTHROPIC_API_KEY` or `TYPHOON_API_KEY` | `mock` | AI second opinion: `mock`, `anthropic`, `typhoon` or `local` (see [case_triage_v2_shadow.md](case_triage_v2_shadow.md)); `local` also reads `NEURON_FLOW_LOCAL_BASE_URL` and the optional `NEURON_FLOW_LOCAL_API_KEY`, and needs a model server in the same container, which the Render service does not have (ADR-026, D7) |
 | `NEURON_FLOW_MAX_QUEUED` | `100` | Admission refuses new jobs above this many waiting |

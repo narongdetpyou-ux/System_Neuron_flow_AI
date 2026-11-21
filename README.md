@@ -158,7 +158,7 @@ so; a paid plan with a disk keeps them.
 
 **Locally (Python 3.10+):**
 ```bash
-python -m unittest discover -s tests -v        # 571 tests
+python -m unittest discover -s tests -v        # 601 tests
 python -m examples.case_triage_demo            # v1 rules, one synthetic case
 python -m examples.case_triage_shadow_demo     # v2 shadow mode, three synthetic cases (offline mock AI)
 python -m app.eval.triage_shadow_eval          # scorecard on 61 synthetic cases
@@ -192,7 +192,7 @@ most 1 MiB. The agent `version` is frozen into each job, so an old job refuses t
 | [Architecture](docs/architecture.md) | Layers, Core constraints, how AI fits, decisions (ADRs), milestones and their status |
 | [case_triage v1](docs/case_triage_pilot.md) | The deterministic keyword rules |
 | [case_triage v2 shadow mode](docs/case_triage_v2_shadow.md) | The AI second opinion: flow, failure handling, configuration, scorecard |
-| [Intake API, queue, Runner and web page](docs/intake_queue.md) | Round 2: how a case flows from outside, recovery rules, API reference, Render setup |
+| [Intake API, queue, Runner and web page](docs/intake_queue.md) | Round 2: how a case flows from outside, recovery rules, API reference, readiness (`/readyz`) and the storage check, Render setup |
 | [Sentry error reporting](docs/observability_sentry.md) | What gets reported, privacy rules, alerts |
 | [Tracing to Honeycomb](docs/observability_tracing.md) | One trace per case: what a span carries and never carries, setup in Render, how it is checked |
 | [Study guide](docs/study_guide.md) | `study_guide.v1`: the workflow and its answer, failure handling, the mock's limits; the scorecard; the box and layered answer on the web page; the topic catalog and verified library, the weekly link check |
@@ -202,7 +202,7 @@ most 1 MiB. The agent `version` is frozen into each job, so an old job refuses t
 | [Auto-approve limits](docs/autosend_simulation.md) | What a button that sends a case without a person would do, simulated on saved answers: the hard set, the open benchmarks, the four policies, what is measured, and what a real button would need (ADR-031) |
 | [วิธีเปิด ปิด และเปลี่ยน AI ของหน้าเว็บ](docs/switch_ai_guide_th.md) | Thai, for the owner: switching the live page between the mock AI, Typhoon and Claude in Render's Environment tab, step by step, and how to switch back |
 | [Funding readiness pack](docs/funding/README.md) | Internal evidence register; not a submitted application |
-| [Evidence notes](docs/evidence/2026-11-03-render-operations.md) | Dated measurements; the first one covers Render operations (graceful stops, deploy filter, cold start), and [the first live AI runs](docs/evidence/2026-11-06-first-live-typhoon.md) are Typhoon's (2026-11-06); [the first robustness run](docs/evidence/2026-11-07-robustness-stage1.md) is from 2026-11-07, and [the local open model's first smoke run](docs/evidence/2026-11-08-first-local-model-smoke.md) and [first full run](docs/evidence/2026-11-08-first-local-model-full.md) from 2026-11-08; [the effectiveness baseline](docs/evidence/2026-11-10-effectiveness-baseline.md) (the 116 edge cases with Typhoon, and the first job after a start) is from 2026-11-10, and so is [the image's bytecode cache, before and after](docs/evidence/2026-11-10-e1-bytecode-cache.md) (measured in CI, and on Render on 2026-11-16), and [the answer to the first independent review](docs/evidence/2026-11-10-independent-review-response.md); [the answer to the quality report of 2026-11-19](docs/evidence/2026-11-19-quality-report-response.md) checks each of its points against the code |
+| [Evidence notes](docs/evidence/2026-11-03-render-operations.md) | Dated measurements; the first one covers Render operations (graceful stops, deploy filter, cold start), and [the first live AI runs](docs/evidence/2026-11-06-first-live-typhoon.md) are Typhoon's (2026-11-06); [the first robustness run](docs/evidence/2026-11-07-robustness-stage1.md) is from 2026-11-07, and [the local open model's first smoke run](docs/evidence/2026-11-08-first-local-model-smoke.md) and [first full run](docs/evidence/2026-11-08-first-local-model-full.md) from 2026-11-08; [the effectiveness baseline](docs/evidence/2026-11-10-effectiveness-baseline.md) (the 116 edge cases with Typhoon, and the first job after a start) is from 2026-11-10, and so is [the image's bytecode cache, before and after](docs/evidence/2026-11-10-e1-bytecode-cache.md) (measured in CI, and on Render on 2026-11-16), and [the answer to the first independent review](docs/evidence/2026-11-10-independent-review-response.md); [the answer to the quality report of 2026-11-19](docs/evidence/2026-11-19-quality-report-response.md) checks each of its points against the code, and [readiness and the storage check](docs/evidence/2026-11-21-readiness-and-storage-check.md) (2026-11-21) records what its page 4 led to |
 
 ## Scope and limits
 

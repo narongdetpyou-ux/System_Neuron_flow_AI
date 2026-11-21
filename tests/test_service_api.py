@@ -5,17 +5,19 @@ import tempfile
 import threading
 import unittest
 from pathlib import Path
+from unittest import mock
 
 from neuron_flow import Runtime
 from neuron_flow.model import normalize_spec
 
-from app.api.routes import MAX_BODY_BYTES, ApiApp, Request
+from app.api.routes import MAX_BODY_BYTES, ApiApp, Request, readiness, traced
 from app.llm import LLMConfig
 from app.persistence import QueueStore, StateError
 from app.services.admission import admit
 from app.services.results import plan_view
 from app.services.runner import Runner
 from app.services.workflows import CATALOG, WorkflowType, agents_for, check_case, preview_spec
+from app.settings import NOT_CHECKED, Settings, StorageCheck
 from tests.service_fixtures import KEY, case_body, settings, slow_catalog
 
 AUTH = {"authorization": f"Bearer {KEY}"}
@@ -300,8 +302,25 @@ class ReadRouteTests(ApiTestCase):
         self.assertFalse(status["runner"]["alive"])
         self.assertEqual(status["queue"]["REVIEW_REQUIRED"], 1)
         self.assertEqual((status["ai"]["provider"], status["ai"]["simulated"]), ("mock", True))
-        self.assertEqual(status["storage"], {"kind": "configured", "persistent": True})
+        # The fixture models a disk the start confirmed (roadmap 1.7); the reply names what was found, never a path.
+        self.assertEqual(status["storage"], {"kind": "configured", "persistent": True, "check": "confirmed",
+                                             "filesystem": "ext4"})
         self.assertEqual(status["default_workflow"], "case_triage.v2")
+
+    def test_a_folder_that_is_set_but_not_confirmed_is_called_temporary(self):
+        # The quality report of 2026-11-19, page 4: a data folder in the settings alone made storage "persistent".
+        for check in (StorageCheck("root_filesystem", "overlay"), StorageCheck("temporary_filesystem", "tmpfs"),
+                      StorageCheck("mount_table_unreadable"), NOT_CHECKED):
+            with self.subTest(check=check.result):
+                app = ApiApp(settings(self.data_dir, storage_check=check), self.store)
+                status = body_of(get(app, "/v1/status"))
+                self.assertEqual(status["storage"], {"kind": "configured", "persistent": False, "check": check.result,
+                                                     "filesystem": check.filesystem})
+                self.assertEqual(status["retention"]["lost_on"], ["sleep", "restart", "deploy"])
+                reply = body_of(post(app, case_body(f"key-unconfirmed-{check.result}")))
+                self.assertEqual((reply["retention"]["persistent"], reply["retention"]["lost_on"]),
+                                 (False, ["sleep", "restart", "deploy"]))
+        self.assertFalse(Settings(data_dir=self.data_dir).persistent)  # built by hand, never checked
 
     def test_status_describes_each_workflows_steps_without_params(self):
         plans = {w["name"]: w["steps"] for w in body_of(get(self.app, "/v1/status"))["workflows"]}
@@ -362,6 +381,87 @@ class ReadRouteTests(ApiTestCase):
             self.assertTrue(dict(asset.headers)["Content-Type"].startswith(kind))
         self.assertEqual(get(self.app, "/static/../routes.py", headers={}).status, 404)
         self.assertEqual(dict(get(self.app, "/v1/status").headers)["Cache-Control"], "no-store")
+
+
+class ReadinessTests(ApiTestCase):
+    """``/readyz`` (roadmap 1.7, ADR-036): whether the Runner can work cases now, apart from ``/healthz``, as a state
+    code and nothing else. The clock is fake; heartbeats are written straight into the queue."""
+
+    START = 1_000_000.0
+
+    def setUp(self):
+        super().setUp()
+        self.now = [self.START]
+        self.app = ApiApp(self.settings, self.store, clock=lambda: self.now[0])
+
+    def beat(self, state, *, age=0.0, detail=None):
+        self.now[0] += 1.0
+        self.store.heartbeat(runner_id="runner-test", pid=1, state=state, detail=detail, started_at=self.START,
+                             now=self.now[0] - age)
+
+    def ready(self, method="GET", app=None):
+        response = get(app or self.app, "/readyz", headers={}, method=method)
+        return response.status, body_of(response)
+
+    def test_a_runner_that_can_work_cases_is_ready(self):
+        for state in ("idle", "running"):
+            with self.subTest(state=state):
+                self.beat(state)
+                self.assertEqual(self.ready(), (200, {"ok": True, "state": state}))
+
+    def test_a_blocked_runner_is_not_ready_while_healthz_stays_ok(self):
+        # The quality report of 2026-11-19, page 4: Typhoon chosen without a key, and /healthz said 200 "ok".
+        self.beat("blocked_config", detail="TYPHOON_API_KEY is not set")
+        self.assertEqual(self.ready(), (503, {"ok": False, "state": "blocked_config"}))
+        self.assertEqual(get(self.app, "/healthz", headers={}).status, 200)  # Render must not restart it
+        self.assertNotIn(b"TYPHOON", get(self.app, "/readyz", headers={}).body)  # a code, never the detail
+        self.assertEqual(post(self.app, case_body("key-ready-blocked")).status, 202)  # cases are still admitted
+
+    def test_every_other_state_has_its_own_code(self):
+        for state, code in (("reconciling", "starting"), ("starting", "starting"), ("stopped", "not_alive"),
+                            ("draining", "unknown")):
+            with self.subTest(state=state):
+                self.beat(state)
+                self.assertEqual(self.ready(), (503, {"ok": False, "state": code}))
+        self.now[0] = self.START + 100  # long after this API's start, the Runner stopped beating
+        self.beat("idle", age=self.settings.runner_stale_s + 0.1)
+        self.assertEqual(self.ready(), (503, {"ok": False, "state": "not_alive"}))
+
+    def test_before_the_first_heartbeat_it_is_starting_then_not_alive(self):
+        self.assertEqual(self.ready(), (503, {"ok": False, "state": "starting"}))
+        self.now[0] = self.START + self.settings.runner_stale_s + 0.1
+        self.assertEqual(self.ready(), (503, {"ok": False, "state": "not_alive"}))
+
+    def test_a_heartbeat_from_before_this_start_does_not_count(self):
+        # On a disk the queue keeps the last Runner's row; a restart must not borrow its "idle".
+        self.store.heartbeat(runner_id="runner-old", pid=1, state="idle", started_at=self.START - 60,
+                             now=self.START - 1)
+        self.assertEqual(self.ready(), (503, {"ok": False, "state": "starting"}))
+        self.beat("idle")
+        self.assertEqual(self.ready(), (200, {"ok": True, "state": "idle"}))
+
+    def test_the_boundaries_of_the_rule(self):
+        row = {"state": "idle", "heartbeat_at": 100.0}
+        self.assertEqual(readiness(row, now=115.0, stale_s=15.0, since=100.0), "idle")  # exactly stale_s old
+        self.assertEqual(readiness(row, now=115.1, stale_s=15.0, since=100.0), "not_alive")
+        self.assertEqual(readiness(row, now=101.0, stale_s=15.0, since=100.1), "starting")
+        self.assertEqual(readiness(None, now=115.0, stale_s=15.0, since=100.0), "starting")
+
+    def test_no_key_no_trace_and_only_reads(self):
+        self.beat("idle")
+        no_key = ApiApp(settings(self.data_dir, access_key=None, access_key_problem="missing"), self.store,
+                        clock=lambda: self.now[0])
+        self.beat("idle")
+        self.assertEqual(self.ready(app=no_key), (200, {"ok": True, "state": "idle"}))  # no 503 for a missing key
+        self.assertEqual(self.ready(method="HEAD")[0], 200)  # the server drops the body of a HEAD reply
+        refused = get(self.app, "/readyz", headers={}, method="POST")
+        self.assertEqual(refused.status, 405)
+        self.assertIn(("Allow", "GET, HEAD"), refused.headers)
+        self.assertFalse(traced("/readyz"))
+
+    def test_an_unreadable_queue_is_not_ready(self):
+        with mock.patch.object(self.store, "runner", side_effect=OSError("disk gone")):
+            self.assertEqual(self.ready(), (503, {"ok": False, "state": "queue_unavailable"}))
 
 
 def cancel(app, job_id, *, body=b"", headers=None):

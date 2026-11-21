@@ -6,9 +6,10 @@ Steps:
 1. read the settings (data folder, port, access key) from the environment;
 2. when started as root directly (not through ``app.boot``), give the data folder to the unprivileged
    ``neuron`` user from the image and drop root before anything else runs;
-3. create the queue database;
-4. start the Runner; if it stops unexpectedly, start it again after a short pause (its
-   reconciliation then finishes any interrupted job);
+3. create the queue database, and say whether the data folder was confirmed on a disk of its own
+   (roadmap 1.7);
+4. build the API, then start the Runner; if it stops unexpectedly, start it again after a short
+   pause (its reconciliation then finishes any interrupted job);
 5. serve HTTP until SIGTERM, then ask the Runner to stop after its current job;
 6. with tracing on (``HONEYCOMB_API_KEY``), send the spans that are still queued before exiting.
 """
@@ -72,6 +73,19 @@ class RunnerSupervisor:
         self._thread.join(timeout=5)
 
 
+def log_storage(settings, logger=log):
+    """Say at start whether the data outlives a restart, as checked (roadmap 1.7): the result, never the path."""
+    check = settings.storage_check
+    if settings.persistent:
+        logger.info("serve: storage confirmed persistent: the data folder is on a filesystem of its own (%s)",
+                    check.filesystem)
+    elif settings.storage == "local_default":
+        logger.warning("serve: no persistent storage configured; jobs are lost when the container restarts")
+    else:
+        logger.warning("serve: the data folder is set but not confirmed persistent (%s%s); jobs are lost when the "
+                       "container restarts", check.result, f", {check.filesystem}" if check.filesystem else "")
+
+
 def main():
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s", stream=sys.stdout)
     settings = Settings.from_env()
@@ -89,12 +103,12 @@ def main():
     if settings.access_key is None:
         log.warning("serve: NEURON_FLOW_ACCESS_KEY is %s; the API refuses every /v1 request until it is set",
                     settings.access_key_problem)
-    if not settings.persistent:
-        log.warning("serve: no persistent storage configured; jobs are lost when the container restarts")
+    log_storage(settings)
+    # The API is built before the Runner starts: readiness counts only heartbeats written after the API's start.
+    app = ApiApp(settings, store, reporter=SentryReporter() if sentry_active else None, tracing=tracing)
     supervisor = RunnerSupervisor()
     supervisor.start()
-    server = make_server(settings, ApiApp(settings, store, reporter=SentryReporter() if sentry_active else None,
-                                          tracing=tracing))
+    server = make_server(settings, app)
 
     def shutdown(signum, _frame):
         log.info("serve: stopping (signal %d)", signum)
