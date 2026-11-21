@@ -7,7 +7,8 @@ name: Service container (same build as Render)
 # reports the image's size and how long a process start and the first case after a start take, at the
 # runner's full speed and with 0.1 CPU. Times are reported, never gated.
 # Since roadmap 1.7 it also checks that storage is called persistent only when the start finds a disk of its own,
-# and that a Runner blocked by its AI settings shows on /readyz while /healthz stays 200 for Render.
+# and that a Runner blocked by its AI settings shows on /readyz while /healthz stays 200 for Render. Since roadmap
+# 1.8 it walks the page in a browser on a phone-sized screen and keeps a picture of each screen (artifact browser-walk).
 # The access key below is a throwaway value used only inside this job.
 on:
   push:
@@ -188,6 +189,37 @@ jobs:
           smoke nf-fixed --after-fix --state blocked.json
           docker rm -f nf-fixed > /dev/null
           docker volume rm nf-volume nf-blocked > /dev/null
+      - name: Cache the browser for the page walk
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-1.63.0-chromium-headless-shell-${{ runner.os }}-${{ runner.arch }}
+      - name: Walk the page in a browser on a phone-sized screen (roadmap 1.8)
+        # Most page tests read the page's source, so a button that cannot be pressed would pass while its text is
+        # still there (quality report of 2026-11-19, page 6). tests/browser_walk.py clicks like a person, on
+        # Playwright's "Pixel 7", against a fresh container of this image: sign in, send a case and confirm it,
+        # find it in the drawer's "รอรีวิว", approve it, open the job it started, and find the decision counted in
+        # the settings tab; then the same over the API. Every screen must not scroll sideways and must raise no
+        # script error. Playwright is a test dependency for CI only (rule 8): nothing in the image imports it.
+        run: |
+          pip install --quiet --disable-pip-version-check "playwright==1.63.0"
+          python -m playwright install --with-deps --only-shell chromium
+          docker run -d --name nf-browser -p 8003:8000 --cap-drop KILL -e NEURON_FLOW_ACCESS_KEY="$ACCESS_KEY" \
+            neuron-flow:ci > /dev/null
+          if ! python -m tests.browser_walk --url http://127.0.0.1:8003 --key "$ACCESS_KEY" --out browser-walk \
+              --summary "$GITHUB_STEP_SUMMARY"; then
+            docker logs nf-browser 2>&1 | tail -n 40 || true
+            exit 1
+          fi
+          docker rm -f nf-browser > /dev/null
+      - name: Keep the pictures of the page walk
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: browser-walk
+          path: browser-walk/
+          if-no-files-found: ignore
+          retention-days: 14
       - name: Service logs
         if: always()
         run: docker logs nf 2>&1 | tail -n 80 || true

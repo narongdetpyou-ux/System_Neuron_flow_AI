@@ -26,7 +26,8 @@ trusted agents in bounded child processes, retries, recovers after a crash and w
 - since round 2, an HTTP API, a durable job queue, a single Runner with crash recovery and a Thai web page,
   shipped as one container for Render; since 2026-11-21 the storage is called persistent only when the start finds
   the data folder on a disk of its own, and `GET /readyz` reports the Runner's readiness beside `/healthz`, which
-  stays Render's liveness check (roadmap 1.7, ADR-036);
+  stays Render's liveness check (roadmap 1.7, ADR-036); and CI walks the page in a browser on a phone-sized screen
+  on every push (roadmap 1.8);
 - a second domain, the study guide (`study_guide.v1`): a versioned topic catalog, a verified resource
   library with a weekly link check, and a five-step workflow that answers a plain-language request with at
   most 5 library resources in study order (roadmap 3.1, 3.2). It ends `COMPLETED` without review (ADR-018).
@@ -181,6 +182,8 @@ Read in this order when you need depth:
    never name agents, code, paths, params or callbacks.
 8. **Standard library first.**
    - Core has no dependencies. The app's only dependency is the optional `sentry-sdk`.
+   - Test tools that only CI needs are installed in their workflow step and never in the image: `pyyaml` and
+     `jsonschema` for the Blueprint check, Playwright 1.63.0 for the browser walk (roadmap 1.8).
    - A new dependency needs a reason in the PR, should be optional where possible, and is added to the
      `Dockerfile`, `pyproject.toml` and `.claude/hooks/session-start.sh` together.
 9. **Synthetic data only.** Open datasets count as synthetic only under ADR-024 (written for the dataset, openly
@@ -200,7 +203,7 @@ If a task seems to need breaking a rule:
 ## 4. Checking your work
 
 ```bash
-python -m unittest discover -s tests -v        # all tests (601 on 2026-11-21); CI: Python 3.10 and 3.12
+python -m unittest discover -s tests -v        # all tests (602 on 2026-11-21); CI: Python 3.10 and 3.12
 python -m examples.case_triage_demo            # v1 rules, one synthetic case
 python -m examples.case_triage_shadow_demo     # v2 shadow mode with the offline mock AI
 python -m examples.study_guide_demo            # the study guide's answers to four synthetic requests
@@ -217,6 +220,7 @@ python -m app.eval.attention_replay --pair old-report.json cases.json  # the "lo
 python -m tests.open_benchmarks.attention_open_check --cache ~/open-bench-cache --part sealed  # signals on open data (counts)
 python -I tests/open_benchmarks/build_sets.py --out open-sets --cache ~/open-bench-cache --check  # open sets (network)
 python -m examples.skill_handoff_demo          # one case step by step through the exchange
+python -m tests.browser_walk --url http://127.0.0.1:<port> --key <key> --out walk  # the page on a phone (Playwright; CI)
 NEURON_FLOW_ACCESS_KEY=$(python -c "import secrets; print(secrets.token_urlsafe(24))") python -m app.serve
 ```
 
@@ -250,7 +254,12 @@ GitHub Actions (the owner can open these; the first three run on every push and 
     (`.github/scripts/check_image_bytecode.py`, run inside the image; effectiveness plan E1);
   - reports, without gating on a time, how long a process start and the first case after a start take, at
     the runner's full speed and held to 0.1 CPU (an imitation of Render's free instance, not Render). The
-    figures are on the run page and in the job log (`bytecode-report`, `first-case` and `image-size` lines).
+    figures are on the run page and in the job log (`bytecode-report`, `first-case` and `image-size` lines);
+  - walks the page in a browser on a phone-sized screen (`tests/browser_walk.py`, roadmap 1.8): sign in, send and
+    confirm a case, open it from the drawer's "รอรีวิว", approve it, open the linked job, find the decision counted
+    in the settings tab, then the same over the API; it fails on a sideways scroll, a script error, a 5xx reply or
+    an element it cannot click. Playwright 1.63.0 is installed in that step only, its headless Chromium cached; a
+    picture of each screen is in the `browser-walk` artifact and a Thai line per step on the run page.
 - *Tracing check* (`tracing-check.yml`) runs the service with tracing sent to the OpenTelemetry Collector
   (`.github/otel/collector.yaml`), submits cases, and checks with `.github/scripts/check_traces.py` that each
   case is one trace with its steps and that no case text or key was sent (roadmap 5.1).
@@ -379,7 +388,7 @@ Notes for cloud sessions (claude.ai/code):
 | `Dockerfile`, `render.yaml`, `railway.json` | the container, the Render Blueprint, the Railway config kept for later |
 | `tests/open_benchmarks/` | stage 2 of the benchmarking plan (roadmap 5.6): `build_sets.py` builds the CLINC150, BANKING77, MASSIVE th/en and BIPIA case sets at run time from pinned sources (standard library, run with `python -I`; refuses any SHA-256 it does not expect), `manifest_v1.json` (the sources and every built file's SHA-256; `--check`), `NOTICE.md` (licences), and `attention_open_check.py` (the development and sealed halves of the same sources for the attention signals; the sealed half prints counts only and can be written as a case file at run time). Nothing downloaded is committed |
 | `tests/robustness/` | the robustness benchmark (docs/benchmarking.md): the synthetic set, the pinned open extract with its licences (`NOTICE.md`), the runner `bench.py`, the extract builder (`build_open_extract.py verify` re-checks the upstream files) and the 116-case file for live runs |
-| `tests/`, `examples/`, `.github/` | tests (`tests/baselines/` holds the eval gate's baseline), demos and smoke tests, CI (`.github/scripts/` holds the `render.yaml` and trace checks and the image's bytecode-cache check, `.github/otel/` the tracing check's collector; `.github/gitleaks.toml` and `.github/.gitleaksignore` the secret scan's rules and reviewed findings) |
+| `tests/`, `examples/`, `.github/` | tests (`tests/baselines/` holds the eval gate's baseline; `tests/browser_walk.py` is the CI walk of the page on a phone-sized screen, not a unit test), demos and smoke tests, CI (`.github/scripts/` holds the `render.yaml` and trace checks and the image's bytecode-cache check, `.github/otel/` the tracing check's collector; `.github/gitleaks.toml` and `.github/.gitleaksignore` the secret scan's rules and reviewed findings) |
 | `.claude/` | the session-start hook for Claude Code cloud sessions |
 
 ## 7. Hosting (Render)
@@ -587,7 +596,18 @@ Notes for cloud sessions (claude.ai/code):
     - a Runner blocked by its AI settings sends one Sentry event per start (`report_runner_blocked`, the class name
       only); checked with a stub SDK, since CI has no DSN;
     - on Render's free plan nothing the owner sees changes except the new `/readyz`. No Render disk has been seen yet:
-      the first deploy after D1 must show "ถาวร" in the settings tab.
+      the first deploy after D1 must show "ถาวร" in the settings tab;
+    - merged as PR #76 the same day; the owner then confirmed the owner test on the live page (their screenshot of
+      the settings tab after the deploy: storage "ชั่วคราว … (Render แผนฟรี)", the Runner ready).
+  - Roadmap 1.8, built on 2026-11-21 after the owner said "ทำขั้น 1.8 ต่อได้เลย": `tests/browser_walk.py` clicks
+    through the page like a person with Playwright's "Pixel 7" against a fresh container of the image, at the end of
+    the *Service container* job, so a page that cannot be used blocks Render's deploy. It signs in, sends and confirms
+    a case, opens it from the drawer's "รอรีวิว", approves it, opens the linked job until it has recorded the
+    approval, finds the decision counted in the settings tab, and then checks the same over the API. Every screen:
+    no sideways scroll, no script error, no 5xx reply. Pictures in the `browser-walk` artifact. Playwright 1.63.0 is a
+    CI-only test dependency (released 2026-09-15; the session's preinstalled browser is the one it expects, so a
+    venv with `pip install "playwright==1.63.0"` runs the walk here too). `tests/test_web_page.py` holds the page to
+    the ids, actions, classes and texts the walk relies on. Not covered: WebKit and Firefox, the study box, tokens.
   - The answer to the first independent review (2026-11-10, of `main` @ `f38c926`; all four findings, one PR;
     `docs/evidence/2026-11-10-independent-review-response.md`):
     - review decisions (2.2) and the page's decision card and "รอรีวิว" list (2.4), built before 2.1 with the
@@ -686,8 +706,7 @@ Notes for cloud sessions (claude.ai/code):
   - Waiting on the owner: 0.2 and 1.4 (D1, paid Render plan), 0.3 path B and 0.4 with Claude (D2, Claude
     API key); 0.4 with Typhoon is free but sends what is typed on the page to Typhoon, so it is the owner's
     choice too; an open model behind the page needs a paid machine (D7); the rest of the owner tests on the live
-    page (2.4's step 4, attention 5.10, 2.8's scorecard after its merge, and `/readyz` after 1.7's merge); the first
-    new skill (H4). The owner's first case since 2026-11-10, on 2026-11-16, passed H3 and 2.4's steps 2 and 3 and
+    page (2.4's step 4, attention 5.10, and 2.8's scorecard after its merge); the first new skill (H4). The owner's first case since 2026-11-10, on 2026-11-16, passed H3 and 2.4's steps 2 and 3 and
     gave E1's Render figure; the
     same day 2.1's owner test passed every step, 2.4's step 1 with it (confirmed by the owner on 2026-11-19).
     D8 is decided (2026-11-10): the e-mail history stays as it is; do not propose a rewrite.
@@ -705,11 +724,10 @@ Notes for cloud sessions (claude.ai/code):
     another version and new evidence.
   - 5.8's first full run is recorded: the owner chooses its branch (not good enough, close or good enough;
     roadmap 5.8, "After the first full run", step 2), then follow it.
-  - **From the quality report of 2026-11-19: 1.7 is built (2026-11-21); planned next: roadmap 1.8** (a browser walk
-    in CI on a phone-sized screen; Playwright as a CI-only test dependency, with its reason in the PR, rule 8). 2.9
-    (blind labels) waits for the owner's go-ahead; 2.10 (reviewer time) is buildable. Never "fix" the report's
-    held-out example `HO-TH-UPL-05` with a keyword (rule 5).
-  - Buildable now without an owner decision: 1.8 and 2.10 (above), the rest of 5.5 (the ten masking gaps, which
+  - **From the quality report of 2026-11-19: 1.7 and 1.8 are built (2026-11-21).** 2.9 (blind labels) waits for the
+    owner's go-ahead; 2.10 (reviewer time) is buildable. Never "fix" the report's held-out example `HO-TH-UPL-05`
+    with a keyword (rule 5).
+  - Buildable now without an owner decision: 2.10 (above), the rest of 5.5 (the ten masking gaps, which
     need new masking rules, and NFC, which needs an ADR; the invisible-text gaps were fixed on 2026-11-19), 5.6 and
     5.7, the rest of Phase 2 (2.1 to 2.4 and 2.8 are built; 2.5 needs D3, 2.6 and 2.7 when needed), H5's trace link,
     and Phase 4 (4.1 first; Phase 3, which it needs, is built). The rest of 7.1 (who can read the AI key) needs an

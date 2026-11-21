@@ -282,7 +282,7 @@ Dockerfile, render.yaml        the container (it compiles all its code once, so 
 app/exchange/                  the skill-handoff exchange (ADR-030): common.py + vocabulary_v2.json (the common language), translators/,
                                routes.py + routes_v1.json (the route table), exchange.py (checks at start, prepares each handoff)
 examples/                      case_triage_demo, case_triage_shadow_demo, study_guide_demo, skill_handoff_demo, sentry_smoke_test, service_smoke_test
-tests/                         601 tests: core, triage v1/v2, AI gateway, Typhoon provider, local model provider and its model fetcher, masking, scorecards, eval gates, Sentry, tracing, API, queue, Runner, HTTP, metrics, study library, link check, study guide, web page, robustness benchmark, workflow permissions, the image's bytecode cache, review decisions and retention, the commit e-mail check, the open-benchmark builder, the auto-approve simulation, and the storage check and readiness
+tests/                         602 tests: core, triage v1/v2, AI gateway, Typhoon provider, local model provider and its model fetcher, masking, scorecards, eval gates, Sentry, tracing, API, queue, Runner, HTTP, metrics, study library, link check, study guide, web page, robustness benchmark, workflow permissions, the image's bytecode cache, review decisions and retention, the commit e-mail check, the open-benchmark builder, the auto-approve simulation, the storage check and readiness, and the page's contract with the browser walk (`tests/browser_walk.py`, run in CI only)
 tests/robustness/              the robustness benchmark, stage 1 (docs/benchmarking.md): synthetic_v1.json (270 edge cases), open_extract_v1.json
                                (BLNS, JSONTestSuite, CLINC150, BANKING77, pinned; NOTICE.md), bench.py, build_open_extract.py, triage_edge_golden_v1.json
 tests/open_benchmarks/         stage 2 (roadmap 5.6): build_sets.py builds CLINC150, BANKING77, MASSIVE th/en and BIPIA case sets at run time
@@ -374,6 +374,10 @@ planned: artifact store
   volume (`confirmed`), a folder with no disk (`root_filesystem`), a tmpfs (`temporary_filesystem`), and Typhoon
   chosen without a key (`/readyz` 503 `blocked_config`, the case admitted and waiting), then the same volume with
   the mock (the case runs).
+- The page works when a person uses it on a phone (roadmap 1.8): the same job walks a fresh container in a
+  browser on Playwright's "Pixel 7" (`tests/browser_walk.py`): sign in, send and confirm a case, open it from
+  "รอรีวิว", approve it, open the linked job, find the decision counted; no sideways scroll, no script error, no
+  5xx reply, and the same result over the API. A picture of each screen is kept in the run's artifact.
 
 **P0 for review decisions, met on 2026-11-10 (automated, `tests/test_service_reviews.py`; ADR-027):**
 - A review decision applies once per version: 16 identical clicks at once make one decision, 16 different
@@ -439,7 +443,8 @@ planned: artifact store
   as Thai only when it holds a Thai letter.
 - Done on 2026-11-21, the rest of that report's page 4 (roadmap 1.7, ADR-036): storage persistent only when the
   start confirms the data folder on a disk of its own; `GET /readyz` beside `/healthz`; one Sentry event per
-  start of a Runner blocked by its AI settings.
+  start of a Runner blocked by its AI settings. The owner's test on the live page passed the same day. Also its
+  page 6's browser walk in CI on a phone-sized screen (roadmap 1.8).
 - Open: retention and backup/restore drills (1.4, needs a disk), API authentication hardening (7.2).
 
 **P2 (do not build early):** multi-tenancy, distributed workers, Postgres, object storage, SLAs, a hosted
