@@ -374,6 +374,33 @@
   // ---------- retention: what this browser sent, to notice a queue that started empty again ---------
 
   function persistent() { return Boolean(((state.status || {}).storage || {}).persistent); }
+  /* The storage as the start checked it (roadmap 1.7): "ถาวร" only when the data folder was found on a disk of its
+     own; otherwise why not. { chip, title, row }: the status bar, its tooltip, and the settings tab's row. */
+  function storageText(storage) {
+    storage = storage || {};
+    if (storage.persistent) {
+      return { chip: "ถาวร", title: "ตรวจตอนเริ่มระบบแล้ว: โฟลเดอร์ข้อมูลอยู่บนดิสก์ที่ต่อแยก เคส ผล และการตัดสินไม่หายเมื่อรีสตาร์ทหรืออัปเดต",
+        row: "ถาวร — ตรวจตอนเริ่มระบบแล้วว่าโฟลเดอร์ข้อมูลอยู่บนดิสก์ที่ต่อแยก" + (storage.filesystem ? ` (${storage.filesystem})` : "") };
+    }
+    const lost = "เคส ผล และการตัดสินจึงยังหายเมื่อระบบรีสตาร์ทหรืออัปเดต";
+    switch (storage.check) {
+      case "root_filesystem":
+      case "temporary_filesystem": {
+        const why = "ตั้งที่เก็บข้อมูลไว้แล้ว แต่ตรวจตอนเริ่มระบบพบว่าโฟลเดอร์ไม่ได้อยู่บนดิสก์ที่ต่อแยก" +
+          (storage.filesystem ? ` (ระบบไฟล์ ${storage.filesystem})` : "") + " ดิสก์อาจยังไม่ได้ต่อ หรือที่อยู่โฟลเดอร์ไม่ตรงกับดิสก์ ";
+        return { chip: "ชั่วคราว: ยังไม่พบดิสก์ถาวร", title: why + lost, row: "ชั่วคราว — " + why + lost };
+      }
+      case "mount_table_unreadable":
+      case "not_checked": {
+        const why = "ตั้งที่เก็บข้อมูลไว้แล้ว แต่ระบบตรวจไม่ได้ว่าเป็นดิสก์ถาวร จึงไม่เรียกว่าถาวร ";
+        return { chip: "ชั่วคราว: ตรวจดิสก์ไม่ได้", title: why + lost, row: "ชั่วคราว — " + why + lost };
+      }
+      default:  // not_configured: no data folder is set (Render's free plan has no disk)
+        return { chip: "ชั่วคราว: เคสหายเมื่อรีสตาร์ท",
+          title: "ยังไม่มีดิสก์ถาวร (Render แบบฟรีไม่มีดิสก์) ระบบยังทำงานครบทุกขั้น แต่เคส ผล และการตัดสินจะหายเมื่อระบบหลับ รีสตาร์ท หรืออัปเดต",
+          row: "ชั่วคราว — เคส ผล และการตัดสินหายเมื่อระบบหลับ รีสตาร์ท หรืออัปเดต (Render แผนฟรี)" };
+    }
+  }
   /* "Saved" in words that are true for the storage in use: never "permanent" on temporary storage. */
   function savedText() { return persistent() ? "บันทึกถาวรแล้ว" : "บันทึกแล้ว (ที่เก็บชั่วคราว)"; }
   const TEMPORARY_NOTE = "ที่เก็บข้อมูลตอนนี้เป็นแบบชั่วคราว (Render แผนฟรี): ถ้าระบบหลับ (ไม่มีคนใช้ราว 15 นาที) รีสตาร์ท หรืออัปเดต " +
@@ -580,10 +607,8 @@
     if (ai.problem) setSys("sys-ai", "ตั้งค่าไม่ครบ", "warn", ai.problem);
     else if (ai.simulated) setSys("sys-ai", "AI จำลอง", "", "ตัวจำลองแบบคำสำคัญ ใช้ทดสอบระบบโดยไม่เสียค่า API (ไม่ใช่ AI จริง)");
     else setSys("sys-ai", aiLabel(ai), "ok");
-    const storage = status.storage || {};
-    if (storage.persistent) setSys("sys-storage", "ถาวร", "ok");
-    else setSys("sys-storage", "ชั่วคราว: เคสหายเมื่อรีสตาร์ท", "warn",
-      "ยังไม่มีดิสก์ถาวร (Render แบบฟรีไม่มีดิสก์) ระบบยังทำงานครบทุกขั้น แต่เคส ผล และการตัดสินจะหายเมื่อระบบหลับ รีสตาร์ท หรืออัปเดต");
+    const storage = storageText(status.storage);
+    setSys("sys-storage", storage.chip, (status.storage || {}).persistent ? "ok" : "warn", storage.title);
     checkStore(status.retention);
     $("version").textContent = status.version ? "v" + status.version : "";
     if (state.mode === "study" && !studyAvailable()) state.mode = "case";
@@ -2153,7 +2178,7 @@
     return panel("ระบบและขีดจำกัด", [
       el("div", { class: "rows" }, [
         el("span", { text: "ตัวรันงาน (Runner)" }), el("span", { text: runnerText }),
-        el("span", { text: "ที่เก็บข้อมูล" }), el("span", { text: storage.persistent ? "ถาวร" : "ชั่วคราว — เคส ผล และการตัดสินหายเมื่อระบบหลับ รีสตาร์ท หรืออัปเดต (Render แผนฟรี)" }),
+        el("span", { text: "ที่เก็บข้อมูล" }), el("span", { text: storageText(storage).row }),
         el("span", { text: "ข้อมูลชุดนี้เริ่มเมื่อ" }), el("span", { text: fullTime((status.retention || {}).store_started_at) }),
         el("span", { text: "คิวรับได้สูงสุด" }), el("span", { text: `${limit.max_queued} เคสที่รออยู่` }),
         el("span", { text: "ส่งได้" }), el("span", { text: `${limit.submit_per_minute} ครั้งต่อนาที` }),

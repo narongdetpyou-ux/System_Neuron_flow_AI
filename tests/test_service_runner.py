@@ -136,6 +136,53 @@ class QueueProcessingTests(RunnerTestCase):
                 thread.join(10)
         self.assertEqual(self.store.runner()["state"], "stopped")
 
+    def test_a_blocked_runner_tells_sentry_once_and_readiness_until_the_settings_are_fixed(self):
+        # Roadmap 1.7, from the quality report of 2026-11-19 (page 4): Typhoon chosen and no key. /healthz said "ok"
+        # and nothing else told a watcher that cases wait.
+        api = ApiApp(self.settings, self.store)
+
+        def check(path):  # no key: these two are for the host and for watchers
+            response = api.handle(Request("GET", path, {}, {}, b"", "watcher"))
+            return response.status, json.loads(response.body)
+
+        job = self.admit("key-blocked-2")
+        sdk = StubSdk()
+        config = LLMConfig(provider="typhoon", model="typhoon-v2.5-30b-a3b-instruct")
+        with mock.patch.dict(os.environ, {"TYPHOON_API_KEY": ""}):
+            runner = Runner(self.settings, store=self.store, llm_config=config, reporter=SentryReporter(sdk=sdk))
+            thread = threading.Thread(target=runner.serve)
+            thread.start()
+            try:
+                wait_for(lambda: (self.store.runner() or {}).get("state") == "blocked_config")
+                self.assertEqual(check("/readyz"), (503, {"ok": False, "state": "blocked_config"}))
+                self.assertEqual(check("/healthz")[0], 200)  # Render's check: it must not restart the service
+                wait_for(lambda: sdk.events)
+                time.sleep(0.3)  # still one event: once per start, not once per heartbeat
+            finally:
+                runner.stop_event.set()
+                thread.join(10)
+        self.assertEqual(len(sdk.events), 1)
+        event = sdk.events[0]
+        self.assertEqual((event["level"], event["fingerprint"]),
+                         ("error", ["neuron-flow", "runner-blocked", "LLMConfigError"]))
+        self.assertEqual(event["tags"],
+                         {"neuron_flow.event": "runner_blocked", "neuron_flow.error_type": "LLMConfigError"})
+        self.assertEqual(event["context"], {"state": "blocked_config", "error_type": "LLMConfigError"})
+        self.assertNotIn("TYPHOON_API_KEY", json.dumps(event))  # the class name only, never the message or a setting
+        self.assertEqual(self.store.get(job["job_id"])["status"], "QUEUED")  # nothing was dropped
+        # The settings are fixed (here: the mock) and the Runner starts again on the same queue: the case runs.
+        fixed = Runner(self.settings, store=self.store, llm_config=LLMConfig())
+        thread = threading.Thread(target=fixed.serve)
+        thread.start()
+        try:
+            wait_for(lambda: self.store.get(job["job_id"])["status"] == "REVIEW_REQUIRED")
+            wait_for(lambda: check("/readyz")[0] == 200)
+            self.assertIn(check("/readyz"),
+                          ((200, {"ok": True, "state": "idle"}), (200, {"ok": True, "state": "running"})))
+        finally:
+            fixed.stop_event.set()
+            thread.join(10)
+
 
 class LockTests(RunnerTestCase):
     def test_only_one_runner_can_own_the_workspace(self):

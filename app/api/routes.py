@@ -3,6 +3,7 @@
   GET  /                          the web page (it holds no secrets and asks for the access key)
   GET  /static/app.css, app.js    page assets
   GET  /healthz                   liveness for the host: process up, queue database readable (no key)
+  GET  /readyz                    readiness: 200 while the Runner can work cases, else 503 and a state code (no key)
   GET  /v1/status                 Runner heartbeat, queue counts and timings, AI mode, tracing, storage, limits, steps
   POST /v1/jobs                   admit a job: 202 new, 200 duplicate, 400/401/409/413/415/429/503
   GET  /v1/jobs                   newest first: ?limit=1-100&before=<seq>
@@ -28,7 +29,13 @@ followed from the log to the job record.
 
 When tracing is on (``app.observability.tracing``), every ``/v1`` request also becomes one span, and a job
 that a request admits records that span as its parent, so the Runner's spans of the job join the same
-trace. The page files and ``/healthz`` are not traced.
+trace. The page files, ``/healthz`` and ``/readyz`` are not traced.
+
+Liveness and readiness are two checks (roadmap 1.7, ADR-036). ``/healthz`` stays the host's health check: it fails only
+when this process cannot read the queue, because Render restarts a service whose check fails and, on the free plan, a
+restart empties the queue. ``/readyz`` says whether the Runner can work cases now, as a state code and nothing else:
+with the AI settings broken it answers 503 ``blocked_config`` while ``/healthz`` answers 200 and cases are still
+admitted, to wait in the queue.
 
 The API only reads, admits and cancels jobs that are still queued, and records people's review decisions in the
 queue database (``app.services.reviews``); it never opens the Core ``Runtime`` (ADR-001). An approval's
@@ -81,6 +88,10 @@ REVIEW_PATH = re.compile(r"^/v1/reviews/(rev_[0-9a-f]{24})(/decisions)?$")
 TOKEN_PATH = re.compile(r"^/v1/tokens/([0-9a-f]{16})/revoke$")
 SCORECARD_PATH = "/v1/reviews/scorecard"
 LOST_ON = ("sleep", "restart", "deploy")  # what wipes a data folder that is not persistent (Render's free plan)
+READY = ("idle", "running")  # the Runner states in which ``/readyz`` answers 200
+# The Runner's heartbeat state as a readiness code. A Runner that has not reached its loop yet is "starting".
+_READINESS = {"idle": "idle", "running": "running", "blocked_config": "blocked_config", "starting": "starting",
+              "reconciling": "starting", "stopped": "not_alive"}
 # A client may send its own id: 1-64 characters, letters, digits, '.', '_' or '-'. Nothing else reaches the logs.
 REQUEST_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$")
 _ASSETS = {"/": ("index.html", "text/html; charset=utf-8"),
@@ -137,6 +148,21 @@ def new_request_id():
     return "req_" + secrets.token_hex(8)
 
 
+def readiness(row, *, now, stale_s, since):
+    """The Runner's readiness as one code: ``idle`` or ``running`` when it can work cases, otherwise
+    ``blocked_config`` (the AI settings cannot work), ``starting`` or ``not_alive`` (roadmap 1.7).
+
+    ``row`` is the queue's heartbeat row (``None`` before the first one) and ``since`` the time this API process
+    started. A heartbeat from before that belongs to an earlier Runner and does not count: until the new Runner writes
+    one the code is ``starting``, and ``not_alive`` once ``stale_s`` has passed without one.
+    """
+    if row is None or row["heartbeat_at"] < since:
+        return "starting" if now - since <= stale_s else "not_alive"
+    if now - row["heartbeat_at"] > stale_s:
+        return "not_alive"
+    return _READINESS.get(row["state"], "unknown")
+
+
 class ApiApp:
     def __init__(self, settings, store, *, catalog=None, clock=time.time, reporter=None, tracing=None, exchange=None):
         self.settings = settings
@@ -145,6 +171,7 @@ class ApiApp:
         # The skill-handoff exchange (ADR-030); a route table that does not fit the catalog fails at start.
         self.exchange = exchange or Exchange(self.catalog)
         self.clock = clock
+        self.started_at = clock()  # readiness counts only Runner heartbeats written after this (``readiness``)
         self.reporter = reporter
         self.tracing = tracing if tracing is not None else Tracing.off()
         key = settings.access_key
@@ -196,6 +223,8 @@ class ApiApp:
             return self._asset(path) if reading else _not_allowed("GET, HEAD")
         if path == "/healthz":
             return self._health() if reading else _not_allowed("GET, HEAD")
+        if path == "/readyz":
+            return self._ready() if reading else _not_allowed("GET, HEAD")
         if not path.startswith("/v1/"):
             return error(404, "not_found", "No such page")
         identity, denied = self._authorize(request)
@@ -281,6 +310,16 @@ class ApiApp:
         # Whether a key is set (never the key itself) lets the page show setup steps without a 401.
         return json_response(200, {"ok": True, "access_key": "configured" if self._key_digest else "not_configured"})
 
+    def _ready(self):
+        """Readiness, apart from liveness (roadmap 1.7, ADR-036): a state code only, never the Runner's detail text,
+        which may name a setting. Cases are admitted whatever it says; they wait in the queue."""
+        try:
+            row = self.store.runner()
+        except Exception:
+            return json_response(503, {"ok": False, "state": "queue_unavailable"})
+        state = readiness(row, now=self.clock(), stale_s=self.settings.runner_stale_s, since=self.started_at)
+        return json_response(200 if state in READY else 503, {"ok": state in READY, "state": state})
+
     def _status(self):
         runner = self.store.runner()
         now = self.clock()
@@ -307,7 +346,10 @@ class ApiApp:
             "metrics": queue_metrics(self.store, now),
             "ai": {**llm, "simulated": llm.get("provider") == "mock", "problem": problem},
             "tracing": self.tracing.status(),
-            "storage": {"kind": self.settings.storage, "persistent": self.settings.persistent},
+            # Persistent only when the start found the folder on a disk of its own (roadmap 1.7); never a path.
+            "storage": {"kind": self.settings.storage, "persistent": self.settings.persistent,
+                        "check": self.settings.storage_check.result,
+                        "filesystem": self.settings.storage_check.filesystem},
             "retention": self._retention(),
             "reviews": {**self.store.review_counts(), **review_service.policy()},
             "access": access.policy(),

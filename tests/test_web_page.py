@@ -13,7 +13,8 @@ what the service and the study guide promise:
 5. the script parses (with Node.js, when it is installed: GitHub's runners have it);
 6. reviews and retention (the independent review of 2026-11-10, points 3 and 4): every job status, decision and
    review error has Thai words; the page never says "saved permanently" without checking the storage; the browser
-   keeps only the access key and job ids, never case text; and who decides is never sent from the page;
+   keeps only the access key and job ids, never case text; and who decides is never sent from the page. Since
+   roadmap 1.7 the storage words come from the check at start, with Thai words for each reason it is not "ถาวร";
 7. personal tokens and roles (roadmap 2.1, ADR-034): every role and token error has Thai words, a new token is
    shown from memory and never stored, only checked token ids reach an address, a status refresh never redraws
    the owner's section, and the page hides what the signed-in role cannot do;
@@ -42,6 +43,7 @@ from app.domains.case_triage.contracts import CATEGORIES
 from app.persistence import STATUSES, QueueStore
 from app.services.reviews import DECISIONS
 from app.services.workflows import CATALOG, check_case, preview_spec
+from app.settings import STORAGE_CHECK_RESULTS
 from examples.study_guide_demo import REQUESTS as DEMO_REQUESTS
 from tests.service_fixtures import settings
 from tests.test_service_api import body_of, get
@@ -233,6 +235,25 @@ class ReviewAndRetentionTests(unittest.TestCase):
             if "บันทึกถาวร" in line:
                 with self.subTest(line=line.strip()[:80]):
                     self.assertTrue("persistent()" in line or "persistent ?" in line, line)
+
+    def test_the_storage_words_follow_the_check_at_start(self):
+        # Roadmap 1.7: "ถาวร" only when the start found the data folder on a disk of its own (the server's
+        # ``persistent``), and every other result of the check has Thai words that say why not.
+        helper = SCRIPT[SCRIPT.index("function storageText(storage)"):]
+        helper = helper[:helper.index("\n  }\n")]
+        persistent_branch = helper[helper.index("if (storage.persistent) {"):helper.index("\n    }\n")]
+        self.assertIn('chip: "ถาวร"', persistent_branch)
+        self.assertEqual(helper.count('chip: "ถาวร"'), 1)
+        for result in STORAGE_CHECK_RESULTS:
+            if result not in ("confirmed", "not_configured"):  # confirmed is persistent; not_configured is the default
+                with self.subTest(result=result):
+                    self.assertIn(f'case "{result}":', helper)
+        self.assertIn("default:", helper)
+        # The status bar and the settings tab both take their words from it; neither says "ถาวร" by itself.
+        self.assertIn('setSys("sys-storage", storage.chip', SCRIPT)
+        self.assertIn("storageText(storage).row", SCRIPT)
+        self.assertNotIn('storage.persistent ? "ถาวร"', SCRIPT)
+        self.assertNotIn('setSys("sys-storage", "ถาวร"', SCRIPT)
 
     def test_the_browser_keeps_the_key_and_job_ids_only(self):
         writes = re.findall(r"(localStorage|sessionStorage)\.setItem\(([A-Z_]+)", SCRIPT)

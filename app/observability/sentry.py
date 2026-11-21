@@ -9,6 +9,8 @@ Design rules (see docs/observability_sentry.md):
   job snapshot after ``Runtime.run`` and sends one event per FAILED step and
   one per DELIVERY_FAILED job. BLOCKED steps are consequences, so they are
   attached as context to the root failure instead of creating noise.
+* A Runner that starts no jobs because the AI settings cannot work sends one
+  ``error`` event per start (``report_runner_blocked``): the error class only.
 * Degraded steps: a SUCCEEDED step whose output is ``{"status": "unavailable",
   "reason": "<code>"}`` (e.g. the AI second opinion was unavailable) sends one
   ``warning`` event, grouped by agent and reason. Only the fixed reason code
@@ -179,6 +181,21 @@ class SentryReporter:
             fingerprint=["neuron-flow", "job-recovered", outcome],
             tags={"neuron_flow.event": "job_recovered", "neuron_flow.recovery_outcome": outcome},
             context={"job_id": job_id, "claims": claims, "outcome": outcome})
+
+    def report_runner_blocked(self, error_type):
+        """The Runner starts no jobs because the AI settings cannot work (``blocked_config``, roadmap 1.7).
+
+        Called once per Runner start, so the owner hears about it without watching the page. Only the error's class
+        name is sent: never its message, a key or a setting's value. The API still admits cases; they wait.
+        """
+        if not self.active:
+            return None
+        error_type = error_type if isinstance(error_type, str) and _CODE_NAME.fullmatch(error_type) else "Unknown"
+        return self._send(
+            f"Neuron Flow Runner blocked: the AI settings cannot work ({error_type})",
+            fingerprint=["neuron-flow", "runner-blocked", error_type],
+            tags={"neuron_flow.event": "runner_blocked", "neuron_flow.error_type": error_type},
+            context={"state": "blocked_config", "error_type": error_type})
 
     def capture_exception(self, exc, *, job_id=None):
         """Report an exception raised by Runtime itself (e.g. agent version drift)."""

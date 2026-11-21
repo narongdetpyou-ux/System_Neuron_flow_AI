@@ -11,6 +11,13 @@ With ``--after-restart``: check that the saved job is still there, that the revo
 scorecard still counts both decisions and that new work still runs.
 With ``--first-case-only``: submit one case to a service that has just started and report how long it
 took (effectiveness plan E1). That mode reports and never fails on a time or on the case's outcome.
+Storage and readiness, checked rather than assumed (roadmap 1.7):
+* ``--expect-storage CHECK`` makes the first run and ``--after-restart`` also check what the start found about the
+  data folder (``confirmed`` with a volume);
+* ``--storage-check CHECK`` only checks that, and what a new case's reply says about how long it is kept;
+* ``--blocked`` expects a Runner whose AI settings cannot work: ``/healthz`` 200, ``/readyz`` 503 ``blocked_config``, a
+  case still admitted and waiting; ``--after-fix`` then expects ``/readyz`` 200 and that case worked.
+Every run except ``--blocked`` and ``--first-case-only`` also waits for ``/readyz`` to answer 200 before it starts.
 It only uses synthetic text, and it never prints the access key.
 """
 
@@ -24,6 +31,12 @@ import urllib.request
 import uuid
 
 TERMINAL = {"REVIEW_REQUIRED", "COMPLETED", "FAILED", "DELIVERY_FAILED"}
+STORAGE_CHECKS = ("confirmed", "root_filesystem", "temporary_filesystem", "not_configured")
+# What the owner reads on the run page about each storage check (Thai).
+STORAGE_WORDS = {"confirmed": "ถาวร", "root_filesystem": "ชั่วคราว (โฟลเดอร์อยู่ในตัวระบบเอง ไม่ใช่ดิสก์ที่ต่อแยก)",
+                 "temporary_filesystem": "ชั่วคราว (โฟลเดอร์อยู่บนพื้นที่ในหน่วยความจำ)",
+                 "not_configured": "ชั่วคราว (ไม่ได้ตั้งที่เก็บข้อมูล)"}
+LOST_ON = ["sleep", "restart", "deploy"]
 
 
 class Client:
@@ -91,6 +104,40 @@ def wait_for_runner(client, timeout_s):
     raise SystemExit(f"FAILED: the Runner did not report alive in {timeout_s}s")
 
 
+def wait_for_ready(client, timeout_s):
+    """``/readyz`` (roadmap 1.7, no key): wait until it answers 200, that is until the Runner can work cases."""
+    deadline = time.monotonic() + timeout_s
+    last = None
+    while time.monotonic() < deadline:
+        try:
+            last = client.call("GET", "/readyz", key=False)
+            if last[0] == 200:
+                check(last[1].get("ok") is True and last[1].get("state") in ("idle", "running"),
+                      f"/readyz answers 200 ({last[1].get('state')})")
+                return last[1]
+        except (urllib.error.URLError, OSError):
+            pass
+        time.sleep(0.5)
+    raise SystemExit(f"FAILED: /readyz did not answer 200 in {timeout_s}s (last: {last})")
+
+
+def storage_is(client, expected):
+    """What the start found about the data folder (roadmap 1.7): persistent only when ``confirmed``."""
+    status, info = client.call("GET", "/v1/status")
+    storage = info.get("storage") or {}
+    persistent = expected == "confirmed"
+    check(status == 200 and storage.get("check") == expected and storage.get("persistent") is persistent,
+          f"the storage check at start found {expected}, so persistent is {persistent}"
+          f" (filesystem: {storage.get('filesystem')})")
+    return storage
+
+
+def storage_line(label, expected, storage):
+    """One Thai line for the run page about what the storage check found."""
+    return (f"- {label}: ระบบเรียกที่เก็บข้อมูลว่า **{STORAGE_WORDS[expected]}** (ผลตรวจ `{expected}`,"
+            f" ระบบไฟล์ `{storage.get('filesystem')}`) ✓")
+
+
 def finished_v2_jobs(client):
     """How many finished case_triage.v2 jobs the status figures count, if they also carry a run time."""
     status, info = client.call("GET", "/v1/status")
@@ -143,13 +190,16 @@ def first_case_only(client, timeout_s, label, summary):
     write_summary(summary, line)
 
 
-def first_run(client, state_file, timeout_s, summary=None):
+def first_run(client, state_file, timeout_s, summary=None, expect_storage=None):
     status, _ = client.call("GET", "/", key=False)
     check(status == 200, "the web page loads")
     status, _ = client.call("GET", "/v1/status", key=False)
     check(status == 401, "the API refuses requests without the access key")
     info = wait_for_runner(client, timeout_s)
     print(f"     ai={info['ai']['provider']}/{info['ai']['model']} storage={info['storage']['kind']}")
+    wait_for_ready(client, timeout_s)
+    if expect_storage:
+        storage_is(client, expect_storage)
     key = f"smoke-{uuid.uuid4()}"
     body = {"workflow_type": "case_triage.v2", "idempotency_key": key,
             "input": {"case_id": "SMOKE-TH-01", "summary": "อัปโหลดไฟล์แนบไม่ได้ ค้างที่ 99%"}}
@@ -272,9 +322,68 @@ def approval_hands_on(client, job_id, timeout_s):
     return applied["job_id"]
 
 
-def after_restart(client, state_file, timeout_s):
+def storage_only(client, expected, timeout_s, summary, label):
+    """Roadmap 1.7: what the start found about the data folder, and what a new case's reply says about it."""
+    wait_for_runner(client, timeout_s)
+    wait_for_ready(client, timeout_s)
+    storage = storage_is(client, expected)
+    persistent = expected == "confirmed"
+    body = {"workflow_type": "case_triage.v2", "idempotency_key": f"smoke-{uuid.uuid4()}",
+            "input": {"case_id": "SMOKE-STORAGE-01", "summary": "I cannot sign in to my account"}}
+    status, job = client.call("POST", "/v1/jobs", body)
+    retention = job.get("retention") or {}
+    check(status == 202 and retention.get("persistent") is persistent
+          and retention.get("lost_on") == ([] if persistent else LOST_ON),
+          "a new case's reply says how long it is kept, as the check found")
+    write_summary(summary, storage_line(label, expected, storage))
+
+
+def blocked(client, state_file, timeout_s, summary):
+    """Roadmap 1.7, from the quality report of 2026-11-19 (page 4): AI settings that cannot work. ``/healthz`` stays
+    200, so the host never restarts the service (on the free plan that empties the queue); ``/readyz`` answers 503
+    ``blocked_config``; a case is still admitted and waits."""
+    status, health = client.call("GET", "/healthz", key=False)
+    check(status == 200 and health.get("ok") is True, "/healthz answers 200: the host has no reason to restart it")
+    deadline = time.monotonic() + timeout_s
+    while True:  # "starting" until the Runner's first heartbeat
+        status, ready = client.call("GET", "/readyz", key=False)
+        if ready.get("state") == "blocked_config" or time.monotonic() > deadline:
+            break
+        time.sleep(0.5)
+    check(status == 503 and ready == {"ok": False, "state": "blocked_config"},
+          "/readyz answers 503 blocked_config, a code without any detail")
+    status, info = client.call("GET", "/v1/status")
+    check(status == 200 and info["runner"]["state"] == "blocked_config" and info["runner"]["alive"],
+          "/v1/status shows a live Runner blocked by its AI settings")
+    body = {"workflow_type": "case_triage.v2", "idempotency_key": f"smoke-{uuid.uuid4()}",
+            "input": {"case_id": "SMOKE-BLOCKED-01", "summary": "I cannot upload an attachment"}}
+    status, job = client.call("POST", "/v1/jobs", body)
+    check(status == 202 and job.get("status") == "QUEUED", "a case is still admitted (202 QUEUED)")
+    time.sleep(3)
+    status, again = client.call("GET", f"/v1/jobs/{job['job_id']}")
+    check(status == 200 and again.get("status") == "QUEUED",
+          "the case waits in the queue: nothing runs, nothing is dropped")
+    Path(state_file).write_text(json.dumps({"job_id": job["job_id"]}), encoding="utf-8")
+    write_summary(summary, "- ตัวรันงานติดเพราะตั้งค่า AI ไม่ครบ (เลือก Typhoon แต่ไม่มีคีย์): `/healthz` ตอบ 200"
+                           " (Render ไม่รีสตาร์ท), `/readyz` ตอบ 503 `blocked_config` และเคสยังรับเข้าคิวได้ ✓")
+
+
+def after_fix(client, state_file, timeout_s, summary):
+    """After ``--blocked``: the same data folder with settings that work. The case that waited is worked."""
+    saved = json.loads(Path(state_file).read_text(encoding="utf-8"))
+    wait_for_ready(client, timeout_s)
+    result = wait_for_result(client, saved["job_id"], timeout_s)
+    check(result["status"] == "REVIEW_REQUIRED", "the case that waited is worked and waits for a person")
+    write_summary(summary, "- แก้ค่าแล้วเริ่มใหม่บนดิสก์เดิม: `/readyz` ตอบ 200 และเคสที่รออยู่ถูกทำจนถึง"
+                           " \"รอคนตรวจ\" ✓")
+
+
+def after_restart(client, state_file, timeout_s, expect_storage=None):
     saved = json.loads(Path(state_file).read_text(encoding="utf-8"))
     wait_for_runner(client, timeout_s)
+    wait_for_ready(client, timeout_s)
+    if expect_storage:
+        storage_is(client, expect_storage)
     status, job = client.call("GET", f"/v1/jobs/{saved['job_id']}")
     check(status == 200 and job["status"] == "REVIEW_REQUIRED", "the case from before the restart is still stored")
     if saved.get("apply_job_id"):
@@ -304,11 +413,21 @@ def main(argv=None):
     parser.add_argument("--after-restart", action="store_true")
     parser.add_argument("--first-case-only", action="store_true",
                         help="only time the first case after a start; a report that does not fail")
-    parser.add_argument("--label", default="this service", help="names the service in the --first-case-only report")
+    parser.add_argument("--label", default="this service", help="names the service in the reports")
     parser.add_argument("--summary", help="append the first case's time here (e.g. $GITHUB_STEP_SUMMARY)")
     parser.add_argument("--timeout", type=float, default=90)
+    parser.add_argument("--expect-storage", choices=STORAGE_CHECKS,
+                        help="also check what the start found about the data folder (roadmap 1.7)")
+    parser.add_argument("--storage-check", choices=STORAGE_CHECKS,
+                        help="only check what the start found about the data folder, and one case's retention")
+    parser.add_argument("--blocked", action="store_true",
+                        help="expect a Runner blocked by its AI settings; needs --state")
+    parser.add_argument("--after-fix", action="store_true",
+                        help="after --blocked: expect /readyz 200 and the waiting case worked; needs --state")
     args = parser.parse_args(argv)
     client = Client(args.url, args.key)
+    if (args.blocked or args.after_fix) and not args.state:
+        parser.error("--blocked and --after-fix need --state")
     if args.first_case_only:
         try:
             wait_until_healthy(client, args.timeout)
@@ -319,12 +438,18 @@ def main(argv=None):
         first_case_only(client, args.timeout, args.label, args.summary)
         return 0
     wait_until_healthy(client, args.timeout)
-    if args.after_restart:
+    if args.storage_check:
+        storage_only(client, args.storage_check, args.timeout, args.summary, args.label)
+    elif args.blocked:
+        blocked(client, args.state, args.timeout, args.summary)
+    elif args.after_fix:
+        after_fix(client, args.state, args.timeout, args.summary)
+    elif args.after_restart:
         if not args.state:
             parser.error("--after-restart needs --state")
-        after_restart(client, args.state, args.timeout)
+        after_restart(client, args.state, args.timeout, args.expect_storage)
     else:
-        first_run(client, args.state, args.timeout, args.summary)
+        first_run(client, args.state, args.timeout, args.summary, args.expect_storage)
     print("all checks passed")
     return 0
 

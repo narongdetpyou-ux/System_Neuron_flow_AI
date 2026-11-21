@@ -70,6 +70,8 @@ retention: {'persistent': True, 'lost_on': []}
   whose health check fails and, on the free plan, a restart empties the queue. Nothing else tells a watcher that the
   Runner cannot work.
 
+**Built on 2026-11-21** (roadmap 1.7, ADR-036; [evidence](2026-11-21-readiness-and-storage-check.md)); the plan was:
+
 **Planned next: roadmap 1.7.** `persistent` only when the folder is confirmed on its own mounted filesystem (not the
 container's root, `overlay`, `tmpfs` or `ramfs`); `GET /readyz` beside `/healthz` (503 with a state code while the
 Runner is blocked, not alive or starting; cases are still admitted); a Sentry event when the Runner is blocked; the
