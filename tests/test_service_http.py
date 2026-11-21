@@ -185,7 +185,7 @@ class LauncherTests(unittest.TestCase):
     def test_the_start_says_what_the_storage_check_found_without_the_path(self):
         folder = "/srv/private-folder-name"
         for value, level, words in (
-                (settings(folder), "INFO", "storage confirmed persistent: the data folder is on a ext4 filesystem"),
+                (settings(folder), "INFO", "storage confirmed persistent: the data folder is on a filesystem of its own (ext4)"),
                 (settings(folder, storage_check=StorageCheck("root_filesystem", "overlay")), "WARNING",
                  "the data folder is set but not confirmed persistent (root_filesystem, overlay)"),
                 (settings(folder, storage="local_default", storage_check=NOT_CONFIGURED), "WARNING",

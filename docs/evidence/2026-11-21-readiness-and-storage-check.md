@@ -55,8 +55,21 @@ container reads as `root_filesystem`: the check prefers calling real persistent 
 
 ## In CI (*Service container*)
 
-Filled in from the pull request's run of *Service container* once it has finished: the filesystem types the
-container saw for a named volume, a folder with no disk and a tmpfs, and the blocked Runner's checks.
+The first run of the pull request's commit `bc83802` (push run 44878906932, job 136769646427, GitHub's
+`ubuntu-latest`, Docker with its default storage driver), one run each, read from the job's log:
+
+| Container | What the start found | The smoke test |
+|---|---|---|
+| `nf`, a named volume at `/var/data` (the main run) | `confirmed`, `ext4`, before and after `docker restart` | all checks passed, `/readyz` 200 `idle` |
+| `nf-volume`, a fresh named volume | `confirmed`, `ext4` | a new case's retention persistent, `lost_on` empty |
+| `nf-plain`, `NEURON_FLOW_DATA_DIR=/var/data` with no volume | `root_filesystem`, `overlay` | not persistent, `lost_on` the free plan's list |
+| `nf-tmpfs`, `--tmpfs /var/data` | `temporary_filesystem`, `tmpfs` | not persistent |
+| `nf-blocked`, a volume, Typhoon chosen and no key | (`confirmed`) | `/healthz` 200, `/readyz` 503 `blocked_config`, the case admitted and still `QUEUED`; the log says why; the key not in the log |
+| `nf-fixed`, the same volume with the mock | (`confirmed`) | `/readyz` 200 `idle`, the waiting case `REVIEW_REQUIRED` |
+
+The first-case timing container, started without a data folder, logged `storage=local_default, not_configured`.
+A named volume on GitHub's runner is a bind of the host's `ext4` disk; Render's disk is a different thing, see the
+first limit below.
 
 ## Limits
 

@@ -77,7 +77,7 @@ def log_storage(settings, logger=log):
     """Say at start whether the data outlives a restart, as checked (roadmap 1.7): the result, never the path."""
     check = settings.storage_check
     if settings.persistent:
-        logger.info("serve: storage confirmed persistent: the data folder is on a %s filesystem of its own",
+        logger.info("serve: storage confirmed persistent: the data folder is on a filesystem of its own (%s)",
                     check.filesystem)
     elif settings.storage == "local_default":
         logger.warning("serve: no persistent storage configured; jobs are lost when the container restarts")
