@@ -171,7 +171,7 @@ GitHub ดาวน์โหลดไฟล์นี้เองจาก Huggin
 | **T1** | This plan and ADR-037 | ✅ merged (PR #80) |
 | **T2** | Synthetic training set v1 with its manifest, and the overlap check against every exam set in CI | ✅ built on 2026-11-22 (section 10); the owner reads a sample |
 | **T3** | The training recipe and receipt format in `training/`, kept out of the image and Render's build, with a test | ✅ built on 2026-11-22 (section 11); D10 to run it |
-| **T4** | The exam gate: round 0 run again on `main`; the local lane takes a candidate file (Hugging Face repository, revision, size, SHA-256), runs every set and writes the comparison against the criteria | the criteria confirmed |
+| **T4** | The exam gate: round 0 run again on `main`; the local lane takes a candidate file (Hugging Face repository, revision, size, SHA-256), runs every set and writes the comparison against the criteria | ✅ built on 2026-11-22 (section 12); round 0's first full run waits for the owner's click |
 | **T5** | Round 1: train on T2's set, run the exam, write an evidence note; the owner decides | T2–T4, D10; where the trained file is put |
 | **T6** | Rounds from people's decisions: the owner exports blind labels (masked) as a training set; the cadence is the owner's choice | 2.9, D1, D3; real cases also D4, 7.1–7.3, 7.5 |
 
@@ -258,4 +258,36 @@ trained on text that differs from what it is served, so T3 includes a guard for 
 - **Not done or not known yet:** no run on a GPU (D10). The pinned library versions and the chat-template prefix
   check are first exercised there; a version that must change is a new recipe version. Whether the starting values
   give a better model than round 0 is T4's and T5's question.
+
+## 12. T4 as built (2026-11-22)
+
+The owner said "เริ่ม T4 ต่อเลย" after merging T3.
+
+- **The exam:** `training/exam.py` and the *Own model exam* workflow (`.github/workflows/own-model-exam.yml`,
+  `.github/scripts/run_exam.sh`). Every model is examined on six sets: the 61 development cases, the 40 held-out
+  cases, the 128 hard auto-send cases, the 64 held-out attention cases, the 116 robustness edges and BIPIA's 75
+  attacks (built at run time from the pinned files), 484 cases in all, with the local provider through the real
+  service code. The workflow uses the local lane's llama.cpp build and round 0 file (a test keeps them equal), the
+  recipe's serving flags (thinking off, temperature 0, repeat penalty 1.05, seed 42, context 16384) and the client's
+  longest wait, 300 s, as the lane (A3 of the advice on Core).
+- **The probe (A2):** before each model's exam, 8 clear development cases (each category once in each language)
+  must come back well formed with the right category, or the exam stops. The same probe is for our model's start
+  behind the page, when D7 comes; it is not wired into the service before then, because nothing would use it.
+- **Round 0 and a candidate on one runner:** with no candidate the workflow examines round 0 alone. With a candidate
+  (a public Hugging Face file pinned by commit and SHA-256), it examines round 0 and then the candidate on the same
+  machine, so their answer times can be compared, and runs criteria v1. Each case's answers are printed as
+  `EXAM-CASE` lines (ids and labels, never case text) and each set's figures as `EXAM-METRICS` lines in the job log,
+  which this session can read back to record round 0's baseline.
+- **Criteria v1** (`exam-criteria-v1`, section 5's proposal, now code): no more missing or off-format answers; at
+  least as many correct categories on the held-out and the hard set; at least as many of the rules' mistakes raised
+  (triage sets); at least as many `needs_person` cases raised (hard and attention sets) and BIPIA attacks raised; a
+  median answer time at most 1.5 times round 0's; and, with the candidate's receipt, a valid receipt trained for
+  today's prompt, answer format, masking and checks on the approved set. Needless raises are reported, not gated.
+- **Checked here:** 18 tests (each criterion shown to fail on a changed report, the probe, the digest, the command line
+  and the workflow's pins), and the whole script run locally against a stand-in model server that answers like the
+  offline mock (round 0 and a candidate, then the comparison). The real model runs on GitHub: pull requests that
+  change the exam get a smoke run of 3 cases per set.
+- **Not done yet:** round 0's full run on `main` (about 484 cases at roughly 8 to 10 s each on a CPU runner: over an
+  hour), which the owner starts with *Run workflow*; then its figures go into an evidence note. A private candidate
+  repository (a token) is T5's question.
 

@@ -1,0 +1,155 @@
+name: Own model exam
+# Own-model track T4 (docs/own_model_plan.md, section 5; ADR-037): the exam before use.
+# - Run workflow with no candidate: round 0 only, the publisher's Typhoon 2.5 Qwen3 4B as the local lane pins it,
+#   on every exam set (training/exam.py: development, held-out, hard, attention, robustness edges, BIPIA). Its
+#   per-case answers are printed as EXAM-CASE lines in the log (ids and labels, never case text) so they can be
+#   recorded as round 0's baseline.
+# - Run workflow with a candidate (a GGUF file trained with the recipe, T5): round 0 and then the candidate on this
+#   same runner, then criteria v1 (training/exam.py compare) with a Thai table on the run page; the run fails when
+#   the candidate does not pass. The candidate's file must be public on Hugging Face and pinned by SHA-256.
+# - Pull requests that change this exam get a smoke run: 3 cases of each set, round 0 only.
+# Nothing is trained and nothing is served here: GitHub's hosted runners only measure (ADR-026). No secret.
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/own-model-exam.yml"
+      - ".github/scripts/run_exam.sh"
+      - "training/exam.py"
+  workflow_dispatch:
+    inputs:
+      candidate_repo:
+        description: "Hugging Face repository of a trained candidate (leave empty to examine round 0 only)"
+        default: ""
+        required: false
+      candidate_revision:
+        description: "The candidate repository's commit (40 hex digits)"
+        default: ""
+        required: false
+      candidate_file:
+        description: "The candidate's GGUF file name"
+        default: ""
+        required: false
+      candidate_sha256:
+        description: "The candidate file's SHA-256, from its training receipt"
+        default: ""
+        required: false
+      limit:
+        description: "Only the first N cases of each set (leave empty for all)"
+        default: ""
+        required: false
+permissions:
+  contents: read
+concurrency:
+  group: own-model-exam-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+env:
+  # The same llama.cpp build and model file as the local lane (tests/test_training_exam.py keeps them equal).
+  LLAMA_CPP_TAG: b12198
+  LLAMA_CPP_COMMIT: f477f795cb071baf5b8af6488378366a72034ac4
+  MODEL_REPO: typhoon-ai/typhoon2.5-qwen3-4b-gguf
+  MODEL_REVISION: 386874d02430a544367cb0878687f8983751bbd2
+  MODEL_FILE: typhoon2.5-qwen3-4b-q4_k_m.gguf
+  MODEL_SHA256: b365302922688f3a3c9ac8e3c00ab97a152cac0cdbf4eb5a734ecb483ae3e511
+  MODEL_NAME: typhoon2.5-qwen3-4b-q4_k_m
+jobs:
+  exam:
+    runs-on: ubuntu-latest
+    timeout-minutes: 340
+    env:
+      NEURON_FLOW_LLM_PROVIDER: local
+      # The client's longest wait, as the local lane: CPU answers are slow (A3 of the advice on Core, 2026-11-22).
+      NEURON_FLOW_LLM_TIMEOUT_S: "300"
+      LIMIT: ${{ github.event_name == 'pull_request' && '3' || inputs.limit }}
+      CANDIDATE_REPO: ${{ inputs.candidate_repo }}
+      CANDIDATE_REVISION: ${{ inputs.candidate_revision }}
+      CANDIDATE_FILE: ${{ inputs.candidate_file }}
+      CANDIDATE_SHA256: ${{ inputs.candidate_sha256 }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - name: Restore llama.cpp's server
+        id: llama-cache
+        uses: actions/cache@v6
+        with:
+          path: ~/llama-bin
+          key: llama-server-${{ env.LLAMA_CPP_COMMIT }}-${{ runner.os }}-${{ runner.arch }}-avx2-v1
+      - name: Build llama.cpp's server at the pinned commit
+        if: steps.llama-cache.outputs.cache-hit != 'true'
+        run: |
+          git clone --depth 1 --branch "$LLAMA_CPP_TAG" https://github.com/ggml-org/llama.cpp "$RUNNER_TEMP/llama.cpp"
+          got="$(git -C "$RUNNER_TEMP/llama.cpp" rev-parse HEAD)"
+          if [ "$got" != "$LLAMA_CPP_COMMIT" ]; then
+            echo "::error::llama.cpp tag $LLAMA_CPP_TAG is commit $got, not the pinned $LLAMA_CPP_COMMIT"
+            exit 1
+          fi
+          cmake -S "$RUNNER_TEMP/llama.cpp" -B "$RUNNER_TEMP/llama-build" -DCMAKE_BUILD_TYPE=Release \
+            -DBUILD_SHARED_LIBS=OFF -DGGML_NATIVE=OFF -DGGML_AVX=ON -DGGML_AVX2=ON -DGGML_FMA=ON -DGGML_F16C=ON \
+            -DLLAMA_BUILD_TESTS=OFF -DLLAMA_BUILD_EXAMPLES=OFF -DLLAMA_BUILD_TOOLS=ON -DLLAMA_BUILD_SERVER=ON \
+            -DLLAMA_BUILD_APP=OFF -DLLAMA_BUILD_UI=OFF -DLLAMA_USE_PREBUILT_UI=OFF -DLLAMA_OPENSSL=OFF
+          cmake --build "$RUNNER_TEMP/llama-build" --target llama-server -j "$(nproc)"
+          mkdir -p ~/llama-bin
+          cp "$RUNNER_TEMP/llama-build/bin/llama-server" ~/llama-bin/
+      - name: Restore round 0's model file
+        uses: actions/cache@v6
+        with:
+          path: ~/models
+          key: local-model-${{ env.MODEL_NAME }}-${{ env.MODEL_SHA256 || env.MODEL_REVISION }}-v1
+      - name: Download and check round 0's model file
+        id: model
+        run: >-
+          python .github/scripts/fetch_model.py --repo "$MODEL_REPO" --revision "$MODEL_REVISION"
+          --file "$MODEL_FILE" --sha256 "$MODEL_SHA256" --dest ~/models
+          --summary "$GITHUB_STEP_SUMMARY" --github-output "$GITHUB_OUTPUT"
+      - name: Keep the downloaded public sources between runs
+        uses: actions/cache@v6
+        with:
+          path: ~/open-bench-cache
+          key: open-bench-sources-${{ hashFiles('tests/open_benchmarks/build_sets.py') }}-v1
+      # Isolated (-I): the builder imports nothing from this repository and reads the downloads as data.
+      - name: Build BIPIA's case set from the pinned open files
+        run: python -I tests/open_benchmarks/build_sets.py --out open-sets --cache ~/open-bench-cache --check
+      - name: Examine round 0
+        env:
+          MODEL_PATH: ${{ steps.model.outputs.path }}
+          MODEL_SHA: ${{ steps.model.outputs.sha256 }}
+        run: bash .github/scripts/run_exam.sh r0 "$MODEL_PATH" "$MODEL_NAME:${MODEL_SHA:0:12}" "$LIMIT"
+      - name: Download and check the candidate's model file
+        id: candidate
+        if: env.CANDIDATE_REPO != ''
+        run: |
+          if ! [[ "$CANDIDATE_REVISION" =~ ^[0-9a-f]{40}$ && "$CANDIDATE_SHA256" =~ ^[0-9a-f]{64}$ ]]; then
+            echo "::error::a candidate needs its repository's 40-digit commit and its file's SHA-256"
+            exit 1
+          fi
+          python .github/scripts/fetch_model.py --repo "$CANDIDATE_REPO" --revision "$CANDIDATE_REVISION" \
+            --file "$CANDIDATE_FILE" --sha256 "$CANDIDATE_SHA256" --dest ~/candidate \
+            --summary "$GITHUB_STEP_SUMMARY" --github-output "$GITHUB_OUTPUT"
+      - name: Examine the candidate on the same runner and compare it with round 0
+        if: env.CANDIDATE_REPO != ''
+        env:
+          CANDIDATE_PATH: ${{ steps.candidate.outputs.path }}
+        run: |
+          name="$(basename "$CANDIDATE_FILE" .gguf | tr 'A-Z' 'a-z')"
+          bash .github/scripts/run_exam.sh cand "$CANDIDATE_PATH" "$name:${CANDIDATE_SHA256:0:12}" "$LIMIT"
+          python -m training.exam compare --baseline reports/r0 --candidate reports/cand --name "$name" \
+            --out reports/comparison.json --summary "$GITHUB_STEP_SUMMARY"
+      - name: Say what round 0 did on the run page
+        if: ${{ !cancelled() }}
+        run: |
+          {
+            echo "### ด่านสอบ AI ของเราเอง (ขั้น T4): รอบ 0"
+            echo ""
+            echo "ผลรายเคสอยู่ในบันทึกของงานนี้ (บรรทัด EXAM-CASE) และในไฟล์แนบ own-model-exam"
+            echo '```text'
+            python -m training.exam digest --label r0 reports/r0/r0-*.json | grep '^EXAM-METRICS' || true
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Keep the reports
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: own-model-exam
+          path: reports/
+          if-no-files-found: ignore

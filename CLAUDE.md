@@ -212,7 +212,7 @@ If a task seems to need breaking a rule:
 ## 4. Checking your work
 
 ```bash
-python -m unittest discover -s tests -v        # all tests (667 on 2026-11-22); CI: Python 3.10 and 3.12
+python -m unittest discover -s tests -v        # all tests (685 on 2026-11-22); CI: Python 3.10 and 3.12
 python -m examples.case_triage_demo            # v1 rules, one synthetic case
 python -m examples.case_triage_shadow_demo     # v2 shadow mode with the offline mock AI
 python -m examples.study_guide_demo            # the study guide's answers to four synthetic requests
@@ -232,6 +232,7 @@ python -m examples.skill_handoff_demo          # one case step by step through t
 python -m tests.browser_walk --url http://127.0.0.1:<port> --key <key> --out walk  # the page on a phone (Playwright; CI)
 python -m training.check_set                   # the training set: records, manifest, no overlap with any exam set (T2)
 python -m training.train_qlora --dry-run       # plan a training round without training (T3; real runs need a GPU, D10)
+python -m training.exam compare --baseline reports/r0 --candidate reports/cand  # criteria v1 against round 0 (T4)
 NEURON_FLOW_ACCESS_KEY=$(python -c "import secrets; print(secrets.token_urlsafe(24))") python -m app.serve
 ```
 
@@ -318,6 +319,13 @@ GitHub Actions (the owner can open these; the first three run on every push and 
   changes `training/`, and by hand: it builds the open-benchmark sets and the sealed half, then runs
   `training.check_set` against every exam set, the sealed half as counts only; a Thai table is on the run page.
   Nothing is trained there. The unit tests check the committed exam sets on every push as well.
+- *Own model exam* (`own-model-exam.yml`, own-model track T4, ADR-037): *Run workflow* with no candidate examines round 0
+  (the local lane's pinned 4B) on six sets, 484 cases, through the real service code; with a candidate (a public
+  Hugging Face GGUF pinned by commit and SHA-256) it examines round 0 and then the candidate on the same runner and
+  applies criteria v1 (`training/exam.py`). An 8-case probe runs before each exam. Per-case answers are printed as
+  `EXAM-CASE` lines in the job log (ids and labels only), which this session can read with
+  `gh api repos/<owner>/<repo>/actions/jobs/<id>/logs`. Pull requests that change the exam get 3 cases per set.
+  CPU only: a full round 0 is over an hour. No secret; nothing trained or served.
 - *Shadow eval with Claude (manual)* and *Study guide eval with Claude (manual)* run the two scorecards
   against real Claude and need the repository secret `ANTHROPIC_API_KEY`.
 
@@ -402,7 +410,7 @@ Notes for cloud sessions (claude.ai/code):
 | `app/boot.py` | the image's process 1: takes the data folder as root, switches to `neuron`, becomes tini |
 | `app/settings.py`, `app/serve.py` | settings from the environment, with the start's storage check from the mount table (roadmap 1.7, ADR-036); the launcher (API + supervised Runner) |
 | `Dockerfile`, `render.yaml`, `railway.json` | the container, the Render Blueprint, the Railway config kept for later |
-| `training/` | the own-model track (ADR-037, [docs/own_model_plan.md](docs/own_model_plan.md)): `check_set.py` (the training set's record checks, its manifest and the overlap check `overlap-v1` against every exam set), `render.py` (training examples from the service's own request builder), `receipt.py` (recipe checks, the training receipt and the serving contract), `train_qlora.py` (the GPU script; its libraries, pinned in `requirements-train.txt`, only inside its functions), `recipe_v1.json` and `data/triage_train_v1.json` with its manifest (240 synthetic cases with their answers). Never copied into the image and ignored by Render's build filter; nothing in `app/` or `neuron_flow/` imports it (rule 8) |
+| `training/` | the own-model track (ADR-037, [docs/own_model_plan.md](docs/own_model_plan.md)): `check_set.py` (the training set's record checks, its manifest and the overlap check `overlap-v1` against every exam set), `render.py` (training examples from the service's own request builder), `receipt.py` (recipe checks, the training receipt and the serving contract), `train_qlora.py` (the GPU script; its libraries, pinned in `requirements-train.txt`, only inside its functions), `exam.py` (the exam: six sets, the probe and criteria v1 against round 0), `recipe_v1.json` and `data/triage_train_v1.json` with its manifest (240 synthetic cases with their answers). Never copied into the image and ignored by Render's build filter; nothing in `app/` or `neuron_flow/` imports it (rule 8) |
 | `tests/open_benchmarks/` | stage 2 of the benchmarking plan (roadmap 5.6): `build_sets.py` builds the CLINC150, BANKING77, MASSIVE th/en and BIPIA case sets at run time from pinned sources (standard library, run with `python -I`; refuses any SHA-256 it does not expect), `manifest_v1.json` (the sources and every built file's SHA-256; `--check`), `NOTICE.md` (licences), and `attention_open_check.py` (the development and sealed halves of the same sources for the attention signals; the sealed half prints counts only and can be written as a case file at run time). Nothing downloaded is committed |
 | `tests/robustness/` | the robustness benchmark (docs/benchmarking.md): the synthetic set, the pinned open extract with its licences (`NOTICE.md`), the runner `bench.py`, the extract builder (`build_open_extract.py verify` re-checks the upstream files) and the 116-case file for live runs |
 | `tests/`, `examples/`, `.github/` | tests (`tests/baselines/` holds the eval gate's baseline; `tests/browser_walk.py` is the CI walk of the page on a phone-sized screen, not a unit test), demos and smoke tests, CI (`.github/scripts/` holds the `render.yaml` and trace checks and the image's bytecode-cache check, `.github/otel/` the tracing check's collector; `.github/gitleaks.toml` and `.github/.gitleaksignore` the secret scan's rules and reviewed findings; `.github/ISSUE_TEMPLATE/` the issue templates and `.github/pull_request_template.md` the pull request template, which mirrors §5) |
@@ -678,7 +686,14 @@ Notes for cloud sessions (claude.ai/code):
     240 with serving byte for byte), `receipt.py` (receipt, `validate`, `serving_mismatches`) and `train_qlora.py`
     (dry run in CI; transformers 4.51.3, peft 0.15.2, bitsandbytes 0.45.5 and accelerate 1.6.0 pinned in
     `requirements-train.txt`, imported only inside its functions, never in the image). 18 new tests. Nothing trained:
-    a real run needs D10, and the pins and the chat-template prefix check are first exercised there. Next: T4.
+    a real run needs D10, and the pins and the chat-template prefix check are first exercised there. Merged as PR #84.
+  - T4, built on 2026-11-22 after the owner said "เริ่ม T4 ต่อเลย": `training/exam.py` (six sets: development 61,
+    held-out 40, hard 128, attention 64, robustness edges 116, BIPIA 75; the 8-case probe, A2; digest lines; criteria
+    v1 `exam-criteria-v1`) and the *Own model exam* workflow with `.github/scripts/run_exam.sh` (the lane's llama.cpp
+    and round 0 pins, kept equal by a test; the recipe's serving flags; the 300 s wait, A3; round 0 and a candidate
+    on one runner). 18 tests; the script was run here end to end against a stand-in server that answers like the
+    mock. Next: the owner starts round 0's full run (*Run workflow*, no candidate); then read the `EXAM-CASE` lines
+    from the job log and record round 0 in an evidence note. T5 needs D10.
 - **Not done yet:**
   - Claude has never been run (D2). Typhoon has run on the synthetic sets and the 116 robustness edges,
     plus all three E2 triage sets (2026-11-11, 217/217 answered/completed): AI correct 60/61 development,
