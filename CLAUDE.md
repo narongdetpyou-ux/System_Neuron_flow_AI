@@ -643,8 +643,9 @@ Notes for cloud sessions (claude.ai/code):
     roadmap track T1–T6, ADR-037 (proposed) and owner decision D10 (where training runs). Fine-tuning an open-weight
     model in measured rounds (the owner approves each training set by hash; an overlap check keeps every exam set
     out; an exam on the local lane by criteria written first; the owner decides each switch), never a model that
-    learns while it serves. Nothing trained or downloaded; the owner's Typhoon 4B stays on hold (a possible round 0
-    of T5). T2 and T3 need only the owner's go-ahead.
+    learns while it serves. Nothing trained or downloaded. Merged as PR #80 the same day; the owner then chose the
+    base and round 0: the publisher's 4B that the local lane pins, instead of the owner's fine-tuned file on Drive
+    ("too troublesome"), which is set aside. T2 and T3 need only the owner's go-ahead.
 - **Not done yet:**
   - Claude has never been run (D2). Typhoon has run on the synthetic sets and the 116 robustness edges,
     plus all three E2 triage sets (2026-11-11, 217/217 answered/completed): AI correct 60/61 development,
@@ -665,8 +666,9 @@ Notes for cloud sessions (claude.ai/code):
     (roadmap 0.4).
   - The rest of the roadmap is open.
 - **Next:** [docs/ROADMAP.md](docs/ROADMAP.md), the first item that is not ✅ and whose needs are met.
-  - **The owner's fine-tuned Typhoon 4B is on hold by the owner (2026-11-13, again on 2026-11-16). Do nothing with it
-    until the owner asks.**
+  - **The owner's fine-tuned Typhoon 4B is set aside by the owner (on hold since 2026-11-13; on 2026-11-22 the owner
+    chose the publisher's 4B for the own-model plan instead, because sharing the Drive file was too troublesome). Never
+    fetch, share or run the Drive file. Do nothing with it unless the owner asks again.**
     - What it is: the owner's QLoRA fine-tune of `typhoon-ai/typhoon2.5-qwen3-4b` (revision
       `ce0a7416fe82d4404b2b4a253ce3ac095ab1252c`) for case triage, merged and quantized to Q4_K_M:
       `nf_typhoon4b_v01_q4_k_m.gguf`, 2,497,278,816 bytes, SHA-256
@@ -693,8 +695,8 @@ Notes for cloud sessions (claude.ai/code):
       or a private Hugging Face repository with a read-only token (more private, more steps; `fetch_model.py` already
       reads Hugging Face). The scope offered: download, check the size and SHA-256, five triage cases on a GitHub
       runner, report, and ask again before a full run.
-    - The own-model plan (2026-11-22, [docs/own_model_plan.md](docs/own_model_plan.md), T5) names it as a possible round 0:
-      that changes nothing about the hold.
+    - The own-model plan ([docs/own_model_plan.md](docs/own_model_plan.md)) uses the publisher's 4B as its base and round 0,
+      the file the local lane pins; this file is not part of it.
     - Before touching it again:
       1. Ask the owner first how their file may be reached or shared (a Drive link they share, or a private Hugging Face
          repository with a token): it is their decision. When a connector cannot see a file, stop and ask which account
