@@ -1,0 +1,62 @@
+{
+  "schema": "neuron-flow-training-recipe-v1",
+  "name": "triage_qlora_v1",
+  "note": "Round 1's recipe (own-model track T3, ADR-037). Starting values, not tuned and not measured: the exam (T4) decides whether a model trained with it is any good. A changed value is a new recipe version.",
+  "task": {
+    "prompt_id": "triage_classify_v2",
+    "training_set": "training/data/triage_train_v1.json",
+    "training_set_sha256": "33f550ec9b4cd6d5e158217e06ec4ee0ade67b901aa90e5043baa6282713aa42"
+  },
+  "base_model": {
+    "repo": "typhoon-ai/typhoon2.5-qwen3-4b",
+    "revision": "ce0a7416fe82d4404b2b4a253ce3ac095ab1252c",
+    "licence": "Apache-2.0 per ADR-026; check it again before serving"
+  },
+  "chat_template_kwargs": {
+    "enable_thinking": false
+  },
+  "qlora": {
+    "load_in_4bit": true,
+    "quant_type": "nf4",
+    "double_quant": true,
+    "compute_dtype": "bfloat16",
+    "lora_r": 16,
+    "lora_alpha": 32,
+    "lora_dropout": 0.05,
+    "target_modules": [
+      "q_proj",
+      "k_proj",
+      "v_proj",
+      "o_proj",
+      "gate_proj",
+      "up_proj",
+      "down_proj"
+    ]
+  },
+  "training": {
+    "epochs": 3,
+    "learning_rate": 0.0002,
+    "lr_scheduler": "cosine",
+    "warmup_ratio": 0.05,
+    "per_device_batch_size": 4,
+    "gradient_accumulation_steps": 4,
+    "max_seq_length": 2048,
+    "eval_share": 0.1,
+    "seed": 20261122,
+    "loss_on": "assistant_only"
+  },
+  "export": {
+    "merge": true,
+    "gguf_quant": "Q4_K_M",
+    "llama_cpp_tag": "b12198",
+    "llama_cpp_commit": "f477f795cb071baf5b8af6488378366a72034ac4",
+    "model_name": "nf-triage-4b-r1-q4_k_m"
+  },
+  "serving": {
+    "reasoning": "off",
+    "temperature": 0,
+    "repeat_penalty": 1.05,
+    "seed": 42,
+    "ctx_size": 16384
+  }
+}

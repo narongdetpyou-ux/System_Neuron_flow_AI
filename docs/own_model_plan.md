@@ -170,7 +170,7 @@ GitHub ดาวน์โหลดไฟล์นี้เองจาก Huggin
 |---|---|---|
 | **T1** | This plan and ADR-037 | ✅ merged (PR #80) |
 | **T2** | Synthetic training set v1 with its manifest, and the overlap check against every exam set in CI | ✅ built on 2026-11-22 (section 10); the owner reads a sample |
-| **T3** | The training recipe and receipt format in `training/`, kept out of the image and Render's build, with a test | nothing to write it; D10 to run it |
+| **T3** | The training recipe and receipt format in `training/`, kept out of the image and Render's build, with a test | ✅ built on 2026-11-22 (section 11); D10 to run it |
 | **T4** | The exam gate: round 0 run again on `main`; the local lane takes a candidate file (Hugging Face repository, revision, size, SHA-256), runs every set and writes the comparison against the criteria | the criteria confirmed |
 | **T5** | Round 1: train on T2's set, run the exam, write an evidence note; the owner decides | T2–T4, D10; where the trained file is put |
 | **T6** | Rounds from people's decisions: the owner exports blind labels (masked) as a training set; the cadence is the owner's choice | 2.9, D1, D3; real cases also D4, 7.1–7.3, 7.5 |
@@ -226,3 +226,36 @@ The owner said "เริ่ม T2 ต่อเลย" (start T2 now) after merg
   set), under the 0.6 threshold.
 - **Not done:** no training (T3, D10) and no exam of a trained model (T4, T5). Whether 240 cases are enough is
   something only round 1 can show.
+
+## 11. T3 as built (2026-11-22)
+
+The owner said "เริ่มทำ T3 ได้เลย" after dropping the idea of changing Core ("ปัดเรื่องแก้ Core ทิ้ง"). The owner had
+worried that Core might make the model go wrong; Core never touches a model's answers, and the real risk is a model
+trained on text that differs from what it is served, so T3 includes a guard for exactly that.
+
+- **The recipe:** `training/recipe_v1.json` (`triage_qlora_v1`) pins the approved training set by SHA-256, the base
+  model `typhoon-ai/typhoon2.5-qwen3-4b` by revision (copied by program from the record of the owner's earlier
+  fine-tune of the same base), QLoRA in 4 bits (r 16, alpha 32, dropout 0.05, all attention and MLP projections),
+  3 epochs at 2e-4 with a cosine schedule, seed 20261122, loss on the answer only, 10% of the cases held out by their
+  id's SHA-256 to watch the loss (20 of 240), the export (merged, then GGUF Q4_K_M with the local lane's llama.cpp
+  tag and commit) and how it must be served (thinking off, temperature 0, repeat penalty 1.05, seed 42, context
+  16384). These are starting values, not tuned or measured; a changed value is a new recipe version.
+- **Train/serve sameness:** `training/render.py` builds every example with the service's own request builder
+  (`build_request_body` for the `local` provider: the prompt file, its answer-format words and `user_message` on the
+  masked text), and the answer as JSON in the schema's order. `tests/test_training_recipe.py` compares all 240
+  examples with a fresh serving request byte for byte, refuses a hand-written system or user message, and checks the
+  recipe against the local lane's flags and llama.cpp pins. On the GPU, the script stops if the model's chat template
+  (thinking off) does not keep each prompt as an exact prefix of the full conversation.
+- **The receipt:** `training/receipt.py` defines `training_receipt.json` (recipe, set and rendered examples by
+  SHA-256, the base model files' SHA-256, library versions, the GPU, the losses, the adapter and the GGUF with its
+  model id) and the serving contract (prompt SHA-256, answer format, masking rules, answer checks). `validate` checks
+  a receipt; `serving_mismatches` finds a model trained for another prompt or other checks, for T4 to refuse.
+- **The script:** `training/train_qlora.py` checks, renders, trains, merges, exports and writes the receipt, also when
+  a run fails. Its libraries (`training/requirements-train.txt`: transformers 4.51.3, peft 0.15.2, bitsandbytes
+  0.45.5, accelerate 1.6.0; PyTorch from the GPU environment) are imported only inside its functions, so
+  `python -m training.train_qlora --dry-run` runs anywhere; the *Training set check* workflow runs it and shows the plan.
+  Nothing in `app/` or `neuron_flow/` imports `training/`, and the libraries are never in the image (tests).
+- **Not done or not known yet:** no run on a GPU (D10). The pinned library versions and the chat-template prefix
+  check are first exercised there; a version that must change is a new recipe version. Whether the starting values
+  give a better model than round 0 is T4's and T5's question.
+

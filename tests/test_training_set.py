@@ -248,7 +248,8 @@ class IsolationTests(unittest.TestCase):
                 self.assertNotRegex(path.read_text(encoding="utf-8"), r"(?m)^\s*(from|import) training\b")
 
     def test_the_checker_uses_the_standard_library_and_the_app_only(self):
-        for path in sorted((ROOT / "training").rglob("*.py")):
+        # train_qlora.py imports the training libraries inside its functions: tests/test_training_recipe.py checks it.
+        for path in sorted(p for p in (ROOT / "training").rglob("*.py") if p.name != "train_qlora.py"):
             tree = ast.parse(path.read_text(encoding="utf-8"))
             modules = {alias.name.split(".")[0] for node in ast.walk(tree) if isinstance(node, ast.Import)
                        for alias in node.names}

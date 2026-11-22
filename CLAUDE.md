@@ -212,7 +212,7 @@ If a task seems to need breaking a rule:
 ## 4. Checking your work
 
 ```bash
-python -m unittest discover -s tests -v        # all tests (649 on 2026-11-22); CI: Python 3.10 and 3.12
+python -m unittest discover -s tests -v        # all tests (667 on 2026-11-22); CI: Python 3.10 and 3.12
 python -m examples.case_triage_demo            # v1 rules, one synthetic case
 python -m examples.case_triage_shadow_demo     # v2 shadow mode with the offline mock AI
 python -m examples.study_guide_demo            # the study guide's answers to four synthetic requests
@@ -231,6 +231,7 @@ python -I tests/open_benchmarks/build_sets.py --out open-sets --cache ~/open-ben
 python -m examples.skill_handoff_demo          # one case step by step through the exchange
 python -m tests.browser_walk --url http://127.0.0.1:<port> --key <key> --out walk  # the page on a phone (Playwright; CI)
 python -m training.check_set                   # the training set: records, manifest, no overlap with any exam set (T2)
+python -m training.train_qlora --dry-run       # plan a training round without training (T3; real runs need a GPU, D10)
 NEURON_FLOW_ACCESS_KEY=$(python -c "import secrets; print(secrets.token_urlsafe(24))") python -m app.serve
 ```
 
@@ -401,7 +402,7 @@ Notes for cloud sessions (claude.ai/code):
 | `app/boot.py` | the image's process 1: takes the data folder as root, switches to `neuron`, becomes tini |
 | `app/settings.py`, `app/serve.py` | settings from the environment, with the start's storage check from the mount table (roadmap 1.7, ADR-036); the launcher (API + supervised Runner) |
 | `Dockerfile`, `render.yaml`, `railway.json` | the container, the Render Blueprint, the Railway config kept for later |
-| `training/` | the own-model track (ADR-037, [docs/own_model_plan.md](docs/own_model_plan.md)): `check_set.py` (the training set's record checks, its manifest and the overlap check `overlap-v1` against every exam set; standard library and the app's contracts only) and `data/triage_train_v1.json` with its manifest (240 synthetic cases with their answers). Never copied into the image and ignored by Render's build filter; training libraries never come here (rule 8) |
+| `training/` | the own-model track (ADR-037, [docs/own_model_plan.md](docs/own_model_plan.md)): `check_set.py` (the training set's record checks, its manifest and the overlap check `overlap-v1` against every exam set), `render.py` (training examples from the service's own request builder), `receipt.py` (recipe checks, the training receipt and the serving contract), `train_qlora.py` (the GPU script; its libraries, pinned in `requirements-train.txt`, only inside its functions), `recipe_v1.json` and `data/triage_train_v1.json` with its manifest (240 synthetic cases with their answers). Never copied into the image and ignored by Render's build filter; nothing in `app/` or `neuron_flow/` imports it (rule 8) |
 | `tests/open_benchmarks/` | stage 2 of the benchmarking plan (roadmap 5.6): `build_sets.py` builds the CLINC150, BANKING77, MASSIVE th/en and BIPIA case sets at run time from pinned sources (standard library, run with `python -I`; refuses any SHA-256 it does not expect), `manifest_v1.json` (the sources and every built file's SHA-256; `--check`), `NOTICE.md` (licences), and `attention_open_check.py` (the development and sealed halves of the same sources for the attention signals; the sealed half prints counts only and can be written as a case file at run time). Nothing downloaded is committed |
 | `tests/robustness/` | the robustness benchmark (docs/benchmarking.md): the synthetic set, the pinned open extract with its licences (`NOTICE.md`), the runner `bench.py`, the extract builder (`build_open_extract.py verify` re-checks the upstream files) and the 116-case file for live runs |
 | `tests/`, `examples/`, `.github/` | tests (`tests/baselines/` holds the eval gate's baseline; `tests/browser_walk.py` is the CI walk of the page on a phone-sized screen, not a unit test), demos and smoke tests, CI (`.github/scripts/` holds the `render.yaml` and trace checks and the image's bytecode-cache check, `.github/otel/` the tracing check's collector; `.github/gitleaks.toml` and `.github/.gitleaksignore` the secret scan's rules and reviewed findings; `.github/ISSUE_TEMPLATE/` the issue templates and `.github/pull_request_template.md` the pull request template, which mirrors §5) |
@@ -669,6 +670,15 @@ Notes for cloud sessions (claude.ai/code):
     session). `training/` is in Render's ignored paths and `.dockerignore`, so this merge redeploys once (`render.yaml`
     changed) and later training-data changes do not. ADR-037 is in force from T2. Next in the track: T3 (the recipe,
     needs nothing to write; D10 to run) or T4 (the criteria to confirm).
+  - T3, built on 2026-11-22 after the owner dropped the idea of changing Core (Core never touches a model's answers;
+    the real risk is training on other text than is served) and said to start: `training/recipe_v1.json`
+    (`triage_qlora_v1`: the set by SHA-256, the base `typhoon-ai/typhoon2.5-qwen3-4b` by revision copied by program,
+    QLoRA starting values, loss on the answer only, 20 of 240 held out, GGUF Q4_K_M with the lane's llama.cpp pins,
+    serving as the lane does), `render.py` (every example from `build_request_body` for `local`; a test compares all
+    240 with serving byte for byte), `receipt.py` (receipt, `validate`, `serving_mismatches`) and `train_qlora.py`
+    (dry run in CI; transformers 4.51.3, peft 0.15.2, bitsandbytes 0.45.5 and accelerate 1.6.0 pinned in
+    `requirements-train.txt`, imported only inside its functions, never in the image). 18 new tests. Nothing trained:
+    a real run needs D10, and the pins and the chat-template prefix check are first exercised there. Next: T4.
 - **Not done yet:**
   - Claude has never been run (D2). Typhoon has run on the synthetic sets and the 116 robustness edges,
     plus all three E2 triage sets (2026-11-11, 217/217 answered/completed): AI correct 60/61 development,
