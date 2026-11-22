@@ -78,7 +78,7 @@ Read in this order when you need depth:
    [study_guide.md](docs/study_guide.md) (the study guide: workflow, scorecard, topic catalog, library, link check),
    [skill_handoff.md](docs/skill_handoff.md) (the exchange between skills: routes, common language, translators, tests),
    [own_model_plan.md](docs/own_model_plan.md) (our own model, a plan: fine-tuning in measured rounds, track T1–T6,
-   ADR-037 proposed).
+   ADR-037; T2 built: `training/`).
 
 ## 2. Working with the owner (read this first)
 
@@ -207,7 +207,7 @@ If a task seems to need breaking a rule:
 ## 4. Checking your work
 
 ```bash
-python -m unittest discover -s tests -v        # all tests (624 on 2026-11-22); CI: Python 3.10 and 3.12
+python -m unittest discover -s tests -v        # all tests (649 on 2026-11-22); CI: Python 3.10 and 3.12
 python -m examples.case_triage_demo            # v1 rules, one synthetic case
 python -m examples.case_triage_shadow_demo     # v2 shadow mode with the offline mock AI
 python -m examples.study_guide_demo            # the study guide's answers to four synthetic requests
@@ -225,6 +225,7 @@ python -m tests.open_benchmarks.attention_open_check --cache ~/open-bench-cache 
 python -I tests/open_benchmarks/build_sets.py --out open-sets --cache ~/open-bench-cache --check  # open sets (network)
 python -m examples.skill_handoff_demo          # one case step by step through the exchange
 python -m tests.browser_walk --url http://127.0.0.1:<port> --key <key> --out walk  # the page on a phone (Playwright; CI)
+python -m training.check_set                   # the training set: records, manifest, no overlap with any exam set (T2)
 NEURON_FLOW_ACCESS_KEY=$(python -c "import secrets; print(secrets.token_urlsafe(24))") python -m app.serve
 ```
 
@@ -307,6 +308,10 @@ GitHub Actions (the owner can open these; the first three run on every push and 
   This session cannot reach Hugging Face: the model file's commit, size and SHA-256 are on the run page.
   GitHub's terms allow hosted runners only for building and testing the project, so this lane measures and
   never serves the web page.
+- *Training set check* (`training-set.yml`, own-model track T2, ADR-037) runs on every push and pull request that
+  changes `training/`, and by hand: it builds the open-benchmark sets and the sealed half, then runs
+  `training.check_set` against every exam set, the sealed half as counts only; a Thai table is on the run page.
+  Nothing is trained there. The unit tests check the committed exam sets on every push as well.
 - *Shadow eval with Claude (manual)* and *Study guide eval with Claude (manual)* run the two scorecards
   against real Claude and need the repository secret `ANTHROPIC_API_KEY`.
 
@@ -390,6 +395,7 @@ Notes for cloud sessions (claude.ai/code):
 | `app/boot.py` | the image's process 1: takes the data folder as root, switches to `neuron`, becomes tini |
 | `app/settings.py`, `app/serve.py` | settings from the environment, with the start's storage check from the mount table (roadmap 1.7, ADR-036); the launcher (API + supervised Runner) |
 | `Dockerfile`, `render.yaml`, `railway.json` | the container, the Render Blueprint, the Railway config kept for later |
+| `training/` | the own-model track (ADR-037, [docs/own_model_plan.md](docs/own_model_plan.md)): `check_set.py` (the training set's record checks, its manifest and the overlap check `overlap-v1` against every exam set; standard library and the app's contracts only) and `data/triage_train_v1.json` with its manifest (240 synthetic cases with their answers). Never copied into the image and ignored by Render's build filter; training libraries never come here (rule 8) |
 | `tests/open_benchmarks/` | stage 2 of the benchmarking plan (roadmap 5.6): `build_sets.py` builds the CLINC150, BANKING77, MASSIVE th/en and BIPIA case sets at run time from pinned sources (standard library, run with `python -I`; refuses any SHA-256 it does not expect), `manifest_v1.json` (the sources and every built file's SHA-256; `--check`), `NOTICE.md` (licences), and `attention_open_check.py` (the development and sealed halves of the same sources for the attention signals; the sealed half prints counts only and can be written as a case file at run time). Nothing downloaded is committed |
 | `tests/robustness/` | the robustness benchmark (docs/benchmarking.md): the synthetic set, the pinned open extract with its licences (`NOTICE.md`), the runner `bench.py`, the extract builder (`build_open_extract.py verify` re-checks the upstream files) and the 116-case file for live runs |
 | `tests/`, `examples/`, `.github/` | tests (`tests/baselines/` holds the eval gate's baseline; `tests/browser_walk.py` is the CI walk of the page on a phone-sized screen, not a unit test), demos and smoke tests, CI (`.github/scripts/` holds the `render.yaml` and trace checks and the image's bytecode-cache check, `.github/otel/` the tracing check's collector; `.github/gitleaks.toml` and `.github/.gitleaksignore` the secret scan's rules and reviewed findings; `.github/ISSUE_TEMPLATE/` the issue templates and `.github/pull_request_template.md` the pull request template, which mirrors §5) |
@@ -645,7 +651,18 @@ Notes for cloud sessions (claude.ai/code):
     out; an exam on the local lane by criteria written first; the owner decides each switch), never a model that
     learns while it serves. Nothing trained or downloaded. Merged as PR #80 the same day; the owner then chose the
     base and round 0: the publisher's 4B that the local lane pins, instead of the owner's fine-tuned file on Drive
-    ("too troublesome"), which is set aside. T2 and T3 need only the owner's go-ahead.
+    ("too troublesome"), which is set aside. Merged as PR #81.
+  - T2 of the own-model track, built on 2026-11-22 after the owner said "เริ่ม T2 ต่อเลย": `training/data/triage_train_v1.json`,
+    240 synthetic cases written for training (120 Thai, 120 English; 60 per category; per language 84 ordinary, 10
+    security, 10 instruction, 8 distress, 8 legal or privacy), each with the answer `triage_classify_v2` should give, and a
+    manifest pinning its SHA-256. `training/check_set.py` checks every record (admission, the case's language, nothing
+    left to mask, an answer the gateway accepts unchanged), the manifest and the overlap rule `overlap-v1` (4-character
+    pieces; Jaccard >= 0.6, or containment >= 0.9) against every exam set; `tests/test_training_set.py` (25 tests) and
+    the *Training set check* workflow run it. The first draft collided with exam texts in 7 cases (rewritten without
+    reading the exams); then 0 exact and 0 near, the four open sets and the sealed half included (checked in this
+    session). `training/` is in Render's ignored paths and `.dockerignore`, so this merge redeploys once (`render.yaml`
+    changed) and later training-data changes do not. ADR-037 is in force from T2. Next in the track: T3 (the recipe,
+    needs nothing to write; D10 to run) or T4 (the criteria to confirm).
 - **Not done yet:**
   - Claude has never been run (D2). Typhoon has run on the synthetic sets and the 116 robustness edges,
     plus all three E2 triage sets (2026-11-11, 217/217 answered/completed): AI correct 60/61 development,

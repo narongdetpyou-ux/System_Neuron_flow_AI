@@ -30,6 +30,7 @@ MUST_BE_IGNORED = (
     "tests/test_core.py", "examples/case_triage_demo.py",
     ".github/workflows/core-tests.yml", ".github/scripts/check_render_blueprint.py",
     ".claude/settings.json", ".claude/hooks/session-start.sh",
+    "training/check_set.py", "training/data/triage_train_v1.json",
 )
 # Tracked files under these paths are what the Dockerfile copies into the image, plus the files that
 # decide how the image is built. A change to any of them must redeploy.

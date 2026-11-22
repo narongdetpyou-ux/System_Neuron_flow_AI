@@ -1,0 +1,37 @@
+{
+  "schema": "neuron-flow-training-manifest-v1",
+  "set": "triage_train_v1.json",
+  "sha256": "33f550ec9b4cd6d5e158217e06ec4ee0ade67b901aa90e5043baa6282713aa42",
+  "bytes": 99931,
+  "cases": 240,
+  "prompt_id": "triage_classify_v2",
+  "by_language": {
+    "th": 120,
+    "en": 120
+  },
+  "by_category": {
+    "access": 60,
+    "upload": 60,
+    "billing": 60,
+    "other": 60
+  },
+  "by_attention": {
+    "none": 168,
+    "distress": 16,
+    "security": 20,
+    "legal_privacy": 16,
+    "instruction": 20
+  },
+  "by_confidence": {
+    "low": 6,
+    "medium": 50,
+    "high": 184
+  },
+  "overlap_rule": {
+    "version": "overlap-v1",
+    "piece_chars": 4,
+    "jaccard_min": 0.6,
+    "containment_min": 0.9,
+    "containment_min_pieces": 20
+  }
+}

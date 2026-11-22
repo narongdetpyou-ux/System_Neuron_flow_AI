@@ -1,8 +1,9 @@
 # Our own model, learning in measured rounds (track T1–T6)
 
 **Status:** a plan, written on 2026-11-22 because the owner asked for "AI ของเราเอง" that learns as the system is
-developed, instead of using other companies' AI, and then said to write the plan. Nothing is built or trained, and
-no model file was touched. The decision is [ADR-037](architecture.md#8-architecture-decisions-adrs) (proposed, not in force).
+developed, instead of using other companies' AI, and then said to write the plan. T2 (a synthetic training set
+and its overlap check) is built ([section 10](#10-t2-as-built-2026-11-22)); nothing is trained, and no model file was
+touched. The decision is [ADR-037](architecture.md#8-architecture-decisions-adrs) (in force since the owner started T2).
 The status of each package is in the roadmap's table ([ROADMAP.md](ROADMAP.md#own-model-track-t1t6)). Merged as
 PR #80 the same day. Then the owner chose the base and round 0: the publisher's Typhoon 2.5 Qwen3 4B that the local
 lane already tests on GitHub, because the owner's fine-tuned file on Drive was too troublesome to share. That file is
@@ -167,8 +168,8 @@ GitHub ดาวน์โหลดไฟล์นี้เองจาก Huggin
 
 | Package | What | Needs |
 |---|---|---|
-| **T1** | This plan and ADR-037 | — (done when merged) |
-| **T2** | Synthetic training set v1 with its manifest, and the overlap check against every exam set in CI | nothing; the owner reads a sample |
+| **T1** | This plan and ADR-037 | ✅ merged (PR #80) |
+| **T2** | Synthetic training set v1 with its manifest, and the overlap check against every exam set in CI | ✅ built on 2026-11-22 (section 10); the owner reads a sample |
 | **T3** | The training recipe and receipt format in `training/`, kept out of the image and Render's build, with a test | nothing to write it; D10 to run it |
 | **T4** | The exam gate: round 0 run again on `main`; the local lane takes a candidate file (Hugging Face repository, revision, size, SHA-256), runs every set and writes the comparison against the criteria | the criteria confirmed |
 | **T5** | Round 1: train on T2's set, run the exam, write an evidence note; the owner decides | T2–T4, D10; where the trained file is put |
@@ -197,3 +198,31 @@ owner says so.
 - "Learning along with the system" is slow on purpose. Each round needs a training run, an exam on CPU (the first
   full local run of both scorecards took about 66 minutes, 55 of them the study guide) and an owner decision.
 - The base model is made by others, and its licence is theirs to set.
+
+## 10. T2 as built (2026-11-22)
+
+The owner said "เริ่ม T2 ต่อเลย" (start T2 now) after merging the base-model choice.
+
+- **The set:** `training/data/triage_train_v1.json`, 240 synthetic cases written for training only by the developer
+  (an AI coding agent): 120 Thai and 120 English, 60 per category, and per language 84 ordinary cases, 10 security,
+  10 instruction (steering text), 8 distress and 8 legal or privacy. Each case carries the answer the prompt
+  `triage_classify_v2` should give: category, attention, confidence and a one-sentence rationale in the case's
+  language. It includes hard negatives (a payment word in an upload case, "not about payment"), mixed requests,
+  vague texts with `low` confidence, and personal details only as the masking placeholders (`[PHONE]`, `[EMAIL]`,
+  `[NUMBER]`, `[NAME]`). Labels are the developer's, not independent ground truth.
+- **The manifest:** `training/data/triage_train_v1.manifest.json` pins the file's SHA-256, its size and its counts.
+  The owner approves the set by merging the pull request that adds it; a changed file fails until its manifest is
+  written again (`--write-manifest`), which is visible in review.
+- **The check:** `python -m training.check_set` (standard library and the app's contracts only), the rule
+  `overlap-v1` of section 3: every record (fields, labels, the case's language, the workflow's own admission check,
+  nothing left to mask, an answer the gateway accepts unchanged), unique ids and texts, the manifest, and no exact or
+  near match with any exam set. `tests/test_training_set.py` runs it in CI against every exam set committed here
+  (and fails if a new exam set is not in its list); the *Training set check* workflow also builds the open-benchmark
+  sets and the sealed half and checks against them (the sealed half as counts only).
+- **First run:** the first draft collided with exam texts in 7 of 240 cases (1 exact and 3 near in the development
+  set, 3 near in the hard auto-send set). All 7 were rewritten as different requests with the same labels, without
+  reading the exam texts. The set then passed against every committed exam set and, in this session, against the four
+  open-benchmark sets and the sealed half (0 exact, 0 near). The highest similarity left is 0.585 (Jaccard, held-out
+  set), under the 0.6 threshold.
+- **Not done:** no training (T3, D10) and no exam of a trained model (T4, T5). Whether 240 cases are enough is
+  something only round 1 can show.
