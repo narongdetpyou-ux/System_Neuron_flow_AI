@@ -1,7 +1,7 @@
 """Docs truth checks (roadmap 1.5): cheap guards against the docs drifting away from the code.
 
-1. Every relative link in README.md, CLAUDE.md and docs/**/*.md points at a file that exists, and every
-   ``#anchor`` points at a heading that exists in the target Markdown file (GitHub's anchor rules).
+1. Every relative link in README.md, CLAUDE.md, CONTRIBUTING.md, CODE_OF_CONDUCT.md and docs/**/*.md
+   points at a file that exists, and every ``#anchor`` points at a heading that exists in the target Markdown file (GitHub's anchor rules).
 2. Every place that states the current number of tests states the real number.
 
 Both read files only; nothing is imported from ``app`` or ``neuron_flow``.
@@ -13,7 +13,13 @@ import unicodedata
 import unittest
 
 ROOT = Path(__file__).resolve().parent.parent
-DOCS = [ROOT / "README.md", ROOT / "CLAUDE.md", *sorted((ROOT / "docs").rglob("*.md"))]
+DOCS = [
+    ROOT / "README.md",
+    ROOT / "CLAUDE.md",
+    ROOT / "CONTRIBUTING.md",
+    ROOT / "CODE_OF_CONDUCT.md",
+    *sorted((ROOT / "docs").rglob("*.md")),
+]
 
 # [text](target) and [text](target "title"); images too. Reference-style links are not used in this repo.
 LINK = re.compile(r"!?\[[^\]]*\]\(\s*<?([^)\s>]+)>?(?:\s+\"[^\"]*\")?\s*\)")

@@ -388,7 +388,8 @@ Notes for cloud sessions (claude.ai/code):
 | `Dockerfile`, `render.yaml`, `railway.json` | the container, the Render Blueprint, the Railway config kept for later |
 | `tests/open_benchmarks/` | stage 2 of the benchmarking plan (roadmap 5.6): `build_sets.py` builds the CLINC150, BANKING77, MASSIVE th/en and BIPIA case sets at run time from pinned sources (standard library, run with `python -I`; refuses any SHA-256 it does not expect), `manifest_v1.json` (the sources and every built file's SHA-256; `--check`), `NOTICE.md` (licences), and `attention_open_check.py` (the development and sealed halves of the same sources for the attention signals; the sealed half prints counts only and can be written as a case file at run time). Nothing downloaded is committed |
 | `tests/robustness/` | the robustness benchmark (docs/benchmarking.md): the synthetic set, the pinned open extract with its licences (`NOTICE.md`), the runner `bench.py`, the extract builder (`build_open_extract.py verify` re-checks the upstream files) and the 116-case file for live runs |
-| `tests/`, `examples/`, `.github/` | tests (`tests/baselines/` holds the eval gate's baseline; `tests/browser_walk.py` is the CI walk of the page on a phone-sized screen, not a unit test), demos and smoke tests, CI (`.github/scripts/` holds the `render.yaml` and trace checks and the image's bytecode-cache check, `.github/otel/` the tracing check's collector; `.github/gitleaks.toml` and `.github/.gitleaksignore` the secret scan's rules and reviewed findings) |
+| `tests/`, `examples/`, `.github/` | tests (`tests/baselines/` holds the eval gate's baseline; `tests/browser_walk.py` is the CI walk of the page on a phone-sized screen, not a unit test), demos and smoke tests, CI (`.github/scripts/` holds the `render.yaml` and trace checks and the image's bytecode-cache check, `.github/otel/` the tracing check's collector; `.github/gitleaks.toml` and `.github/.gitleaksignore` the secret scan's rules and reviewed findings; `.github/ISSUE_TEMPLATE/` the issue templates and `.github/pull_request_template.md` the pull request template, which mirrors §5) |
+| `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `SECURITY.md` | the community files GitHub's community standards checklist looks for; the code of conduct adopts the Contributor Covenant 2.1 and, since no e-mail address is published, takes reports through the Security tab's private form |
 | `.claude/` | the session-start hook for Claude Code cloud sessions |
 
 ## 7. Hosting (Render)
@@ -618,6 +619,10 @@ Notes for cloud sessions (claude.ai/code):
     - retention stated at every write and on the page, which counts the cases lost after a wipe (ADR-029);
     - the `commit-emails` check, and roadmap 7.6 with owner decision D8 for the address already public (a
       local dry run of a rewrite is in the evidence note).
+  - Community files, added on 2026-11-22 after the owner asked why GitHub's community standards checklist was
+    incomplete (42%): `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md` (Contributor Covenant 2.1 by reference), two issue
+    templates with a private security link, and a pull request template that mirrors §5. Docs only; it does not
+    redeploy. The repository's description is a setting only the owner can fill in (the About box's gear).
 - **Not done yet:**
   - Claude has never been run (D2). Typhoon has run on the synthetic sets and the 116 robustness edges,
     plus all three E2 triage sets (2026-11-11, 217/217 answered/completed): AI correct 60/61 development,

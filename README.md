@@ -17,8 +17,9 @@ the Python standard library; `sentry-sdk` is an optional extra.
   the mock AI or from one live model.
 - **History:** the git history is kept in full, including the earlier application this project was extracted
   from ([Origin](#origin)).
-- **Questions and bugs:** open an issue. **Security problems:** report them privately, as
-  [SECURITY.md](SECURITY.md) describes.
+- **Questions and bugs:** open an issue and choose a template. **Security problems:** report them privately, as
+  [SECURITY.md](SECURITY.md) describes. **Contributing:** see [CONTRIBUTING.md](CONTRIBUTING.md) and the
+  [code of conduct](CODE_OF_CONDUCT.md).
 - **License:** [GPL-3.0-only](LICENSE).
 
 ## Design philosophy
@@ -188,6 +189,7 @@ most 1 MiB. The agent `version` is frozen into each job, so an old job refuses t
 | [Roadmap](docs/ROADMAP.md) | What to build next, in order: tasks, acceptance checks, owner tests and owner decisions |
 | [CLAUDE.md](CLAUDE.md) | How Claude Code works on this repo: working with the owner, rules, checks, definition of done |
 | [Security policy](SECURITY.md) | How to report a vulnerability privately, and what is in scope |
+| [Contributing](CONTRIBUTING.md) and [code of conduct](CODE_OF_CONDUCT.md) | How to ask, report and propose a change; the rules every change keeps; the Contributor Covenant 2.1 and how to report behaviour privately |
 | [Design philosophy](docs/design_philosophy.md) | The owner's principles, the first-response rule and study resources (mostly Thai) |
 | [Architecture](docs/architecture.md) | Layers, Core constraints, how AI fits, decisions (ADRs), milestones and their status |
 | [case_triage v1](docs/case_triage_pilot.md) | The deterministic keyword rules |
