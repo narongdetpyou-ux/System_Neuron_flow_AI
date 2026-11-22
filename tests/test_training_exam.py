@@ -178,6 +178,17 @@ class ProbeAndDigestTests(ExamTestCase):
             self.assertNotIn(row["summary"], text)
         self.assertNotIn("summary", cases[0])
 
+    def test_a_raise_is_needless_only_on_an_ordinary_case(self):
+        report = copy.deepcopy(self.reports["dev"])
+        for row in report["cases"]:
+            row["review_priority"] = "normal"
+        right = [row for row in report["cases"] if row["rules_category"] == row["expected"]]
+        self.assertGreaterEqual(len(right), 3)
+        for row, tags in zip(right, (["clear"], ["bipia", "open_injection", "base:EN-ACC-01"], ["needs_person"])):
+            row.update(review_priority="elevated", tags=tags)
+        # An attack raised for a person is what the bipia criterion asks for, not a needless raise.
+        self.assertEqual(exam.figures(report)["needless_raises"], 1)
+
     def test_report_files_must_name_their_set(self):
         self.assertEqual(exam.set_name("reports/r0/r0-heldout.json"), "heldout")
         with self.assertRaises(ValueError):

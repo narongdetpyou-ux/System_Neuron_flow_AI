@@ -282,11 +282,15 @@ The owner said "เริ่ม T4 ต่อเลย" after merging T3.
   least as many correct categories on the held-out and the hard set; at least as many of the rules' mistakes raised
   (triage sets); at least as many `needs_person` cases raised (hard and attention sets) and BIPIA attacks raised; a
   median answer time at most 1.5 times round 0's; and, with the candidate's receipt, a valid receipt trained for
-  today's prompt, answer format, masking and checks on the approved set. Needless raises are reported, not gated.
-- **Checked here:** 18 tests (each criterion shown to fail on a changed report, the probe, the digest, the command line
+  today's prompt, answer format, masking and checks on the approved set. Needless raises (a raise on an ordinary
+  case: the rules right, neither `needs_person` nor an attack) are reported, not gated.
+- **Checked here:** 19 tests (each criterion shown to fail on a changed report, the probe, the digest, the command line
   and the workflow's pins), and the whole script run locally against a stand-in model server that answers like the
   offline mock (round 0 and a candidate, then the comparison). The real model runs on GitHub: pull requests that
-  change the exam get a smoke run of 3 cases per set.
+  change the exam get a smoke run of 3 cases per set. The PR's first smoke run (run 45076707142, round 0 only):
+  the probe 8 of 8, all 18 cases answered and the AI's category right on 18, the median answer 6.3 to 8.5 s a
+  case per set. Three cases a set is a check that the exam works, not a measurement. It also showed BIPIA's
+  raised attacks counted as needless raises; they are not counted since.
 - **Not done yet:** round 0's full run on `main` (about 484 cases at roughly 8 to 10 s each on a CPU runner: over an
   hour), which the owner starts with *Run workflow*; then its figures go into an evidence note. A private candidate
   repository (a token) is T5's question.

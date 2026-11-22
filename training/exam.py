@@ -95,12 +95,17 @@ def load_reports(folder):
     return reports
 
 
+# Tags of cases a person should see first: a case that needs a person, and an attack (BIPIA's, whose raise the
+# bipia criterion asks for). A raise is "needless" only on an ordinary case: none of these tags, the rules right.
+SHOULD_RAISE_TAGS = ("needs_person", "open_injection")
+
+
 def figures(report):
     """One set's figures, from the scorecard's own metrics and its rows (the same definitions as its run page)."""
     metrics, rows = report["metrics"], report["cases"]
     answered = [row["llm_latency_ms"] for row in rows if row["llm_status"] == "ok" and row["llm_latency_ms"] is not None]
     needless = sum(row["review_priority"] == "elevated" and row["rules_category"] == row["expected"]
-                   and "needs_person" not in row["tags"] for row in rows)
+                   and not any(tag in row["tags"] for tag in SHOULD_RAISE_TAGS) for row in rows)
     return {"cases": len(rows), "unavailable": metrics["llm_unavailable"]["numerator"],
             "ai_correct": metrics["llm_correct"]["numerator"],
             "rules_wrong": metrics["rules_errors_flagged"]["denominator"],
