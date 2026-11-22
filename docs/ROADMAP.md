@@ -78,6 +78,7 @@ differs, this file and architecture.md win.
 | 7 | เตรียมพร้อมก่อนให้คนอื่นใช้ หรือก่อนเปิด repo สาธารณะ | รายงานตรวจความปลอดภัย และรายการตรวจก่อนเปิดตัว | เริ่มแล้ว: 7.1 ปิดข้อมูลส่วนตัวก่อนส่งให้ AI ทำแล้ว และตั้งแต่ 10 พ.ย. ตัวกลางเรียก AI บังคับปิดซ้ำเองก่อนส่ง ส่วนการจำกัดว่าใครเห็นคีย์ AI ได้ เขียนแผนไว้ ยังไม่ทำ; 7.4 เสร็จ: repo นี้เป็นสาธารณะพร้อมประวัติทั้งหมดตั้งแต่ 8 พ.ย. (D5) เปลี่ยนคีย์ Sentry แล้ว และเปิดระบบสแกนคีย์ของ GitHub แล้ว; มีผู้ตรวจสอบอิสระอ่านโค้ดครั้งแรกเมื่อ 10 พ.ย. ตอบครบ 4 ข้อแล้ว และคุณเลือกเก็บประวัติอีเมลเก่าไว้ตามเดิม (D8) |
 | E | [แผนเพิ่มประสิทธิผล](effectiveness_plan.md) 6 งาน (E1–E6): เคสแรกหลังระบบตื่นเร็วขึ้น กฎรุ่น 2 ที่อ่านภาษาไทยได้ หน้าเว็บจริงใช้ AI จริง เก็บคำตอบ "เข้าใจถูกไหม" ให้ AI แยก "อื่น ๆ" ได้ดีขึ้น และคลังแหล่งเรียนที่มีภาษาไทยมากขึ้น | เวลาของเคสแรก ข้อเสนอหลักของเคสภาษาไทย และตัวนับ "เข้าใจถูก" บนหน้าเว็บ | เขียนแผนแล้วเมื่อ 10 พ.ย. ตามที่คุณขอ (PR #50); E1 สร้างแล้วใน PR #60 (10 พ.ย.): ภาพของบริการมีไฟล์ที่แปลไว้ล่วงหน้าครบแล้ว บนเครื่องของ GitHub ที่จำกัดกำลังให้เท่าเครื่องฟรี เคสแรกเร็วขึ้นจาก 14.4 เป็น 3.1 วินาที รวมแล้วเมื่อ 10 พ.ย. และวัดบน Render จริงแล้ว (16 พ.ย.): เคสแรกหลังระบบตื่นใช้ 3.2 วินาที จากเดิม 9.0–10.5 วินาที; E2 สร้างและวัดครบใน PR #64: กฎถูก 61/61 ในชุดพัฒนา 105/116 ในชุดเคสยาก และ 22/40 ในชุดที่กันไว้ ([ผลวัดและข้อจำกัด](evidence/2026-11-11-e2-rules-v2.md)); E3 รอคุณตัดสินใจ; E4 และ E6 (ของผู้ช่วยแนะนำแหล่งเรียน) หยุดไว้ก่อนตามที่คุณสั่ง (11 พ.ย.) |
 | H | [ทักษะแยกกัน ส่งงานผ่านตัวกลาง](skill_handoff.md) มีล่ามแปลเป็นภาษาของทักษะปลายทางระหว่างทาง (H1–H5) | อนุมัติเคสบนหน้าเว็บแล้วเห็นงานที่ส่งต่อมา 1 งาน และกล่อง "ส่งต่อแล้ว" | สร้างแล้วตามที่คุณขอ (11 พ.ย., H1–H3): เส้นทางแรก "อนุมัติเคส → บันทึกผลหลังอนุมัติ" ทำงานแล้ว หน้าเว็บแสดงการส่งต่อทั้งสองทาง ทดสอบกับเคสเดิม 217 เคสผ่านทุกข้อ; คุณลองบนหน้าเว็บจริงผ่านแล้ว (16 พ.ย.); ทักษะใหม่ตัวแรก (H4) รอคุณเลือก |
+| T | [AI ของเราเอง ที่เรียนเป็นรอบ](own_model_plan.md) (T1–T6): สอนโมเดลเปิดด้วยงานของเรา สอบก่อนใช้ทุกรอบ และคุณเป็นคนตัดสินใจเปลี่ยนรุ่น | ผลสอบของรุ่นใหม่เทียบรุ่นเดิมในหน้า Actions | เขียนแผนแล้ว (22 พ.ย. ตามที่คุณขอ) ยังไม่ได้สร้างหรือฝึกอะไร และไม่ได้แตะไฟล์โมเดล Typhoon 4B ที่คุณพักไว้ |
 
 **เรื่องที่คุณต้องตัดสินใจเอง** อยู่ในตาราง [Owner decisions](#owner-decisions) ข้างล่าง เช่น
 - จะจ่ายค่า Render เพื่อให้เคสและรหัสรายคนไม่หายหรือไม่
@@ -87,6 +88,7 @@ differs, this file and architecture.md win.
 - จะเปิด repo เป็นสาธารณะเมื่อไร
 - จะให้หน้าเว็บจริงใช้ AI จริง (Typhoon ฟรี) หรือไม่ และจะเริ่มงานไหนของแผนเพิ่มประสิทธิผลก่อน (E1–E6)
 - ทักษะใหม่ตัวแรกที่จะต่อกับตัวกลาง (H4) คืออะไร
+- AI ของเราเอง: จะเริ่มชุดฝึก (T2) เมื่อไร และจะฝึกที่ไหน (D10)
 - จะมี "ปุ่มอนุมัติเอง" จริงหรือไม่ (D9): ตอนนี้ยังไม่ควร เพราะผลวัด (5.9) บอกว่าความมั่นใจของ AI ใช้แยกถูกผิดไม่ได้ และการเปลี่ยนนี้แก้กติกาข้อ 4
 
 ## How to use this file (for Claude Code)
@@ -181,6 +183,12 @@ owner.
 | H3 | The exchange and the first route (2.3's linked job after an approval) | ✅ built 2026-11-11: route table, queue schema 3 with the `handoffs` ledger, the handoff inside the decision's transaction, API fields; new suite and all 217 existing triage cases pass ([evidence](evidence/2026-11-11-skill-handoff.md)); the owner's test on the live page passed on 2026-11-16 | H2, 2.2 |
 | H4 | The first new skill, joined only through translators | ⬜ | H3, the owner's choice |
 | H5 | The chain on the page and in traces | 🟡 the page shows the chain both ways (2026-11-11); the trace link is not built | H3 |
+| T1 | Our own model: the plan and ADR-037 ([own_model_plan.md](own_model_plan.md)) | 🟡 written on 2026-11-22 at the owner's request; done when merged | — |
+| T2 | A synthetic training set and the overlap check against every exam set | ⬜ | the owner's go-ahead |
+| T3 | The training recipe and its receipt, kept out of the image and Render's build | ⬜ | the owner's go-ahead; D10 to run it |
+| T4 | The exam gate for a candidate model on the local lane | ⬜ | the owner's route for sharing a file; the criteria confirmed |
+| T5 | Round 1: train, examine, decide | ⬜ | T2–T4, D10 |
+| T6 | Rounds from people's blind labels | ⬜ | 2.9, D1, D3; real cases also D4, 7.1–7.3, 7.5 |
 
 Phase 2 can be built and tested without a disk. Real use needs D1 = paid: on the free plan, tokens and
 decisions would vanish on every sleep. Since 2026-11-10 the API and the page say so at every write (ADR-029).
@@ -1771,6 +1779,26 @@ of H5 were built ([evidence](evidence/2026-11-11-skill-handoff.md)).
 
 ---
 
+## Own model track (T1–T6)
+
+Added on 2026-11-22, because the owner asked whether the system could have an AI of its own that learns as the system
+is developed, instead of using other companies' AI, and then asked for the plan. The design, its data rules, the exam
+criteria and each package are in [own_model_plan.md](own_model_plan.md); the decision is ADR-037 (proposed). Their
+status is in the table above.
+
+- **The idea in one line:** fine-tune an open-weight model (today's candidate base: Typhoon 2.5 Qwen3 4B, the local
+  lane's) in measured rounds: collect, the owner approves the training set by its hash, train outside the service,
+  examine on the local lane by criteria written first, the owner decides the switch, watch the 2.8 scorecard.
+- **Order:** T2 and T3 need no money and no real data; T4 needs the owner's route for sharing a model file (the same
+  question as for the on-hold v01); T5 needs D10; T6 needs blind labels (2.9) and a disk (D1), and real cases need
+  D4. As with a phase, a package starts when the owner says so.
+- **The owner's fine-tuned Typhoon 4B stays on hold.** It may become round 0 of T5 if the owner resumes it; until
+  then nothing is downloaded, shared or run.
+- **Don't:** let a model learn while it serves or switch by itself; train on an exam set or the sealed half; use real
+  data before D4; put training libraries in the image; train or serve on GitHub's hosted runners.
+
+---
+
 ## Not now (P2): do not build early
 
 - Multi-tenancy, distributed workers or claims, Postgres, object storage, SLAs, a hosted dashboard
@@ -1794,6 +1822,7 @@ of H5 were built ([evidence](evidence/2026-11-11-skill-handoff.md)).
 | D8 | The personal e-mail address in 53 public commits | — (the setting in 7.6 stops new ones now) | Keep the history (chosen by the owner on 2026-11-10) · rewrite it and ask GitHub Support to purge the old commits · re-create the repository from the rewritten history (7.6) | Decided: kept as it is; new commits checked in CI |
 | D7 | An open model behind the online page | 5.8 step 4 | Mock (today) · Typhoon through 0.4 (free; what is typed goes to SCB 10X) · the local model on a paid machine with room for it (prices checked at the time) | The mock on the page; the local model only in GitHub Actions, for measuring |
 | D9 | Sending a case without a person (an auto-approve button) | not planned; it would change rule 4 and ADR-010 | No (today) · a narrow trial for one low-risk action with undo, only after a confidence that can be checked (E5), a check for text that talks to the system, and reviewer labels (2.8); see 5.9 | Simulation only (ADR-031): every case waits for a person |
+| D10 | Where our own model is trained (ADR-037) | T5 | Not now (today) · Google Colab on the owner's account (free tier limits; paid tiers) · a GPU rented by the hour · the owner's own computer with a GPU | No training; T2–T4 can be built |
 
 ## Evidence track
 
@@ -1989,3 +2018,6 @@ of H5 were built ([evidence](evidence/2026-11-11-skill-handoff.md)).
   person. The same day the owner asked whether the system could have an AI of its own that learns as the system is
   developed; the answer (fine-tuning an open model in measured rounds from people's labels, after 2.9, D1 and D4)
   is not a plan item yet.
+- 2026-11-22: the owner said to merge 2.10 (PR #79) and to write the plan for our own model. Track T1–T6 and
+  [own_model_plan.md](own_model_plan.md) added, with ADR-037 (proposed) and owner decision D10 (where training
+  runs). Docs only: nothing trained, and the owner's fine-tuned Typhoon 4B stays on hold.

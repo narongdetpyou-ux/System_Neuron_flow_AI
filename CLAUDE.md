@@ -76,7 +76,9 @@ Read in this order when you need depth:
    [observability_sentry.md](docs/observability_sentry.md),
    [observability_tracing.md](docs/observability_tracing.md) (traces to Honeycomb),
    [study_guide.md](docs/study_guide.md) (the study guide: workflow, scorecard, topic catalog, library, link check),
-   [skill_handoff.md](docs/skill_handoff.md) (the exchange between skills: routes, common language, translators, tests).
+   [skill_handoff.md](docs/skill_handoff.md) (the exchange between skills: routes, common language, translators, tests),
+   [own_model_plan.md](docs/own_model_plan.md) (our own model, a plan: fine-tuning in measured rounds, track T1–T6,
+   ADR-037 proposed).
 
 ## 2. Working with the owner (read this first)
 
@@ -635,10 +637,14 @@ Notes for cloud sessions (claude.ai/code):
     `tests/test_service_review_time.py`, the page's contract tests and the browser walk (run in this session too, with
     a Playwright 1.63.0 venv: the timed decision appears in the settings tab and over the API). Real figures need D3
     and D1.
+    Merged as PR #79 the same day at the owner's request.
   - The same day the owner asked whether the system could have an AI of its own that "learns along with developing
-    the system". Answered in chat, nothing built: fine-tuning an open-weight model (the owner's Typhoon 4B is on hold)
-    in measured rounds from people's labels, never a model that changes itself; it needs blind labels (2.9), a disk
-    (D1), real data only after D4, a GPU to train and a paid machine to serve (D7). Not a roadmap item yet.
+    the system", then said to merge 2.10 and write the plan. Written, docs only: [docs/own_model_plan.md](docs/own_model_plan.md),
+    roadmap track T1–T6, ADR-037 (proposed) and owner decision D10 (where training runs). Fine-tuning an open-weight
+    model in measured rounds (the owner approves each training set by hash; an overlap check keeps every exam set
+    out; an exam on the local lane by criteria written first; the owner decides each switch), never a model that
+    learns while it serves. Nothing trained or downloaded; the owner's Typhoon 4B stays on hold (a possible round 0
+    of T5). T2 and T3 need only the owner's go-ahead.
 - **Not done yet:**
   - Claude has never been run (D2). Typhoon has run on the synthetic sets and the 116 robustness edges,
     plus all three E2 triage sets (2026-11-11, 217/217 answered/completed): AI correct 60/61 development,
@@ -687,6 +693,8 @@ Notes for cloud sessions (claude.ai/code):
       or a private Hugging Face repository with a read-only token (more private, more steps; `fetch_model.py` already
       reads Hugging Face). The scope offered: download, check the size and SHA-256, five triage cases on a GitHub
       runner, report, and ask again before a full run.
+    - The own-model plan (2026-11-22, [docs/own_model_plan.md](docs/own_model_plan.md), T5) names it as a possible round 0:
+      that changes nothing about the hold.
     - Before touching it again:
       1. Ask the owner first how their file may be reached or shared (a Drive link they share, or a private Hugging Face
          repository with a token): it is their decision. When a connector cannot see a file, stop and ask which account
@@ -727,7 +735,8 @@ Notes for cloud sessions (claude.ai/code):
   - Waiting on the owner: 0.2 and 1.4 (D1, paid Render plan), 0.3 path B and 0.4 with Claude (D2, Claude
     API key); 0.4 with Typhoon is free but sends what is typed on the page to Typhoon, so it is the owner's
     choice too; an open model behind the page needs a paid machine (D7); the rest of the owner tests on the live
-    page (2.4's step 4, attention 5.10, and 2.8's scorecard after its merge); the first new skill (H4). The owner's first case since 2026-11-10, on 2026-11-16, passed H3 and 2.4's steps 2 and 3 and
+    page (2.4's step 4, attention 5.10, and 2.8's scorecard after its merge); the first new skill (H4); the start of the
+    own-model track (T2) and where training runs (D10). The owner's first case since 2026-11-10, on 2026-11-16, passed H3 and 2.4's steps 2 and 3 and
     gave E1's Render figure; the
     same day 2.1's owner test passed every step, 2.4's step 1 with it (confirmed by the owner on 2026-11-19).
     D8 is decided (2026-11-10): the e-mail history stays as it is; do not propose a rewrite.
