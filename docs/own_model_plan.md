@@ -3,8 +3,10 @@
 **Status:** a plan, written on 2026-11-22 because the owner asked for "AI ของเราเอง" that learns as the system is
 developed, instead of using other companies' AI, and then said to write the plan. Nothing is built or trained, and
 no model file was touched. The decision is [ADR-037](architecture.md#8-architecture-decisions-adrs) (proposed, not in force).
-The status of each package is in the roadmap's table ([ROADMAP.md](ROADMAP.md#own-model-track-t1t6)). The owner's
-fine-tuned Typhoon 4B stays on hold: this plan names it as a candidate and does nothing with it.
+The status of each package is in the roadmap's table ([ROADMAP.md](ROADMAP.md#own-model-track-t1t6)). Merged as
+PR #80 the same day. Then the owner chose the base and round 0: the publisher's Typhoon 2.5 Qwen3 4B that the local
+lane already tests on GitHub, because the owner's fine-tuned file on Drive was too troublesome to share. That file is
+set aside, and nothing is done with it.
 
 ## สรุปสำหรับเจ้าของโปรเจกต์
 
@@ -32,11 +34,15 @@ fine-tuned Typhoon 4B stays on hold: this plan names it as a candidate and does 
 
 **รอคุณตัดสินใจ**
 - D10 จะฝึกที่ไหน: Colab ฟรีหรือเสียเงิน, เช่าการ์ดจอเป็นชั่วโมง หรือเครื่องของคุณเอง
-- จะส่งไฟล์โมเดลให้ด่านสอบทางไหน: ลิงก์ Drive หรือ Hugging Face แบบส่วนตัว (คำถามเดียวกับโมเดล Typhoon 4B ที่คุณพักไว้)
+- เมื่อฝึกรอบแรกเสร็จ (T5) ไฟล์รุ่นใหม่ต้องไปอยู่ที่ที่ GitHub ดาวน์โหลดเองได้ เช่น Hugging Face แบบส่วนตัวหรือสาธารณะ ผมจะถามอีกครั้งตอนนั้น
+
+**ตัดสินใจแล้ว (22 พ.ย.):** ใช้โมเดล 4B ตัวเดิมที่ GitHub ทดสอบอยู่ (Typhoon 2.5 Qwen3 4B ของผู้พัฒนา) เป็นจุดตั้งต้นและ "รอบ 0"
+GitHub ดาวน์โหลดไฟล์นี้เองจาก Hugging Face และตรวจรหัส SHA-256 ทุกครั้ง จึงไม่ต้องใช้ลิงก์หรือไฟล์ใน Drive
+ส่วนโมเดลที่คุณฝึกเองใน Drive ผมพักไว้ ไม่แตะ
 - เรื่องอื่นที่มีอยู่แล้ว: 2.9 (ให้คนเลือกหมวดก่อนเห็นข้อเสนอ), D1 (ดิสก์ถาวร เพื่อสะสมเฉลย), D3 (ผู้ตรวจจริง), D4 (ข้อมูลจริง), D7 (เครื่องเสียเงินสำหรับใช้โมเดลบนหน้าเว็บ), D6 (บทบาทของ AI)
 
 **สิ่งที่แผนนี้จะไม่ทำ:** ไม่ให้ AI เรียนเองขณะทำงาน ไม่เปลี่ยนรุ่นเอง ไม่เอาข้อสอบไปฝึก ไม่ใช้ข้อมูลจริงก่อน D4
-ไม่ให้ AI ตัดสินแทนคน และไม่แตะไฟล์โมเดลของคุณจนกว่าคุณจะสั่ง
+ไม่ให้ AI ตัดสินแทนคน และไม่ใช้ไฟล์โมเดลใน Drive ของคุณ
 
 **ข้อจำกัดที่ต้องรู้:** โมเดลพื้นฐานยังเป็นของบริษัทอื่น (Typhoon 2.5 ของ SCB 10X ซึ่งต่อยอดจาก Qwen3) แต่เป็นแบบเปิด:
 เราถือไฟล์เอง รันบนเครื่องที่เราคุม และไม่ส่งข้อความไปบริษัท AI ใด ฝึกด้วยข้อมูลน้อยอาจจำข้อสอบแทนที่จะเข้าใจ
@@ -56,9 +62,11 @@ fine-tuned Typhoon 4B stays on hold: this plan names it as a candidate and does 
 ## 1. What "our own model" means here
 
 - **Fine-tuning, not pretraining.** Training a language model from nothing takes data and compute far beyond this
-  project. We take an open-weight base and teach it our task. The candidate base is the one the local lane already
-  serves: Typhoon 2.5 Qwen3 4B (SCB 10X, Apache-2.0; ADR-026). We hold the file, run it on a machine we control and
-  send nothing to an AI company. The base is still someone else's work, so its licence is checked again for each
+  project. We take an open-weight base and teach it our task. The base, chosen by the owner on 2026-11-22, is the
+  file the local lane already serves: Typhoon 2.5 Qwen3 4B (SCB 10X, Apache-2.0; ADR-026), Q4_K_M, pinned by
+  repository, revision and SHA-256 in `.github/workflows/local-model-eval.yml` (`MODEL_REPO`, `MODEL_REVISION`,
+  `MODEL_SHA256`). Training starts from the publisher's un-quantized weights of the same model, pinned in T3. We
+  hold the file, run it on a machine we control and send nothing to an AI company. The base is still someone else's work, so its licence is checked again for each
   new base before it is served.
 - **One narrow job first:** the triage second opinion, a category and the attention flag, both fixed choices. It
   uses the same prompt contract (`triage_classify_v2`), the same gateway checks, masking and answer format as
@@ -125,12 +133,15 @@ fine-tuned Typhoon 4B stays on hold: this plan names it as a candidate and does 
 
 ## 5. The exam before use
 
-- **Where:** the local lane (5.8), on a GitHub runner, with the candidate fetched by URL and checked against its
-  size and SHA-256 (T4). How the owner shares a file (a Drive link in a repository secret, or a private Hugging Face
-  repository with a read-only token) is the owner's choice, the same one as for the on-hold v01.
+- **Where:** the local lane (5.8), on a GitHub runner. Round 0 is the lane's own pinned file, fetched from Hugging
+  Face as today. A trained candidate (T5) must be put where the runner can fetch it and check its size and SHA-256.
+  Hugging Face, which `fetch_model.py` already reads, is the natural place. Whether that repository is private (a
+  read-only token as a repository secret) or public is the owner's choice at T5.
 - **Sets:** all of section 3's exam sets, with the sealed half counted only.
-- **Compared with:** the current local model (the publisher's 4B, full run of 2026-11-08) and Typhoon's saved
-  answers (2026-11-11), set by set, as counts (n/N).
+- **Compared with:** round 0, the publisher's 4B unchanged, and Typhoon's saved answers (2026-11-11), set by set,
+  as counts (n/N). Its full run of 2026-11-08 used that day's prompt and answer checks; today's agent version
+  differs (`triage_classify_v2`, `answer-checks-v3`), so round 0 is run again on `main` before the first comparison
+  (T4).
 - **Criteria, proposed now and confirmed by the owner before the first run (T4):**
   - no more off-format or unavailable answers than the current local model;
   - AI correct on the held-out and hard sets: not lower than the current local model's;
@@ -146,7 +157,8 @@ fine-tuned Typhoon 4B stays on hold: this plan names it as a candidate and does 
 ## 6. Serving it behind the page
 
 - The live page needs a machine with room for the model (owner decision D7, roadmap 5.8 step 4). Measured so far:
-  the owner's v01 file is 2,497,278,816 bytes; the publisher's 4B used at most 8.8 GB of memory and took about 8 to
+  a Q4_K_M file of this 4B model is about 2.5 GB (the owner's set-aside fine-tune: 2,497,278,816 bytes); the
+  publisher's 4B used at most 8.8 GB of memory and took about 8 to
   10 s a case after loading on a GitHub runner (run 43421904358). Render's free plan has 512 MB.
 - Then the model server goes into the service's container (one machine, ADR-003) through `render.yaml`, with
   `NEURON_FLOW_LLM_PROVIDER=local` and the file's model id. Latency is measured again on that machine.
@@ -158,8 +170,8 @@ fine-tuned Typhoon 4B stays on hold: this plan names it as a candidate and does 
 | **T1** | This plan and ADR-037 | — (done when merged) |
 | **T2** | Synthetic training set v1 with its manifest, and the overlap check against every exam set in CI | nothing; the owner reads a sample |
 | **T3** | The training recipe and receipt format in `training/`, kept out of the image and Render's build, with a test | nothing to write it; D10 to run it |
-| **T4** | The exam gate: the local lane takes a candidate file (URL, size, SHA-256), runs every set and writes the comparison against the criteria | the owner's route for sharing a file; the criteria confirmed |
-| **T5** | Round 1: train on T2's set, run the exam, write an evidence note; the owner decides. The owner's v01 may first be examined as round 0, if the owner resumes it | T2–T4, D10 |
+| **T4** | The exam gate: round 0 run again on `main`; the local lane takes a candidate file (Hugging Face repository, revision, size, SHA-256), runs every set and writes the comparison against the criteria | the criteria confirmed |
+| **T5** | Round 1: train on T2's set, run the exam, write an evidence note; the owner decides | T2–T4, D10; where the trained file is put |
 | **T6** | Rounds from people's decisions: the owner exports blind labels (masked) as a training set; the cadence is the owner's choice | 2.9, D1, D3; real cases also D4, 7.1–7.3, 7.5 |
 
 Serving behind the page is not a T package: it is D7 and 5.8 step 4. As with a phase, a package starts when the
@@ -174,7 +186,7 @@ owner says so.
 - Train or serve on GitHub's hosted runners; they measure.
 - Present our model's numbers as Typhoon's API or Claude's, or the owner's Colab results as measured here.
 - Let it decide anything (rule 4) or change its role without D6.
-- Touch the owner's v01 file before the owner says so.
+- Fetch, share or run the owner's fine-tuned file on Drive: the owner set it aside on 2026-11-22.
 
 ## 9. Honest limits
 
