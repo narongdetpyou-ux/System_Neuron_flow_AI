@@ -228,6 +228,15 @@ Built in round 2 (full reference in [intake_queue.md](intake_queue.md)):
   sign, Thai digits or marks alone do not count), every rate as numerator/denominator with a 95% Wilson interval,
   plus `label_scope` and `retention`. A result recorded before the version was kept is its own group,
   `version_known: false`. No case text, reason or token; it changes nothing.
+- Reviewer time per case (built on 2026-11-22, roadmap 2.10): the page's decision card notes when it appeared
+  (`performance.now()`) and the decision carries `card_open_s`, the seconds until it was sent (0 to 86,400, a tenth of
+  a second; measured once per idempotency key, so a retried click sends the same value). The queue keeps it with the
+  decision (schema 5, a nullable `card_open_s` column with the same check on new and upgraded queues; a tested
+  4 → 5 upgrade, two processes at once included). It is not part of the decision: the request fingerprint leaves it
+  out and no view of a decision shows it. The scorecard reports, per group, `review_time`: how many decisions were
+  timed and untimed, the median and the 95th percentile (nearest rank), overall and by the review's priority
+  (`elevated`, `normal`); never per person, role or credential. It measures what raising more cases (5.10) costs a
+  person; real figures need real reviewers (D3) and a disk (D1).
 - Retention (ADR-029): `/v1/status`, every new job's reply and every decision's reply carry
   `retention: {persistent, lost_on, store_id, store_started_at}`. A new `store_id` means the queue started
   empty again.
@@ -270,10 +279,10 @@ app/eval/                      triage_shadow_eval.py, rules_comparison.py (same 
                                (40 held-out cases), case_triage_autosend_hard_v1.json (128 hard cases, 38 needs_person),
                                golden/study_guide_synthetic_v1.json (67 requests)
 app/observability/             sentry.py (step failures, degraded AI, Runner recoveries); tracing.py (OTLP/JSON exporter) and job_spans.py (a job's spans)
-app/persistence/               queue_store.py: the application job queue, events, Runner heartbeat, reviews and decisions, handoffs, access tokens (SQLite, schema 4)
+app/persistence/               queue_store.py: the application job queue, events, Runner heartbeat, reviews and decisions (with each decision card's open time since schema 5), handoffs, access tokens (SQLite, schema 5)
 app/services/                  workflows.py (catalog), admission.py, runner.py (with reconciliation), results.py, metrics.py, reviews.py (decisions),
                                access.py (the shared key, personal tokens and the role table, ADR-034),
-                               review_labels.py (rules and AI against people's decisions, roadmap 2.8; counts only)
+                               review_labels.py (rules and AI against people's decisions, roadmap 2.8, and reviewer time per group, 2.10; counts only)
 app/api/                       routes.py (ApiApp), server.py (standard-library HTTP server), limits.py
 app/web/                       index.html, app.css, app.js: the Thai web page (chat layout with a case / study-question switch, the study guide's layered answer, Flow and Trace, read-only settings)
 app/boot.py                    process 1 of the image: takes the data folder, drops root, becomes tini
@@ -282,7 +291,7 @@ Dockerfile, render.yaml        the container (it compiles all its code once, so 
 app/exchange/                  the skill-handoff exchange (ADR-030): common.py + vocabulary_v2.json (the common language), translators/,
                                routes.py + routes_v1.json (the route table), exchange.py (checks at start, prepares each handoff)
 examples/                      case_triage_demo, case_triage_shadow_demo, study_guide_demo, skill_handoff_demo, sentry_smoke_test, service_smoke_test
-tests/                         602 tests: core, triage v1/v2, AI gateway, Typhoon provider, local model provider and its model fetcher, masking, scorecards, eval gates, Sentry, tracing, API, queue, Runner, HTTP, metrics, study library, link check, study guide, web page, robustness benchmark, workflow permissions, the image's bytecode cache, review decisions and retention, the commit e-mail check, the open-benchmark builder, the auto-approve simulation, the storage check and readiness, and the page's contract with the browser walk (`tests/browser_walk.py`, run in CI only)
+tests/                         624 tests: core, triage v1/v2, AI gateway, Typhoon provider, local model provider and its model fetcher, masking, scorecards, eval gates, Sentry, tracing, API, queue, Runner, HTTP, metrics, study library, link check, study guide, web page, robustness benchmark, workflow permissions, the image's bytecode cache, review decisions and retention, the commit e-mail check, the open-benchmark builder, the auto-approve simulation, the storage check and readiness, and the page's contract with the browser walk (`tests/browser_walk.py`, run in CI only)
 tests/robustness/              the robustness benchmark, stage 1 (docs/benchmarking.md): synthetic_v1.json (270 edge cases), open_extract_v1.json
                                (BLNS, JSONTestSuite, CLINC150, BANKING77, pinned; NOTICE.md), bench.py, build_open_extract.py, triage_edge_golden_v1.json
 tests/open_benchmarks/         stage 2 (roadmap 5.6): build_sets.py builds CLINC150, BANKING77, MASSIVE th/en and BIPIA case sets at run time
@@ -458,7 +467,7 @@ dashboard.
 | A2 | AI gateway, v2 shadow mode, scorecard, Sentry reporting | Done (PR #8, #9); a free Typhoon provider added (ADR-021, after GitHub Models was found retired). First live runs with Typhoon on 2026-11-06 after the answer-format fix (ADR-022): AI correct 60/61 on the synthetic triage set in two runs ([evidence](evidence/2026-11-06-first-live-typhoon.md)); Claude not run yet (D2); a local open-model lane on the GitHub runner, Typhoon 2.5 4B through llama.cpp (ADR-026, PR #46, ROADMAP 5.8), first full run on 2026-11-08: AI correct 58/61, every rule mistake raised (32/32) ([evidence](evidence/2026-11-08-first-local-model-full.md)) |
 | P1-fix | Neutral telemetry phase names | Done (PR #21, roadmap 1.1) |
 | B | Admission queue, single Runner, reconciliation, thin API, web page | Done (PR #11); live on Render's free plan since 2026-11-01; page redesigned as a chat layout with Flow, Trace and read-only settings (PR #18, roadmap 1.6) |
-| C | Two-phase review, decision ledger, n8n notifications | Started 2026-11-10: the decision ledger and API (2.2) and the page's decision card and inbox (2.4), with the owner's shared key as the reviewer's credential (ADR-027); the linked phase-B job (2.3) built on 2026-11-11 as the first skill-handoff route (ADR-030); on the live page on 2026-11-16 the owner approved a case and its linked job completed; personal tokens and roles (2.1, ADR-034) built and owner-tested on the live page the same day; the reviewer-label scorecard (2.8) on 2026-11-19; n8n (2.5) open |
+| C | Two-phase review, decision ledger, n8n notifications | Started 2026-11-10: the decision ledger and API (2.2) and the page's decision card and inbox (2.4), with the owner's shared key as the reviewer's credential (ADR-027); the linked phase-B job (2.3) built on 2026-11-11 as the first skill-handoff route (ADR-030); on the live page on 2026-11-16 the owner approved a case and its linked job completed; personal tokens and roles (2.1, ADR-034) built and owner-tested on the live page the same day; the reviewer-label scorecard (2.8) on 2026-11-19; reviewer time per case (2.10) on 2026-11-22; n8n (2.5) open |
 | D | OpenTelemetry tracing, eval gates in CI | Done: the per-case eval gates (5.2 for triage; 3.3 for the study guide), queue/run-time figures (5.3), Sentry, request ids, and tracing (5.1, PR #30), with the first trace seen in Honeycomb on 2026-11-03. Added on 2026-11-07: the robustness benchmark, stage 1 of the plan in [benchmarking.md](benchmarking.md) (5.4, PR #41; its 8 bugs fixed in 5.5, PR #42). Stage 2 (5.6) built on 2026-11-11 with the auto-approve limits (5.9, ADR-031), which also took stage 3's first injection measurement (5.7); the rest of 5.7 planned |
 | E | Planner pattern (B), MCP server, second domain with zero Core changes | Open |
 | Effectiveness E2 | Versioned Thai/English rules for the official shadow suggestion | Built and measured in PR #64, merged on 2026-11-11; original v1 demo retained; all 217 cases answered in the three-set Typhoon run, no v1-correct case regressed; [measurement and gap dispositions](evidence/2026-11-11-e2-rules-v2.md) |

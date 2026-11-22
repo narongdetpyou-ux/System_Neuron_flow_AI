@@ -30,7 +30,11 @@
  *
  * Rules and AI against people's decisions (roadmap 2.8): the settings tab shows, for a role that may decide, how
  * often the rules' suggestion and the AI's opinion named the category a person recorded. The server counts
- * (GET /v1/reviews/scorecard) and sends no case text; the page adds what the numbers cannot say for themselves. */
+ * (GET /v1/reviews/scorecard) and sends no case text; the page adds what the numbers cannot say for themselves.
+ *
+ * Reviewer time (roadmap 2.10): the decision card notes when it appeared (performance.now(), a clock that never
+ * jumps) and the decision carries card_open_s, the seconds until it was sent: a number only, kept with the
+ * idempotency key so a retried click sends the same value. The scorecard reports it per group, never per person. */
 (function () {
   const KEY_STORAGE = "neuronflow.accessKey";
   const SENT_STORAGE = "neuronflow.sent";  // { store_id, jobs: [job id, ...] }: ids only, never case text
@@ -149,6 +153,8 @@
   const ACCESS_TH = { free: "ฟรี", paid: "เสียเงิน" };
   /* The reviewer-label scorecard splits cases by code (app/services/review_labels.py): a Thai letter in the text or not. */
   const LABEL_LANGUAGE = { th: "เคสที่มีอักษรไทย", non_th: "เคสที่ไม่มีอักษรไทย" };
+  /* Reviewer time is also split by the review's priority (roadmap 2.10, review_labels.PRIORITIES). */
+  const LABEL_PRIORITY = { elevated: "เวลาตัดสิน: เคสที่ยกให้ดูก่อน", normal: "เวลาตัดสิน: เคสปกติ" };
   /* A result finished before the AI's full version was kept with it (2026-11-19, ADR-035). */
   const AGENT_VERSION_UNKNOWN = "ไม่ทราบรุ่น (บันทึกก่อนระบบเริ่มเก็บรุ่นของ AI ไว้กับผล)";
   const KIND_TH = {
@@ -185,6 +191,7 @@
     internal_error: "ระบบขัดข้องฝั่งเซิร์ฟเวอร์",
     invalid_decision: "เลือก \"อนุมัติ\" หรือ \"ไม่อนุมัติ\" ก่อน",
     invalid_category: "หมวดนี้ไม่มีในระบบ",
+    invalid_card_open_s: "เวลาที่เปิดการ์ดตัดสินไม่ถูกต้อง โหลดหน้าใหม่แล้วลองอีกครั้ง",
     invalid_reason: "เหตุผลต้องมี 1–500 ตัวอักษร",
     invalid_version: "ข้อมูลเคสเปลี่ยนไปแล้ว โหลดใหม่แล้วลองอีกครั้ง",
     already_decided: "เคสนี้มีคนตัดสินไปแล้ว การตัดสินแก้ไม่ได้",
@@ -1311,7 +1318,7 @@
     if (!form || form.jobId !== job.job_id || form.version !== human.version) {
       form = state.review = { jobId: job.job_id, reviewId: human.review_id, version: human.version, decision: null,
         suggested: review.suggested_category || "", category: review.suggested_category || "", reason: "",
-        key: null, signature: null, sending: false, error: null };
+        key: null, signature: null, sending: false, error: null, openedAt: performance.now(), openS: null };
     }
     const policy = (state.status || {}).reviews || {};
     const categories = policy.categories || Object.keys(CATEGORY);
@@ -1352,6 +1359,14 @@
     return el("p", { class: "hint", text: `ถ้าอนุมัติ ตัวกลางจะส่งต่อให้ "${WORKFLOW[route.to] || route.to}" ทันทีผ่านล่ามและภาษากลาง: ${route.why.th} · ถ้าไม่อนุมัติ จะไม่ส่งต่อ` });
   }
 
+  /* Seconds since the decision card appeared, to a tenth (roadmap 2.10), or null when it is longer than the server
+   * counts as reviewer time (policy.card_open_max_s, a day): such a decision is sent untimed rather than capped. */
+  function cardOpenSeconds(form) {
+    const max = (((state.status || {}).reviews) || {}).card_open_max_s || 86400;
+    const seconds = Math.round((performance.now() - form.openedAt) / 100) / 10;
+    return seconds >= 0 && seconds <= max ? seconds : null;
+  }
+
   function chooseDecision(decision) {
     const form = state.review;
     if (!form || form.sending || !DECISION[decision]) return;
@@ -1386,8 +1401,10 @@
     if (!form.key || form.signature !== signature) {
       form.key = newIdempotencyKey();
       form.signature = signature;
+      form.openS = cardOpenSeconds(form);  // measured once per key: a retry is the same request
     }
     body.idempotency_key = form.key;
+    if (form.openS !== null) body.card_open_s = form.openS;
     form.sending = true;
     renderThread();
     let result;
@@ -2272,6 +2289,13 @@
     return ` · ช่วงที่เป็นไปได้ ${Math.round(value.low_95 * 100)}–${Math.round(value.high_95 * 100)}%`;
   }
 
+  /* Reviewer time of a set of decisions (roadmap 2.10): the median and the 95th percentile, with how many were timed. */
+  function reviewTimeText(time) {
+    const all = (time.timed || 0) + (time.untimed || 0);
+    if (!time.timed) return all ? `ยังไม่มีเคสที่จับเวลาได้ (${all} เคสไม่ได้จับเวลา)` : "—";
+    return `ค่ากลาง ${durationText(time.median_s)} · 95% ของเคสไม่เกิน ${durationText(time.p95_s)} · จับเวลาได้ ${time.timed} จาก ${all} เคส`;
+  }
+
   function labelsGroup(group) {
     const ai = group.ai;
     const split = group.when_disagreeing;
@@ -2295,6 +2319,11 @@
           ? `${split.total} เคส: คนบันทึกหมวดเดียวกับ AI ${split.ai_match} · เดียวกับกฎ ${split.rules_match} · ไม่ตรงทั้งคู่ ${split.neither}`
           : "ยังไม่มีเคสแบบนี้" }),
       );
+    }
+    const time = group.review_time || {};
+    rows.push(el("span", { text: "เวลาตัดสินต่อเคส" }), el("span", { text: reviewTimeText(time) }));
+    for (const [priority, figures] of Object.entries(time.by_priority || {})) {
+      rows.push(el("span", { text: LABEL_PRIORITY[priority] || priority }), el("span", { text: reviewTimeText(figures) }));
     }
     for (const [language, score] of Object.entries(group.by_language || {})) {
       rows.push(el("span", { text: LABEL_LANGUAGE[language] || language }), el("span", { text: `มีเฉลย ${score.labelled} เคส · กฎตรง ${shareText(score.rules_match)}` +
@@ -2348,6 +2377,9 @@
           "และไม่รวมกับชุดที่รู้รุ่น");
       }
       notes.push("แยกภาษาโดยดูว่าข้อความเคสมีตัวอักษรไทยไหม: เครื่องหมาย ฿ เลขไทย หรือวรรณยุกต์อย่างเดียว ไม่นับเป็นเคสไทย");
+      notes.push("เวลาตัดสินต่อเคส: หน้าเว็บจับเวลาตั้งแต่การ์ด \"ตัดสินเคสนี้\" ขึ้นจนกดบันทึก จึงรวมเวลาที่สลับไปทำอย่างอื่นด้วย " +
+        "ถ้าเปิดเคสอื่นหรือโหลดหน้าใหม่ จะเริ่มนับใหม่ คำตัดสินที่ส่งทาง API โดยไม่บอกเวลา นับเป็น \"ไม่ได้จับเวลา\" " +
+        "· \"95% ของเคสไม่เกิน\" ถ้ามีไม่กี่เคส คือเคสที่ช้าที่สุดนั่นเอง · ตัวเลขนี้เป็นภาพรวมของทุกคนที่ตัดสินในชุดนั้น ไม่แยกรายคน และระบบไม่ใช้ตัดสินอะไร");
       if (!(status.storage || {}).persistent) {
         notes.push("ที่เก็บข้อมูลเป็นแบบชั่วคราว (Render แผนฟรี): คำตัดสินหายทุกครั้งที่ระบบหลับ รีสตาร์ท หรืออัปเดต ตัวเลขนี้จึงนับเฉพาะรอบปัจจุบัน " +
           `(เริ่มเมื่อ ${fullTime((report.retention || {}).store_started_at)}) จะสะสมข้ามวันได้ต้องมีดิสก์ถาวร`);

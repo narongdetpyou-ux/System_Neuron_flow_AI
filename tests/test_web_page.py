@@ -21,7 +21,10 @@ what the service and the study guide promise:
 8. the reviewer-label scorecard (roadmap 2.8): only a role that may decide reads it, the lock forgets it, it is read
    again only when a decision was recorded or the queue started empty, and its panel keeps the limits of its numbers;
 9. the browser walk (roadmap 1.8): every id, action, class and text that ``tests/browser_walk.py`` relies on is still
-   on the page.
+   on the page;
+10. reviewer time (roadmap 2.10): the decision card notes when it appeared on a clock that never jumps, the decision
+   carries ``card_open_s`` measured once per idempotency key (a retry sends the same value), and the scorecard panel
+   shows the figures per group and by priority with their limits, never per person.
 
 Since roadmap 1.8 the page itself is also walked in a real browser on a phone-sized screen, in CI's Service container
 job (``tests/browser_walk.py``; docs/intake_queue.md).
@@ -225,7 +228,8 @@ class ReviewAndRetentionTests(unittest.TestCase):
         self.assertEqual(set(js_table("DECISION")), set(DECISIONS))
         self.assertTrue(set(CATEGORIES) <= set(js_table("CATEGORY")))
         errors = js_table("API_ERROR")
-        for code in ("invalid_decision", "invalid_category", "invalid_reason", "invalid_version", "already_decided",
+        for code in ("invalid_decision", "invalid_category", "invalid_card_open_s", "invalid_reason", "invalid_version",
+                     "already_decided",
                      "version_conflict", "not_reviewable", "review_not_found", "idempotency_conflict", "rate_limited"):
             with self.subTest(code=code):
                 self.assertIn(code, errors)
@@ -275,9 +279,10 @@ class ReviewAndRetentionTests(unittest.TestCase):
         for made in ('class: "decide"', 'class: "handoff"', "inbox-item", 'class: "panel"'):
             with self.subTest(made=made):
                 self.assertIn(made, SCRIPT)
-        # Texts the walk waits for. Two are built from a template on the page; their templates must still be there.
+        # Texts the walk waits for. Three are built from a template on the page; their templates must still be there.
         templates = {"บันทึก: อนุมัติ": "`บันทึก: ${DECISION[form.decision]}`",
-                     "อนุมัติ 1 เคส": "`อนุมัติ ${totals.approved || 0} เคส"}
+                     "อนุมัติ 1 เคส": "`อนุมัติ ${totals.approved || 0} เคส",
+                     "จับเวลาได้ 1 จาก 1 เคส": "จับเวลาได้ ${time.timed} จาก ${all} เคส`"}  # roadmap 2.10
         texts = set(re.findall(r'to_(?:have|contain)_text\("([^"]+)"', walk)) | {"กฎกับ AI เทียบกับคำตัดสินของคน"}
         self.assertGreaterEqual(len(texts), 8)
         for text in sorted(texts):
@@ -450,5 +455,56 @@ class ReviewerLabelTests(unittest.TestCase):
                       "ชั่วคราว",              # the free plan forgets the decisions
                       "การตัดสินใจของเจ้าของระบบ",  # the numbers change nothing by themselves (D6)
                       "Wilson"):              # the interval, said in words
+            with self.subTest(limit=limit):
+                self.assertIn(limit, panel)
+
+
+class ReviewerTimeTests(unittest.TestCase):
+    """How long a decision card was open (roadmap 2.10, app/services/review_labels.py and reviews.check_card_open)."""
+
+    @staticmethod
+    def body(name):
+        start = SCRIPT.index(f"function {name}")
+        return SCRIPT[start:SCRIPT.index("\n  }\n", start)]
+
+    def test_the_card_notes_when_it_appeared_on_a_clock_that_never_jumps(self):
+        form = self.body("decisionForm")
+        self.assertIn("openedAt: performance.now()", form)
+        seconds = self.body("cardOpenSeconds")
+        self.assertIn("performance.now() - form.openedAt", seconds)
+        self.assertNotIn("Date.now", seconds)
+        self.assertIn("card_open_max_s", seconds)  # longer than the server counts: sent untimed, not capped
+        self.assertIn(": null", seconds)
+
+    def test_the_seconds_are_measured_once_per_key_and_added_after_the_signature(self):
+        submit = SCRIPT[SCRIPT.index("async function submitDecision"):]
+        submit = submit[:submit.index('call("POST"')]
+        key_block = submit[submit.index("if (!form.key || form.signature !== signature)"):]
+        key_block = key_block[:key_block.index("}")]
+        self.assertIn("form.openS = cardOpenSeconds(form)", key_block)  # a retry keeps the first value
+        self.assertLess(submit.index("const signature = JSON.stringify(body)"),
+                        submit.index("body.card_open_s = form.openS"))  # the time never changes the key
+        self.assertEqual(SCRIPT.count("card_open_s ="), 1)
+
+    def test_every_priority_has_thai_words(self):
+        from app.services.review_labels import PRIORITIES
+        words = js_table("LABEL_PRIORITY")
+        self.assertEqual(set(words), set(PRIORITIES))
+        self.assertTrue(all(re.search(r"[฀-๿]", word) for word in words.values()))
+
+    def test_each_group_shows_the_time_and_the_panel_says_its_limits(self):
+        group = self.body("labelsGroup")
+        self.assertIn("reviewTimeText(time)", group)
+        self.assertIn("time.by_priority", group)
+        text = self.body("reviewTimeText")
+        for part in ("median_s", "p95_s", "timed", "untimed"):
+            with self.subTest(part=part):
+                self.assertIn(part, text)
+        panel = self.body("labelsPanel")
+        for limit in ("รวมเวลาที่สลับ",   # the clock runs while the person is away from the tab
+                      "เริ่มนับใหม่",      # another case or a reload starts it again
+                      "ไม่ได้จับเวลา",     # a decision over the API without the field
+                      "ไม่แยกรายคน",       # never per person
+                      "ไม่ใช้ตัดสินอะไร"):  # it decides nothing
             with self.subTest(limit=limit):
                 self.assertIn(limit, panel)

@@ -10,9 +10,10 @@ whose AI is the mock:
 3. when it waits for a person, open the drawer (☰), find it in "รอรีวิว" and open it from there;
 4. approve it on the decision card, with a reason;
 5. see the handoff ("ส่งต่อแล้ว"), open the job it started, and wait until that job has recorded the approval;
-6. open the settings tab and find the decision counted in "กฎกับ AI เทียบกับคำตัดสินของคน";
+6. open the settings tab and find the decision counted in "กฎกับ AI เทียบกับคำตัดสินของคน", timed (roadmap 2.10: the
+   page sent how long its decision card was open);
 7. check the same over the API: the case approved, one handoff, the linked job completed with a Core receipt, and
-   the scorecard's count.
+   the scorecard's count with one timed decision.
 
 On every screen it checks that nothing scrolls sideways and that the page has raised no script error and got no 5xx
 reply. A click only succeeds on an element that is visible, enabled, still and not covered, so a button that
@@ -157,7 +158,8 @@ def walk(page, url, key, out, summary):
     page.locator("#tab-settings").click()
     panel = page.locator("#view-settings section.panel", has=page.locator("h2", has_text=SCORECARD))
     expect(panel).to_contain_text("อนุมัติ 1 เคส")
-    w.screen("scorecard", f"แท็บ \"ตั้งค่า\" นับคำตัดสินนี้ในส่วน \"{SCORECARD}\" (อนุมัติ 1 เคส)",
+    expect(panel).to_contain_text("จับเวลาได้ 1 จาก 1 เคส")  # the page sent the card's time (roadmap 2.10)
+    w.screen("scorecard", f"แท็บ \"ตั้งค่า\" นับคำตัดสินนี้ในส่วน \"{SCORECARD}\" (อนุมัติ 1 เคส) และจับเวลาตัดสินได้ 1 เคส",
              focus=panel.get_by_text("อนุมัติ 1 เคส"))
 
 
@@ -179,6 +181,9 @@ def same_over_the_api(client):
     totals = card.get("totals") or {}
     check(status == 200 and (totals.get("decided"), totals.get("approved")) == (1, 1),
           "over the API: the scorecard counts the one decision")
+    time = ((card.get("groups") or [{}])[0]).get("review_time") or {}
+    check(time.get("timed") == 1 and isinstance(time.get("median_s"), (int, float)) and time["median_s"] > 0,
+          "over the API: the decision was timed (the seconds its card was open, roadmap 2.10)")
 
 
 def main(argv=None):

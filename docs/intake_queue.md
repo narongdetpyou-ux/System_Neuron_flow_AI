@@ -1,6 +1,6 @@
 # Intake API, job queue, Runner and web page (round 2, Milestone B)
 
-**Status:** built in PR #11 and tested offline (602 tests on 2026-11-21, including killing the Runner
+**Status:** built in PR #11 and tested offline (624 tests on 2026-11-22, including killing the Runner
 mid-step). The container build is checked on every push by *Actions → Service container*. Live on
 Render's free plan since 2026-11-01 (`render.yaml`). Railway was the first choice, but it has paused new
 sign-ups since 22 Oct 2026 after a security incident; `railway.json` stays in the repository for later.
@@ -30,6 +30,9 @@ Rules and AI against people's decisions (2026-11-19, roadmap 2.8): `GET /v1/revi
 settings tab count how often the rules' suggestion and the AI's opinion named the category a person recorded, per
 proposal version and split by Thai text or not; counts only, nothing changes because of them (see "กฎกับ AI
 เทียบกับคำตัดสินของคน" and "Reviewer-label scorecard" below).
+Reviewer time per case (2026-11-22, roadmap 2.10): the page sends with each decision how many seconds its decision
+card was open (`card_open_s`, a number only; queue schema 5 with a tested 4 → 5 upgrade), and the scorecard reports
+the median and the 95th percentile per group and by priority, never per person (see "เวลาตัดสินต่อเคส" below).
 Storage and readiness checked, not assumed (2026-11-21, roadmap 1.7, ADR-036): the storage is called persistent
 only when the start finds the data folder on a disk of its own, and `GET /readyz` says whether the Runner can work
 cases while `/healthz` stays the host's liveness check (see "ตรวจความพร้อม" and "Readiness and the storage
@@ -158,6 +161,21 @@ Design principles: [design_philosophy.md](design_philosophy.md).
 - ทุกเคสเป็นข้อมูลสมมติ ตัวเลขนี้จึงยังไม่ใช่ความแม่นยำในงานจริง และถ้าใช้ AI จำลอง ตัวเลขของ AI ก็ไม่ใช่ของ AI จริง
 - บน Render แผนฟรี คำตัดสินหายทุกครั้งที่ระบบหลับ รีสตาร์ท หรืออัปเดต ตัวเลขจึงนับเฉพาะรอบปัจจุบัน จะสะสมข้ามวันได้ต้องมีดิสก์ถาวร (D1)
 - นับจากเคสที่ตัดสินแล้วล่าสุดไม่เกิน 500 เคส ไม่มีข้อความเคสหรือเหตุผลของผู้ตัดสินในตัวเลขนี้
+
+#### เวลาตัดสินต่อเคส (ขั้น 2.10)
+
+ตั้งแต่ 22 พ.ย. ส่วนเดียวกันนี้บอกด้วยว่าคนใช้เวลาตัดสินแต่ละเคสนานแค่ไหน เพราะระบบดันเคสขึ้นให้คนดูก่อนมากขึ้น (ขั้น 5.10) ซึ่งกินเวลาของคน และก่อนหน้านี้ไม่มีใครวัด
+
+1. **หน้าเว็บเริ่มจับเวลา** ทันทีที่การ์ด "ตัดสินเคสนี้" ขึ้น
+2. **กดบันทึกการตัดสิน** หน้าเว็บส่งจำนวนวินาทีที่การ์ดเปิดอยู่ไปพร้อมคำตัดสิน ส่งเป็นตัวเลขอย่างเดียว ไม่มีข้อความ
+3. **แท็บ "ตั้งค่า"** แสดงในแต่ละชุด: "ค่ากลาง" (median: เคสครึ่งหนึ่งเร็วกว่านี้) และ "95% ของเคสไม่เกิน" (95th percentile) แยกเป็นเคสที่ยกให้ดูก่อนกับเคสปกติ พร้อมบอกว่าจับเวลาได้กี่เคสจากทั้งหมด
+
+ข้อควรรู้:
+- นาฬิกาเดินตั้งแต่การ์ดขึ้นจนกดบันทึก จึงรวมเวลาที่สลับไปทำอย่างอื่น ถ้าเปิดเคสอื่นหรือโหลดหน้าใหม่ จะเริ่มนับใหม่
+- คำตัดสินที่ส่งทาง API โดยไม่บอกเวลา นับเป็น "ไม่ได้จับเวลา" ถ้าการ์ดเปิดค้างเกิน 1 วัน หน้าเว็บจะไม่ส่งเวลา (ไม่ใช่เวลาทำงานจริง)
+- ถ้ามีไม่กี่เคส "95% ของเคสไม่เกิน" ก็คือเคสที่ช้าที่สุดนั่นเอง
+- ตัวเลขเป็นภาพรวมของทุกคนในชุด **ไม่แยกรายคน** ไม่แสดงในหน้าเคส และระบบไม่ใช้ตัดสินอะไร
+- ตัวเลขจริงต้องมีผู้ตรวจจริง (D3) และดิสก์ถาวร (D1) บนแผนฟรีตัวเลขหายทุกครั้งที่ระบบหลับ
 
 ### ถามเรื่องที่อยากเรียน (ขั้น 3.4)
 
@@ -451,7 +469,7 @@ app runs, carries an `X-Request-Id` header:
 | `GET /v1/reviews?state=PENDING&limit=20&after=<cursor>` | Reviews in one state (`PENDING`, `APPROVED`, `REJECTED`). Pending: elevated first, then the oldest; decided: newest first. `next_after` is the next cursor; `counts` has every state and `elevated_pending` | 200 | 400, 401 |
 | `GET /v1/reviews/{review_id}` | The case, the proposal (rules, AI second opinion, why it was raised), `proposal_sha256`, `version`, `decidable`, and every decision | 200 | 401, 404 `review_not_found` |
 | `POST /v1/reviews/{review_id}/decisions` | A person's decision, below | 201 new, 200 the same decision again | 400, 401, 403, 404, 409, 413, 415, 429 |
-| `GET /v1/reviews/scorecard` | The owner and reviewers: the rules and the AI against the categories people recorded (roadmap 2.8), below | 200 | 401, 403 |
+| `GET /v1/reviews/scorecard` | The owner and reviewers: the rules and the AI against the categories people recorded (roadmap 2.8), and reviewer time per group (2.10), below | 200 | 401, 403 |
 | `GET /v1/me` | Who the credential is (`token_id`, `role`, `display_name`, `shared_key`) and what its role may do (`can`: `submit`, `cancel`, `review`, `manage_tokens`) | 200 | 401, 429 |
 | `GET /v1/tokens` | The owner: every personal token (never a secret or its hash), `active`, the limits and `retention` | 200 | 401, 403 |
 | `POST /v1/tokens` | The owner: issue a token, `{"display_name": "…", "role": "reviewer"\|"submitter"}`; the reply's `token` is the only copy (`shown_once`) | 201 | 400, 401, 403, 409 `too_many_tokens`, 413, 415, 429 |
@@ -461,8 +479,12 @@ app runs, carries an `X-Request-Id` header:
 hex) in the same transaction. A job view (`GET /v1/jobs/{job_id}`) has `human_review`: `review_id`, `state`,
 `version`, `priority`, `decidable` and the latest `decision`. A decision is
 `{"decision": "APPROVE"|"REJECT", "final_category"?: "access"|"upload"|"billing"|"other", "reason": "…",
-"expected_version": 1, "idempotency_key": "…"}`:
+"expected_version": 1, "idempotency_key": "…", "card_open_s"?: 12.3}`:
 - approving without `final_category` keeps the rules' suggestion; rejecting without one records none;
+- `card_open_s` (roadmap 2.10) is how many seconds the decision card was open before it was sent: a number from 0 to
+  86,400 (`reviews.card_open_max_s` in `/v1/status`), kept to a tenth of a second. It is a measurement, not part of
+  the decision: it is left out of the request fingerprint, so the same key with another value returns the first
+  decision and keeps the first value. No view of a decision shows it; only the scorecard, per group;
 - `reason` is required: 1–500 characters after trimming, without control characters (new lines are fine);
 - who decides comes from the credential, never the body: `{"token_id": "shared-access-key", "role": "owner",
   "name": null}` for the owner's shared key, or a reviewer token's id, `"reviewer"` and its display name (2.1). A
@@ -472,7 +494,7 @@ hex) in the same transaction. A job view (`GET /v1/jobs/{job_id}`) has `human_re
 - the same key and body again → `200` with the same decision; the same key with another body or another review
   → `409 idempotency_conflict`; a decided review → `409 already_decided` (with `review_state`); another
   `expected_version` → `409 version_conflict` (with the current `version`). None of them changes anything;
-- other codes: `invalid_decision`, `invalid_category`, `invalid_reason`, `invalid_version`,
+- other codes: `invalid_decision`, `invalid_category`, `invalid_card_open_s`, `invalid_reason`, `invalid_version`,
   `invalid_idempotency_key`, `invalid_fields`, `not_reviewable` (the job left `REVIEW_REQUIRED` behind the
   review's back; the transaction rolls back), `review_not_found`, `rate_limited`.
 
@@ -497,6 +519,12 @@ workflow, agent, translator or the Runner reads it (a test checks).
   figures are `null`, not 0, for a workflow without an AI.
 - Every rate is `{numerator, denominator, rate, low_95, high_95}`: the 95% Wilson score interval, so 2 of 2 reads
   as 34–100%, not 100%.
+- Each group also has `review_time` (roadmap 2.10): `timed` and `untimed` (decisions with and without
+  `card_open_s`), `median_s` and `p95_s` (the 95th percentile by nearest rank, a measured value; with few decisions it
+  is the slowest one), both `null` when nothing was timed, and `by_priority` with the same figures for `elevated` and
+  `normal` reviews. Never per person: no breakdown by role or credential. The page's clock includes time away from the
+  tab and starts again when another case is opened or the page is reloaded. `schema` is
+  `neuron-flow-reviewer-labels-v2` since this field was added.
 - `totals` (the same counts, `by_role` and `reviewers`: how many different credentials decided), `window`
   (`limit`, `decided`, `decided_total`, `truncated`), `label_scope` (what a label is and is not) and `retention`.
 - Never in the reply: case text, a reviewer's reason, a token. Labels lean towards the proposal (the person saw it

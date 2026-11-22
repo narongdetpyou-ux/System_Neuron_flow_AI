@@ -12,7 +12,8 @@
   POST /v1/jobs/{job_id}/cancel   withdraw a job that is still QUEUED: 200, or 409 not_cancellable
   GET  /v1/reviews                cases waiting for a person: ?state=PENDING|APPROVED|REJECTED&limit=1-100&after=
   GET  /v1/reviews/{review_id}    the case, the proposal (rules, AI second opinion, why raised), every decision
-  GET  /v1/reviews/scorecard      rules and AI against the categories people recorded (roadmap 2.8); counts only
+  GET  /v1/reviews/scorecard      rules and AI against the categories people recorded (roadmap 2.8) and reviewer
+                                  time per group (2.10); counts only
   POST /v1/reviews/{review_id}/decisions   approve or reject: 201 new, 200 the same decision again, 400/404/409
   GET  /v1/me                     who the credential is and what its role may do
   GET  /v1/tokens                 the owner: every personal token, without secrets

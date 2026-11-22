@@ -28,6 +28,15 @@ provider, model and prompt apart as before, and says that the version is unknown
 Every rate keeps its numerator and denominator, and carries the 95% Wilson score interval: with few cases it is
 wide, which is the point (2 of 2 is not 100%).
 
+**Reviewer time** (roadmap 2.10): raising more cases for a person (5.10) costs that person's time, so each group also
+reports how long its decision cards were open before the decision was sent (``card_open_s``, measured by the page),
+as the median and the 95th percentile (nearest rank), overall and by the review's priority (``elevated`` or
+``normal``), with how many decisions were timed and how many were not. Never per person: there is no breakdown by
+credential or role, and no view of one decision shows its time. The page's clock starts when the card appears and
+stops when the decision is sent, so it includes time spent away from the tab, and opening another case or reloading
+the page starts it again. A decision sent over the API without the field is ``untimed``. With few timed decisions the
+95th percentile is simply the slowest one; the reply keeps the counts so nobody reads more into it.
+
 Honest limits (the reply says them in ``label_scope``; the page says them in Thai):
 * the person saw the rules' suggestion and the AI's opinion before deciding, and approving without choosing keeps
   the rules' category, so these labels lean towards the proposal. They are not blind labels;
@@ -40,12 +49,14 @@ Honest limits (the reply says them in ``label_scope``; the page says them in Tha
 
 import math
 import re
+from statistics import median
 
 from app.persistence.queue_store import iso
 
-SCHEMA = "neuron-flow-reviewer-labels-v1"
+SCHEMA = "neuron-flow-reviewer-labels-v2"  # v2 (roadmap 2.10): each group has ``review_time``
 WINDOW = 500  # the newest decided cases
 LANGUAGES = ("th", "non_th")
+PRIORITIES = ("elevated", "normal")  # a review's priority, as the queue stores it
 LABEL_SCOPE = ("Each label is the category a person recorded for a synthetic case, after seeing the rules' "
                "suggestion and the AI's opinion; approving as proposed keeps the rules' category. Not blind labels, "
                "not independent ground truth and not real-world accuracy.")
@@ -104,7 +115,9 @@ def _row(review):
             "language": language_of((review.get("input") or {}).get("summary")),
             "role": review["reviewer_role"],
             "credential": review["reviewer_token_id"],
-            "at": review["decision_at"]}
+            "at": review["decision_at"],
+            "priority": review.get("priority"),
+            "card_open_s": review.get("card_open_s")}
 
 
 def _counts(rows):
@@ -123,6 +136,19 @@ def _scores(rows, has_ai):
             "rules_match": rate(sum(r["rules_category"] == r["label"] for r in labelled), len(labelled)),
             "ai_answered": rate(len(answered), len(labelled)) if has_ai else None,
             "ai_match": rate(sum(r["ai_category"] == r["label"] for r in answered), len(answered)) if has_ai else None}
+
+
+def nearest_rank(ordered, share):
+    """The ``share`` percentile of an ascending list by the nearest-rank method: a value that was measured."""
+    return ordered[max(1, math.ceil(share * len(ordered))) - 1]
+
+
+def review_time(rows):
+    """How long the decision cards of these decisions were open (roadmap 2.10), in seconds; ``None`` without data."""
+    timed = sorted(r["card_open_s"] for r in rows if r["card_open_s"] is not None)
+    return {"timed": len(timed), "untimed": len(rows) - len(timed),
+            "median_s": round(median(timed), 1) if timed else None,
+            "p95_s": nearest_rank(timed, 0.95) if timed else None}
 
 
 def _group(rows):
@@ -148,6 +174,9 @@ def _group(rows):
                                                 for r in disagreeing)} if has_ai else None,
             "by_language": {language: _scores([r for r in rows if r["language"] == language], has_ai)
                             for language in LANGUAGES if any(r["language"] == language for r in rows)},
+            "review_time": {**review_time(rows),
+                            "by_priority": {priority: review_time([r for r in rows if r["priority"] == priority])
+                                            for priority in PRIORITIES if any(r["priority"] == priority for r in rows)}},
             "first_decision_at": iso(min(r["at"] for r in rows)),
             "last_decision_at": iso(max(r["at"] for r in rows))}
 
