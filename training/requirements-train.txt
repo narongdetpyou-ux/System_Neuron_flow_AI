@@ -1,0 +1,7 @@
+# Libraries for training/train_qlora.py, installed only where training runs (a GPU such as Google Colab, owner
+# decision D10), never in the image, pyproject.toml or the session hook (rule 8, ADR-037). PyTorch comes with the GPU
+# environment; the receipt records its version and every library version actually used.
+transformers==4.51.3
+peft==0.15.2
+bitsandbytes==0.45.5
+accelerate==1.6.0

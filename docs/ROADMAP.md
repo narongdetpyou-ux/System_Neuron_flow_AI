@@ -23,7 +23,7 @@ differs, this file and architecture.md win.
   - ถ้าสองฝ่ายเห็นไม่ตรงกัน โค้ดเจอสัญญาณ หรือ AI ชี้ เคสจะถูกยกให้คนดูก่อน พร้อมบอกเหตุผล (ขั้น 5.10)
 - ถ้าเครื่องดับกลางทาง ระบบทำต่อได้ ส่งซ้ำก็ไม่เกิดงานซ้ำ
 - ยกเลิกเคสที่ยังรอคิวได้ และทุกคำขอมีรหัสคำขอ (request id) ไว้ไล่ดูใน log (ขั้น 1.2, 1.3)
-- ผ่านชุดทดสอบอัตโนมัติ 649 ข้อ และเปิดใช้ออนไลน์บน Render แล้ว ระบบปิดตัวอย่างเรียบร้อย และการแก้แค่เอกสารไม่ทำให้ Render ขึ้นเวอร์ชันใหม่ (ขั้น 0.1, 0.5)
+- ผ่านชุดทดสอบอัตโนมัติ 667 ข้อ และเปิดใช้ออนไลน์บน Render แล้ว ระบบปิดตัวอย่างเรียบร้อย และการแก้แค่เอกสารไม่ทำให้ Render ขึ้นเวอร์ชันใหม่ (ขั้น 0.1, 0.5)
 - หน้าเว็บเป็นแบบแชท: พิมพ์เคส ดูขั้นตอนก่อนส่ง กดยืนยัน แล้วติดตามใน Flow และประวัติเหตุการณ์ (ขั้น 1.6)
 - หน้าเว็บบอกว่ามีเคสรอกี่เคส เคสที่รอนานสุดรอมานานเท่าไร ปกติแต่ละเคสใช้เวลาเท่าไร และเคสที่ไม่สำเร็จล้มเพราะอะไร (ขั้น 5.3)
 - ถ้ามีคนแก้กฎหรือ prompt แล้วคำตอบของเคสทดสอบเคสไหนเปลี่ยน ช่องตรวจบน GitHub จะเป็นสีแดงและบอกว่าเคสไหนเปลี่ยนอะไร (ขั้น 5.2)
@@ -78,7 +78,7 @@ differs, this file and architecture.md win.
 | 7 | เตรียมพร้อมก่อนให้คนอื่นใช้ หรือก่อนเปิด repo สาธารณะ | รายงานตรวจความปลอดภัย และรายการตรวจก่อนเปิดตัว | เริ่มแล้ว: 7.1 ปิดข้อมูลส่วนตัวก่อนส่งให้ AI ทำแล้ว และตั้งแต่ 10 พ.ย. ตัวกลางเรียก AI บังคับปิดซ้ำเองก่อนส่ง ส่วนการจำกัดว่าใครเห็นคีย์ AI ได้ เขียนแผนไว้ ยังไม่ทำ; 7.4 เสร็จ: repo นี้เป็นสาธารณะพร้อมประวัติทั้งหมดตั้งแต่ 8 พ.ย. (D5) เปลี่ยนคีย์ Sentry แล้ว และเปิดระบบสแกนคีย์ของ GitHub แล้ว; มีผู้ตรวจสอบอิสระอ่านโค้ดครั้งแรกเมื่อ 10 พ.ย. ตอบครบ 4 ข้อแล้ว และคุณเลือกเก็บประวัติอีเมลเก่าไว้ตามเดิม (D8) |
 | E | [แผนเพิ่มประสิทธิผล](effectiveness_plan.md) 6 งาน (E1–E6): เคสแรกหลังระบบตื่นเร็วขึ้น กฎรุ่น 2 ที่อ่านภาษาไทยได้ หน้าเว็บจริงใช้ AI จริง เก็บคำตอบ "เข้าใจถูกไหม" ให้ AI แยก "อื่น ๆ" ได้ดีขึ้น และคลังแหล่งเรียนที่มีภาษาไทยมากขึ้น | เวลาของเคสแรก ข้อเสนอหลักของเคสภาษาไทย และตัวนับ "เข้าใจถูก" บนหน้าเว็บ | เขียนแผนแล้วเมื่อ 10 พ.ย. ตามที่คุณขอ (PR #50); E1 สร้างแล้วใน PR #60 (10 พ.ย.): ภาพของบริการมีไฟล์ที่แปลไว้ล่วงหน้าครบแล้ว บนเครื่องของ GitHub ที่จำกัดกำลังให้เท่าเครื่องฟรี เคสแรกเร็วขึ้นจาก 14.4 เป็น 3.1 วินาที รวมแล้วเมื่อ 10 พ.ย. และวัดบน Render จริงแล้ว (16 พ.ย.): เคสแรกหลังระบบตื่นใช้ 3.2 วินาที จากเดิม 9.0–10.5 วินาที; E2 สร้างและวัดครบใน PR #64: กฎถูก 61/61 ในชุดพัฒนา 105/116 ในชุดเคสยาก และ 22/40 ในชุดที่กันไว้ ([ผลวัดและข้อจำกัด](evidence/2026-11-11-e2-rules-v2.md)); E3 รอคุณตัดสินใจ; E4 และ E6 (ของผู้ช่วยแนะนำแหล่งเรียน) หยุดไว้ก่อนตามที่คุณสั่ง (11 พ.ย.) |
 | H | [ทักษะแยกกัน ส่งงานผ่านตัวกลาง](skill_handoff.md) มีล่ามแปลเป็นภาษาของทักษะปลายทางระหว่างทาง (H1–H5) | อนุมัติเคสบนหน้าเว็บแล้วเห็นงานที่ส่งต่อมา 1 งาน และกล่อง "ส่งต่อแล้ว" | สร้างแล้วตามที่คุณขอ (11 พ.ย., H1–H3): เส้นทางแรก "อนุมัติเคส → บันทึกผลหลังอนุมัติ" ทำงานแล้ว หน้าเว็บแสดงการส่งต่อทั้งสองทาง ทดสอบกับเคสเดิม 217 เคสผ่านทุกข้อ; คุณลองบนหน้าเว็บจริงผ่านแล้ว (16 พ.ย.); ทักษะใหม่ตัวแรก (H4) รอคุณเลือก |
-| T | [AI ของเราเอง ที่เรียนเป็นรอบ](own_model_plan.md) (T1–T6): สอนโมเดลเปิดด้วยงานของเรา สอบก่อนใช้ทุกรอบ และคุณเป็นคนตัดสินใจเปลี่ยนรุ่น | ผลสอบของรุ่นใหม่เทียบรุ่นเดิมในหน้า Actions | เขียนแผนแล้ว (22 พ.ย. ตามที่คุณขอ) คุณเลือกโมเดล 4B ตัวที่ GitHub ทดสอบอยู่เป็นจุดตั้งต้น และพักไฟล์ใน Drive (22 พ.ย.) · T2 ชุดฝึกสมมติ 240 เคส พร้อมด่านตรวจว่าไม่ซ้ำข้อสอบ ทำแล้ว (22 พ.ย.) ยังไม่ได้ฝึกจริง |
+| T | [AI ของเราเอง ที่เรียนเป็นรอบ](own_model_plan.md) (T1–T6): สอนโมเดลเปิดด้วยงานของเรา สอบก่อนใช้ทุกรอบ และคุณเป็นคนตัดสินใจเปลี่ยนรุ่น | ผลสอบของรุ่นใหม่เทียบรุ่นเดิมในหน้า Actions | เขียนแผนแล้ว (22 พ.ย. ตามที่คุณขอ) คุณเลือกโมเดล 4B ตัวที่ GitHub ทดสอบอยู่เป็นจุดตั้งต้น และพักไฟล์ใน Drive (22 พ.ย.) · T2 ชุดฝึกสมมติ 240 เคส พร้อมด่านตรวจว่าไม่ซ้ำข้อสอบ ทำแล้ว · T3 สูตรการฝึกพร้อมด่านกันข้อความตอนฝึกต่างจากตอนใช้งาน ทำแล้ว (22 พ.ย.) ยังไม่ได้ฝึกจริง รอเลือกที่ฝึก (D10) |
 
 **เรื่องที่คุณต้องตัดสินใจเอง** อยู่ในตาราง [Owner decisions](#owner-decisions) ข้างล่าง เช่น
 - จะจ่ายค่า Render เพื่อให้เคสและรหัสรายคนไม่หายหรือไม่
@@ -185,7 +185,7 @@ owner.
 | H5 | The chain on the page and in traces | 🟡 the page shows the chain both ways (2026-11-11); the trace link is not built | H3 |
 | T1 | Our own model: the plan and ADR-037 ([own_model_plan.md](own_model_plan.md)) | ✅ merged on 2026-11-22 (PR #80); the same day the owner chose the base and round 0: the publisher's 4B the local lane pins | — |
 | T2 | A synthetic training set and the overlap check against every exam set | ✅ built on 2026-11-22: 240 cases (120 Thai, 120 English; 60 per category; every attention kind), a manifest with the file's SHA-256, `training/check_set.py` in the unit tests and the *Training set check* workflow; 0 exact and 0 near matches with every exam set, the open sets and the sealed half included | — |
-| T3 | The training recipe and its receipt, kept out of the image and Render's build | ⬜ | the owner's go-ahead; D10 to run it |
+| T3 | The training recipe and its receipt, kept out of the image and Render's build | ✅ built on 2026-11-22: `training/recipe_v1.json`, `render.py` (examples from the service's own request builder, compared byte for byte with serving in a test), `receipt.py` (receipt and serving contract), `train_qlora.py` (dry run in CI; GPU libraries pinned in `requirements-train.txt`, never in the image) | D10 to run it |
 | T4 | The exam gate for a candidate model on the local lane, with round 0 run again on `main` | ⬜ | the criteria confirmed |
 | T5 | Round 1: train, examine, decide | ⬜ | T2–T4, D10; where the trained file is put |
 | T6 | Rounds from people's blind labels | ⬜ | 2.9, D1, D3; real cases also D4, 7.1–7.3, 7.5 |
@@ -2030,3 +2030,8 @@ status is in the table above.
   and the *Training set check* workflow. `training/` is ignored by Render's build filter and never copied into the
   image. ADR-037 is in force from this step. The first draft collided with exam texts in 7 cases, which were
   rewritten; the set now has 0 exact and 0 near matches.
+- 2026-11-22: the owner dropped the idea of changing Core (Core never touches a model's answers) and said to start
+  T3. Built: the recipe `triage_qlora_v1`, the renderer that builds every training example with the service's own
+  request builder (a test compares all 240 with serving, byte for byte), the receipt format with the serving contract,
+  and the GPU script with a dry run in CI. Nothing trained; running it needs D10.
+

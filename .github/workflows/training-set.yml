@@ -3,7 +3,8 @@ name: Training set check
 # must not equal or nearly equal any exam text. The unit tests (Core logic tests) already check it against every
 # exam set committed here; this workflow also checks it against the open-benchmark sets, which are built at run
 # time from pinned public files and never committed (roadmap 5.6), and against the sealed half of the open data,
-# reported as counts only (ADR-032). Nothing is trained here: GitHub's hosted runners only check and measure.
+# reported as counts only (ADR-032). Then it plans one training round without training (T3's dry run: the recipe,
+# the set and the rendered examples). Nothing is trained here: GitHub's hosted runners only check and measure.
 on:
   push:
     paths:
@@ -47,3 +48,11 @@ jobs:
             --extra open-sets/open_clinc150_v1.json open-sets/open_banking77_v1.json \
                     open-sets/open_massive_th_en_v1.json open-sets/open_bipia_injection_v1.json \
             --extra-sealed open-sets/open_attention_sealed_v1.json
+      - name: Plan a training round without training (dry run)
+        run: |
+          {
+            echo '### สูตรการฝึก (ขั้น T3): ซ้อมตรวจก่อนฝึก ไม่ได้ฝึกจริง'
+            echo '```text'
+            python -m training.train_qlora --dry-run
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
