@@ -160,7 +160,7 @@ so; a paid plan with a disk keeps them.
 
 **Locally (Python 3.10+):**
 ```bash
-python -m unittest discover -s tests -v        # 624 tests
+python -m unittest discover -s tests -v        # 649 tests
 python -m examples.case_triage_demo            # v1 rules, one synthetic case
 python -m examples.case_triage_shadow_demo     # v2 shadow mode, three synthetic cases (offline mock AI)
 python -m app.eval.triage_shadow_eval          # scorecard on 61 synthetic cases
@@ -202,7 +202,7 @@ most 1 MiB. The agent `version` is frozen into each job, so an old job refuses t
 | [Effectiveness plan](docs/effectiveness_plan.md) | What "effective" means here, as eleven measures with today's values, and six planned work packages (E1 to E6) that move them: a faster first case, rules that read Thai, a real model behind the page, recorded feedback, the edge of `other`, more Thai study resources |
 | [Skill handoff](docs/skill_handoff.md) | How separate skills pass work to each other: one exchange, fixed versioned routes, a common language with a translator on each side; what is recorded and shown, every refusal, and how it is tested |
 | [Benchmarking plan](docs/benchmarking.md) | Three stages of testing beyond our own cases: the robustness gate (built), open benchmarks (built), attacks, privacy, load and live drift (first injection measurement done; the rest planned); the datasets, their licences and the ones left out |
-| [Our own model](docs/own_model_plan.md) | A plan (track T1–T6, ADR-037 proposed): fine-tune an open-weight model in measured rounds from synthetic cases and later people's blind labels, examine every candidate on the local lane before the owner decides to switch; never a model that learns while it serves |
+| [Our own model](docs/own_model_plan.md) | A plan (track T1–T6, ADR-037) with T2 built, a synthetic training set of 240 cases and its overlap check: fine-tune an open-weight model in measured rounds from synthetic cases and later people's blind labels, examine every candidate on the local lane before the owner decides to switch; never a model that learns while it serves |
 | [Auto-approve limits](docs/autosend_simulation.md) | What a button that sends a case without a person would do, simulated on saved answers: the hard set, the open benchmarks, the four policies, what is measured, and what a real button would need (ADR-031) |
 | [วิธีเปิด ปิด และเปลี่ยน AI ของหน้าเว็บ](docs/switch_ai_guide_th.md) | Thai, for the owner: switching the live page between the mock AI, Typhoon and Claude in Render's Environment tab, step by step, and how to switch back |
 | [Funding readiness pack](docs/funding/README.md) | Internal evidence register; not a submitted application |

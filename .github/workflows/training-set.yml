@@ -1,0 +1,49 @@
+name: Training set check
+# Own-model track T2 (docs/own_model_plan.md, ADR-037): the synthetic training set must pass its record checks and
+# must not equal or nearly equal any exam text. The unit tests (Core logic tests) already check it against every
+# exam set committed here; this workflow also checks it against the open-benchmark sets, which are built at run
+# time from pinned public files and never committed (roadmap 5.6), and against the sealed half of the open data,
+# reported as counts only (ADR-032). Nothing is trained here: GitHub's hosted runners only check and measure.
+on:
+  push:
+    paths:
+      - "training/**"
+      - ".github/workflows/training-set.yml"
+  pull_request:
+    paths:
+      - "training/**"
+      - ".github/workflows/training-set.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: training-set-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - name: Keep the downloaded public sources between runs
+        uses: actions/cache@v6
+        with:
+          path: ~/open-bench-cache
+          key: open-bench-sources-${{ hashFiles('tests/open_benchmarks/build_sets.py') }}-v1
+      # Isolated (-I): the builder imports nothing from this repository and reads the downloads as data.
+      - name: Build the open-benchmark case sets and check them against the manifest
+        run: python -I tests/open_benchmarks/build_sets.py --out open-sets --cache ~/open-bench-cache --check
+      # Written as a case file so the overlap check can compare against it; the step prints counts only.
+      - name: Write the sealed half of the open data as a case set (counts only)
+        run: |
+          python -m tests.open_benchmarks.attention_open_check --cache ~/open-bench-cache --part sealed \
+            --export-sealed open-sets/open_attention_sealed_v1.json > /dev/null
+      - name: Check the training set against every exam set
+        run: |
+          python -m training.check_set --summary "$GITHUB_STEP_SUMMARY" \
+            --extra open-sets/open_clinc150_v1.json open-sets/open_banking77_v1.json \
+                    open-sets/open_massive_th_en_v1.json open-sets/open_bipia_injection_v1.json \
+            --extra-sealed open-sets/open_attention_sealed_v1.json
