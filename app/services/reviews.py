@@ -4,7 +4,9 @@ Flow for one ``POST /v1/reviews/{review_id}/decisions``:
 1. the body must hold ``decision`` (``APPROVE`` or ``REJECT``), ``reason`` (1-500 characters, the person's own
    words), ``expected_version`` (the review version the person looked at) and ``idempotency_key``; it may hold
    ``final_category``, one of the fixed triage categories. Approving without one keeps the rules' suggestion;
-   rejecting without one records no category;
+   rejecting without one records no category. It may also hold ``card_open_s``, how many seconds the decision card
+   was open on the page before the person sent it (roadmap 2.10): a number from 0 to ``CARD_OPEN_MAX_S``, a
+   measurement and not part of the decision, so it is left out of the request's fingerprint;
 2. who decides comes from the credential, never from the body (``app.services.access``, ADR-034): the owner's shared
    key is recorded as ``shared-access-key`` with the role ``owner``, a reviewer's personal token as its token id
    with the role ``reviewer``. A submitter's token cannot decide;
@@ -19,6 +21,7 @@ transaction: for ``case_triage.v2`` that is ``case_triage.v2.apply``, which writ
 (roadmap 2.3, ADR-004). A rejection starts nothing.
 """
 
+import math
 import re
 
 from neuron_flow import SpecError
@@ -26,7 +29,7 @@ from neuron_flow.model import fingerprint
 
 from app.domains.case_triage.contracts import CATEGORIES, QUEUE_FOR
 from app.persistence import PENDING, REVIEW_STATES, DecisionConflict, StateError
-from app.persistence.queue_store import iso
+from app.persistence.queue_store import CARD_OPEN_MAX_S, iso
 
 from .access import OWNER_IDENTITY, PERMISSIONS
 from .admission import IDEMPOTENCY_KEY
@@ -37,7 +40,7 @@ REVIEW_ID = re.compile(r"^rev_[0-9a-f]{24}$")
 SHARED_KEY_REVIEWER = OWNER_IDENTITY.reviewer
 DECIDE_ROLES = tuple(sorted(PERMISSIONS[("POST", "/v1/reviews/{review_id}/decisions")]))
 _REQUIRED = {"decision", "reason", "expected_version", "idempotency_key"}
-_OPTIONAL = {"final_category"}
+_OPTIONAL = {"final_category", "card_open_s"}
 _CONTROL = re.compile(r"[\x00-\x08\x0b-\x1f\x7f]")  # tabs and new lines are allowed in a reason
 _PROPOSAL = ("suggested_category", "suggested_queue", "suggestion_source", "second_opinion", "agreement",
              "review_priority", "review_reasons", "mode")
@@ -59,14 +62,15 @@ class DecisionError(Exception):
 def policy():
     """What the page needs to offer a decision: the choices, the limits and which roles may decide."""
     return {"decisions": list(DECISIONS), "categories": list(CATEGORIES), "queues": dict(QUEUE_FOR),
-            "reason_max_chars": REASON_MAX_CHARS, "decide_roles": list(DECIDE_ROLES), "per_person_tokens": True}
+            "reason_max_chars": REASON_MAX_CHARS, "decide_roles": list(DECIDE_ROLES), "per_person_tokens": True,
+            "card_open_max_s": CARD_OPEN_MAX_S}
 
 
 def check_decision(body, review):
     """The normalized decision, or :class:`DecisionError` (400) before anything is written."""
     if not isinstance(body, dict) or not _REQUIRED <= set(body) <= _REQUIRED | _OPTIONAL:
         raise DecisionError(400, "invalid_fields", "The body must contain decision, reason, expected_version and "
-                            "idempotency_key, and may contain final_category")
+                            "idempotency_key, and may contain final_category and card_open_s")
     decision = body["decision"]
     if decision not in DECISIONS:
         raise DecisionError(400, "invalid_decision", "decision must be APPROVE or REJECT")
@@ -91,7 +95,27 @@ def check_decision(body, review):
         raise DecisionError(400, "invalid_idempotency_key",
                             "idempotency_key must be 8-128 letters, digits, '.', '_', ':' or '-'")
     return {"decision": decision, "final_category": category, "reason": reason, "expected_version": version,
-            "idempotency_key": key}
+            "idempotency_key": key, "card_open_s": check_card_open(body.get("card_open_s"))}
+
+
+def check_card_open(value):
+    """Seconds the decision card was open (roadmap 2.10), rounded to a tenth, or ``None`` when the client did not say.
+
+    A number from 0 to ``CARD_OPEN_MAX_S``; anything else is refused (400) rather than guessed, because a wrong value
+    would be counted silently. A JSON number too large for a float, such as 1e400, arrives as infinity."""
+    if value is None:
+        return None
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        valid = False
+    else:
+        try:
+            valid = math.isfinite(value) and 0 <= value <= CARD_OPEN_MAX_S
+        except OverflowError:  # an integer too large to compare as a float
+            valid = False
+    if not valid:
+        raise DecisionError(400, "invalid_card_open_s", "card_open_s must be the seconds the decision card was open: "
+                            f"a number from 0 to {CARD_OPEN_MAX_S}", max_s=CARD_OPEN_MAX_S)
+    return round(float(value), 1) + 0.0  # + 0.0 turns -0.0 into 0.0
 
 
 def decide(store, review_id, body, *, reviewer=None, request_id=None, exchange=None):
@@ -105,6 +129,7 @@ def decide(store, review_id, body, *, reviewer=None, request_id=None, exchange=N
         raise DecisionError(404, "review_not_found", "No review with this id")
     checked = check_decision(body, review)
     try:
+        # card_open_s stays out: a retried click is the same decision, even when its card was open longer by then.
         digest = fingerprint({"review_id": review_id, **{k: checked[k] for k in
                                                          ("decision", "final_category", "reason", "expected_version")}})
     except SpecError:  # text Core's encoder cannot hold, such as half of an emoji
@@ -115,7 +140,8 @@ def decide(store, review_id, body, *, reviewer=None, request_id=None, exchange=N
                                     reason=checked["reason"], expected_version=checked["expected_version"],
                                     idempotency_key=checked["idempotency_key"], request_sha256=digest,
                                     reviewer_token_id=reviewer["token_id"], reviewer_role=reviewer["role"],
-                                    request_id=request_id, handoff=exchange.prepare if exchange else None)
+                                    request_id=request_id, card_open_s=checked["card_open_s"],
+                                    handoff=exchange.prepare if exchange else None)
     except KeyError:
         raise DecisionError(404, "review_not_found", "No review with this id") from None
     except DecisionConflict as exc:
@@ -128,6 +154,8 @@ def decide(store, review_id, body, *, reviewer=None, request_id=None, exchange=N
 # -- views ------------------------------------------------------------------------------------
 
 def decision_view(row):
+    """One decision as the API shows it. Never its ``card_open_s``: reviewer time is reported per group of cases in
+    the scorecard (roadmap 2.10), never per decision or per person."""
     if row is None:
         return None
     approved = row["decision"] == "APPROVE"

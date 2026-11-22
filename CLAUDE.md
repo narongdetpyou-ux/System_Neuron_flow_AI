@@ -16,7 +16,9 @@ trusted agents in bounded child processes, retries, recovers after a crash and w
   the owner's (roadmap 2.1, ADR-034). Since 2026-11-19 the categories people record are counted as labels: the
   rules and the AI against them, per proposal version (the AI's whole version as Core checked it, since the quality
   report of 2026-11-19; ADR-035), on `GET /v1/reviews/scorecard` and in the settings tab; counts only, never a reason
-  to change anything by itself (roadmap 2.8; D6 stays the owner's);
+  to change anything by itself (roadmap 2.8; D6 stays the owner's). Since 2026-11-22 the same scorecard reports how
+  long decision cards were open before the decision (the page sends `card_open_s`), per group and by priority, never
+  per person (roadmap 2.10);
 - an AI gateway (an offline mock, Claude, Typhoon: SCB 10X's Thai-first model, free within rate limits;
   ADR-021, or `local`: an open-weight model on a server we run ourselves, today llama.cpp with Typhoon 2.5 4B
   on the GitHub runner; ADR-026);
@@ -203,7 +205,7 @@ If a task seems to need breaking a rule:
 ## 4. Checking your work
 
 ```bash
-python -m unittest discover -s tests -v        # all tests (602 on 2026-11-21); CI: Python 3.10 and 3.12
+python -m unittest discover -s tests -v        # all tests (624 on 2026-11-22); CI: Python 3.10 and 3.12
 python -m examples.case_triage_demo            # v1 rules, one synthetic case
 python -m examples.case_triage_shadow_demo     # v2 shadow mode with the offline mock AI
 python -m examples.study_guide_demo            # the study guide's answers to four synthetic requests
@@ -380,8 +382,8 @@ Notes for cloud sessions (claude.ai/code):
 | `app/eval/` | the two scorecards (triage: 61 labelled cases; study guide: 67 labelled requests), the eval gate's shared code and per-category scores (`common.py`), the rules v1/v2 replay (`rules_comparison.py`) the auto-approve simulation (`autosend_sim.py`, ADR-031: a replay only, never imported by the service) and the attention replay (`attention_replay.py`, ADR-032: the flag before and after the signals on saved answers); `golden/` holds the case sets, among them the 128-case hard auto-send set and the 64-case held-out attention set |
 | `app/observability/sentry.py` | Sentry reporting: step failures, degraded AI, Runner recoveries |
 | `app/observability/tracing.py`, `job_spans.py` | tracing: the OTLP/JSON exporter with its attribute allow-list, and a finished job's spans (ADR-017) |
-| `app/persistence/queue_store.py` | the application queue in its own SQLite file (`<data>/app/queue.sqlite3`, schema 4): jobs, events, the Runner heartbeat, reviews and append-only decisions, skill handoffs, personal access tokens (the secret's SHA-256, never the secret; ADR-034), and the store id that shows when the queue started empty |
-| `app/services/` | workflow catalog, admission, Runner with reconciliation, result summaries, queue and run-time figures, review decisions (`reviews.py`), the rules and the AI against people's decisions (`review_labels.py`, roadmap 2.8: counts only, nothing reads it to decide), who may call the API and what each role may do (`access.py`: the shared key, personal tokens and the role table, ADR-034) |
+| `app/persistence/queue_store.py` | the application queue in its own SQLite file (`<data>/app/queue.sqlite3`, schema 5): jobs, events, the Runner heartbeat, reviews and append-only decisions (with each decision card's open time, `card_open_s`, since schema 5; roadmap 2.10), skill handoffs, personal access tokens (the secret's SHA-256, never the secret; ADR-034), and the store id that shows when the queue started empty |
+| `app/services/` | workflow catalog, admission, Runner with reconciliation, result summaries, queue and run-time figures, review decisions (`reviews.py`), the rules and the AI against people's decisions and reviewer time per group (`review_labels.py`, roadmap 2.8 and 2.10: counts only, nothing reads it to decide), who may call the API and what each role may do (`access.py`: the shared key, personal tokens and the role table, ADR-034) |
 | `app/api/`, `app/web/` | standard-library HTTP API and the Thai web page (chat layout with a case / study-question switch, the study guide's layered answer, Flow and Trace, read-only settings); `tests/test_web_page.py` holds the page to its contracts |
 | `app/boot.py` | the image's process 1: takes the data folder as root, switches to `neuron`, becomes tini |
 | `app/settings.py`, `app/serve.py` | settings from the environment, with the start's storage check from the mount table (roadmap 1.7, ADR-036); the launcher (API + supervised Runner) |
@@ -623,6 +625,20 @@ Notes for cloud sessions (claude.ai/code):
     incomplete (42%): `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md` (Contributor Covenant 2.1 by reference), two issue
     templates with a private security link, and a pull request template that mirrors §5. Docs only; it does not
     redeploy. The repository's description is a setting only the owner can fill in (the About box's gear).
+    Merged as PR #78 the same day; the owner filled in the description and the checklist is complete.
+  - Reviewer time per case (roadmap 2.10), built on 2026-11-22 after the owner asked what came next and chose it among
+    three buildable items: the decision card notes when it appeared (`performance.now()`), and the decision carries
+    `card_open_s` (0 to 86,400 s, a tenth of a second; measured once per idempotency key, left out of the request
+    fingerprint, never shown in a view of a decision). Queue schema 5 adds the column, with a tested 4 → 5 upgrade.
+    Each scorecard group has `review_time`: timed and untimed decisions, the median and the 95th percentile by
+    nearest rank, overall and by priority; never per person, role or credential. Checked by
+    `tests/test_service_review_time.py`, the page's contract tests and the browser walk (run in this session too, with
+    a Playwright 1.63.0 venv: the timed decision appears in the settings tab and over the API). Real figures need D3
+    and D1.
+  - The same day the owner asked whether the system could have an AI of its own that "learns along with developing
+    the system". Answered in chat, nothing built: fine-tuning an open-weight model (the owner's Typhoon 4B is on hold)
+    in measured rounds from people's labels, never a model that changes itself; it needs blind labels (2.9), a disk
+    (D1), real data only after D4, a GPU to train and a paid machine to serve (D7). Not a roadmap item yet.
 - **Not done yet:**
   - Claude has never been run (D2). Typhoon has run on the synthetic sets and the 116 robustness edges,
     plus all three E2 triage sets (2026-11-11, 217/217 answered/completed): AI correct 60/61 development,
@@ -729,12 +745,12 @@ Notes for cloud sessions (claude.ai/code):
     another version and new evidence.
   - 5.8's first full run is recorded: the owner chooses its branch (not good enough, close or good enough;
     roadmap 5.8, "After the first full run", step 2), then follow it.
-  - **From the quality report of 2026-11-19: 1.7 and 1.8 are built (2026-11-21).** 2.9 (blind labels) waits for the
-    owner's go-ahead; 2.10 (reviewer time) is buildable. Never "fix" the report's held-out example `HO-TH-UPL-05`
-    with a keyword (rule 5).
-  - Buildable now without an owner decision: 2.10 (above), the rest of 5.5 (the ten masking gaps, which
+  - **From the quality report of 2026-11-19: 1.7 and 1.8 are built (2026-11-21), and 2.10 (2026-11-22).** 2.9
+    (blind labels) waits for the owner's go-ahead. Never "fix" the report's held-out example `HO-TH-UPL-05` with a
+    keyword (rule 5).
+  - Buildable now without an owner decision: the rest of 5.5 (the ten masking gaps, which
     need new masking rules, and NFC, which needs an ADR; the invisible-text gaps were fixed on 2026-11-19), 5.6 and
-    5.7, the rest of Phase 2 (2.1 to 2.4 and 2.8 are built; 2.5 needs D3, 2.6 and 2.7 when needed), H5's trace link,
+    5.7, the rest of Phase 2 (2.1 to 2.4, 2.8 and 2.10 are built; 2.5 needs D3, 2.6 and 2.7 when needed), H5's trace link,
     and Phase 4 (4.1 first; Phase 3, which it needs, is built). The rest of 7.1 (who can read the AI key) needs an
     ADR first.
   - The effectiveness track (2026-11-10, PR #50, [docs/effectiveness_plan.md](docs/effectiveness_plan.md)): E1

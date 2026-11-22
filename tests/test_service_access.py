@@ -376,7 +376,7 @@ class SecrecyTests(AccessTestCase):
 
 
 class MigrationTests(unittest.TestCase):
-    def test_a_version_3_queue_is_upgraded_to_4_with_no_tokens_and_keeps_its_jobs(self):
+    def test_a_version_3_queue_is_upgraded_with_no_tokens_and_keeps_its_jobs(self):
         with tempfile.TemporaryDirectory() as folder:
             config = settings(Path(folder))
             store = QueueStore(config.queue_db)
@@ -388,7 +388,8 @@ class MigrationTests(unittest.TestCase):
             store = QueueStore(config.queue_db)
             store.migrate()
             with closing(sqlite3.connect(config.queue_db)) as db:
-                self.assertEqual(db.execute("SELECT value FROM meta WHERE key='schema_version'").fetchone()[0], "4")
+                # 3 -> 4 (access tokens) -> 5 (reviewer time, roadmap 2.10)
+                self.assertEqual(db.execute("SELECT value FROM meta WHERE key='schema_version'").fetchone()[0], "5")
             self.assertEqual(store.list_tokens(), [])
             self.assertEqual(store.get(job_id)["status"], "QUEUED")
             app = ApiApp(config, store)

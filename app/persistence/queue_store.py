@@ -39,6 +39,12 @@ under it, a job starts at most one handoff, and chains stop at the route table's
 Access tokens (schema version 4, ADR-034): one row per personal token the owner issued, with the SHA-256 of its
 secret, never the secret. Only the API writes them. On storage that is not persistent they go with the rest of the
 queue, so a lost token is refused like an unknown one (it fails closed).
+
+Reviewer time (schema version 5, roadmap 2.10): a decision may carry ``card_open_s``, the seconds its decision card
+was open on the page before it was sent (a number from 0 to ``CARD_OPEN_MAX_S``, or ``NULL`` when the client did not
+say). It is a measurement, not part of the decision: the request fingerprint leaves it out, so a retried click with
+another value returns the first decision and keeps the first value. Only the reviewer-label scorecard reads it, as
+figures per group; no view of one decision shows it.
 """
 
 from contextlib import contextmanager
@@ -51,7 +57,8 @@ import time
 
 from neuron_flow.model import encode, fingerprint
 
-SCHEMA_VERSION = 4
+SCHEMA_VERSION = 5
+CARD_OPEN_MAX_S = 86_400  # a decision card open longer than a day is not reviewer time
 QUEUED, RUNNING, CANCELLED = "QUEUED", "RUNNING", "CANCELLED"
 REVIEW_REQUIRED, APPROVED, REJECTED = "REVIEW_REQUIRED", "APPROVED", "REJECTED"
 TERMINAL = (REVIEW_REQUIRED, "COMPLETED", "FAILED", "DELIVERY_FAILED")  # the outcomes the Runner records
@@ -130,6 +137,7 @@ CREATE TABLE IF NOT EXISTS review_decisions (
     request_sha256 TEXT NOT NULL,
     request_id TEXT,
     created_at REAL NOT NULL,
+    card_open_s REAL CHECK (card_open_s IS NULL OR (card_open_s >= 0 AND card_open_s <= 86400)),
     UNIQUE (review_id, version)
 );
 CREATE INDEX IF NOT EXISTS review_decisions_by_review ON review_decisions(review_id, seq);
@@ -286,6 +294,9 @@ class QueueStore:
             if version == "3":  # the access_tokens table was created above; a queue starts with no tokens
                 db.execute("UPDATE meta SET value='4' WHERE key='schema_version'")
                 version = "4"
+            if version == "4":
+                self._upgrade_4_to_5(db)
+                version = "5"
             if version != str(SCHEMA_VERSION):
                 raise RuntimeError(f"Queue database schema {version} is not supported (expected {SCHEMA_VERSION})")
             db.execute("INSERT OR IGNORE INTO meta(key, value) VALUES('store_id', ?)", ("store_" + secrets.token_hex(8),))
@@ -299,6 +310,16 @@ class QueueStore:
             if isinstance(review, dict):
                 _insert_review(db, row["job_id"], review, row["finished_at"] or now)
         db.execute("UPDATE meta SET value='2' WHERE key='schema_version'")
+
+    @staticmethod
+    def _upgrade_4_to_5(db):
+        """Reviewer time (roadmap 2.10): ``card_open_s`` on every decision; the decisions made before have none.
+        A table created above from ``_SCHEMA`` (a version-1 queue had none) already has the column."""
+        columns = {row["name"] for row in db.execute("PRAGMA table_info(review_decisions)")}
+        if "card_open_s" not in columns:
+            db.execute("ALTER TABLE review_decisions ADD COLUMN card_open_s REAL"
+                       " CHECK (card_open_s IS NULL OR (card_open_s >= 0 AND card_open_s <= 86400))")
+        db.execute("UPDATE meta SET value='5' WHERE key='schema_version'")
 
     def store_info(self):
         """``{"id", "created_at"}`` of this queue database: a new id means it started empty again."""
@@ -707,7 +728,8 @@ class QueueStore:
         decided reviews there are in all: ``(reviews, total)``, read in one snapshot.
 
         For the reviewer-label scorecard (roadmap 2.8). A row holds the job's workflow type, input and result, and
-        the decision's verdict, category, time and who made it; never the person's reason. The decision is the one
+        the review's priority, the decision's verdict, category, time, who made it and how long its card was open
+        (``card_open_s``, roadmap 2.10); never the person's reason. The decision is the one
         the review's current state came from (its version is one below the review's), so a review that could be
         decided again later would still count once. The caller reads the case text only to tell its language.
         """
@@ -715,8 +737,9 @@ class QueueStore:
             db.execute("BEGIN")  # one snapshot, so the total never counts a decision the rows do not hold
             try:
                 rows = db.execute(
-                    "SELECT r.review_id, r.state, r.suggested_category, j.workflow_type, j.input, j.result,"
-                    " d.decision, d.final_category, d.reviewer_token_id, d.reviewer_role, d.created_at AS decision_at"
+                    "SELECT r.review_id, r.state, r.suggested_category, r.priority, j.workflow_type, j.input, j.result,"
+                    " d.decision, d.final_category, d.reviewer_token_id, d.reviewer_role, d.created_at AS decision_at,"
+                    " d.card_open_s"
                     " FROM review_decisions d JOIN reviews r ON r.review_id = d.review_id"
                     " AND r.version = d.version + 1 JOIN jobs j ON j.job_id = r.job_id"
                     " WHERE r.state IN (?, ?) ORDER BY d.seq DESC LIMIT ?", (APPROVED, REJECTED, limit)).fetchall()
@@ -727,7 +750,8 @@ class QueueStore:
         return [self._review(row) for row in rows], total
 
     def decide(self, review_id, *, decision, final_category, reason, expected_version, idempotency_key,
-               request_sha256, reviewer_token_id, reviewer_role, request_id=None, handoff=None, now=None):
+               request_sha256, reviewer_token_id, reviewer_role, request_id=None, card_open_s=None, handoff=None,
+               now=None):
         """Record a person's decision. Returns ``(decision_row, created)``.
 
         One ``BEGIN IMMEDIATE`` transaction: the decision row, the review's new state and version, the job's new
@@ -735,7 +759,8 @@ class QueueStore:
         starts, all or nothing. The idempotency key is checked first, so a retried click returns the
         same decision (``created`` False) even after the review is decided. Raises ``KeyError`` for an unknown
         review and :class:`DecisionConflict` when the key was used for another request, the review is already
-        decided, or ``expected_version`` is not the current version.
+        decided, or ``expected_version`` is not the current version. ``card_open_s`` (roadmap 2.10) is stored with a
+        new decision only; a repeated key returns the decision with the value it was first recorded with.
         """
         if decision not in DECISION_STATE:
             raise ValueError(f"unknown decision {decision}")
@@ -756,10 +781,10 @@ class QueueStore:
             decision_id = "dec_" + secrets.token_hex(12)
             state = DECISION_STATE[decision]
             db.execute("INSERT INTO review_decisions(decision_id, review_id, version, reviewer_token_id, reviewer_role,"
-                       " decision, final_category, reason, idempotency_key, request_sha256, request_id, created_at)"
-                       " VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",
+                       " decision, final_category, reason, idempotency_key, request_sha256, request_id, created_at,"
+                       " card_open_s) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)",
                        (decision_id, review_id, review["version"], reviewer_token_id, reviewer_role, decision,
-                        final_category, reason, idempotency_key, request_sha256, request_id, now))
+                        final_category, reason, idempotency_key, request_sha256, request_id, now, card_open_s))
             moved = db.execute("UPDATE reviews SET state=?, version=version+1, decided_at=? WHERE review_id=?"
                                " AND state=? AND version=?", (state, now, review_id, PENDING, review["version"]))
             job = db.execute("UPDATE jobs SET status=?, updated_at=? WHERE job_id=? AND status=?",

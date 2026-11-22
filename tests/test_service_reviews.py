@@ -400,8 +400,8 @@ class MigrationTests(unittest.TestCase):
         store = QueueStore(self.path)
         store.migrate()
         with raw_db(self.path) as db:
-            db.execute("UPDATE meta SET value='5' WHERE key='schema_version'")
-        with self.assertRaisesRegex(RuntimeError, "schema 5 is not supported"):
+            db.execute("UPDATE meta SET value='6' WHERE key='schema_version'")
+        with self.assertRaisesRegex(RuntimeError, "schema 6 is not supported"):
             store.migrate()
 
 

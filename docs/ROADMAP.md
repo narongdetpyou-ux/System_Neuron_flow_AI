@@ -23,7 +23,7 @@ differs, this file and architecture.md win.
   - ถ้าสองฝ่ายเห็นไม่ตรงกัน โค้ดเจอสัญญาณ หรือ AI ชี้ เคสจะถูกยกให้คนดูก่อน พร้อมบอกเหตุผล (ขั้น 5.10)
 - ถ้าเครื่องดับกลางทาง ระบบทำต่อได้ ส่งซ้ำก็ไม่เกิดงานซ้ำ
 - ยกเลิกเคสที่ยังรอคิวได้ และทุกคำขอมีรหัสคำขอ (request id) ไว้ไล่ดูใน log (ขั้น 1.2, 1.3)
-- ผ่านชุดทดสอบอัตโนมัติ 602 ข้อ และเปิดใช้ออนไลน์บน Render แล้ว ระบบปิดตัวอย่างเรียบร้อย และการแก้แค่เอกสารไม่ทำให้ Render ขึ้นเวอร์ชันใหม่ (ขั้น 0.1, 0.5)
+- ผ่านชุดทดสอบอัตโนมัติ 624 ข้อ และเปิดใช้ออนไลน์บน Render แล้ว ระบบปิดตัวอย่างเรียบร้อย และการแก้แค่เอกสารไม่ทำให้ Render ขึ้นเวอร์ชันใหม่ (ขั้น 0.1, 0.5)
 - หน้าเว็บเป็นแบบแชท: พิมพ์เคส ดูขั้นตอนก่อนส่ง กดยืนยัน แล้วติดตามใน Flow และประวัติเหตุการณ์ (ขั้น 1.6)
 - หน้าเว็บบอกว่ามีเคสรอกี่เคส เคสที่รอนานสุดรอมานานเท่าไร ปกติแต่ละเคสใช้เวลาเท่าไร และเคสที่ไม่สำเร็จล้มเพราะอะไร (ขั้น 5.3)
 - ถ้ามีคนแก้กฎหรือ prompt แล้วคำตอบของเคสทดสอบเคสไหนเปลี่ยน ช่องตรวจบน GitHub จะเป็นสีแดงและบอกว่าเคสไหนเปลี่ยนอะไร (ขั้น 5.2)
@@ -62,14 +62,15 @@ differs, this file and architecture.md win.
   - ข้ออื่นเป็นแผนงาน: 1.7 (ป้าย "ถาวร" ต้องตรวจจริง และสัญญาณแยกเมื่อตัวรันงานติด ทำแล้ว 21 พ.ย. ดูข้อถัดไป) 1.8 (ทดสอบกดจริงบนจอขนาดมือถือใน GitHub ทำแล้ว 21 พ.ย. ดูข้อถัดไป) 2.9 (ให้คนเลือกหมวดก่อนเห็นข้อเสนอ ต้องรอคุณเห็นชอบ) 2.10 (เวลาที่คนใช้ตัดสินแต่ละเคส) และเพิ่มเกณฑ์ใน 1.4, 5.7, 7.2, 7.5 ส่วนที่ต้องให้คุณตัดสินใจ: D1 (ดิสก์ถาวร) และข้อมูลจริง (D4)
 - **ป้าย "ถาวร" และสถานะตัวรันงาน มาจากการตรวจจริง (21 พ.ย., ขั้น 1.7, ADR-036):** ตอนเริ่มระบบ ระบบดูตารางดิสก์ของเครื่อง (mount table) แล้วเรียกที่เก็บว่า "ถาวร" เฉพาะเมื่อโฟลเดอร์ข้อมูลอยู่บนดิสก์ที่ต่อแยกจริง ถ้าตั้งไว้แต่ดิสก์ไม่ได้ต่อ แท็บ "ตั้งค่า" บอก "ชั่วคราว" พร้อมเหตุผล มีหน้าตรวจความพร้อมใหม่ `/readyz` ที่บอกว่าตัวรันงานพร้อมทำเคสไหม (ตั้งค่า AI ไม่ครบจะได้ `blocked_config`) ส่วน `/healthz` เดิมไม่เปลี่ยน เพราะ Render ใช้ตัดสินการรีสตาร์ท และตัวรันงานที่ติดแจ้ง Sentry 1 ครั้งต่อการเริ่มระบบ บนแผนฟรีหน้าเว็บยังบอก "ชั่วคราว" เหมือนเดิม คุณลองบนหน้าเว็บจริงหลังอัปเดตแล้วและยืนยันว่าผ่าน (21 พ.ย.) ([บันทึกหลักฐาน](evidence/2026-11-21-readiness-and-storage-check.md), [วิธีใช้](intake_queue.md))
 - **GitHub กดหน้าเว็บบนจอขนาดมือถือให้ทุกครั้ง (21 พ.ย., ขั้น 1.8):** ทุกครั้งที่ส่งโค้ด ช่องตรวจ *Service container* เปิดหน้าเว็บด้วยเบราว์เซอร์อัตโนมัติบนจอขนาดมือถือ แล้วกดเหมือนคน: ใส่รหัส ส่งเคส ยืนยัน เปิดเคสจากกล่อง "รอรีวิว" กดอนุมัติ เปิดงานที่ส่งต่อ และดูว่าแท็บ "ตั้งค่า" นับคำตัดสินแล้ว ถ้าปุ่มไหนกดไม่ได้ หน้าจอล้นออกด้านข้าง หรือหน้าเว็บมีข้อผิดพลาด ช่องตรวจจะเป็นสีแดงและ Render จะไม่อัปเดต รูปหน้าจอทุกขั้นอยู่ใน artifact `browser-walk` ของหน้า run ([วิธีดู](intake_queue.md#github-ลองกดหน้าเว็บบนจอขนาดมือถือให้ทุกครั้ง-ขั้น-18))
+- **จับเวลาที่คนใช้ตัดสินแต่ละเคส (22 พ.ย., ขั้น 2.10 ตามที่คุณเลือก):** หน้าเว็บเริ่มจับเวลาเมื่อการ์ด "ตัดสินเคสนี้" ขึ้น แล้วส่งจำนวนวินาทีไปพร้อมคำตัดสิน (ตัวเลขอย่างเดียว) แท็บ "ตั้งค่า" แสดงค่ากลางและ "95% ของเคสไม่เกิน" ของแต่ละชุด แยกเคสที่ยกให้ดูก่อนกับเคสปกติ ตัวเลขเป็นภาพรวม ไม่แยกรายคน ไม่แสดงในหน้าเคส และไม่เปลี่ยนการตัดสิน ตัวเลขจริงต้องมีผู้ตรวจจริง (D3) และดิสก์ถาวร (D1)
 
 **ลำดับต่อจากนี้** แต่ละขั้นจบด้วยสิ่งที่คุณลองเองได้
 
-| ขั้น | ทำอะไร | คุณจะได้ลองอะไร | สถานะ (21 พ.ย. 2026) |
+| ขั้น | ทำอะไร | คุณจะได้ลองอะไร | สถานะ (22 พ.ย. 2026) |
 |---|---|---|---|
 | 0 | เปิดใช้ออนไลน์บน Render และวัดผล AI จริงครั้งแรก | ใส่เคสบนหน้าเว็บจริง และอ่านผลวัดของ AI จริง | ออนไลน์แล้ว; วัดผล AI จริงครั้งแรกแล้วด้วย Typhoon (0.3, 6 พ.ย.); ที่เหลือรอคุณตัดสินใจ: D1 แผน Render แบบเสียเงิน, D2 API key ของ Claude และ 0.4 กับ Typhoon (ฟรี แต่ข้อความที่พิมพ์บนหน้าเว็บจะถูกส่งไป Typhoon) |
 | 1 | เก็บงานเล็ก ๆ ให้ระบบแน่นขึ้น | ยกเลิกเคสที่ยังรอคิวได้ เปิด `/readyz` ดูว่าตัวรันงานพร้อมไหม และดูรูปหน้าจอมือถือที่ GitHub กดให้ | เสร็จ ยกเว้น 1.4 (สำรองข้อมูล) ที่ต้องใช้แผน Render แบบเสียเงิน; เพิ่มจากรายงานคุณภาพ 19 พ.ย.: 1.7 (สถานะที่ตรวจจริง) ทำแล้วและคุณลองผ่านแล้ว (21 พ.ย.) และ 1.8 (ทดสอบกดจริงบนจอมือถือ) ทำแล้ว (21 พ.ย.) |
-| 2 | ให้คนรีวิวได้จริง: ผู้รีวิวมีรหัสของตัวเอง กดอนุมัติหรือไม่อนุมัติได้ และ n8n แจ้งเตือน | กล่อง "รอรีวิว" บนหน้าเว็บ และข้อความแจ้งเตือน | เริ่มแล้ว (10 พ.ย. ตามข้อ 4 ของผู้ตรวจสอบอิสระ): 2.2 บันทึกการตัดสินและ 2.4 การ์ดตัดสินกับรายการ "รอรีวิว" ทำแล้ว โดยผู้ตัดสินคือผู้ถือรหัสเข้าใช้ร่วม (คุณ); 2.3 งานต่อเนื่องหลังอนุมัติทำแล้ว (11 พ.ย.) เป็นเส้นทางแรกของตัวกลาง (ขั้น H); คุณลองบนหน้าเว็บจริงแล้ว (16 พ.ย.): อนุมัติ 1 เคส เกิดงานต่อเนื่อง 1 งานและเสร็จ ป้าย "ด่วน" ผ่านแล้วระหว่างทดสอบรหัสรายคน ส่วนการกด "ไม่อนุมัติ" โดยไม่ใส่เหตุผลยังไม่ได้ลอง; 2.1 รหัสรายคนของผู้ตรวจและผู้ส่งเคสทำแล้ว (16 พ.ย.) และคุณลองบนหน้าเว็บจริงผ่านครบทุกขั้นแล้ว (16 พ.ย.); 2.8 นับว่ากฎกับ AI ตรงกับคำตัดสินของคนกี่เคส ทำแล้ว (19 พ.ย.); 2.5 n8n ยังไม่ทำ |
+| 2 | ให้คนรีวิวได้จริง: ผู้รีวิวมีรหัสของตัวเอง กดอนุมัติหรือไม่อนุมัติได้ และ n8n แจ้งเตือน | กล่อง "รอรีวิว" บนหน้าเว็บ และข้อความแจ้งเตือน | เริ่มแล้ว (10 พ.ย. ตามข้อ 4 ของผู้ตรวจสอบอิสระ): 2.2 บันทึกการตัดสินและ 2.4 การ์ดตัดสินกับรายการ "รอรีวิว" ทำแล้ว โดยผู้ตัดสินคือผู้ถือรหัสเข้าใช้ร่วม (คุณ); 2.3 งานต่อเนื่องหลังอนุมัติทำแล้ว (11 พ.ย.) เป็นเส้นทางแรกของตัวกลาง (ขั้น H); คุณลองบนหน้าเว็บจริงแล้ว (16 พ.ย.): อนุมัติ 1 เคส เกิดงานต่อเนื่อง 1 งานและเสร็จ ป้าย "ด่วน" ผ่านแล้วระหว่างทดสอบรหัสรายคน ส่วนการกด "ไม่อนุมัติ" โดยไม่ใส่เหตุผลยังไม่ได้ลอง; 2.1 รหัสรายคนของผู้ตรวจและผู้ส่งเคสทำแล้ว (16 พ.ย.) และคุณลองบนหน้าเว็บจริงผ่านครบทุกขั้นแล้ว (16 พ.ย.); 2.8 นับว่ากฎกับ AI ตรงกับคำตัดสินของคนกี่เคส ทำแล้ว (19 พ.ย.); 2.10 จับเวลาที่คนใช้ตัดสินแต่ละเคส ทำแล้ว (22 พ.ย.); 2.5 n8n ยังไม่ทำ |
 | 3 | ผู้ช่วยแนะนำแหล่งเรียน (`study_guide.v1`) ตามหลักปรัชญาของคุณ | พิมพ์เรื่องที่อยากรู้ด้วยคำธรรมดา แล้วได้แหล่งเรียนไม่เกิน 5 แหล่งพร้อมลำดับการเรียน | สร้างครบทุกขั้นแล้ว (คุณเลือกขั้นนี้ก่อนขั้น 2 เมื่อ 5 พ.ย.): 3.1 คลังแหล่งเรียน 3.2 ตัวผู้ช่วย และ 3.3 ชุดข้อสอบ ทำแล้ว (ดูตัวอย่างคำตอบและผลข้อสอบใน Actions ได้); 3.4 ช่อง "อยากเรียน" บนหน้าเว็บ สร้างและ merge แล้ว (7 พ.ย.) คุณลองบนหน้าเว็บจริงผ่านแล้ว (8 พ.ย.); รันกับ AI จริง (Typhoon) แล้ว หาหัวข้อถูก 46 จาก 48 ข้อ ไม่มีลิงก์นอกคลัง (Claude รอ D2); **หยุดพัฒนาเพิ่มไว้ก่อนตามที่คุณสั่ง (11 พ.ย.)**: ของที่มีอยู่ยังใช้ได้และช่องตรวจยังรันเหมือนเดิม |
 | 4 | ช่องคุยภาษาธรรมดา: ระบบเข้าใจว่าคุณขออะไร บอกตรง ๆ เมื่อเรื่องอยู่นอกกรอบ และถามกลับ 1 คำถามเมื่อข้อมูลไม่พอ | คุยกับระบบได้เลย ไม่ต้องเลือกประเภทงานเอง | ยังไม่เริ่ม (ขั้น 3 สร้างครบแล้ว เริ่มได้เมื่อคุณเลือก) |
 | 5 | ติดตามเส้นทางของแต่ละงาน (เวลา token จุดที่ช้า) ด่านตรวจผลรายเคส และแผนทดสอบ 3 ขั้นด้วยข้อมูลเปิด | ตัวเลขคิวและเวลาบนหน้าเว็บ ช่องตรวจบน PR แล้วต่อด้วยเส้นทางงานใน Honeycomb; ผลด่านความทนทานในหน้าสรุปของ *Core logic tests* | เสร็จแล้วทั้ง 5.1, 5.2, 5.3 และ 5.4; เส้นทางงานแรกเข้า Honeycomb เมื่อ 4 พ.ย. 00:23 น.; ด่านความทนทาน (5.4) รวมเข้า main แล้ว 7 พ.ย.; แก้ 8 bug ที่เจอแล้ว (5.5, PR #42 รวมแล้วเมื่อ 8 พ.ย.); E2 ใน PR #64 แก้จุดอ่อนของกฎได้ 24 จุด และวันที่ 19 พ.ย. แก้จุดอ่อนเรื่องตัวที่มองไม่เห็นอีก 7 จุด เหลือจุดอ่อนทั้งหมด 13 จุด ขั้นข้อสอบกลาง (5.6) สร้างและวัดกับ Typhoon แล้ว 11 พ.ย. พร้อมการจำลองปุ่มอนุมัติเอง (5.9) และวัดคำสั่งแอบแฝงครั้งแรก (ส่วนหนึ่งของ 5.7); ส่วนที่เหลือของ 5.7 ยังไม่ทำ; 5.8 โมเดลเปิดที่รันเองบนเครื่องทดสอบของ GitHub สร้างแล้วใน PR #46 และรันเต็มรอบแรกแล้ว 8 พ.ย. (ดันเคสที่กฎผิดขึ้นคิวด่วนครบ 32/32) รอเจ้าของโปรเจกต์เลือกทาง |
@@ -141,7 +142,7 @@ owner.
 | 2.7 | Artifact store with hash checks | ⬜ when needed | — |
 | 2.8 | Measure rules vs AI against reviewer labels | ✅ built on 2026-11-19: `GET /v1/reviews/scorecard` and a panel in the settings tab (owner and reviewers) count, over the newest 500 decided cases, how often the rules and the AI named the category a person recorded, per proposal version (rules, AI, prompt), split by Thai text or not, every rate with its counts and a 95% Wilson interval; counts only. Evidence for D6 needs labels that last (D1) and are not led by the proposal. Fixed the same day from the quality report: groups by the AI agent's whole version (ADR-035; unknown for older results) and counts a case as Thai only by a Thai letter | 2.2, 0.3 |
 | 2.9 | Blind labels: the person picks a category before seeing the proposal | ⬜ planned (quality report of 2026-11-19) | the owner's go-ahead; D1 |
-| 2.10 | Reviewer time per case, from opening it to deciding | ⬜ planned (quality report of 2026-11-19) | real figures need D3 and D1 |
+| 2.10 | Reviewer time per case, from opening it to deciding | ✅ built on 2026-11-22: the decision carries `card_open_s` (queue schema 5), the scorecard reports the median and the 95th percentile per group and by priority, never per person; checked by unit tests, the page's contract tests and the browser walk | real figures need D3 and D1 |
 | 3.1 | Topic catalog and verified resource library | ✅ PR #32; links checked by *Study library link check* on the PR ([evidence note](evidence/2026-11-05-study-library-links.md)); the weekly run starts after the merge | — |
 | 3.2 | `study_guide.v1` workflow | ✅ PR #33; first live run with Typhoon in PR #38 (topic correct 46/48, 0 of 142 links outside the library); Claude needs D2 | 3.1 |
 | 3.3 | Study-guide evaluation set and scorecard | ✅ PR #34 with the mock in CI (an eval gate); first live run with Typhoon on 2026-11-06 (PR #38): topic correct 46/48, 0 of 142 links outside the library; Claude after D2 | 3.2 |
@@ -801,7 +802,7 @@ person ends at `REVIEW_REQUIRED`, and nothing else can happen to it.
 - **Needs:** the owner's go-ahead, because it changes how a reviewer works (one more step on those cases), and a disk
   (D1) for the labels to add up.
 
-### 2.10 Reviewer time per case (planned)
+### 2.10 Reviewer time per case
 
 - **Why:** raising more cases for a person (5.10) costs reviewer time, which nothing measures yet (quality report of
   2026-11-19). Before more users: compare how long a person takes from opening a case to deciding it, and how often
@@ -809,6 +810,21 @@ person ends at `REVIEW_REQUIRED`, and nothing else can happen to it.
 - **Idea:** the page sends, with the decision, how many seconds the card was open (a number only, never text); the
   scorecard reports the median and the 95th percentile per group, beside the category-change rate it already has.
 - **Needs:** nothing to build; real figures need real reviewers (D3) and a disk (D1).
+- **Status (2026-11-22): built** after the owner chose it as the next item ([intake_queue.md](intake_queue.md),
+  "Reviews" and "Reviewer-label scorecard"):
+  - the decision card notes when it appeared (`performance.now()`, a clock that never jumps) and the decision carries
+    `card_open_s`, measured once per idempotency key, so a retried click sends the same value; a card open longer
+    than a day is sent untimed, not capped;
+  - `card_open_s` is optional, a number from 0 to 86,400 kept to a tenth of a second, refused otherwise
+    (`invalid_card_open_s`); it is left out of the request fingerprint, and no view of a decision shows it;
+  - queue schema 5 adds the column with the same check on new and upgraded queues (a tested 4 → 5 upgrade, with two
+    processes at once and a version-1 queue);
+  - each scorecard group has `review_time`: timed and untimed decisions, the median and the 95th percentile by
+    nearest rank, overall and by priority; never per person, role or credential. The category-change rate it sits
+    beside is `rules_match`'s complement;
+  - checked by `tests/test_service_review_time.py`, the page's contract tests and the browser walk (which now also
+    finds the timed decision in the settings tab and over the API).
+  - Not measured yet: real reviewers' time. Before more users, compare it with the way the work is done today.
 
 ---
 
@@ -1967,3 +1983,9 @@ of H5 were built ([evidence](evidence/2026-11-11-skill-handoff.md)).
   "รอรีวิว", approve it, open the linked job, find the decision counted), then checks the same over the API, with a
   picture of each screen in the run's artifact. Playwright 1.63.0 is a CI-only test dependency. Next buildable
   without an owner decision: 2.10 (reviewer time per case).
+- 2026-11-22: 2.10 built after the owner asked what came next and chose it among three buildable items (2.10, 5.5's
+  masking gaps, Phase 4). The page sends how long the decision card was open with each decision (`card_open_s`,
+  queue schema 5), and the scorecard reports the median and the 95th percentile per group and by priority, never per
+  person. The same day the owner asked whether the system could have an AI of its own that learns as the system is
+  developed; the answer (fine-tuning an open model in measured rounds from people's labels, after 2.9, D1 and D4)
+  is not a plan item yet.

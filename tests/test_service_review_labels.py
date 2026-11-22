@@ -52,7 +52,7 @@ class LabelsTestCase(unittest.TestCase):
         self._temp.cleanup()
 
     def waiting(self, *, rules="billing", ai="billing", ai_status="ok", summary="I was charged twice this month",
-                workflow_type="case_triage.v2", rules_source=RULES_A, provenance=TYPHOON):
+                workflow_type="case_triage.v2", rules_source=RULES_A, provenance=TYPHOON, priority="normal"):
         """A case the Runner finished as REVIEW_REQUIRED, with this rules suggestion and this AI answer.
         ``ai_status=None`` is a rules-only workflow (no second opinion at all). Returns the review id."""
         self.number += 1
@@ -75,17 +75,19 @@ class LabelsTestCase(unittest.TestCase):
             "llm_unavailable" if second["status"] != "ok" else "agree" if ai == rules else "disagree")
         proposal = {"case_id": f"LABEL-{self.number}", "suggested_category": rules, "suggested_queue": QUEUE_FOR[rules],
                     "suggestion_source": rules_source, "second_opinion": second, "agreement": agreement,
-                    "review_required": True, "review_priority": "normal", "review_reasons": [],
+                    "review_required": True, "review_priority": priority, "review_reasons": [],
                     "decision": "PENDING_HUMAN_REVIEW", "mode": "shadow" if second is not None else "rules_only"}
         self.store.finish(job["job_id"], "REVIEW_REQUIRED", result={"review": proposal, "ai": ai_view, "steps": []})
         return review_id_for(job["job_id"])
 
-    def decided(self, decision="APPROVE", final=None, *, reviewer=None, reason="ตรวจแล้ว", **case):
+    def decided(self, decision="APPROVE", final=None, *, reviewer=None, reason="ตรวจแล้ว", card_open_s=None, **case):
         review_id = self.waiting(**case)
         body = {"decision": decision, "reason": reason, "expected_version": 1,
                 "idempotency_key": f"key-label-decision-{self.number:04d}"}
         if final is not None:
             body["final_category"] = final
+        if card_open_s is not None:
+            body["card_open_s"] = card_open_s
         _review, _row, created = decide(self.store, review_id, body, reviewer=reviewer)
         self.assertTrue(created)
         return review_id
@@ -101,7 +103,7 @@ def figures(value):
 class ReportTests(LabelsTestCase):
     def test_an_empty_queue_reports_nothing_and_no_rate(self):
         report = self.report()
-        self.assertEqual(report["schema"], "neuron-flow-reviewer-labels-v1")
+        self.assertEqual(report["schema"], "neuron-flow-reviewer-labels-v2")
         self.assertIn("not real-world accuracy", report["label_scope"])
         self.assertEqual(report["window"], {"limit": review_labels.WINDOW, "decided": 0, "decided_total": 0,
                                             "truncated": False})
@@ -240,7 +242,7 @@ class ReportTests(LabelsTestCase):
         source = (ROOT / "app" / "services" / "review_labels.py").read_text(encoding="utf-8")
         self.assertEqual(sorted(set(re.findall(r"\bstore\.(\w+)\(", source))), ["decided_reviews"])
         imports = re.findall(r"^(?:from|import) ([\w.]+)", source, re.M)
-        self.assertEqual(sorted(imports), ["app.persistence.queue_store", "math", "re"])
+        self.assertEqual(sorted(imports), ["app.persistence.queue_store", "math", "re", "statistics"])
         # A scorecard decides nothing (rule 4): no workflow, agent, translator or the Runner reads it.
         for path in [*(ROOT / "app" / "domains").rglob("*.py"), *(ROOT / "app" / "exchange").rglob("*.py"),
                      *(ROOT / "app" / "llm").rglob("*.py"), ROOT / "app" / "services" / "runner.py"]:
