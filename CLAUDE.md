@@ -98,6 +98,11 @@ Read in this order when you need depth:
   - which page or Actions run to open;
   - what to click or type;
   - what they should see if it works.
+- **Anything the owner must check goes in a file, in everyday words** (the owner's rule, 2026-11-22). When the owner
+  has to read or judge something (labels, cases, choices in a plan, a comparison), turn it into plain Thai first, as
+  tables like the T2 sample (the case's text, then its labels in Thai words, never codes alone), write it to a file
+  and send the file to the owner (`SendUserFile`, from the scratchpad). Do not put that material on the PR page: the
+  PR keeps its short Thai summary and test steps only.
 - **Questions.** Ask at most one question, and only when the answer changes what you build. Otherwise take
   the safe default, say which one you took, and continue.
 - **Owner-only decisions.** Spending money, publishing anything, adding people and touching real personal
@@ -375,7 +380,8 @@ Notes for cloud sessions (claude.ai/code):
 - **Safety.** No secrets, no real personal data, no unmeasured claims. `tests/test_no_secrets.py` and
   *Secret scan* enforce the first. Never add an entry to `.github/.gitleaksignore` without a reason in the
   file and the owner's knowledge.
-- **Owner test.** The PR ends with the owner's test steps, in Thai.
+- **Owner test.** The PR ends with the owner's test steps, in Thai. Material the owner must check goes in a file sent to
+  the owner (§2), not on the PR page.
 
 ## 6. Where things are
 
