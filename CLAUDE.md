@@ -212,7 +212,7 @@ If a task seems to need breaking a rule:
 ## 4. Checking your work
 
 ```bash
-python -m unittest discover -s tests -v        # all tests (686 on 2026-11-22); CI: Python 3.10 and 3.12
+python -m unittest discover -s tests -v        # all tests (689 on 2026-11-22); CI: Python 3.10 and 3.12
 python -m examples.case_triage_demo            # v1 rules, one synthetic case
 python -m examples.case_triage_shadow_demo     # v2 shadow mode with the offline mock AI
 python -m examples.study_guide_demo            # the study guide's answers to four synthetic requests
@@ -691,7 +691,7 @@ Notes for cloud sessions (claude.ai/code):
     held-out 40, hard 128, attention 64, robustness edges 116, BIPIA 75; the 8-case probe, A2; digest lines; criteria
     v1 `exam-criteria-v1`) and the *Own model exam* workflow with `.github/scripts/run_exam.sh` (the lane's llama.cpp
     and round 0 pins, kept equal by a test; the recipe's serving flags; the 300 s wait, A3; round 0 and a candidate
-    on one runner). 19 tests; the script was run here end to end against a stand-in server that answers like the
+    on one runner). 22 tests; the script was run here end to end against a stand-in server that answers like the
     mock. Next: the owner starts round 0's full run (*Run workflow*, no candidate); then read the `EXAM-CASE` lines
     from the job log and record round 0 in an evidence note. T5 needs D10.
 - **Not done yet:**

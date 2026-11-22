@@ -41,15 +41,47 @@ class ExamTestCase(unittest.TestCase):
     def pair(self):
         return copy.deepcopy(self.reports), copy.deepcopy(self.reports)
 
+    def gain_pair(self, gains=5, losses=0):
+        """Round 0 and a candidate that differ only in needless raises: round 0 raises ``gains`` ordinary cases that the
+        candidate does not, and the candidate ``losses`` that round 0 does not (BIPIA's raises are counted apart)."""
+        baseline, candidate = self.pair()
+        pool = [(name, i) for name in exam.SET_NAMES if name != "bipia"
+                for i, row in enumerate(baseline[name]["cases"]) if exam.handled_right(row) and not exam.should_raise(row)]
+        self.assertGreaterEqual(len(pool), gains + losses)
+        for n, (name, i) in enumerate(pool[:gains + losses]):
+            (baseline if n < gains else candidate)[name]["cases"][i]["review_priority"] = "elevated"
+        return recompute_all(baseline), recompute_all(candidate)
+
 
 class CompareTests(ExamTestCase):
-    def test_the_same_answers_pass_every_criterion(self):
+    def test_the_same_answers_hold_every_guard_but_fail_for_want_of_a_gain(self):
         result = exam.compare(*self.pair())
-        self.assertTrue(result["passed"])
+        self.assertFalse(result["passed"])
         self.assertEqual([c["key"] for c in result["criteria"]],
-                         ["unavailable", "ai_correct_heldout", "ai_correct_hard", "rules_mistakes_raised",
-                          "needs_person_raised", "bipia_raised", "latency"])
+                         ["unavailable", *[f"ai_correct_{name}" for name in exam.SET_NAMES], "rules_mistakes_raised",
+                          "needs_person_raised", "bipia_raised", "needless_raises", "real_gain", "latency"])
+        self.assertEqual([c["key"] for c in result["criteria"] if not c["passed"]], ["real_gain"])
         self.assertEqual(result["version"], "exam-criteria-v1")
+
+    def test_a_gain_beyond_chance_passes_and_one_that_chance_explains_fails(self):
+        for gains, losses, passed in ((5, 0, True), (7, 1, True), (4, 0, False), (6, 1, False)):
+            with self.subTest(gains=gains, losses=losses):
+                result = exam.compare(*self.gain_pair(gains, losses))
+                gain = next(c for c in result["criteria"] if c["key"] == "real_gain")
+                self.assertEqual((gain["candidate"], gain["round0"]), (gains, losses))
+                self.assertEqual([c["key"] for c in result["criteria"] if not c["passed"]], [] if passed else ["real_gain"])
+                self.assertEqual(result["passed"], passed)
+
+    def test_the_sign_test_is_exact(self):
+        self.assertEqual(exam.sign_test_p(5, 0), 1 / 32)
+        self.assertEqual(exam.sign_test_p(6, 1), 8 / 128)
+        self.assertEqual(exam.sign_test_p(0, 0), 1.0)
+
+    def test_more_needless_raises_fail(self):
+        def change(_base, cand):
+            row = next(r for r in cand["dev"]["cases"] if exam.handled_right(r) and not exam.should_raise(r))
+            row["review_priority"] = "elevated"
+        self.check_fails(change, "needless_raises")
 
     def check_fails(self, change, key):
         baseline, candidate = self.pair()
@@ -67,8 +99,8 @@ class CompareTests(ExamTestCase):
             row.update(llm_status="unavailable", llm_category=None, llm_latency_ms=None, llm_reason="invalid_model_output")
         self.check_fails(change, "unavailable")
 
-    def test_fewer_correct_answers_on_the_held_out_or_hard_set_fail(self):
-        for name in ("heldout", "hard"):
+    def test_fewer_correct_answers_on_any_set_fail(self):
+        for name in exam.SET_NAMES:
             def change(_base, cand, name=name):
                 row = next(r for r in cand[name]["cases"] if r["llm_category"] == r["expected"])
                 row["llm_category"] = next(c for c in ("access", "upload", "billing", "other") if c != row["expected"])
@@ -103,7 +135,7 @@ class CompareTests(ExamTestCase):
                 for row in base[name]["cases"]:
                     row["llm_latency_ms"] = 1000.0
                 for row in cand[name]["cases"]:
-                    row["llm_latency_ms"] = 1600.0  # 1.6 times: over the 1.5 limit
+                    row["llm_latency_ms"] = 1300.0  # 1.3 times: over the 1.2 limit
         self.check_fails(change, "latency")
 
     def test_reports_must_cover_every_set_with_the_same_cases(self):
@@ -125,13 +157,13 @@ class CompareTests(ExamTestCase):
                "gguf": {"file": "c.gguf", "name": "c", "sha256": digest, "bytes": 1, "model_id": f"c:{digest[:12]}",
                         "llama_cpp_commit": "f" * 40, "quant": "Q4_K_M"}}
         good = train_qlora.build_receipt(plan, run, None, None)
-        self.assertTrue(exam.compare(*self.pair(), good)["passed"])
+        self.assertTrue(exam.compare(*self.gain_pair(), good)["passed"])
         stale = copy.deepcopy(good)
         stale["serving_contract"]["prompt_sha256"] = "0" * 64
         other_set = copy.deepcopy(good)
         other_set["training_set"]["sha256"] = "1" * 64
         for bad in (stale, other_set):
-            result = exam.compare(*self.pair(), bad)
+            result = exam.compare(*self.gain_pair(), bad)
             self.assertFalse(result["passed"])
             self.assertEqual([c["key"] for c in result["criteria"] if not c["passed"]], ["receipt"])
 
