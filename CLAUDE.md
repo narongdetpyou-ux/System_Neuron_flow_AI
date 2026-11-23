@@ -78,7 +78,7 @@ Read in this order when you need depth:
    [study_guide.md](docs/study_guide.md) (the study guide: workflow, scorecard, topic catalog, library, link check),
    [skill_handoff.md](docs/skill_handoff.md) (the exchange between skills: routes, common language, translators, tests),
    [own_model_plan.md](docs/own_model_plan.md) (our own model, a plan: fine-tuning in measured rounds, track T1–T6,
-   ADR-037; T2 built: `training/`).
+   ADR-037; T2–T4 built: `training/`; round 0 examined on 2026-11-23).
 
 ## 2. Working with the owner (read this first)
 
@@ -130,7 +130,9 @@ Read in this order when you need depth:
     sets; prompt `triage_classify_v2` with signals v2 on ten sets, 1,780 cases, one run,
     `docs/evidence/2026-11-11-attention-signals.md`), and the local 4B model's: a smoke run on the first 5
     items of each set, twice, and one full run of both sets (2026-11-08,
-    `docs/evidence/2026-11-08-first-local-model-smoke.md`, `docs/evidence/2026-11-08-first-local-model-full.md`).
+    `docs/evidence/2026-11-08-first-local-model-smoke.md`, `docs/evidence/2026-11-08-first-local-model-full.md`),
+    then round 0 of the own-model exam: the same file with today's prompt and answer checks on six triage sets,
+    484 cases, one run (2026-11-23, `docs/evidence/2026-11-23-own-model-round0.md`).
     There is none for Claude, and no security review or user study yet. A Typhoon or local result describes
     that model only; never present it as another model's, least of all Claude's.
   - Never write a number you did not measure. Record failures as well as successes.
@@ -692,15 +694,22 @@ Notes for cloud sessions (claude.ai/code):
     v1 `exam-criteria-v1`) and the *Own model exam* workflow with `.github/scripts/run_exam.sh` (the lane's llama.cpp
     and round 0 pins, kept equal by a test; the recipe's serving flags; the 300 s wait, A3; round 0 and a candidate
     on one runner). 22 tests; the script was run here end to end against a stand-in server that answers like the
-    mock. Next: the owner starts round 0's full run (*Run workflow*, no candidate); then read the `EXAM-CASE` lines
-    from the job log and record round 0 in an evidence note. T5 needs D10.
+    mock. Merged as PR #85.
+  - Round 0's first full exam, started by the owner on `main` on 2026-11-23 (run 45080841395, 65 minutes): 484 of 484
+    cases answered, the probe 8 of 8; AI correct 58/61 development, 37/40 held-out, 104/128 hard, 57/64 attention,
+    98/116 edges and 70/75 BIPIA; `needs_person` raised 38/38 and 32/32, BIPIA attacks raised 51/75, 38 needless
+    raises. Read from the log's `EXAM-CASE` lines, recomputed in the session (equal to the printed `EXAM-METRICS`),
+    and kept as printed in `docs/evidence/2026-11-23-own-model-round0.json`
+    ([evidence](docs/evidence/2026-11-23-own-model-round0.md)). It is the baseline for T5's comparison, which runs
+    round 0 again beside the candidate. T5 needs D10.
 - **Not done yet:**
   - Claude has never been run (D2). Typhoon has run on the synthetic sets and the 116 robustness edges,
     plus all three E2 triage sets (2026-11-11, 217/217 answered/completed): AI correct 60/61 development,
     103/116 edge and 40/40 held-out. The earlier edge run was 104/116; the E2 rules comparison reuses the
     same answers for v1 and v2, rather than comparing separate model runs. Eight edge cases remain wrong
     for both and unflagged; fewer flags do not fix that risk (E5). The local 4B model has had one full run
-    of each set (2026-11-08) besides the PR's two smoke runs.
+    of each set (2026-11-08) besides the PR's two smoke runs, and, as round 0, one exam run of the six triage sets
+    with today's prompt (2026-11-23).
   - The auto-approve limits run (2026-11-11, ADR-031) answered the owner's "how far could a button go that sends a
     case without a person?" on paper only: on the 128-case hard set Typhoon said `high` on 122 answers and was
     wrong on 13, 12 of them `high`, so its own confidence cannot carry a button; no policy holds the cases that
@@ -785,8 +794,8 @@ Notes for cloud sessions (claude.ai/code):
   - Waiting on the owner: 0.2 and 1.4 (D1, paid Render plan), 0.3 path B and 0.4 with Claude (D2, Claude
     API key); 0.4 with Typhoon is free but sends what is typed on the page to Typhoon, so it is the owner's
     choice too; an open model behind the page needs a paid machine (D7); the rest of the owner tests on the live
-    page (2.4's step 4, attention 5.10, and 2.8's scorecard after its merge); the first new skill (H4); the start of the
-    own-model track (T2) and where training runs (D10). The owner's first case since 2026-11-10, on 2026-11-16, passed H3 and 2.4's steps 2 and 3 and
+    page (2.4's step 4, attention 5.10, 2.8's scorecard after its merge, and 2.10's timed decision); the first new skill
+    (H4); where our own model is trained (D10), before T5. The owner's first case since 2026-11-10, on 2026-11-16, passed H3 and 2.4's steps 2 and 3 and
     gave E1's Render figure; the
     same day 2.1's owner test passed every step, 2.4's step 1 with it (confirmed by the owner on 2026-11-19).
     D8 is decided (2026-11-10): the e-mail history stays as it is; do not propose a rewrite.

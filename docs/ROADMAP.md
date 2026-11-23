@@ -66,7 +66,7 @@ differs, this file and architecture.md win.
 
 **ลำดับต่อจากนี้** แต่ละขั้นจบด้วยสิ่งที่คุณลองเองได้
 
-| ขั้น | ทำอะไร | คุณจะได้ลองอะไร | สถานะ (22 พ.ย. 2026) |
+| ขั้น | ทำอะไร | คุณจะได้ลองอะไร | สถานะ (23 พ.ย. 2026) |
 |---|---|---|---|
 | 0 | เปิดใช้ออนไลน์บน Render และวัดผล AI จริงครั้งแรก | ใส่เคสบนหน้าเว็บจริง และอ่านผลวัดของ AI จริง | ออนไลน์แล้ว; วัดผล AI จริงครั้งแรกแล้วด้วย Typhoon (0.3, 6 พ.ย.); ที่เหลือรอคุณตัดสินใจ: D1 แผน Render แบบเสียเงิน, D2 API key ของ Claude และ 0.4 กับ Typhoon (ฟรี แต่ข้อความที่พิมพ์บนหน้าเว็บจะถูกส่งไป Typhoon) |
 | 1 | เก็บงานเล็ก ๆ ให้ระบบแน่นขึ้น | ยกเลิกเคสที่ยังรอคิวได้ เปิด `/readyz` ดูว่าตัวรันงานพร้อมไหม และดูรูปหน้าจอมือถือที่ GitHub กดให้ | เสร็จ ยกเว้น 1.4 (สำรองข้อมูล) ที่ต้องใช้แผน Render แบบเสียเงิน; เพิ่มจากรายงานคุณภาพ 19 พ.ย.: 1.7 (สถานะที่ตรวจจริง) ทำแล้วและคุณลองผ่านแล้ว (21 พ.ย.) และ 1.8 (ทดสอบกดจริงบนจอมือถือ) ทำแล้ว (21 พ.ย.) |
@@ -78,7 +78,7 @@ differs, this file and architecture.md win.
 | 7 | เตรียมพร้อมก่อนให้คนอื่นใช้ หรือก่อนเปิด repo สาธารณะ | รายงานตรวจความปลอดภัย และรายการตรวจก่อนเปิดตัว | เริ่มแล้ว: 7.1 ปิดข้อมูลส่วนตัวก่อนส่งให้ AI ทำแล้ว และตั้งแต่ 10 พ.ย. ตัวกลางเรียก AI บังคับปิดซ้ำเองก่อนส่ง ส่วนการจำกัดว่าใครเห็นคีย์ AI ได้ เขียนแผนไว้ ยังไม่ทำ; 7.4 เสร็จ: repo นี้เป็นสาธารณะพร้อมประวัติทั้งหมดตั้งแต่ 8 พ.ย. (D5) เปลี่ยนคีย์ Sentry แล้ว และเปิดระบบสแกนคีย์ของ GitHub แล้ว; มีผู้ตรวจสอบอิสระอ่านโค้ดครั้งแรกเมื่อ 10 พ.ย. ตอบครบ 4 ข้อแล้ว และคุณเลือกเก็บประวัติอีเมลเก่าไว้ตามเดิม (D8) |
 | E | [แผนเพิ่มประสิทธิผล](effectiveness_plan.md) 6 งาน (E1–E6): เคสแรกหลังระบบตื่นเร็วขึ้น กฎรุ่น 2 ที่อ่านภาษาไทยได้ หน้าเว็บจริงใช้ AI จริง เก็บคำตอบ "เข้าใจถูกไหม" ให้ AI แยก "อื่น ๆ" ได้ดีขึ้น และคลังแหล่งเรียนที่มีภาษาไทยมากขึ้น | เวลาของเคสแรก ข้อเสนอหลักของเคสภาษาไทย และตัวนับ "เข้าใจถูก" บนหน้าเว็บ | เขียนแผนแล้วเมื่อ 10 พ.ย. ตามที่คุณขอ (PR #50); E1 สร้างแล้วใน PR #60 (10 พ.ย.): ภาพของบริการมีไฟล์ที่แปลไว้ล่วงหน้าครบแล้ว บนเครื่องของ GitHub ที่จำกัดกำลังให้เท่าเครื่องฟรี เคสแรกเร็วขึ้นจาก 14.4 เป็น 3.1 วินาที รวมแล้วเมื่อ 10 พ.ย. และวัดบน Render จริงแล้ว (16 พ.ย.): เคสแรกหลังระบบตื่นใช้ 3.2 วินาที จากเดิม 9.0–10.5 วินาที; E2 สร้างและวัดครบใน PR #64: กฎถูก 61/61 ในชุดพัฒนา 105/116 ในชุดเคสยาก และ 22/40 ในชุดที่กันไว้ ([ผลวัดและข้อจำกัด](evidence/2026-11-11-e2-rules-v2.md)); E3 รอคุณตัดสินใจ; E4 และ E6 (ของผู้ช่วยแนะนำแหล่งเรียน) หยุดไว้ก่อนตามที่คุณสั่ง (11 พ.ย.) |
 | H | [ทักษะแยกกัน ส่งงานผ่านตัวกลาง](skill_handoff.md) มีล่ามแปลเป็นภาษาของทักษะปลายทางระหว่างทาง (H1–H5) | อนุมัติเคสบนหน้าเว็บแล้วเห็นงานที่ส่งต่อมา 1 งาน และกล่อง "ส่งต่อแล้ว" | สร้างแล้วตามที่คุณขอ (11 พ.ย., H1–H3): เส้นทางแรก "อนุมัติเคส → บันทึกผลหลังอนุมัติ" ทำงานแล้ว หน้าเว็บแสดงการส่งต่อทั้งสองทาง ทดสอบกับเคสเดิม 217 เคสผ่านทุกข้อ; คุณลองบนหน้าเว็บจริงผ่านแล้ว (16 พ.ย.); ทักษะใหม่ตัวแรก (H4) รอคุณเลือก |
-| T | [AI ของเราเอง ที่เรียนเป็นรอบ](own_model_plan.md) (T1–T6): สอนโมเดลเปิดด้วยงานของเรา สอบก่อนใช้ทุกรอบ และคุณเป็นคนตัดสินใจเปลี่ยนรุ่น | ผลสอบของรุ่นใหม่เทียบรุ่นเดิมในหน้า Actions | เขียนแผนแล้ว (22 พ.ย. ตามที่คุณขอ) คุณเลือกโมเดล 4B ตัวที่ GitHub ทดสอบอยู่เป็นจุดตั้งต้น และพักไฟล์ใน Drive (22 พ.ย.) · T2 ชุดฝึกสมมติ 240 เคส พร้อมด่านตรวจว่าไม่ซ้ำข้อสอบ ทำแล้ว · T3 สูตรการฝึกพร้อมด่านกันข้อความตอนฝึกต่างจากตอนใช้งาน ทำแล้ว · T4 ด่านสอบ ทำแล้ว (22 พ.ย.) รอคุณกดวัดรอบ 0 · ยังไม่ได้ฝึกจริง รอเลือกที่ฝึก (D10) |
+| T | [AI ของเราเอง ที่เรียนเป็นรอบ](own_model_plan.md) (T1–T6): สอนโมเดลเปิดด้วยงานของเรา สอบก่อนใช้ทุกรอบ และคุณเป็นคนตัดสินใจเปลี่ยนรุ่น | ผลสอบของรุ่นใหม่เทียบรุ่นเดิมในหน้า Actions | เขียนแผนแล้ว (22 พ.ย. ตามที่คุณขอ) คุณเลือกโมเดล 4B ตัวที่ GitHub ทดสอบอยู่เป็นจุดตั้งต้น และพักไฟล์ใน Drive (22 พ.ย.) · T2 ชุดฝึกสมมติ 240 เคส พร้อมด่านตรวจว่าไม่ซ้ำข้อสอบ ทำแล้ว · T3 สูตรการฝึกพร้อมด่านกันข้อความตอนฝึกต่างจากตอนใช้งาน ทำแล้ว · T4 ด่านสอบ ทำแล้ว (22 พ.ย.) และคุณกดสอบรอบ 0 แล้ว (23 พ.ย.): ตอบครบ 484 ข้อ ผลอยู่ใน[บันทึกหลักฐาน](evidence/2026-11-23-own-model-round0.md) · ยังไม่ได้ฝึกจริง รอเลือกที่ฝึก (D10) |
 
 **เรื่องที่คุณต้องตัดสินใจเอง** อยู่ในตาราง [Owner decisions](#owner-decisions) ข้างล่าง เช่น
 - จะจ่ายค่า Render เพื่อให้เคสและรหัสรายคนไม่หายหรือไม่
@@ -88,7 +88,7 @@ differs, this file and architecture.md win.
 - จะเปิด repo เป็นสาธารณะเมื่อไร
 - จะให้หน้าเว็บจริงใช้ AI จริง (Typhoon ฟรี) หรือไม่ และจะเริ่มงานไหนของแผนเพิ่มประสิทธิผลก่อน (E1–E6)
 - ทักษะใหม่ตัวแรกที่จะต่อกับตัวกลาง (H4) คืออะไร
-- AI ของเราเอง: จะเริ่มชุดฝึก (T2) เมื่อไร และจะฝึกที่ไหน (D10)
+- AI ของเราเอง: จะฝึกที่ไหน (D10) ก่อนรอบฝึกจริงรอบแรก (T5)
 - จะมี "ปุ่มอนุมัติเอง" จริงหรือไม่ (D9): ตอนนี้ยังไม่ควร เพราะผลวัด (5.9) บอกว่าความมั่นใจของ AI ใช้แยกถูกผิดไม่ได้ และการเปลี่ยนนี้แก้กติกาข้อ 4
 
 ## How to use this file (for Claude Code)
@@ -186,7 +186,7 @@ owner.
 | T1 | Our own model: the plan and ADR-037 ([own_model_plan.md](own_model_plan.md)) | ✅ merged on 2026-11-22 (PR #80); the same day the owner chose the base and round 0: the publisher's 4B the local lane pins | — |
 | T2 | A synthetic training set and the overlap check against every exam set | ✅ built on 2026-11-22: 240 cases (120 Thai, 120 English; 60 per category; every attention kind), a manifest with the file's SHA-256, `training/check_set.py` in the unit tests and the *Training set check* workflow; 0 exact and 0 near matches with every exam set, the open sets and the sealed half included | — |
 | T3 | The training recipe and its receipt, kept out of the image and Render's build | ✅ built on 2026-11-22: `training/recipe_v1.json`, `render.py` (examples from the service's own request builder, compared byte for byte with serving in a test), `receipt.py` (receipt and serving contract), `train_qlora.py` (dry run in CI; GPU libraries pinned in `requirements-train.txt`, never in the image) | D10 to run it |
-| T4 | The exam gate for a candidate model on the local lane, with round 0 run again on `main` | ✅ built on 2026-11-22: `training/exam.py` (six sets, 484 cases; the 8-case probe; criteria v1) and the *Own model exam* workflow (round 0 and a candidate on one runner, the lane's build and file, the recipe's serving flags); round 0's full run waits for the owner's click | — |
+| T4 | The exam gate for a candidate model on the local lane, with round 0 run again on `main` | ✅ built on 2026-11-22: `training/exam.py` (six sets, 484 cases; the 8-case probe; criteria v1) and the *Own model exam* workflow (round 0 and a candidate on one runner, the lane's build and file, the recipe's serving flags); round 0's first full run on `main` (2026-11-23, started by the owner): 484/484 answered, probe 8/8, AI correct 58/61 development, 37/40 held-out, 104/128 hard, 57/64 attention, 98/116 edges and 70/75 BIPIA ([evidence](evidence/2026-11-23-own-model-round0.md)) | — |
 | T5 | Round 1: train, examine, decide | ⬜ | T2–T4, D10; where the trained file is put |
 | T6 | Rounds from people's blind labels | ⬜ | 2.9, D1, D3; real cases also D4, 7.1–7.3, 7.5 |
 
@@ -1792,6 +1792,9 @@ status is in the table above.
 - **Order:** T2 and T3 need no money and no real data; T4 needs only the criteria confirmed, because round 0 is the
   lane's own file; T5 needs D10 and a place for the trained file that the runner can fetch (Hugging Face); T6 needs
   blind labels (2.9) and a disk (D1), and real cases need D4. As with a phase, a package starts when the owner says so.
+- **Round 0 (2026-11-23):** the publisher's 4B before any training, examined on `main` when the owner started
+  *Run workflow*: 484/484 answered; it is the baseline a T5 candidate is compared with, round 0 running again beside
+  it on the same runner ([evidence](evidence/2026-11-23-own-model-round0.md)).
 - **The owner's fine-tuned Typhoon 4B is set aside** (2026-11-22: sharing the file from Drive was too troublesome).
   Nothing is downloaded, shared or run.
 - **Don't:** let a model learn while it serves or switch by itself; train on an exam set or the sealed half; use real
@@ -2038,4 +2041,8 @@ status is in the table above.
   8-case probe before each exam; `EXAM-CASE` and `EXAM-METRICS` lines for the log; criteria v1 against round 0) and
   the *Own model exam* workflow, which examines round 0 and a candidate on one runner with the local lane's build,
   round 0 file and the recipe's serving flags. Round 0's first full run waits for the owner's *Run workflow*.
+- 2026-11-23: the owner started round 0's first full run on `main` (run 45080841395). All 484 cases were answered and
+  the probe passed 8 of 8; the figures per set, the misses and the limits are in
+  [the evidence note](evidence/2026-11-23-own-model-round0.md), and the 484 `EXAM-CASE` rows as printed in its data
+  file. Docs only.
 

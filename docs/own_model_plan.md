@@ -33,6 +33,10 @@ set aside, and nothing is done with it.
 - T3 สูตรการฝึกที่ทำซ้ำได้ (เขียนสูตรไว้ แต่ยังไม่ฝึก)
 - T4 ด่านสอบรุ่นใหม่ (ใช้ช่องวัดเดิมของ GitHub ซึ่งฟรี)
 
+ทั้ง 3 ข้อทำแล้ว (22 พ.ย.) **ผลสอบรอบ 0 (23 พ.ย.):** โมเดล 4B ที่ยังไม่ได้ฝึกตอบครบ 484 ข้อ จัดหมวดถูก 58/61 ในชุดพัฒนา
+และ 37/40 ในชุดเก็บไว้ทดสอบ เคสที่ต้องให้คนดูก่อนถูกยกขึ้นครบ 70 จาก 70 คะแนนชุดนี้คือเส้นที่รุ่นที่ฝึกแล้วต้องทำได้ดีกว่า
+([บันทึกหลักฐาน](evidence/2026-11-23-own-model-round0.md))
+
 **รอคุณตัดสินใจ**
 - D10 จะฝึกที่ไหน: Colab ฟรีหรือเสียเงิน, เช่าการ์ดจอเป็นชั่วโมง หรือเครื่องของคุณเอง
 - เมื่อฝึกรอบแรกเสร็จ (T5) ไฟล์รุ่นใหม่ต้องไปอยู่ที่ที่ GitHub ดาวน์โหลดเองได้ เช่น Hugging Face แบบส่วนตัวหรือสาธารณะ ผมจะถามอีกครั้งตอนนั้น
@@ -177,7 +181,7 @@ GitHub ดาวน์โหลดไฟล์นี้เองจาก Huggin
 | **T1** | This plan and ADR-037 | ✅ merged (PR #80) |
 | **T2** | Synthetic training set v1 with its manifest, and the overlap check against every exam set in CI | ✅ built on 2026-11-22 (section 10); the owner reads a sample |
 | **T3** | The training recipe and receipt format in `training/`, kept out of the image and Render's build, with a test | ✅ built on 2026-11-22 (section 11); D10 to run it |
-| **T4** | The exam gate: round 0 run again on `main`; the local lane takes a candidate file (Hugging Face repository, revision, size, SHA-256), runs every set and writes the comparison against the criteria | ✅ built on 2026-11-22 (section 12); round 0's first full run waits for the owner's click |
+| **T4** | The exam gate: round 0 run again on `main`; the local lane takes a candidate file (Hugging Face repository, revision, size, SHA-256), runs every set and writes the comparison against the criteria | ✅ built on 2026-11-22 (section 12); round 0 examined on `main` on 2026-11-23 ([evidence](evidence/2026-11-23-own-model-round0.md)) |
 | **T5** | Round 1: train on T2's set, run the exam, write an evidence note; the owner decides | T2–T4, D10; where the trained file is put |
 | **T6** | Rounds from people's decisions: the owner exports blind labels (masked) as a training set; the cadence is the owner's choice | 2.9, D1, D3; real cases also D4, 7.1–7.3, 7.5 |
 
@@ -302,7 +306,9 @@ The owner said "เริ่ม T4 ต่อเลย" after merging T3.
   the probe 8 of 8, all 18 cases answered and the AI's category right on 18, the median answer 6.3 to 8.5 s a
   case per set. Three cases a set is a check that the exam works, not a measurement. It also showed BIPIA's
   raised attacks counted as needless raises; they are not counted since.
-- **Not done yet:** round 0's full run on `main` (about 484 cases at roughly 8 to 10 s each on a CPU runner: over an
-  hour), which the owner starts with *Run workflow*; then its figures go into an evidence note. A private candidate
-  repository (a token) is T5's question.
+- **Round 0's full run (2026-11-23):** the owner started it on `main` with *Run workflow* (run 45080841395, 65
+  minutes). Every one of the 484 cases was answered and the probe passed 8 of 8. The figures per set, the misses
+  and the limits are in [the evidence note](evidence/2026-11-23-own-model-round0.md), and the 484 `EXAM-CASE` rows,
+  as printed, in its data file.
+- **Not done yet:** a private candidate repository (a token) is T5's question.
 
