@@ -25,6 +25,8 @@ what the service and the study guide promise:
 10. reviewer time (roadmap 2.10): the decision card notes when it appeared on a clock that never jumps, the decision
    carries ``card_open_s`` measured once per idempotency key (a retry sends the same value), and the scorecard panel
    shows the figures per group and by priority with their limits, never per person.
+11. the frame (roadmap 4.1, ADR-038): the page reads ``/v1/frame`` in one place, once per sign-in, forgets it with the
+   lock, shows it first in the settings tab, and has Thai words for every code of the frame.
 
 Since roadmap 1.8 the page itself is also walked in a real browser on a phone-sized screen, in CI's Service container
 job (``tests/browser_walk.py``; docs/intake_queue.md).
@@ -283,7 +285,8 @@ class ReviewAndRetentionTests(unittest.TestCase):
         templates = {"บันทึก: อนุมัติ": "`บันทึก: ${DECISION[form.decision]}`",
                      "อนุมัติ 1 เคส": "`อนุมัติ ${totals.approved || 0} เคส",
                      "จับเวลาได้ 1 จาก 1 เคส": "จับเวลาได้ ${time.timed} จาก ${all} เคส`"}  # roadmap 2.10
-        texts = set(re.findall(r'to_(?:have|contain)_text\("([^"]+)"', walk)) | {"กฎกับ AI เทียบกับคำตัดสินของคน"}
+        texts = set(re.findall(r'to_(?:have|contain)_text\("([^"]+)"', walk)) | {"กฎกับ AI เทียบกับคำตัดสินของคน",
+                                                                                "ระบบช่วยอะไรได้บ้าง"}
         self.assertGreaterEqual(len(texts), 8)
         for text in sorted(texts):
             with self.subTest(text=text):
@@ -399,6 +402,36 @@ class AccessTests(unittest.TestCase):
         inbox = SCRIPT[SCRIPT.index("async function refreshInbox"):]
         self.assertIn('can("review")', inbox[:inbox.index("\n  }\n")])
 
+
+class FrameTests(unittest.TestCase):
+    """What the system can do, in plain words, on the page (roadmap 4.1, app/services/frame.py)."""
+
+    def test_every_code_of_the_frame_has_thai_words(self):
+        from app.services.frame import GIVEN_BY, REVIEWS
+        for table, codes in (("REVIEW_TH", REVIEWS), ("GIVEN_BY_TH", GIVEN_BY)):
+            with self.subTest(table=table):
+                words = js_table(table)
+                self.assertEqual(set(words), set(codes))
+                self.assertTrue(all(re.search(r"[฀-๿]", word) for word in words.values()))
+
+    def test_it_is_read_once_per_sign_in_and_the_lock_forgets_it(self):
+        self.assertEqual(SCRIPT.count('call("GET", "/v1/frame")'), 1)
+        enter = SCRIPT[SCRIPT.index("async function enter"):]
+        self.assertIn('call("GET", "/v1/frame")', enter[:enter.index("\n  }\n")])
+        lock = SCRIPT[SCRIPT.index('$("lock").addEventListener'):]
+        self.assertIn("state.frame = null;", lock[:lock.index("showGate(null)")])
+
+    def test_it_opens_the_settings_tab_and_shows_server_words_as_text(self):
+        settings_view = SCRIPT[SCRIPT.index("function renderSettings"):]
+        settings_view = settings_view[:settings_view.index("\n  }\n")]
+        self.assertLess(settings_view.index("framePanel()"), settings_view.index("agentsPanel(status)"))
+        self.assertIn("frame_version", settings_view)  # a new frame redraws the tab
+        panel = SCRIPT[SCRIPT.index("function framePanel"):]
+        panel = panel[:panel.index("\n  }\n")]
+        self.assertIn('"ระบบช่วยอะไรได้บ้าง (กรอบงาน)"', panel)
+        self.assertNotIn("innerHTML", panel)
+        # It says honestly that the person still chooses until the router (roadmap 4.2) is built.
+        self.assertIn("ตอนนี้ยังต้องเลือกเอง", panel)
 
 class ReviewerLabelTests(unittest.TestCase):
     """Rules and AI against people's decisions on the page (roadmap 2.8, app/services/review_labels.py)."""

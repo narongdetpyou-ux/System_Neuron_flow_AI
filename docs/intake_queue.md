@@ -1,6 +1,6 @@
 # Intake API, job queue, Runner and web page (round 2, Milestone B)
 
-**Status:** built in PR #11 and tested offline (697 tests on 2026-11-24, including killing the Runner
+**Status:** built in PR #11 and tested offline (721 tests on 2026-11-24, including killing the Runner
 mid-step). The container build is checked on every push by *Actions → Service container*. Live on
 Render's free plan since 2026-11-01 (`render.yaml`). Railway was the first choice, but it has paused new
 sign-ups since 22 Oct 2026 after a security incident; `railway.json` stays in the repository for later.
@@ -37,6 +37,10 @@ Storage and readiness checked, not assumed (2026-11-21, roadmap 1.7, ADR-036): t
 only when the start finds the data folder on a disk of its own, and `GET /readyz` says whether the Runner can work
 cases while `/healthz` stays the host's liveness check (see "ตรวจความพร้อม" and "Readiness and the storage
 check" below).
+The frame (2026-11-24, roadmap 4.1, ADR-038): `GET /v1/frame` and the first panel of the page's settings tab say what
+the system can do, in plain words: two tasks, each with examples, the information it needs, the one question asked
+when that is missing, and who decides (see "ระบบช่วยอะไรได้บ้าง" and "The frame" below). The person still chooses
+the kind of message above the box until the router (roadmap 4.2) chooses from this list.
 Design principles: [design_philosophy.md](design_philosophy.md).
 
 ## ภาพรวมการทำงาน (ภาษาไทย)
@@ -103,7 +107,7 @@ Design principles: [design_philosophy.md](design_philosophy.md).
 
 **ที่เก็บชั่วคราว (Render แผนฟรี)** หน้าเว็บไม่พูดว่า "บันทึกถาวร" เตือนในการ์ดยืนยันก่อนส่งและบนเคสที่รอตัดสิน และจำ "รหัสงาน" ของสิ่งที่ส่งจากเครื่องนี้ไว้ในเบราว์เซอร์ (ไม่จำข้อความเคส) ถ้าระบบเริ่มใหม่ด้วยที่เก็บว่าง จะขึ้นแถบสีเหลืองว่าหายไปกี่รายการ แทนที่เคสจะหายไปเงียบ ๆ ทางที่ทำให้ไม่หายคือแผนเสียเงินพร้อมดิสก์ (D1)
 
-แท็บ "ตั้งค่า" **ดูอย่างเดียว**: ขั้นตอนและตัวทำงาน (agent) ของแต่ละประเภทงาน, AI ที่ใช้อยู่และวิธีเปลี่ยนใน Render, กติกาการตัดสิน, ที่เก็บข้อมูลและขีดจำกัด, "ตัวเลขการทำงาน" (ดูหัวข้อถัดไป), "กฎกับ AI เทียบกับคำตัดสินของคน" (เฉพาะเจ้าของระบบและผู้ตรวจ ดูหัวข้อ "กฎกับ AI เทียบกับคำตัดสินของคน") และ "เส้นทางงานใน Honeycomb" (เปิดหรือปิด ส่งไปที่ไหน การส่งล่าสุดสำเร็จไหม และวิธีเปิดใน Render ดู [observability_tracing.md](observability_tracing.md)) เมื่อเปิดส่งเส้นทางงานแล้ว "รายละเอียดเชิงเทคนิค" ของแต่ละเคสจะมี "รหัสเส้นทางใน Honeycomb (trace id)" ด้วย หน้าเว็บแก้ค่าเหล่านี้ไม่ได้โดยตั้งใจ: คีย์อยู่ใน Render เท่านั้น ตัวทำงานเปลี่ยนได้ผ่าน PR เท่านั้น และคนต้องเป็นผู้ตัดสินเสมอ
+แท็บ "ตั้งค่า" **ดูอย่างเดียว**: "ระบบช่วยอะไรได้บ้าง" (ดูหัวข้อ "ระบบช่วยอะไรได้บ้าง"), ขั้นตอนและตัวทำงาน (agent) ของแต่ละประเภทงาน, AI ที่ใช้อยู่และวิธีเปลี่ยนใน Render, กติกาการตัดสิน, ที่เก็บข้อมูลและขีดจำกัด, "ตัวเลขการทำงาน" (ดูหัวข้อถัดไป), "กฎกับ AI เทียบกับคำตัดสินของคน" (เฉพาะเจ้าของระบบและผู้ตรวจ ดูหัวข้อ "กฎกับ AI เทียบกับคำตัดสินของคน") และ "เส้นทางงานใน Honeycomb" (เปิดหรือปิด ส่งไปที่ไหน การส่งล่าสุดสำเร็จไหม และวิธีเปิดใน Render ดู [observability_tracing.md](observability_tracing.md)) เมื่อเปิดส่งเส้นทางงานแล้ว "รายละเอียดเชิงเทคนิค" ของแต่ละเคสจะมี "รหัสเส้นทางใน Honeycomb (trace id)" ด้วย หน้าเว็บแก้ค่าเหล่านี้ไม่ได้โดยตั้งใจ: คีย์อยู่ใน Render เท่านั้น ตัวทำงานเปลี่ยนได้ผ่าน PR เท่านั้น และคนต้องเป็นผู้ตัดสินเสมอ
 
 ### รหัสรายคน: ให้คนอื่นช่วยตรวจหรือส่งเคส (ขั้น 2.1)
 
@@ -195,6 +199,20 @@ Design principles: [design_philosophy.md](design_philosophy.md).
 - ปุ่มหยุดงานที่กำลังทำอยู่ → ทำไม่ได้ เพราะแกนระบบหยุดงานกลางทางไม่ได้ (ยกเลิกได้เฉพาะเคสที่ยังรอคิว ทำแล้วในขั้น 1.3), ปุ่มอนุมัติ/ไม่อนุมัติ → ขั้น 2.4
 - ช่องใส่ API key, เปลี่ยน AI, ตั้งจำนวนครั้งลองใหม่, ตัวเลือก "ไม่ต้องถาม" และปุ่ม "แก้ไข JSON" → จะไม่ทำ เพราะขัดกฎของโปรเจกต์ (CLAUDE.md ข้อ 4–7)
 
+### ระบบช่วยอะไรได้บ้าง (ขั้น 4.1)
+
+ตั้งแต่ 24 พ.ย. ระบบมี "สมุดงาน" (กรอบงาน, frame) ไฟล์เดียวที่มีเลขรุ่น บอกเป็นภาษาไทยและอังกฤษว่าระบบช่วยอะไรได้บ้าง ตอนนี้มี 2 งาน
+
+| งาน | ข้อมูลที่ต้องมี | ถ้าข้อมูลขาด ระบบจะถาม | ใครตัดสิน |
+|---|---|---|---|
+| คัดแยกเคสปัญหาของลูกค้า | เรื่องที่ลูกค้าแจ้ง 8–500 ตัวอักษร (รหัสเคสระบบใส่ให้เอง) | "ลูกค้าแจ้งปัญหาอะไรเข้ามา เล่าสั้น ๆ ได้ไหมว่าลูกค้าทำอะไรอยู่ แล้วติดตรงไหน" | คนตัดสินทุกเคส |
+| แนะนำแหล่งเรียนเรื่อง AI และการออกแบบระบบ | เรื่องที่อยากเรียน 4–500 ตัวอักษร | "อยากเรียนเรื่องอะไร เล่าเป็นคำธรรมดาก็ได้" | ไม่มีใครต้องตัดสิน เพราะเป็นแค่คำแนะนำ |
+
+1. **ดูได้ที่แท็บ "ตั้งค่า"** ส่วน "ระบบช่วยอะไรได้บ้าง (กรอบงาน)" (เจ้าของระบบเห็นใต้ "จัดการผู้ใช้" ผู้ตรวจและผู้ส่งเคสเห็นเป็นส่วนแรก) แต่ละงานมีคำอธิบาย ตัวอย่างคำขอภาษาไทยและอังกฤษ ข้อมูลที่ต้องมี และใครตัดสิน
+2. **เลขรุ่น** อยู่ในบรรทัดแรกของส่วนนี้: `frame-v1 ·` ตามด้วยรหัส 12 ตัวที่คำนวณจากไฟล์ (SHA-256) ถ้ามีคนแก้ไฟล์แม้ตัวอักษรเดียว รหัสนี้จะเปลี่ยน
+3. **ยังไม่ได้เลือกงานให้เอง:** ตอนนี้ยังกด "เคสลูกค้า" หรือ "อยากเรียน" เหนือช่องพิมพ์เหมือนเดิม ขั้นต่อไป (4.2) ระบบจะอ่านข้อความแล้วเลือกงานจากรายการนี้ ถามกลับ 1 คำถามเมื่อข้อมูลไม่พอ และบอกตรง ๆ เมื่อเรื่องอยู่นอกรายการ
+4. **สิ่งที่ไม่อยู่ในรายการโดยตั้งใจ:** "จัดหมวดเคสด้วยกฎอย่างเดียว" (`case_triage.v1` รุ่นแรก) ยังเรียกผ่าน API ด้วยชื่อได้ แต่ไม่อยู่ในรายการ เพราะเป็นงานเดียวกับข้อแรก และ "บันทึกผลหลังอนุมัติ" เริ่มได้หลังคนอนุมัติเท่านั้น
+
 ### ตรวจความพร้อม (`/readyz`) และป้าย "ถาวร" ที่ตรวจจริง (ขั้น 1.7)
 
 ตั้งแต่ 21 พ.ย. ระบบไม่เชื่อตามค่าที่ตั้งไว้ แต่ตรวจของจริง 2 เรื่อง (จากรายงานคุณภาพ 19 พ.ย. หน้า 4):
@@ -221,7 +239,7 @@ Design principles: [design_philosophy.md](design_philosophy.md).
 3. เปิดเมนู ☰ แล้วเปิดเคสจากกล่อง "รอรีวิว"
 4. กด "อนุมัติ" ใส่เหตุผล แล้วกดบันทึก
 5. เปิดงานที่ส่งต่อไป แล้วรอจนงานนั้นบันทึกผลเสร็จ
-6. เปิดแท็บ "ตั้งค่า" แล้วดูว่าคำตัดสินถูกนับแล้ว
+6. เปิดแท็บ "ตั้งค่า" ดูว่ามีส่วน "ระบบช่วยอะไรได้บ้าง" ครบ 2 งาน (ขั้น 4.1) และคำตัดสินถูกนับแล้ว
 
 ถ้าปุ่มไหนกดไม่ได้ หน้าจอล้นออกด้านข้าง หรือหน้าเว็บมีข้อผิดพลาด ช่องตรวจจะเป็นสีแดง และ Render จะไม่อัปเดตระบบ **ดูผลเอง:** เปิดหน้า run ของ *Service container* → ส่วน Summary → หัวข้อ "เดินหน้าเว็บด้วยเบราว์เซอร์บนจอขนาดมือถือ" และรูปหน้าจอทุกขั้นอยู่ใน artifact ชื่อ `browser-walk` ท้ายหน้า run (เก็บไว้ 14 วัน) ยังไม่ได้ลองบน Safari หรือ Firefox
 
@@ -382,7 +400,8 @@ container: app.boot (root) ─becomes─► tini ─► python -m app.serve
   like a person on Playwright's "Pixel 7" (412 × 839 CSS pixels, touch, Chromium), against a fresh container of
   the image in the *Service container* job: sign in on the gate, type a case and send it, confirm it on the card,
   open the drawer (☰) and open the case from "รอรีวิว", approve it with a reason, see "ส่งต่อแล้ว" and open the
-  job it started until it has recorded the approval, then find the decision counted in the settings tab; last, the
+  job it started until it has recorded the approval, then find the frame's two tasks under "ระบบช่วยอะไรได้บ้าง" (roadmap
+  4.1) and the decision counted in the settings tab; last, the
   same over the API. Every screen must not scroll sideways, and the page must raise no script error and get no
   5xx reply; a click only succeeds on an element that is visible, enabled, still and not covered. Each screen is
   kept as a picture in the run's `browser-walk` artifact (14 days), with a Thai line per step on the run page.
@@ -471,6 +490,7 @@ app runs, carries an `X-Request-Id` header:
 | `POST /v1/reviews/{review_id}/decisions` | A person's decision, below | 201 new, 200 the same decision again | 400, 401, 403, 404, 409, 413, 415, 429 |
 | `GET /v1/reviews/scorecard` | The owner and reviewers: the rules and the AI against the categories people recorded (roadmap 2.8), and reviewer time per group (2.10), below | 200 | 401, 403 |
 | `GET /v1/me` | Who the credential is (`token_id`, `role`, `display_name`, `shared_key`) and what its role may do (`can`: `submit`, `cancel`, `review`, `manage_tokens`) | 200 | 401, 429 |
+| `GET /v1/frame` | Every role: what the system can do, in plain words (roadmap 4.1, ADR-038), below | 200 | 401, 405, 429 |
 | `GET /v1/tokens` | The owner: every personal token (never a secret or its hash), `active`, the limits and `retention` | 200 | 401, 403 |
 | `POST /v1/tokens` | The owner: issue a token, `{"display_name": "…", "role": "reviewer"\|"submitter"}`; the reply's `token` is the only copy (`shown_once`) | 201 | 400, 401, 403, 409 `too_many_tokens`, 413, 415, 429 |
 | `POST /v1/tokens/{token_id}/revoke` | The owner: revoke at once; the body is empty or `{}`; `changed` is `false` when it was already revoked | 200 | 400, 401, 403, 404 `token_not_found`, 415 |
@@ -538,7 +558,7 @@ workflow, agent, translator or the Runner reads it (a test checks).
   keys a minute per client. No cache, so a revocation applies to the next request. `last_used_at` is written at
   most once a minute.
 - Roles (`app/services/access.py`, `PERMISSIONS`): every route is open to the owner; `reviewer` may read
-  `/v1/status`, `/v1/me`, jobs, their events and reviews, and decide; `submitter` may read the same but reviews,
+  `/v1/status`, `/v1/me`, `/v1/frame`, jobs, their events and reviews, and decide; `submitter` may read the same but reviews,
   and send and cancel jobs. Anything else → `403 {"error": "forbidden", "role": …}`. Tokens are issued for
   `reviewer` and `submitter` only, at most 50 active, 10 new ones a minute per client; a display name is 1–60
   characters of text.
@@ -558,6 +578,22 @@ workflow, agent, translator or the Runner reads it (a test checks).
   fact meanings and origins, the refusal codes, the versions and `counts`; each workflow says `route_only`.
 - `POST /v1/jobs` refuses a route-only type (today `case_triage.v2.apply`) as `400 unknown_workflow_type`, and its
   `allowed` list leaves it out.
+
+**The frame (roadmap 4.1, ADR-038).** `GET /v1/frame` answers the frame that `app/services/frame_v1.json` holds, as
+checked against the catalog when the API started:
+- `frame_version`: `frame-v1@sha256:` and the complete SHA-256 of the file's bytes; one changed character is a new
+  version;
+- `languages` (`["th", "en"]`) and `out_of_scope`: the opening of an honest out-of-scope answer in both languages (for
+  the router, roadmap 4.2);
+- `tasks`: for each, `id` (`case_triage`, `study_guide`), `workflow_type` (the one type that runs it), `name` and
+  `description` in Thai and English, `review` (`person`: every job waits for a person; `none`: informational, ends
+  `COMPLETED`, ADR-018), `examples` (2–8 per language; not an evaluation set) and `fields`. A field is
+  `{name, given_by: "person", min_chars, max_chars, meaning, question}` or `{name, given_by: "system", meaning}`.
+- The checks at start: a task is never a route-only type; its fields are exactly its type's input fields; its limits
+  are probed against the type's own input check; every example passes that check. A frame that does not fit stops
+  the API at start. `case_triage.v1` is not a task on purpose (`frame.NAMED_ONLY`), and a test fails when a new
+  admissible type is neither a task nor named-only.
+- Nothing in it is a path, a param or an agent, and it admits nothing: `POST /v1/jobs` still takes a `workflow_type`.
 
 **Retention (ADR-029).** `GET /v1/status`, a new job's reply (202 and the duplicate's 200) and a decision's reply
 carry `retention`: `{"persistent": false, "lost_on": ["sleep", "restart", "deploy"], "store_id": "store_<16 hex>",

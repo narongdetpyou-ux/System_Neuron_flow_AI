@@ -23,7 +23,7 @@ differs, this file and architecture.md win.
   - ถ้าสองฝ่ายเห็นไม่ตรงกัน โค้ดเจอสัญญาณ หรือ AI ชี้ เคสจะถูกยกให้คนดูก่อน พร้อมบอกเหตุผล (ขั้น 5.10)
 - ถ้าเครื่องดับกลางทาง ระบบทำต่อได้ ส่งซ้ำก็ไม่เกิดงานซ้ำ
 - ยกเลิกเคสที่ยังรอคิวได้ และทุกคำขอมีรหัสคำขอ (request id) ไว้ไล่ดูใน log (ขั้น 1.2, 1.3)
-- ผ่านชุดทดสอบอัตโนมัติ 697 ข้อ และเปิดใช้ออนไลน์บน Render แล้ว ระบบปิดตัวอย่างเรียบร้อย และการแก้แค่เอกสารไม่ทำให้ Render ขึ้นเวอร์ชันใหม่ (ขั้น 0.1, 0.5)
+- ผ่านชุดทดสอบอัตโนมัติ 721 ข้อ และเปิดใช้ออนไลน์บน Render แล้ว ระบบปิดตัวอย่างเรียบร้อย และการแก้แค่เอกสารไม่ทำให้ Render ขึ้นเวอร์ชันใหม่ (ขั้น 0.1, 0.5)
 - หน้าเว็บเป็นแบบแชท: พิมพ์เคส ดูขั้นตอนก่อนส่ง กดยืนยัน แล้วติดตามใน Flow และประวัติเหตุการณ์ (ขั้น 1.6)
 - หน้าเว็บบอกว่ามีเคสรอกี่เคส เคสที่รอนานสุดรอมานานเท่าไร ปกติแต่ละเคสใช้เวลาเท่าไร และเคสที่ไม่สำเร็จล้มเพราะอะไร (ขั้น 5.3)
 - ถ้ามีคนแก้กฎหรือ prompt แล้วคำตอบของเคสทดสอบเคสไหนเปลี่ยน ช่องตรวจบน GitHub จะเป็นสีแดงและบอกว่าเคสไหนเปลี่ยนอะไร (ขั้น 5.2)
@@ -62,6 +62,7 @@ differs, this file and architecture.md win.
   - ข้ออื่นเป็นแผนงาน: 1.7 (ป้าย "ถาวร" ต้องตรวจจริง และสัญญาณแยกเมื่อตัวรันงานติด ทำแล้ว 21 พ.ย. ดูข้อถัดไป) 1.8 (ทดสอบกดจริงบนจอขนาดมือถือใน GitHub ทำแล้ว 21 พ.ย. ดูข้อถัดไป) 2.9 (ให้คนเลือกหมวดก่อนเห็นข้อเสนอ ต้องรอคุณเห็นชอบ) 2.10 (เวลาที่คนใช้ตัดสินแต่ละเคส) และเพิ่มเกณฑ์ใน 1.4, 5.7, 7.2, 7.5 ส่วนที่ต้องให้คุณตัดสินใจ: D1 (ดิสก์ถาวร) และข้อมูลจริง (D4)
 - **ป้าย "ถาวร" และสถานะตัวรันงาน มาจากการตรวจจริง (21 พ.ย., ขั้น 1.7, ADR-036):** ตอนเริ่มระบบ ระบบดูตารางดิสก์ของเครื่อง (mount table) แล้วเรียกที่เก็บว่า "ถาวร" เฉพาะเมื่อโฟลเดอร์ข้อมูลอยู่บนดิสก์ที่ต่อแยกจริง ถ้าตั้งไว้แต่ดิสก์ไม่ได้ต่อ แท็บ "ตั้งค่า" บอก "ชั่วคราว" พร้อมเหตุผล มีหน้าตรวจความพร้อมใหม่ `/readyz` ที่บอกว่าตัวรันงานพร้อมทำเคสไหม (ตั้งค่า AI ไม่ครบจะได้ `blocked_config`) ส่วน `/healthz` เดิมไม่เปลี่ยน เพราะ Render ใช้ตัดสินการรีสตาร์ท และตัวรันงานที่ติดแจ้ง Sentry 1 ครั้งต่อการเริ่มระบบ บนแผนฟรีหน้าเว็บยังบอก "ชั่วคราว" เหมือนเดิม คุณลองบนหน้าเว็บจริงหลังอัปเดตแล้วและยืนยันว่าผ่าน (21 พ.ย.) ([บันทึกหลักฐาน](evidence/2026-11-21-readiness-and-storage-check.md), [วิธีใช้](intake_queue.md))
 - **GitHub กดหน้าเว็บบนจอขนาดมือถือให้ทุกครั้ง (21 พ.ย., ขั้น 1.8):** ทุกครั้งที่ส่งโค้ด ช่องตรวจ *Service container* เปิดหน้าเว็บด้วยเบราว์เซอร์อัตโนมัติบนจอขนาดมือถือ แล้วกดเหมือนคน: ใส่รหัส ส่งเคส ยืนยัน เปิดเคสจากกล่อง "รอรีวิว" กดอนุมัติ เปิดงานที่ส่งต่อ และดูว่าแท็บ "ตั้งค่า" นับคำตัดสินแล้ว ถ้าปุ่มไหนกดไม่ได้ หน้าจอล้นออกด้านข้าง หรือหน้าเว็บมีข้อผิดพลาด ช่องตรวจจะเป็นสีแดงและ Render จะไม่อัปเดต รูปหน้าจอทุกขั้นอยู่ใน artifact `browser-walk` ของหน้า run ([วิธีดู](intake_queue.md#github-ลองกดหน้าเว็บบนจอขนาดมือถือให้ทุกครั้ง-ขั้น-18))
+- **ระบบบอกได้ว่าช่วยอะไรได้บ้าง (24 พ.ย., ขั้น 4.1 ตามลำดับที่คุณเลือก, ADR-038):** มี "สมุดงาน" (กรอบงาน) ไฟล์เดียวที่มีเลขรุ่น บอกเป็นภาษาไทยและอังกฤษว่าระบบช่วยได้ 2 อย่าง: "คัดแยกเคสปัญหาของลูกค้า" (คนตัดสินทุกเคส) และ "แนะนำแหล่งเรียนเรื่อง AI และการออกแบบระบบ" (เป็นแค่คำแนะนำ) แต่ละงานมีตัวอย่างคำขอ ข้อมูลที่ต้องมี คำถาม 1 ข้อที่ระบบจะถามเมื่อข้อมูลขาด และบอกว่าใครตัดสิน ดูได้ในแท็บ "ตั้งค่า" ส่วน "ระบบช่วยอะไรได้บ้าง" ระบบตรวจทุกครั้งที่เริ่มว่ารายการนี้ตรงกับงานที่ระบบทำจริง (ข้อมูลที่ต้องมีและความยาวตรงกับด่านตรวจของงานนั้น) ยังไม่ได้เลือกงานให้เอง: ตอนนี้ยังกด "เคสลูกค้า" หรือ "อยากเรียน" เหมือนเดิม ส่วนที่ระบบอ่านข้อความแล้วเลือกงานให้คือขั้น 4.2 ([วิธีดู](intake_queue.md#ระบบช่วยอะไรได้บ้าง-ขั้น-41))
 - **จับเวลาที่คนใช้ตัดสินแต่ละเคส (22 พ.ย., ขั้น 2.10 ตามที่คุณเลือก):** หน้าเว็บเริ่มจับเวลาเมื่อการ์ด "ตัดสินเคสนี้" ขึ้น แล้วส่งจำนวนวินาทีไปพร้อมคำตัดสิน (ตัวเลขอย่างเดียว) แท็บ "ตั้งค่า" แสดงค่ากลางและ "95% ของเคสไม่เกิน" ของแต่ละชุด แยกเคสที่ยกให้ดูก่อนกับเคสปกติ ตัวเลขเป็นภาพรวม ไม่แยกรายคน ไม่แสดงในหน้าเคส และไม่เปลี่ยนการตัดสิน ตัวเลขจริงต้องมีผู้ตรวจจริง (D3) และดิสก์ถาวร (D1)
 
 **ลำดับต่อจากนี้** แต่ละขั้นจบด้วยสิ่งที่คุณลองเองได้
@@ -72,7 +73,7 @@ differs, this file and architecture.md win.
 | 1 | เก็บงานเล็ก ๆ ให้ระบบแน่นขึ้น | ยกเลิกเคสที่ยังรอคิวได้ เปิด `/readyz` ดูว่าตัวรันงานพร้อมไหม และดูรูปหน้าจอมือถือที่ GitHub กดให้ | เสร็จ ยกเว้น 1.4 (สำรองข้อมูล) ที่ต้องใช้แผน Render แบบเสียเงิน; เพิ่มจากรายงานคุณภาพ 19 พ.ย.: 1.7 (สถานะที่ตรวจจริง) ทำแล้วและคุณลองผ่านแล้ว (21 พ.ย.) และ 1.8 (ทดสอบกดจริงบนจอมือถือ) ทำแล้ว (21 พ.ย.) |
 | 2 | ให้คนรีวิวได้จริง: ผู้รีวิวมีรหัสของตัวเอง กดอนุมัติหรือไม่อนุมัติได้ และ n8n แจ้งเตือน | กล่อง "รอรีวิว" บนหน้าเว็บ และข้อความแจ้งเตือน | เริ่มแล้ว (10 พ.ย. ตามข้อ 4 ของผู้ตรวจสอบอิสระ): 2.2 บันทึกการตัดสินและ 2.4 การ์ดตัดสินกับรายการ "รอรีวิว" ทำแล้ว โดยผู้ตัดสินคือผู้ถือรหัสเข้าใช้ร่วม (คุณ); 2.3 งานต่อเนื่องหลังอนุมัติทำแล้ว (11 พ.ย.) เป็นเส้นทางแรกของตัวกลาง (ขั้น H); คุณลองบนหน้าเว็บจริงแล้ว (16 พ.ย.): อนุมัติ 1 เคส เกิดงานต่อเนื่อง 1 งานและเสร็จ ป้าย "ด่วน" ผ่านแล้วระหว่างทดสอบรหัสรายคน ส่วนการกด "ไม่อนุมัติ" โดยไม่ใส่เหตุผลยังไม่ได้ลอง; 2.1 รหัสรายคนของผู้ตรวจและผู้ส่งเคสทำแล้ว (16 พ.ย.) และคุณลองบนหน้าเว็บจริงผ่านครบทุกขั้นแล้ว (16 พ.ย.); 2.8 นับว่ากฎกับ AI ตรงกับคำตัดสินของคนกี่เคส ทำแล้ว (19 พ.ย.); 2.10 จับเวลาที่คนใช้ตัดสินแต่ละเคส ทำแล้ว (22 พ.ย.); 2.5 n8n ยังไม่ทำ |
 | 3 | ผู้ช่วยแนะนำแหล่งเรียน (`study_guide.v1`) ตามหลักปรัชญาของคุณ | พิมพ์เรื่องที่อยากรู้ด้วยคำธรรมดา แล้วได้แหล่งเรียนไม่เกิน 5 แหล่งพร้อมลำดับการเรียน | สร้างครบทุกขั้นแล้ว (คุณเลือกขั้นนี้ก่อนขั้น 2 เมื่อ 5 พ.ย.): 3.1 คลังแหล่งเรียน 3.2 ตัวผู้ช่วย และ 3.3 ชุดข้อสอบ ทำแล้ว (ดูตัวอย่างคำตอบและผลข้อสอบใน Actions ได้); 3.4 ช่อง "อยากเรียน" บนหน้าเว็บ สร้างและ merge แล้ว (7 พ.ย.) คุณลองบนหน้าเว็บจริงผ่านแล้ว (8 พ.ย.); รันกับ AI จริง (Typhoon) แล้ว หาหัวข้อถูก 46 จาก 48 ข้อ ไม่มีลิงก์นอกคลัง (Claude รอ D2); **หยุดพัฒนาเพิ่มไว้ก่อนตามที่คุณสั่ง (11 พ.ย.)**: ของที่มีอยู่ยังใช้ได้และช่องตรวจยังรันเหมือนเดิม |
-| 4 | ช่องคุยภาษาธรรมดา: ระบบเข้าใจว่าคุณขออะไร บอกตรง ๆ เมื่อเรื่องอยู่นอกกรอบ และถามกลับ 1 คำถามเมื่อข้อมูลไม่พอ | คุยกับระบบได้เลย ไม่ต้องเลือกประเภทงานเอง | ยังไม่เริ่ม (ขั้น 3 สร้างครบแล้ว เริ่มได้เมื่อคุณเลือก) |
+| 4 | ช่องคุยภาษาธรรมดา: ระบบเข้าใจว่าคุณขออะไร บอกตรง ๆ เมื่อเรื่องอยู่นอกกรอบ และถามกลับ 1 คำถามเมื่อข้อมูลไม่พอ | คุยกับระบบได้เลย ไม่ต้องเลือกประเภทงานเอง | เริ่มแล้ว (24 พ.ย. ตามลำดับที่คุณเลือก): 4.1 "สมุดงาน" บอกว่าระบบช่วยอะไรได้บ้าง ทำแล้ว ดูได้ในแท็บ "ตั้งค่า" ส่วน "ระบบช่วยอะไรได้บ้าง" (รอคุณลองบนหน้าเว็บจริงหลัง merge); ต่อไป 4.2 ระบบอ่านข้อความแล้วเลือกงานให้เอง แล้ว 4.3 คำตอบเป็นชั้น และ 4.4 หน้าแชท |
 | 5 | ติดตามเส้นทางของแต่ละงาน (เวลา token จุดที่ช้า) ด่านตรวจผลรายเคส และแผนทดสอบ 3 ขั้นด้วยข้อมูลเปิด | ตัวเลขคิวและเวลาบนหน้าเว็บ ช่องตรวจบน PR แล้วต่อด้วยเส้นทางงานใน Honeycomb; ผลด่านความทนทานในหน้าสรุปของ *Core logic tests* | เสร็จแล้วทั้ง 5.1, 5.2, 5.3 และ 5.4; เส้นทางงานแรกเข้า Honeycomb เมื่อ 4 พ.ย. 00:23 น.; ด่านความทนทาน (5.4) รวมเข้า main แล้ว 7 พ.ย.; แก้ 8 bug ที่เจอแล้ว (5.5, PR #42 รวมแล้วเมื่อ 8 พ.ย.); E2 ใน PR #64 แก้จุดอ่อนของกฎได้ 24 จุด วันที่ 19 พ.ย. แก้จุดอ่อนเรื่องตัวที่มองไม่เห็นอีก 7 จุด และวันที่ 24 พ.ย. แก้ช่องรั่วของการปิดข้อมูลส่วนตัว 10 จุด เหลือจุดอ่อนทั้งหมด 3 จุด ขั้นข้อสอบกลาง (5.6) สร้างและวัดกับ Typhoon แล้ว 11 พ.ย. พร้อมการจำลองปุ่มอนุมัติเอง (5.9) และวัดคำสั่งแอบแฝงครั้งแรก (ส่วนหนึ่งของ 5.7); ส่วนที่เหลือของ 5.7 ยังไม่ทำ; 5.8 โมเดลเปิดที่รันเองบนเครื่องทดสอบของ GitHub สร้างแล้วใน PR #46 และรันเต็มรอบแรกแล้ว 8 พ.ย. (ดันเคสที่กฎผิดขึ้นคิวด่วนครบ 32/32) รอเจ้าของโปรเจกต์เลือกทาง |
 | 6 | AI วางแผนงานหลายขั้น ระบบตรวจแผนก่อนรัน และเครื่องมืออื่นเรียกใช้ผ่าน MCP ได้ | สั่งงานจากแอป Claude ได้ | ยังไม่เริ่ม (ต้องรอขั้น 2–4) |
 | 7 | เตรียมพร้อมก่อนให้คนอื่นใช้ หรือก่อนเปิด repo สาธารณะ | รายงานตรวจความปลอดภัย และรายการตรวจก่อนเปิดตัว | เริ่มแล้ว: 7.1 ปิดข้อมูลส่วนตัวก่อนส่งให้ AI ทำแล้ว และตั้งแต่ 10 พ.ย. ตัวกลางเรียก AI บังคับปิดซ้ำเองก่อนส่ง ส่วนการจำกัดว่าใครเห็นคีย์ AI ได้ เขียนแผนไว้ ยังไม่ทำ; 7.4 เสร็จ: repo นี้เป็นสาธารณะพร้อมประวัติทั้งหมดตั้งแต่ 8 พ.ย. (D5) เปลี่ยนคีย์ Sentry แล้ว และเปิดระบบสแกนคีย์ของ GitHub แล้ว; มีผู้ตรวจสอบอิสระอ่านโค้ดครั้งแรกเมื่อ 10 พ.ย. ตอบครบ 4 ข้อแล้ว และคุณเลือกเก็บประวัติอีเมลเก่าไว้ตามเดิม (D8) |
@@ -149,7 +150,7 @@ owner.
 | 3.2 | `study_guide.v1` workflow | ✅ PR #33; first live run with Typhoon in PR #38 (topic correct 46/48, 0 of 142 links outside the library); Claude needs D2 | 3.1 |
 | 3.3 | Study-guide evaluation set and scorecard | ✅ PR #34 with the mock in CI (an eval gate); first live run with Typhoon on 2026-11-06 (PR #38): topic correct 46/48, 0 of 142 links outside the library; Claude after D2 | 3.2 |
 | 3.4 | Study guide on the web page | ✅ PR #39 (2026-11-07): a case / study switch above the box, a layered answer, questions sent without a confirm card (ADR-023); the owner's test on the live page passed on 2026-11-08 (mock AI) | 3.2 |
-| 4.1 | The frame: a versioned catalog of what the system can do | ⬜ | 3.2 |
+| 4.1 | The frame: a versioned catalog of what the system can do | ✅ built on 2026-11-24 (ADR-038): `app/services/frame_v1.json` (`frame-v1@sha256:…`) lists two tasks, `case_triage` (`case_triage.v2`, a person decides) and `study_guide` (`study_guide.v1`, informational), each with Thai and English names, descriptions and examples, its input fields and one question per field a person gives; `app/services/frame.py` checks it on its own and against the catalog (fields and limits probed against each type's own input check) at start; `GET /v1/frame` for every role and the first panel of the settings tab; one job per task checks who decides; the examples are kept apart from every exam set; the owner's test on the live page after the merge is open | 3.2 |
 | 4.2 | `intake.route.v1`: the plain-language router | ⬜ | 4.1 |
 | 4.3 | Layered answers (summary → steps → details) | ⬜ | 4.2 |
 | 4.4 | Chat-style page | ⬜ | 4.2 |
@@ -1065,6 +1066,20 @@ workflow types.
 - **Versioning:** the frame is versioned data with a hash, like a prompt.
 - **`GET /v1/frame`** lists what the system can do, in plain words, for the page and for out-of-scope
   answers.
+- **Changed when it was built (2026-11-24, ADR-038):**
+  - The frame lists *tasks*, not catalog entries: what a person may ask for in plain words, each run by one
+    workflow type. Two today: `case_triage` (`case_triage.v2`) and `study_guide` (`study_guide.v1`).
+    `case_triage.v1` (the rules-only demo) stays admissible by name but is not offered (`frame.NAMED_ONLY`, with a
+    test that fails when a new admissible type is neither); the route-only `case_triage.v2.apply` can never be a task.
+  - The entries live in one file, `app/services/frame_v1.json`, beside the catalog rather than inside it, so the
+    whole frame has one version: `frame-v1@sha256:` and the complete SHA-256 of the file's bytes.
+  - Each task also says who decides (`person` or `none`), checked by running one job per task, and each field says
+    who gives it: a person (with its length limits and one question) or the application (a case id).
+  - The limits are probed against each type's own `check_input`, and every example must pass it; a frame that does
+    not fit stops the API at start. The examples are the developer's, not an evaluation set: a test keeps them apart
+    from every exam set, and the two paraphrases of Phase 4's gate are kept out of them.
+  - The page shows the frame in the settings tab ("ระบบช่วยอะไรได้บ้าง"); the switch above the box still chooses until
+    4.2. The study guide is one of the tasks as it is built; nothing under `app/domains/study_guide/` changed (paused).
 
 ### 4.2 `intake.route.v1`: the router
 
@@ -2082,4 +2097,12 @@ status is in the table above.
   merge, both fixed: a phone number grouped like a date (`08-12-3456 78`) was left alone, and a plain "at" with
   real dots masked "login at example.com" as an address. Every AI agent's version now names `redact-v3`, so the
   merge redeploys Render. NFC (an ADR) is the rest of 5.5.
+- 2026-11-24: the owner said to start Phase 4; 4.1 built (ADR-038). The frame is one versioned file,
+  `app/services/frame_v1.json` (`frame-v1@sha256:` and the file's complete SHA-256), with two tasks a person may ask
+  for in plain words, each with its workflow type, Thai and English names, descriptions and examples, who decides, its
+  input fields and one question for each field a person gives. `app/services/frame.py` checks it on its own and
+  against the catalog when the API starts (fields, limits probed against each type's input check, examples);
+  `GET /v1/frame` for every role; the settings tab's first panel shows it, and the browser walk and the smoke test
+  check it on the real image. `case_triage.v1` is named-only on purpose. Tests: 721 (24 new). No triage outcome
+  changed, so the eval and robustness baselines are unchanged. Merging redeploys Render. Next: 4.2, the router.
 

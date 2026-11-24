@@ -106,6 +106,7 @@ guide** (`study_guide.v1`, the owner's first-response rule):
 | Personal access tokens and roles: the owner issues a token for a reviewer or a submitter on the page (shown once) and revokes it at once; every API route checks the caller's role | `app/services/access.py`, `app/api/routes.py`, `app/web/` | **Built on 2026-11-16** (roadmap 2.1, ADR-034); the owner's test on the live page passed the same day. On Render's free plan the tokens are lost with the queue at every sleep, restart and deploy, so they fail closed |
 | Rules and AI against people's decisions: how often each named the category a reviewer recorded, per proposal version, split by Thai text or not, with a 95% interval on every rate | `app/services/review_labels.py`, `app/api/routes.py`, `app/web/` | **Built on 2026-11-19** (roadmap 2.8): `GET /v1/reviews/scorecard` and the settings tab, for the owner and reviewers; counts only. The labels lean towards the proposal and are synthetic cases, so they are not accuracy; on the free plan they vanish at every sleep |
 | Reviewer time per case: how long a decision card was open before the decision, as the median and the 95th percentile per proposal version and by priority, never per person | `app/web/app.js`, `app/services/reviews.py`, `app/services/review_labels.py`, `app/persistence/queue_store.py` | **Built on 2026-11-22** (roadmap 2.10): the page sends `card_open_s` with a decision (queue schema 5); real figures need real reviewers (D3) and a disk (D1) |
+| The frame: what the system can do, in plain words (two tasks, each with Thai and English names, examples, the information it needs, one question for each missing field, and who decides) | `app/services/frame.py`, `frame_v1.json`, `app/api/routes.py`, `app/web/` | **Built on 2026-11-24** (roadmap 4.1, ADR-038): one versioned file checked against the catalog at start, `GET /v1/frame` and the first panel of the settings tab. It describes only: the plain-language router that chooses a task by itself is roadmap 4.2 |
 | n8n intake, reviewer notifications | — | **Not built yet** (Milestone C in [architecture](docs/architecture.md)) |
 | Skill handoff: separate skills that pass work through one exchange, with a translator on each side of a common language; the first route starts the linked job after an approval (roadmap 2.3) | `app/exchange/`, `app/domains/case_triage/apply.py` | **Working since 2026-11-11** (ADR-030, [design and tests](docs/skill_handoff.md)): checked over all 217 triage cases end to end; the first new skill waits for the owner's choice |
 
@@ -160,7 +161,7 @@ so; a paid plan with a disk keeps them.
 
 **Locally (Python 3.10+):**
 ```bash
-python -m unittest discover -s tests -v        # 697 tests
+python -m unittest discover -s tests -v        # 721 tests
 python -m examples.case_triage_demo            # v1 rules, one synthetic case
 python -m examples.case_triage_shadow_demo     # v2 shadow mode, three synthetic cases (offline mock AI)
 python -m app.eval.triage_shadow_eval          # scorecard on 61 synthetic cases

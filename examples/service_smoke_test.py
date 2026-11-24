@@ -4,7 +4,7 @@ CI runs it against the Docker container; you can point it at the online service 
 
     python -m examples.service_smoke_test --url https://<your-service>.onrender.com --key <access key>
 
-First run: submit a case, check duplicates and conflicts, wait for the result, approve a case and follow its
+First run: read the frame (roadmap 4.1), submit a case, check duplicates and conflicts, wait for the result, approve a case and follow its
 handoff, issue a reviewer token, decide with it and revoke it (roadmap 2.1), check that the scorecard counts both
 decisions against the rules and the AI (roadmap 2.8), and save the job and token ids.
 With ``--after-restart``: check that the saved job is still there, that the revoked token is still revoked, that the
@@ -200,6 +200,10 @@ def first_run(client, state_file, timeout_s, summary=None, expect_storage=None):
     wait_for_ready(client, timeout_s)
     if expect_storage:
         storage_is(client, expect_storage)
+    status, frame = client.call("GET", "/v1/frame")
+    check(status == 200 and str(frame.get("frame_version", "")).startswith("frame-v1@sha256:")
+          and [task.get("id") for task in frame.get("tasks") or []] == ["case_triage", "study_guide"],
+          "the frame lists what the system can do: 2 tasks in plain words (roadmap 4.1)")
     key = f"smoke-{uuid.uuid4()}"
     body = {"workflow_type": "case_triage.v2", "idempotency_key": key,
             "input": {"case_id": "SMOKE-TH-01", "summary": "อัปโหลดไฟล์แนบไม่ได้ ค้างที่ 99%"}}

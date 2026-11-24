@@ -1,8 +1,9 @@
 """The workflows the intake accepts, and how each one becomes a Core job.
 
 A request only names a ``workflow_type``. It can never carry agent names, import paths, step lists,
-params or callbacks: this catalog is the whole frame, and anything outside it is refused at
-admission ("out of scope" is a valid answer).
+params or callbacks: this catalog is everything the system runs, and anything outside it is refused at
+admission ("out of scope" is a valid answer). The frame (``app/services/frame.py``, roadmap 4.1, ADR-038) says in
+plain words which of these types a person may ask for, and what each one needs; it admits nothing itself.
 
 A workflow type marked ``route_only`` is started only by a skill-handoff route (ADR-030, ``app/exchange/``), from
 a recorded state of another job; ``POST /v1/jobs`` refuses it like a type outside the frame.

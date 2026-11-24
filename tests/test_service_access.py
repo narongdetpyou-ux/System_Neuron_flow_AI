@@ -23,7 +23,8 @@ REVIEW = "rev_" + "0" * 24
 UNKNOWN_ID = "ab" * 8  # a well-formed token id that no token has
 # One path for every route template in the role table, and the body each POST needs to get past its checks.
 SAMPLES = {
-    "/v1/status": "/v1/status", "/v1/me": "/v1/me", "/v1/jobs": "/v1/jobs", "/v1/jobs/{job_id}": f"/v1/jobs/{JOB}",
+    "/v1/status": "/v1/status", "/v1/me": "/v1/me", "/v1/frame": "/v1/frame", "/v1/jobs": "/v1/jobs",
+    "/v1/jobs/{job_id}": f"/v1/jobs/{JOB}",
     "/v1/jobs/{job_id}/events": f"/v1/jobs/{JOB}/events", "/v1/jobs/{job_id}/cancel": f"/v1/jobs/{JOB}/cancel",
     "/v1/reviews": "/v1/reviews", "/v1/reviews/scorecard": "/v1/reviews/scorecard",
     "/v1/reviews/{review_id}": f"/v1/reviews/{REVIEW}",
