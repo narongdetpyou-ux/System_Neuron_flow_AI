@@ -16,12 +16,14 @@ What is masked (Thai and English), in this order:
     (``สมชาย@ตัวอย่าง.ไทย``), starting after a space, punctuation or the start of the text;
   - addresses written out: ``at``/``(at)``/``[at]``/``แอท`` for ``@`` and ``dot``/``(dot)``/``[dot]``/``ดอท`` for
     a dot, ending in a common top-level domain (``somchai at example dot com``). The list of endings keeps
-    phrases such as "look at the dot matrix" readable;
+    phrases such as "look at the dot matrix" readable. A plain "at" needs a written-out dot and a first
+    part that is not a common word, so ``I cannot login at example.com`` keeps its words;
 * **long numbers**: a run of digits (Thai digits too) with spaces (up to three), dashes, dots or slashes
   between the groups (with or without spaces around them), or with invisible zero-width characters between
   them, and an optional ``+`` or area code in brackets. A date (``2026-11-03``, ``24/11/2026``,
-  ``24.11.2026``), alone or with the hour that a space joins to it, is left alone. Runs of 9 or more digits are
-  masked by what they look like, the first match winning:
+  ``24.11.2026``), alone or with the hour that a space joins to it, is left alone when its parts make a date
+  (``08-12-3456 78`` does not). Runs of 9 or more digits are masked by what they look like, the first match
+  winning:
   - 13 digits with a valid Thai ID check digit → ``[THAI_ID]``;
   - 13–19 digits passing the Luhn check (card-like) → ``[CARD]``;
   - a phone number → ``[PHONE]``: Thai numbers (0 + 8–9 digits, the second digit 2–9), +66/0066 + 8–9
@@ -43,8 +45,9 @@ What is masked (Thai and English), in this order:
 
 Not detected (written down so nobody relies on it): names without a title or label (for example
 ``คุณสมชาย``, where คุณ may also mean "you", or ``John Smith called``), Thai surnames after a given name,
-addresses, numbers of fewer than 9 digits, numbers spelled out in words, and identifiers mixing letters and
-digits. Masking lowers the risk; it does not make real personal data safe to use. Real data still needs the
+addresses, an e-mail written with a plain "at" and real dots (``somchai at gmail.com``, which reads like
+``login at example.com``), numbers of fewer than 9 digits, numbers spelled out in words, and identifiers
+mixing letters and digits. Masking lowers the risk; it does not make real personal data safe to use. Real data still needs the
 owner's decision (D4) after 7.2 and 7.3.
 
 The placeholders never contain the masked value, its length or a hash of it. ``REDACTION_VERSION`` is
@@ -86,8 +89,10 @@ _TOP_LEVEL = ("com", "net", "org", "edu", "gov", "mil", "int", "info", "biz", "n
 _SPELLED_AT = r"(?:[ \t]+(?i:at)[ \t]+|[ \t]*[(\[{][ \t]*(?i:at)[ \t]*[)\]}][ \t]*|[ \t]*แอท[ \t]*)"
 _SPELLED_DOT = r"(?:[ \t]+(?i:dot)[ \t]+|[ \t]*[(\[{][ \t]*(?i:dot)[ \t]*[)\]}][ \t]*|[ \t]*ดอท[ \t]*|\.)"
 _EMAIL_SPELLED = re.compile(
-    rf"(?<![A-Za-z0-9._%+-])[A-Za-z0-9._%+-]+(?:{_SPELLED_AT}|@)[A-Za-z0-9-]+(?:{_SPELLED_DOT}[A-Za-z0-9-]+)*"
-    rf"{_SPELLED_DOT}(?i:{'|'.join(sorted(_TOP_LEVEL, key=len, reverse=True))})(?![A-Za-z0-9-])")
+    rf"(?<![A-Za-z0-9._%+-])(?P<local>[A-Za-z0-9._%+-]+)(?P<at>{_SPELLED_AT}|@)(?P<domain>[A-Za-z0-9-]+"
+    rf"(?:{_SPELLED_DOT}[A-Za-z0-9-]+)*{_SPELLED_DOT}(?i:{'|'.join(sorted(_TOP_LEVEL, key=len, reverse=True))}))"
+    rf"(?![A-Za-z0-9-])")
+_SPELLED_DOT_WORD = re.compile(r"(?i:(?<![A-Za-z])dot(?![A-Za-z]))|ดอท")
 # Digit groups and what may stand between them: spaces (up to three), a dash, dot or slash with or without spaces
 # around it, or invisible zero-width characters (text copied from some websites). Not glued to Latin letters or
 # other digits. Thai letters may touch a number ("โทร0812345678"), so they are not part of the boundary.
@@ -144,9 +149,11 @@ _NOT_NAMES = {"นาย": ("จ้าง", "หน้า", "กรัฐมน�
               "นาง": ("สาว", "ฟ้า", "แบบ", "พยาบาล", "งาม", "รำ", "เอก", "ร้าย")}
 _MAX_THAI_NAME = 20
 # A date, alone or with the hour that a space joins to it ("2026-11-03 12:30", "24/11/2026 10:30",
-# "24.11.2026 10:30"), is not personal data. The same mark separates its three parts.
-_DATE = re.compile(r"(?:\d{4}[ \t]*([-/.])[ \t]*\d{1,2}[ \t]*\1[ \t]*\d{1,2}|\d{1,2}[ \t]*([-/.])[ \t]*\d{1,2}[ \t]*\2"
-                   r"[ \t]*\d{4})(?:[ \t]+\d{1,2})?")
+# "24.11.2026 10:30"), is not personal data. The same mark separates its three parts, and the parts must make a
+# date (see _is_date): "08-12-3456 78" is a phone number, not a date.
+_DATE = re.compile(r"(?:(?P<y1>\d{4})[ \t]*(?P<s1>[-/.])[ \t]*(?P<a1>\d{1,2})[ \t]*(?P=s1)[ \t]*(?P<b1>\d{1,2})"
+                   r"|(?P<a2>\d{1,2})[ \t]*(?P<s2>[-/.])[ \t]*(?P<b2>\d{1,2})[ \t]*(?P=s2)[ \t]*(?P<y2>\d{4}))"
+                   r"(?:[ \t]+(?P<hour>\d{1,2}))?")
 
 
 _SEAL = object()  # held by this module only: mask() passes it, so other code cannot make a MaskedText by accident
@@ -246,9 +253,35 @@ def _phone(run, digits):
     return digits.startswith("0") and len(digits) in (9, 10) and digits[1] in "23456789"
 
 
+def _is_date(run):
+    """True when ``run`` is a date (and maybe an hour) whose parts make sense: a year from 1900 to 2100 or the same
+    years in the Thai calendar (2443 to 2643), a day and a month in either order, an hour from 0 to 23."""
+    match = _DATE.fullmatch(run)
+    if not match:
+        return False
+    year = int(match["y1"] or match["y2"])
+    first, second = int(match["a1"] or match["a2"]), int(match["b1"] or match["b2"])
+    if not (1900 <= year <= 2100 or 2443 <= year <= 2643):
+        return False
+    if match["hour"] is not None and int(match["hour"]) > 23:
+        return False
+    return (1 <= first <= 12 and 1 <= second <= 31) or (1 <= first <= 31 and 1 <= second <= 12)
+
+
+def _written_out_address(match):
+    """Whether a written-out address is one. A plain word "at" followed by real dots reads like a place on the
+    web ("I cannot login at example.com"), and a common word before "at … dot" too ("login at example dot com"):
+    both are left alone, so the case keeps the word the triage needs. ``@``, ``(at)``, ``[at]`` and แอท are
+    always an address."""
+    if match["at"].strip().lower() != "at":
+        return True
+    return (_SPELLED_DOT_WORD.search(match["domain"]) is not None
+            and match["local"].lower() not in _NOT_A_NAME)
+
+
 def _number_kind(run):
     digits = _ascii_digits(run)
-    if len(digits) < MIN_DIGITS or _DATE.fullmatch(run):
+    if len(digits) < MIN_DIGITS or _is_date(run):
         return None
     if _thai_id(digits):
         return "thai_id"
@@ -260,8 +293,9 @@ def _number_kind(run):
 
 
 def _mask_once(text, count):
-    for pattern in (_EMAIL, _EMAIL_INTL, _EMAIL_SPELLED):
+    for pattern in (_EMAIL, _EMAIL_INTL):
         text = pattern.sub(lambda m: count("email"), text)
+    text = _EMAIL_SPELLED.sub(lambda m: count("email") if _written_out_address(m) else m.group(0), text)
 
     def number(match):
         kind = _number_kind(match.group(1))

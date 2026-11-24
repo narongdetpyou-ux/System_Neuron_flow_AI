@@ -282,6 +282,16 @@ BLNS strings through masking: idempotent, 0 violations) are identical.
 
 These last two are the changes outside the ten items; no benchmark item covered them.
 
+**Found by the automated review of PR #89, fixed before the merge:**
+- a number grouped like a date was left alone even when its parts could not make one: `08-12-3456 78`, which
+  redact-v2 masked as a phone number. A date is now left alone only when its year is 1900–2100 (or 2443–2643 in the
+  Thai calendar), its day and month fit in either order and its hour is 0–23; `0812-34-56 78`, which redact-v2 also
+  missed, is masked too;
+- a plain "at" with real dots took a place on the web for an address: `I cannot login at example.com` became
+  `I cannot [EMAIL]`, removing the word the triage needs. A written-out address with a plain "at" now needs a
+  written-out dot and a first part that is not a common word; `(at)`, `[at]`, แอท and `@` stay addresses. So
+  `somchai at gmail.com` is left alone, as in redact-v2, and is recorded as a limit (a unit test holds it).
+
 **What did not change:** under both versions, the masked text of every case is byte for byte the same in the 61
 development, 40 held-out, 128 hard, 64 attention and 116 edge cases, the 240 training cases and the 67 study-guide
 requests (716 texts, compared by program). So every eval gate (shadow, hard, attention, study guide), the auto-approve

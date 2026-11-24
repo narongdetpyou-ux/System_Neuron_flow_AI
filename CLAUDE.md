@@ -107,7 +107,7 @@ and ask the owner in plain Thai.
 ## 4. Checking your work
 
 ```bash
-python -m unittest discover -s tests -v        # all tests (696 on 2026-11-24); CI: Python 3.10 and 3.12
+python -m unittest discover -s tests -v        # all tests (697 on 2026-11-24); CI: Python 3.10 and 3.12
 python -m app.eval.triage_shadow_eval --compare-with tests/baselines/shadow_eval_mock.json  # scorecard + eval gate
 python -m tests.robustness.bench --compare-with tests/baselines/robustness_v1.json         # robustness gate (~25 s)
 ```

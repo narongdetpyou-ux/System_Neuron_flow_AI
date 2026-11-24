@@ -143,6 +143,12 @@ class RedactV3Tests(unittest.TestCase):
             ("Mr Smith's order is late", "Mr [NAME] order is late", {"name": 1}),
             ("Name: JOHN SMITH\nupload fails", "Name: [NAME]\nupload fails", {"name": 1}),
             ("คุณ JOHN แจ้งว่า upload ค้าง", "คุณ [NAME] แจ้งว่า upload ค้าง", {"name": 1}),
+            ("somchai(at)example.com", "[EMAIL]", {"email": 1}),  # (at), [at] and แอท are always an address
+            ("somchai แอท example.com", "[EMAIL]", {"email": 1}),
+            ("somchai@example dot com", "[EMAIL]", {"email": 1}),
+            # parts that cannot make a date: a phone number (the automated review of PR #89; redact-v2 masked the first)
+            ("call 08-12-3456 78 tonight", "call [PHONE] tonight", {"phone": 1}),
+            ("call 0812-34-56 78 tonight", "call [PHONE] tonight", {"phone": 1}),
         ]
         for text, expected_text, expected_counts in cases:
             with self.subTest(text=text):
@@ -154,7 +160,11 @@ class RedactV3Tests(unittest.TestCase):
                      "look at the dot matrix printer", "meet at 5 dot 30", "Dr. it works now",
                      "Miss the deadline? The upload failed.", "dr appointment tomorrow", "ms teams keeps crashing",
                      "24.11.2026 10:30 ระบบล่ม", "24/11/2026 10:30 login fails", "2026/11/24 10:30",
-                     "วันที่ 2026-11-03 12:30 ระบบล่ม", "version 2.10.3.4567 crashes on start"):
+                     "วันที่ 2026-11-03 12:30 ระบบล่ม", "version 2.10.3.4567 crashes on start",
+                     "01/12/2026 10:30 ok", "11/24/2026 10:30 ok", "24/11/2569 10:30 ok",
+                     # a place on the web keeps the word the triage needs (the automated review of PR #89)
+                     "I cannot login at example.com", "upload at drive.example.com fails",
+                     "refund at shop.example.co.th please", "login at example dot com"):
             with self.subTest(text=text):
                 self.check(text, text, {})
 
@@ -165,6 +175,11 @@ class RedactV3Tests(unittest.TestCase):
         self.check("MR. SMITH CAN'T LOGIN", "MR. [NAME] CAN'T LOGIN", {"name": 1})
         self.check("Mr. IT Mr. Smith", "Mr. IT Mr. [NAME]", {"name": 1})  # a refused word does not hide the next title
         self.check("Mr Will Smith called", "Mr [NAME] called", {"name": 1})  # a capitalised name stays a name
+
+    def test_a_plain_at_with_real_dots_is_a_documented_limit(self):
+        # It reads like "login at example.com", so it is left alone; written with "dot", (at) or แอท it is masked.
+        self.check("somchai at gmail.com", "somchai at gmail.com", {})
+        self.check("somchai at gmail dot com", "[EMAIL]", {"email": 1})
 
     def test_a_title_is_never_taken_for_a_surname(self):
         # redact-v2 read "Mrs" as Smith's surname and left "Jones" unmasked.
