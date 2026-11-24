@@ -16,6 +16,7 @@
                                   time per group (2.10); counts only
   POST /v1/reviews/{review_id}/decisions   approve or reject: 201 new, 200 the same decision again, 400/404/409
   GET  /v1/me                     who the credential is and what its role may do
+  GET  /v1/frame                  what the system can do, in plain words: the tasks of the frame (roadmap 4.1, ADR-038)
   GET  /v1/tokens                 the owner: every personal token, without secrets
   POST /v1/tokens                 the owner: issue a token for a reviewer or a submitter; 201, shown once
   POST /v1/tokens/{token_id}/revoke   the owner: revoke at once; 200, or 404
@@ -43,6 +44,11 @@ queue database (``app.services.reviews``); it never opens the Core ``Runtime`` (
 skill-handoff route (ADR-030, ``app.exchange``) is written in the same transaction as the decision; a job's detail
 shows where it came from (``handoff.from``) and what it handed on (``handoff.to``), and ``/v1/status`` lists the
 routes. A route-only workflow type cannot be admitted here.
+
+The frame (``app.services.frame``, roadmap 4.1, ADR-038) is read and checked against the catalog when the app is made, and
+``/v1/frame`` answers the same view for the whole life of the process; a frame that does not fit the catalog stops the
+service at start, like a route table that does not fit. It describes; it admits nothing (requests still name a
+``workflow_type``).
 
 Retention is stated, not implied: ``/v1/status``, every new job's reply and every decision's reply carry
 ``retention`` (whether the data folder survives a restart, and the queue database's ``store_id``). On storage
@@ -72,6 +78,7 @@ from app.persistence import DECIDED, PENDING, QUEUED, REVIEW_REQUIRED, StateErro
 from app.persistence.queue_store import iso
 from app.services import access
 from app.services.admission import AdmissionError, admit
+from app.services.frame import load_frame
 from app.services.metrics import queue_metrics
 from app.services.results import plan_view
 from app.services import review_labels
@@ -88,6 +95,7 @@ JOB_ID_TEXT = re.compile(r"(?:job|rev)_[0-9a-f]{24}")  # a review id is named af
 REVIEW_PATH = re.compile(r"^/v1/reviews/(rev_[0-9a-f]{24})(/decisions)?$")
 TOKEN_PATH = re.compile(r"^/v1/tokens/([0-9a-f]{16})/revoke$")
 SCORECARD_PATH = "/v1/reviews/scorecard"
+FRAME_PATH = "/v1/frame"
 LOST_ON = ("sleep", "restart", "deploy")  # what wipes a data folder that is not persistent (Render's free plan)
 READY = ("idle", "running")  # the Runner states in which ``/readyz`` answers 200
 # The Runner's heartbeat state as a readiness code. A Runner that has not reached its loop yet is "starting".
@@ -165,12 +173,16 @@ def readiness(row, *, now, stale_s, since):
 
 
 class ApiApp:
-    def __init__(self, settings, store, *, catalog=None, clock=time.time, reporter=None, tracing=None, exchange=None):
+    def __init__(self, settings, store, *, catalog=None, clock=time.time, reporter=None, tracing=None, exchange=None,
+                 frame=None):
         self.settings = settings
         self.store = store
         self.catalog = CATALOG if catalog is None else catalog
         # The skill-handoff exchange (ADR-030); a route table that does not fit the catalog fails at start.
         self.exchange = exchange or Exchange(self.catalog)
+        # The frame (roadmap 4.1, ADR-038): checked against this catalog once, here; one that does not fit fails at start.
+        self.frame = load_frame() if frame is None else frame
+        self._frame_view = self.frame.view(self.catalog)
         self.clock = clock
         self.started_at = clock()  # readiness counts only Runner heartbeats written after this (``readiness``)
         self.reporter = reporter
@@ -238,6 +250,8 @@ class ApiApp:
             return self._status() if reading else _not_allowed("GET, HEAD")
         if path == "/v1/me":
             return json_response(200, access.me_view(identity)) if reading else _not_allowed("GET, HEAD")
+        if path == FRAME_PATH:
+            return json_response(200, self._frame_view) if reading else _not_allowed("GET, HEAD")
         if path == "/v1/tokens":
             if method == "POST":
                 return self._issue(request, identity)
@@ -633,7 +647,7 @@ def route_template(path):
     """The route of an API path as a fixed template (``/v1/jobs/{job_id}``), or ``None`` for an unknown path.
 
     Spans carry this, never the path itself, so a path a client made up cannot carry text into a trace."""
-    if path in ("/v1/status", "/v1/jobs", "/v1/reviews", SCORECARD_PATH, "/v1/me", "/v1/tokens"):
+    if path in ("/v1/status", "/v1/jobs", "/v1/reviews", SCORECARD_PATH, "/v1/me", FRAME_PATH, "/v1/tokens"):
         return path
     if TOKEN_PATH.fullmatch(path):
         return "/v1/tokens/{token_id}/revoke"

@@ -10,8 +10,8 @@ whose AI is the mock:
 3. when it waits for a person, open the drawer (☰), find it in "รอรีวิว" and open it from there;
 4. approve it on the decision card, with a reason;
 5. see the handoff ("ส่งต่อแล้ว"), open the job it started, and wait until that job has recorded the approval;
-6. open the settings tab and find the decision counted in "กฎกับ AI เทียบกับคำตัดสินของคน", timed (roadmap 2.10: the
-   page sent how long its decision card was open);
+6. open the settings tab, find "ระบบช่วยอะไรได้บ้าง" with the frame's two tasks (roadmap 4.1), and find the decision
+   counted in "กฎกับ AI เทียบกับคำตัดสินของคน", timed (roadmap 2.10: the page sent how long its decision card was open);
 7. check the same over the API: the case approved, one handoff, the linked job completed with a Core receipt, and
    the scorecard's count with one timed decision.
 
@@ -48,6 +48,7 @@ REASON = "ทดสอบด้วยเบราว์เซอร์: อน�
 STEP_MS = 30_000     # one click or one screen
 CASE_MS = 90_000     # a case from "send" to "waits for a person", on a container that has just started
 SCORECARD = "กฎกับ AI เทียบกับคำตัดสินของคน"
+FRAME = "ระบบช่วยอะไรได้บ้าง"  # what the system can do, in plain words (roadmap 4.1)
 
 
 class Walk:
@@ -154,8 +155,12 @@ def walk(page, url, key, out, summary):
     w.screen("linked-job", "เปิดงานที่ส่งต่อไป และงานนั้นบันทึกผลการอนุมัติเสร็จพร้อมใบรับจาก Core",
              focus=thread.get_by_text("บันทึกผลเสร็จแล้ว พร้อมใบรับจาก Core"))
 
-    # 6. The decision is counted in the settings tab.
+    # 6. The settings tab: what the system can do (roadmap 4.1), then the decision counted.
     page.locator("#tab-settings").click()
+    frame = page.locator("#view-settings section.panel", has=page.locator("h2", has_text=FRAME))
+    expect(frame.locator("h3")).to_have_count(2)  # the frame's two tasks
+    w.screen("frame", f"แท็บ \"ตั้งค่า\" มีส่วน \"{FRAME}\" บอกงาน 2 อย่างที่ระบบช่วยได้ พร้อมตัวอย่างคำขอ ข้อมูลที่ต้องมี"
+             " และใครตัดสิน", focus=frame.locator("h2"))
     panel = page.locator("#view-settings section.panel", has=page.locator("h2", has_text=SCORECARD))
     expect(panel).to_contain_text("อนุมัติ 1 เคส")
     expect(panel).to_contain_text("จับเวลาได้ 1 จาก 1 เคส")  # the page sent the card's time (roadmap 2.10)

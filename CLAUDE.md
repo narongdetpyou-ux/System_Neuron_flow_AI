@@ -107,7 +107,7 @@ and ask the owner in plain Thai.
 ## 4. Checking your work
 
 ```bash
-python -m unittest discover -s tests -v        # all tests (697 on 2026-11-24); CI: Python 3.10 and 3.12
+python -m unittest discover -s tests -v        # all tests (721 on 2026-11-24); CI: Python 3.10 and 3.12
 python -m app.eval.triage_shadow_eval --compare-with tests/baselines/shadow_eval_mock.json  # scorecard + eval gate
 python -m tests.robustness.bench --compare-with tests/baselines/robustness_v1.json         # robustness gate (~25 s)
 ```
@@ -188,10 +188,11 @@ is paused, on hold, waiting and next: change it only when that changes, and keep
   0.4 with Claude), 0.4 with Typhoon (free, but what is typed on the page goes to Typhoon), D7 (a paid machine for an
   open model behind the page), 5.8's branch after its first full run, 2.9 (blind labels), H4 (the first new skill),
   D10 (before T5), the *Auto-approve limits* run by hand, and the owner tests still open on the live page (2.4's step
-  4, attention 5.10, 2.8's scorecard and 2.10's timed decision).
+  4, attention 5.10, 2.8's scorecard, 2.10's timed decision and 4.1's frame panel).
 - **Buildable now without an owner decision:** the rest of 5.5 (NFC, an ADR first), 5.6 and 5.7, the rest of Phase 2
-  (2.5 needs D3; 2.6 and 2.7 when needed), H5's trace link, and Phase 4 (4.1 first). The rest of 7.1 (who can read
-  the AI key) needs an ADR first.
-- **Next:** the owner's order (2026-11-24): 5.5 (its masking gaps: `redact-v3`), then Phase 4 (4.1 → 4.4), then H5.
+  (2.5 needs D3; 2.6 and 2.7 when needed), H5's trace link, and the rest of Phase 4 (4.2 next, an ADR first). The rest
+  of 7.1 (who can read the AI key) needs an ADR first.
+- **Next:** the owner's order (2026-11-24): 5.5 (its masking gaps: `redact-v3`, done), then Phase 4 (4.1 done; 4.2 →
+  4.4, one PR each), then H5.
   After that, the first item in [ROADMAP.md](docs/ROADMAP.md) that is not ✅ and whose needs are met; the owner
   decides which phase or package comes next, so ask before starting one.

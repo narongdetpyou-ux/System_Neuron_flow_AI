@@ -1,0 +1,78 @@
+{
+  "version": "frame-v1",
+  "description": "What the system can do, in plain words (roadmap 4.1, ADR-038): the tasks a person may ask for, each run by one workflow type of the catalog, with the input fields it needs and one simple question for each field a person must give. The router (roadmap 4.2) may answer only one of these task ids or out_of_scope. The examples show how people may ask; they are not an evaluation set, and the router's tests must use other phrases.",
+  "out_of_scope": {
+    "th": "เรื่องนี้อยู่นอกเหนือสิ่งที่ระบบช่วยได้ ระบบจึงไม่เดาเอง ตอนนี้ระบบช่วยได้เรื่องเหล่านี้",
+    "en": "This is outside what the system can help with, so it does not guess. Today it can help with these"
+  },
+  "tasks": [
+    {
+      "id": "case_triage",
+      "workflow_type": "case_triage.v2",
+      "name": {"th": "คัดแยกเคสปัญหาของลูกค้า", "en": "Sort a customer's problem"},
+      "description": {
+        "th": "รับเรื่องปัญหาที่ลูกค้าแจ้งเข้ามา แล้วเสนอว่าเป็นหมวดไหน (เข้าระบบหรือบัญชี อัปโหลดไฟล์ การเงิน หรือเรื่องอื่น) และควรไปคิวตรวจไหน กฎคำสำคัญเป็นข้อเสนอหลัก AI ให้ความเห็นที่สอง และคนตัดสินทุกเคส",
+        "en": "Takes a problem a customer reported and suggests its category (sign-in or account, file upload, billing, or something else) and the review queue it belongs in. Keyword rules make the suggestion, an AI gives a second opinion, and a person decides every case."
+      },
+      "review": "person",
+      "examples": {
+        "th": [
+          "ลูกค้ากดลืมรหัสผ่านแล้ว แต่อีเมลตั้งรหัสใหม่ไม่มาสักที",
+          "แนบรูปสินค้าไม่ได้ ระบบบอกว่าไฟล์ใหญ่เกินไป",
+          "ยอดในใบแจ้งหนี้เดือนนี้ไม่ตรงกับแพ็กเกจที่ลูกค้าสมัครไว้"
+        ],
+        "en": [
+          "The customer asked for a new password, but the reset email never came",
+          "Uploading a product photo fails with a message that the file is too big",
+          "This month's invoice does not match the plan the customer signed up for"
+        ]
+      },
+      "fields": [
+        {
+          "name": "summary", "given_by": "person", "min_chars": 8, "max_chars": 500,
+          "meaning": {"th": "เรื่องที่ลูกค้าแจ้ง เล่าด้วยคำธรรมดา", "en": "What the customer reported, in everyday words"},
+          "question": {
+            "th": "ลูกค้าแจ้งปัญหาอะไรเข้ามา เล่าสั้น ๆ ได้ไหมว่าลูกค้าทำอะไรอยู่ แล้วติดตรงไหน",
+            "en": "What problem did the customer report? Say briefly what they were doing and where it went wrong."
+          }
+        },
+        {
+          "name": "case_id", "given_by": "system",
+          "meaning": {"th": "รหัสเคส ใช้ติดตามเคสนี้", "en": "The case's id, to follow the case"}
+        }
+      ]
+    },
+    {
+      "id": "study_guide",
+      "workflow_type": "study_guide.v1",
+      "name": {"th": "แนะนำแหล่งเรียนเรื่อง AI และการออกแบบระบบ", "en": "Suggest where to learn about AI and system design"},
+      "description": {
+        "th": "ถามด้วยคำธรรมดาหรือคำเปรียบ เรื่องที่อยากเข้าใจเกี่ยวกับการสร้างงานด้วย AI หรือการออกแบบระบบ แล้วได้แหล่งเรียนจากคลังที่ตรวจแล้วไม่เกิน 5 แหล่ง เรียงพื้นฐานก่อน พร้อมบอกว่าแต่ละแหล่งใช้ทำอะไร เป็นแค่คำแนะนำ ไม่ตัดสินอะไรแทนใคร",
+        "en": "Ask in everyday words, or with a metaphor, about something you want to understand in building with AI or designing systems, and get up to 5 resources from a checked library, basics first, each with what it is for. It is advice only and decides nothing for anyone."
+      },
+      "review": "none",
+      "examples": {
+        "th": [
+          "อยากรู้ว่าถ้าจะออกแบบระบบให้รองรับคนใช้เยอะ ๆ ต้องเริ่มเรียนตรงไหน",
+          "อยากเข้าใจว่าทำยังไงให้ AI ตอบอยู่แค่ในเรื่องที่กำหนด",
+          "ผู้ช่วย AI ที่ทำงานต่อกันหลายขั้นทำงานยังไง อยากเรียนพื้นฐานก่อน"
+        ],
+        "en": [
+          "Where should I start if I want to design a system that many people use?",
+          "How do people stop an AI from wandering off the topic?",
+          "I want to learn how AI assistants handle a task in several steps"
+        ]
+      },
+      "fields": [
+        {
+          "name": "message", "given_by": "person", "min_chars": 4, "max_chars": 500,
+          "meaning": {"th": "เรื่องที่อยากเรียน เล่าด้วยคำธรรมดาหรือคำเปรียบก็ได้", "en": "What you want to learn about, in everyday words or a metaphor"},
+          "question": {
+            "th": "อยากเรียนเรื่องอะไร เล่าเป็นคำธรรมดาก็ได้",
+            "en": "What would you like to learn about? Everyday words are fine."
+          }
+        }
+      ]
+    }
+  ]
+}

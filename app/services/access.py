@@ -51,6 +51,7 @@ _DECIDES = frozenset({OWNER, REVIEWER})
 PERMISSIONS = {
     ("GET", "/v1/status"): _EVERYONE,
     ("GET", "/v1/me"): _EVERYONE,
+    ("GET", "/v1/frame"): _EVERYONE,  # what the system can do, in plain words (roadmap 4.1)
     ("GET", "/v1/jobs"): _EVERYONE,
     ("POST", "/v1/jobs"): _SENDS,
     ("GET", "/v1/jobs/{job_id}"): _EVERYONE,

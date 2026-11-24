@@ -34,7 +34,11 @@
  *
  * Reviewer time (roadmap 2.10): the decision card notes when it appeared (performance.now(), a clock that never
  * jumps) and the decision carries card_open_s, the seconds until it was sent: a number only, kept with the
- * idempotency key so a retried click sends the same value. The scorecard reports it per group, never per person. */
+ * idempotency key so a retried click sends the same value. The scorecard reports it per group, never per person.
+ *
+ * The frame (roadmap 4.1, ADR-038): the settings tab opens with "ระบบช่วยอะไรได้บ้าง", the tasks the system can do in
+ * plain words, read once per sign-in from GET /v1/frame. It only describes: the switch above the box still chooses
+ * what a message becomes, until the router (roadmap 4.2) chooses from the frame. */
 (function () {
   const KEY_STORAGE = "neuronflow.accessKey";
   const SENT_STORAGE = "neuronflow.sent";  // { store_id, jobs: [job id, ...] }: ids only, never case text
@@ -146,6 +150,11 @@
    * Its fixed codes get the page's own Thai words, so every label reads the same whichever language the
    * person wrote in; the answer's own texts (summary, purposes, notes) stay in that language.
    * tests/test_web_page.py keeps these tables in step with the study guide's vocabulary. */
+  /* The frame (roadmap 4.1, ADR-038, app/services/frame.py): what the system can do, read from GET /v1/frame. Its words
+   * come from the server in Thai and English; its fixed codes get Thai words here. tests/test_web_page.py keeps these
+   * tables in step with the frame's codes. */
+  const REVIEW_TH = { person: "คนตัดสินทุกเคส: AI เสนอได้อย่างเดียว", none: "เป็นแค่คำแนะนำ ไม่ตัดสินอะไรแทนใคร จึงไม่ต้องรอคนตรวจ" };
+  const GIVEN_BY_TH = { person: "คนพิมพ์", system: "ระบบใส่ให้เอง" };
   const ANSWER_STATUS = { guide: "ได้แผนการเรียน", out_of_scope: "อยู่นอกกรอบ", not_understood: "ยังเข้าใจคำขอไม่ได้" };
   const LEVEL_TH = { beginner: "เริ่มต้น", intermediate: "กลาง", advanced: "ลึก" };
   const PRIORITY_TH = { prerequisite: "พื้นฐานที่ควรรู้ก่อน (ข้ามได้ถ้ารู้แล้ว)", core: "สำคัญที่สุด", later: "อ่านทีหลังได้" };
@@ -252,6 +261,7 @@
     inbox: [],       // cases that wait for a decision, elevated first (GET /v1/reviews)
     lost: null,      // { count, since } when the queue started empty again since this browser last sent something
     me: null,        // who the credential is and what its role may do (GET /v1/me, ADR-034)
+    frame: null,     // what the system can do, in plain words (GET /v1/frame, roadmap 4.1): read once per sign-in
     users: freshUsers(),  // the owner's "จัดการผู้ใช้" section
     labels: freshLabels(),  // rules and AI against people's decisions (GET /v1/reviews/scorecard)
     keys: { thread: null, side: null, flow: null, inbox: null },
@@ -552,6 +562,11 @@
       return;
     }
     state.me = me.data;
+    // What the system can do (roadmap 4.1). It is the same for the life of the service, so it is read once here;
+    // without it the settings tab only lacks that panel.
+    let frame = null;
+    try { frame = await call("GET", "/v1/frame"); } catch (_) { frame = null; }
+    state.frame = frame && frame.status === 200 ? frame.data : null;
     banner(null);
     showApp();
     applyStatus(result.data);
@@ -2095,6 +2110,46 @@
     return el("section", { class: "panel" + (extra ? " " + extra : "") }, [el("h2", {}, title), ...children]);
   }
 
+  /* What the system can do, in plain words (roadmap 4.1, ADR-038): the tasks of the frame (GET /v1/frame). Every
+   * word in it comes from the server as text; the person still picks the kind of message above the box until the
+   * router (roadmap 4.2) chooses from this list. */
+  function framePanel() {
+    const frame = state.frame;
+    if (!frame) return null;
+    const tasks = frame.tasks || [];
+    const [version, digest] = String(frame.frame_version || "").split("@sha256:");
+    const blocks = tasks.flatMap((task) => {
+      const words = (value) => (value || {}).th || "";
+      const examples = task.examples || {};
+      const fields = (task.fields || []).map((field) => el("span", { class: "metric-item" }, [
+        field.given_by === "person"
+          ? `${words(field.meaning)} (${GIVEN_BY_TH.person} ${field.min_chars}–${field.max_chars} ตัวอักษร) · ` +
+            `ถ้าขาด ระบบจะถาม: "${words(field.question)}" `
+          : `${words(field.meaning)} (${GIVEN_BY_TH[field.given_by] || field.given_by}) `,
+        el("span", { class: "mono muted", text: field.name })]));
+      return [
+        el("h3", {}, [words(task.name) || task.id, el("span", { class: "mono muted", text: task.workflow_type })]),
+        el("p", { class: "lead", text: words(task.description) }),
+        el("div", { class: "rows" }, [
+          el("span", { text: "ตัวอย่างคำขอ" }),
+          // A span of block-level spans, so the .rows grid keeps its label/value pairs (as in the metrics panel).
+          el("span", { class: "metric-list" }, [...(examples.th || []), ...(examples.en || [])]
+            .map((text) => el("span", { class: "metric-item", text: `"${text}"` }))),
+          el("span", { text: "ข้อมูลที่ต้องมี" }), el("span", { class: "metric-list" }, fields),
+          el("span", { text: "ใครตัดสิน" }), el("span", { text: REVIEW_TH[task.review] || task.review }),
+        ]),
+      ];
+    });
+    return panel("ระบบช่วยอะไรได้บ้าง (กรอบงาน)", [
+      el("p", { class: "lead" }, [`ระบบช่วยได้ ${tasks.length} อย่างตามรายการนี้ รายการเป็นข้อมูลที่มีเลขรุ่น (`,
+        el("span", { class: "mono", text: digest ? `${version} · ${digest.slice(0, 12)}` : (version || "—") }),
+        ") มาจากโค้ดที่ผ่านการทดสอบ แก้จากหน้าเว็บไม่ได้"]),
+      el("p", { class: "lead", text: "ตอนนี้ยังต้องเลือกเองที่ปุ่ม \"เคสลูกค้า\" หรือ \"อยากเรียน\" เหนือช่องพิมพ์ ขั้นต่อไป (4.2) " +
+        "ระบบจะอ่านข้อความแล้วเลือกงานจากรายการนี้ให้เอง ถามกลับ 1 คำถามเมื่อข้อมูลไม่พอ และบอกตรง ๆ เมื่อเรื่องอยู่นอกรายการ" }),
+      ...blocks,
+    ]);
+  }
+
   function agentsPanel(status) {
     const workflows = status.workflows || [];
     const blocks = workflows.flatMap((workflow) => {
@@ -2466,13 +2521,14 @@
     const runner = status.runner || {};
     const key = JSON.stringify([status.ai, status.storage, status.limits, status.workflows, status.default_workflow,
       runner.state, runner.alive, Math.round((runner.heartbeat_age_s || 0) / 10), status.version,
-      tracingSetup(status.tracing), can("review")]);
+      tracingSetup(status.tracing), can("review"), (state.frame || {}).frame_version || null]);
     const figures = JSON.stringify([status.metrics || null, tracingFigures(status.tracing), state.labels.report]);
     if (view.dataset.key !== key) {
       view.dataset.key = key;
       view.dataset.figures = figures;
       view.replaceChildren(...[
         el("p", { class: "settings-intro", text: "ดูอย่างเดียว — ค่าเหล่านี้มาจากโค้ด (ผ่านการทดสอบและ PR) และจากแท็บ Environment ของ Render หน้าเว็บแก้ไม่ได้โดยตั้งใจ เพื่อไม่ให้ใครเปลี่ยนตัวทำงาน AI หรือคีย์จากหน้าเว็บ" }),
+        framePanel(),
         agentsPanel(status),
         el("div", { class: "panel-grid" }, [aiPanel(status.ai || {}), approvalPanel()]),
         systemPanel(status),
@@ -3105,6 +3161,7 @@
       state.jobs = [];
       state.inbox = [];
       state.me = null;
+      state.frame = null;
       state.users = freshUsers();  // a new token on screen goes with the lock: it was never stored
       state.labels = freshLabels();
       renderUsers();
