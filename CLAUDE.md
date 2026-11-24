@@ -391,6 +391,9 @@ Notes for cloud sessions (claude.ai/code):
 - **Safety.** No secrets, no real personal data, no unmeasured claims. `tests/test_no_secrets.py` and
   *Secret scan* enforce the first. Never add an entry to `.github/.gitleaksignore` without a reason in the
   file and the owner's knowledge.
+- **Training cases** (the owner, 2026-11-24). When a PR adds a triage behaviour or a new kind of case, add synthetic
+  training cases for it (that PR or the next), by the rules in
+  [own_model_plan.md §13](docs/own_model_plan.md#collecting-training-cases-along-the-way).
 - **Owner test.** The PR ends with the owner's test steps, in Thai. Material the owner must check goes in a file sent to
   the owner (§2), not on the PR page.
 
@@ -702,6 +705,11 @@ Notes for cloud sessions (claude.ai/code):
     and kept as printed in `docs/evidence/2026-11-23-own-model-round0.json`
     ([evidence](docs/evidence/2026-11-23-own-model-round0.md)). It is the baseline for T5's comparison, which runs
     round 0 again beside the candidate. T5 needs D10.
+  - On 2026-11-24 the owner paused training (D10: not now; the resources are not ready), said to keep relying on
+    Typhoon's API during development and to build training sets along the way, and chose Typhoon 2.5 Qwen3 30B-A3B
+    as the base of a future round. The 4B stays round 0 and the comparison; the exam's pins are unchanged, because
+    the 30B (a Q4_K_M file of about 19 GB) does not fit GitHub's free runner (16 GB of memory, 14 GB of SSD). Docs
+    only ([decisions](docs/own_model_plan.md#13-the-owners-decisions-of-2026-11-24)).
 - **Not done yet:**
   - Claude has never been run (D2). Typhoon has run on the synthetic sets and the 116 robustness edges,
     plus all three E2 triage sets (2026-11-11, 217/217 answered/completed): AI correct 60/61 development,
@@ -795,7 +803,8 @@ Notes for cloud sessions (claude.ai/code):
     API key); 0.4 with Typhoon is free but sends what is typed on the page to Typhoon, so it is the owner's
     choice too; an open model behind the page needs a paid machine (D7); the rest of the owner tests on the live
     page (2.4's step 4, attention 5.10, 2.8's scorecard after its merge, and 2.10's timed decision); the first new skill
-    (H4); where our own model is trained (D10), before T5. The owner's first case since 2026-11-10, on 2026-11-16, passed H3 and 2.4's steps 2 and 3 and
+    (H4); where our own model is trained and where a 30B exam runs (D10: the owner chose not now on 2026-11-24, so T5
+    is paused). The owner's first case since 2026-11-10, on 2026-11-16, passed H3 and 2.4's steps 2 and 3 and
     gave E1's Render figure; the
     same day 2.1's owner test passed every step, 2.4's step 1 with it (confirmed by the owner on 2026-11-19).
     D8 is decided (2026-11-10): the e-mail history stays as it is; do not propose a rewrite.
