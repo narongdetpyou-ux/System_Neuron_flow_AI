@@ -102,6 +102,82 @@ class MaskTests(unittest.TestCase):
             mask(None)
 
 
+class RedactV3Tests(unittest.TestCase):
+    """redact-v3 (roadmap 5.5): the ten masking gaps of the robustness benchmark, and the words that must stay."""
+
+    def check(self, text, expected_text, expected_counts):
+        masked = mask(text)
+        self.assertEqual((masked.text, masked.counts), (expected_text, expected_counts), text)
+        self.assertEqual(redaction.leftover(masked.text), {}, text)
+
+    def test_the_ten_gaps_of_the_robustness_benchmark_are_masked(self):
+        cases = [  # SYN-MSK-040 to SYN-MSK-049, in order
+            ("call 081  234  5678 tonight", "call [PHONE] tonight", {"phone": 1}),
+            ("call 081\u200b234\u200b5678 tonight", "call [PHONE] tonight", {"phone": 1}),
+            ("call 081/234/5678 tonight", "call [PHONE] tonight", {"phone": 1}),
+            ("Mr. JOHN SMITH called", "Mr. [NAME] called", {"name": 1}),
+            ("mr john smith called", "mr [NAME] called", {"name": 1}),
+            ("Mr McDonald called", "Mr [NAME] called", {"name": 1}),
+            ("Dr. O'Neil called", "Dr. [NAME] called", {"name": 1}),
+            ("อีเมล สมชาย@ตัวอย่าง.ไทย", "อีเมล [EMAIL]", {"email": 1}),
+            ("mail me: somchai at example dot com", "mail me: [EMAIL]", {"email": 1}),
+            ("my name is somchai and I cannot pay", "my name is [NAME] and I cannot pay", {"name": 1}),
+        ]
+        for text, expected_text, expected_counts in cases:
+            with self.subTest(text=text):
+                self.check(text, expected_text, expected_counts)
+
+    def test_more_forms_of_the_same_gaps(self):
+        cases = [
+            ("call 081 - 234 - 5678", "call [PHONE]", {"phone": 1}),
+            ("โทร ๐๘๑/๒๓๔/๕๖๗๘ ได้เลย", "โทร [PHONE] ได้เลย", {"phone": 1}),
+            ("somchai(at)example(dot)com", "[EMAIL]", {"email": 1}),
+            ("write to somchai [at] example [dot] co [dot] th", "write to [EMAIL]", {"email": 1}),
+            ("ส่งมาที่ somchai แอท example ดอท com นะคะ", "ส่งมาที่ [EMAIL] นะคะ", {"email": 1}),
+            ("somchai.j AT example DOT org", "[EMAIL]", {"email": 1}),
+            ("MRS. JANE DOE paid twice", "MRS. [NAME] paid twice", {"name": 1}),
+            ("mrs jane doe paid twice", "mrs [NAME] paid twice", {"name": 1}),
+            ("MY NAME IS SOMCHAI", "MY NAME IS [NAME]", {"name": 1}),
+            ("Mr. McDONALD and Mr. MacARTHUR", "Mr. [NAME] and Mr. [NAME]", {"name": 2}),
+            ("Mrs Anne-Marie-Claire Dubois asked", "Mrs [NAME] asked", {"name": 1}),
+            ("Mr Smith's order is late", "Mr [NAME] order is late", {"name": 1}),
+            ("Name: JOHN SMITH\nupload fails", "Name: [NAME]\nupload fails", {"name": 1}),
+            ("คุณ JOHN แจ้งว่า upload ค้าง", "คุณ [NAME] แจ้งว่า upload ค้าง", {"name": 1}),
+        ]
+        for text, expected_text, expected_counts in cases:
+            with self.subTest(text=text):
+                self.check(text, expected_text, expected_counts)
+
+    def test_ordinary_words_and_dates_stay_readable(self):
+        for text in ("Mr. IT support is closed", "MS Word file will not open", "DR site is down",
+                     "my name is not showing", "my name is misspelled on the invoice", "MY NAME IS WRONG",
+                     "look at the dot matrix printer", "meet at 5 dot 30", "Dr. it works now",
+                     "Miss the deadline? The upload failed.", "dr appointment tomorrow", "ms teams keeps crashing",
+                     "24.11.2026 10:30 ระบบล่ม", "24/11/2026 10:30 login fails", "2026/11/24 10:30",
+                     "วันที่ 2026-11-03 12:30 ระบบล่ม", "version 2.10.3.4567 crashes on start"):
+            with self.subTest(text=text):
+                self.check(text, text, {})
+
+    def test_only_the_name_goes_when_a_common_word_follows_it(self):
+        self.check("Mr John called", "Mr [NAME] called", {"name": 1})
+        self.check("mr john reset my password", "mr [NAME] reset my password", {"name": 1})
+        self.check("MR. SMITH CANNOT LOGIN", "MR. [NAME] CANNOT LOGIN", {"name": 1})
+        self.check("MR. SMITH CAN'T LOGIN", "MR. [NAME] CAN'T LOGIN", {"name": 1})
+        self.check("Mr. IT Mr. Smith", "Mr. IT Mr. [NAME]", {"name": 1})  # a refused word does not hide the next title
+        self.check("Mr Will Smith called", "Mr [NAME] called", {"name": 1})  # a capitalised name stays a name
+
+    def test_a_title_is_never_taken_for_a_surname(self):
+        # redact-v2 read "Mrs" as Smith's surname and left "Jones" unmasked.
+        self.check("Mr Smith Mrs Jones", "Mr [NAME] Mrs [NAME]", {"name": 2})
+        self.check("Dr. Lee Mr Smith", "Dr. [NAME] Mr [NAME]", {"name": 2})
+        self.check("mr john mrs jane", "mr [NAME] mrs [NAME]", {"name": 2})
+
+    def test_redact_v2_inputs_keep_their_results(self):
+        self.check("คุณZsMr Yaa", "คุณ[NAME]Mr [NAME]", {"name": 2})
+        self.check("Mr Smith0812345678", "Mr [NAME][PHONE]", {"phone": 1, "name": 1})
+        self.check("อีเมลsomchai@example.com", "อีเมล[EMAIL]", {"email": 1})
+
+
 class IdempotenceTests(unittest.TestCase):
     """The gateway relies on "masking masked text again changes nothing"; redact-v1 broke it on these inputs."""
 
@@ -132,7 +208,9 @@ class IdempotenceTests(unittest.TestCase):
     def test_masking_twice_changes_nothing_on_random_text(self):
         pieces = list("0123456789๐๑ -.+()@,;:\n") + [
             "Mr", "Mrs", "Dr.", " Smith", "นาย", "นาง", "นางสาว", "น.ส.", "คุณ", "นามสกุล", "สมหญิง", " ใจดี",
-            "Name:", "my name is ", "@example.com", "081", "5678", "+66", "(02)", "[NAME]", "[PHONE]", "4111"]
+            "Name:", "my name is ", "@example.com", "081", "5678", "+66", "(02)", "[NAME]", "[PHONE]", "4111",
+            "\u200b", "/", " at ", " dot ", "(at)", "[dot]", "แอท", "ดอท", "com", "mr ", "MR ", "Ms ", "JOHN", "john",
+            "O'", "Mc", "DONALD", "IT", "สมชาย@ตัวอย่าง.ไทย", ".ไทย", "MY NAME IS ", " and"]
         rng = random.Random(20261110)
         for _ in range(3000):
             text = "".join(rng.choice(pieces) for _ in range(rng.randint(1, 20)))

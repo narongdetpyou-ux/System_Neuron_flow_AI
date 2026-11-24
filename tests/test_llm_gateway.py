@@ -91,7 +91,7 @@ class PromptAndConfigTests(unittest.TestCase):
         self.assertIn("llm=mock/mock-keyword-1", tag)
         self.assertIn(PROMPT.sha256, tag)
         # The masking rules and the gateway's answer checks are part of the version (ADR-028, ADR-035).
-        self.assertTrue(tag.endswith(f";redaction=redact-v2;checks={ANSWER_CHECKS_VERSION}"), tag)
+        self.assertTrue(tag.endswith(f";redaction=redact-v3;checks={ANSWER_CHECKS_VERSION}"), tag)
         self.assertNotEqual(tag, LLMConfig(model="mock-keyword-2").version_tag(PROMPT))
 
 

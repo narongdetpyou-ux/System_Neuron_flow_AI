@@ -72,7 +72,7 @@ ADRs in §8) and [README.md](README.md) (every feature doc, in its docs table).
 5. **Trusted, versioned agents** (ADR-005, ADR-011, ADR-015). Agents come from the registry. An agent's version
    includes provider, model, prompt hash, max_tokens and effort, and is frozen per job; a changed prompt or model is a
    new version, and jobs caught mid-way fail as `configuration_changed`.
-   - An AI agent's version also names the masking rules (`redact-v2`), the gateway's answer checks
+   - An AI agent's version also names the masking rules (`redact-v3`), the gateway's answer checks
      (`config.ANSWER_CHECKS_VERSION`, ADR-035) and, for Typhoon and the local model, the answer format (ADR-022). Any
      change to what `app/llm/gateway.py` does with a reply is a new checks version: `tests/test_answer_checks_version.py`
      fails until it is named, and a released version's pin is never edited.
@@ -107,7 +107,7 @@ and ask the owner in plain Thai.
 ## 4. Checking your work
 
 ```bash
-python -m unittest discover -s tests -v        # all tests (690 on 2026-11-24); CI: Python 3.10 and 3.12
+python -m unittest discover -s tests -v        # all tests (696 on 2026-11-24); CI: Python 3.10 and 3.12
 python -m app.eval.triage_shadow_eval --compare-with tests/baselines/shadow_eval_mock.json  # scorecard + eval gate
 python -m tests.robustness.bench --compare-with tests/baselines/robustness_v1.json         # robustness gate (~25 s)
 ```
@@ -189,8 +189,9 @@ is paused, on hold, waiting and next: change it only when that changes, and keep
   open model behind the page), 5.8's branch after its first full run, 2.9 (blind labels), H4 (the first new skill),
   D10 (before T5), the *Auto-approve limits* run by hand, and the owner tests still open on the live page (2.4's step
   4, attention 5.10, 2.8's scorecard and 2.10's timed decision).
-- **Buildable now without an owner decision:** the rest of 5.5 (the masking gaps need new masking rules, NFC needs an
-  ADR), 5.6 and 5.7, the rest of Phase 2 (2.5 needs D3; 2.6 and 2.7 when needed), H5's trace link, and Phase 4 (4.1
-  first). The rest of 7.1 (who can read the AI key) needs an ADR first.
-- **Next:** the first item in [ROADMAP.md](docs/ROADMAP.md) that is not ✅ and whose needs are met; the owner decides
-  which phase or package comes next, so ask before starting one.
+- **Buildable now without an owner decision:** the rest of 5.5 (NFC, an ADR first), 5.6 and 5.7, the rest of Phase 2
+  (2.5 needs D3; 2.6 and 2.7 when needed), H5's trace link, and Phase 4 (4.1 first). The rest of 7.1 (who can read
+  the AI key) needs an ADR first.
+- **Next:** the owner's order (2026-11-24): 5.5 (its masking gaps: `redact-v3`), then Phase 4 (4.1 → 4.4), then H5.
+  After that, the first item in [ROADMAP.md](docs/ROADMAP.md) that is not ✅ and whose needs are met; the owner
+  decides which phase or package comes next, so ask before starting one.
