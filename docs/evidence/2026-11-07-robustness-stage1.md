@@ -233,3 +233,75 @@ title, addresses and the like) stay info items. NFC normalization of the request
 SYN-COR-051) needs an ADR first, because it changes which requests count as the same.
 
 **Limits:** as in stage 1. No real model was called, and the items and their expectations are the developer's.
+
+## Masking rules redact-v3 (2026-11-24, roadmap 5.5)
+
+**Where:** a Claude Code cloud session, on `main` @ `b2bede1` plus the branch `claude/masking-v3`. Python 3.12 for the
+figures below; the unit tests also pass on 3.10.20.
+
+**Data:** unchanged: `synthetic_v1.json` `15d9adf7…`, `open_extract_v1.json` `510483c1…` and the 116-case export.
+Only the masking rules changed (`app/llm/redaction.py`, `REDACTION_VERSION` `redact-v2` → `redact-v3`).
+
+### สรุปสำหรับเจ้าของโปรเจกต์
+
+- **เคสที่เขียนเอง 270 ข้อ ผ่าน 256** (เดิม 246) ปัญหาร้ายแรง (bug) **0** จุดอ่อน (gap) **3** (เดิม 13)
+- **ช่องรั่วของข้อมูลส่วนตัวทั้ง 10 แบบปิดแล้ว** เช่น เบอร์โทรที่คั่นด้วยทับหรือเว้นวรรคสองช่อง อีเมลที่เขียนว่า "at … dot"
+  ชื่อที่มีคำนำหน้าแต่พิมพ์ตัวใหญ่หรือตัวเล็กทั้งหมด
+- **ข้อความของชุดข้อสอบ ชุดฝึก และคู่มือเรียน 716 ข้อ ถูกปิดข้อมูลเหมือนเดิมทุกข้อ** คำตอบในทุกด่านจึงไม่เปลี่ยน
+- **ยังตรวจไม่เจอเหมือนเดิม:** ชื่อที่ไม่มีคำนำหน้า ที่อยู่ และเบอร์ที่เขียนเป็นคำอ่าน
+
+### What changed, item by item
+
+Exactly 10 items changed in `tests/baselines/robustness_v1.json`, all from gap to pass; the sweeps (including 515
+BLNS strings through masking: idempotent, 0 violations) are identical.
+
+| Item | redact-v2 | redact-v3 | New rule |
+|---|---|---|---|
+| SYN-MSK-040 | `081  234  5678` not masked | `[PHONE]` | up to three spaces between digit groups |
+| SYN-MSK-041 | zero-width spaces between the groups: not masked | `[PHONE]` | zero-width characters count as a gap between groups |
+| SYN-MSK-042 | `081/234/5678` not masked | `[PHONE]` | a slash separates groups (with or without spaces around it) |
+| SYN-MSK-043 | `Mr. JOHN SMITH` not masked | `Mr. [NAME]` | a name word may be written in capitals |
+| SYN-MSK-044 | `mr john smith` not masked | `mr [NAME]` | after Mr or Mrs (any case), a name may be in small letters |
+| SYN-MSK-045 | `Mr [NAME]Donald` | `Mr [NAME]` | a name word may hold a capital inside (McDonald) and is taken whole |
+| SYN-MSK-046 | `Dr. O'Neil` not masked | `Dr. [NAME]` | O'Neil and D'Angelo forms |
+| SYN-MSK-047 | `สมชาย@ตัวอย่าง.ไทย` not masked | `[EMAIL]` | e-mail addresses with Thai or other non-ASCII letters |
+| SYN-MSK-048 | `somchai at example dot com` not masked | `[EMAIL]` | written-out addresses (at, dot, in brackets, แอท, ดอท) ending in a common top-level domain |
+| SYN-MSK-049 | `my name is somchai` not masked | `my name is [NAME]` | "my name is" in any case, then a name in small letters too |
+
+**Guards against masking ordinary words**, each covered by a unit test (`tests/test_redaction.py`, `RedactV3Tests`):
+- a word in capitals or small letters is not a name when it is a common English word (`Mr. IT support`, `my name is
+  not showing`, `Mr John called` keeps "called"); a capitalised word after a title stays a name, as in redact-v2
+  (`Mr Will Smith`);
+- `ms`, `miss`, `mx` and `dr` in small letters are not titles (`ms teams`, `dr appointment`), and `MS` or `DR` in
+  capitals neither (`MS Word`, `DR site`); `Ms`, `Miss`, `Mx` and `Dr` take only capitalised or capital names, so
+  `Miss the deadline?` stays as it is;
+- a written-out address must end in a common top-level domain: `look at the dot matrix printer` stays;
+- a date with dashes, slashes or dots, alone or with the hour (`24/11/2026 10:30`), is left alone. redact-v2 masked
+  `24.11.2026 10:30` as a number;
+- a title is never taken for a surname: redact-v2 masked `Mr Smith Mrs Jones` as `Mr [NAME] Jones`.
+
+These last two are the changes outside the ten items; no benchmark item covered them.
+
+**Found by the automated review of PR #89, fixed before the merge:**
+- a number grouped like a date was left alone even when its parts could not make one: `08-12-3456 78`, which
+  redact-v2 masked as a phone number. A date is now left alone only when its year is 1900–2100 (or 2443–2643 in the
+  Thai calendar), its day and month fit in either order and its hour is 0–23; `0812-34-56 78`, which redact-v2 also
+  missed, is masked too;
+- a plain "at" with real dots took a place on the web for an address: `I cannot login at example.com` became
+  `I cannot [EMAIL]`, removing the word the triage needs. A written-out address with a plain "at" now needs a
+  written-out dot and a first part that is not a common word; `(at)`, `[at]`, แอท and `@` stay addresses. So
+  `somchai at gmail.com` is left alone, as in redact-v2, and is recorded as a limit (a unit test holds it).
+
+**What did not change:** under both versions, the masked text of every case is byte for byte the same in the 61
+development, 40 held-out, 128 hard, 64 attention and 116 edge cases, the 240 training cases and the 67 study-guide
+requests (716 texts, compared by program). So every eval gate (shadow, hard, attention, study guide), the auto-approve
+simulation and the handoff check give the same answers, and the training set still passes `training.check_set`.
+`redact-v2`'s own regression inputs (`คุณZsMr Yaa`, `Mr Smith0812345678`) give the same results.
+
+**Still open:** 3 gaps, the rules' measured limits kept by E2 (SYN-RUL-009, 032, 033). The masking info items stay
+documented limits: names without a title or label, addresses, a phone number spelled out in Thai words, numbers of
+fewer than 9 digits and identifiers mixing letters and digits. NFC normalization of the request fingerprint
+(SYN-INT-055, SYN-COR-051) still needs an ADR first.
+
+**Limits:** as in stage 1. No real model was called, and the items, their expectations and the list of common words
+are the developer's. Masking is pattern-based: it lowers the risk and does not make real personal data safe to use.

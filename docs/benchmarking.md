@@ -9,7 +9,9 @@
   On 2026-11-19 the invisible-text gaps were fixed (bidi controls refused in a case, invisible characters not
   counted towards the minimum, invisible characters removed from the AI's free text): 246/270 pass, 0 bugs, 13 gaps
   ([evidence](evidence/2026-11-07-robustness-stage1.md#invisible-and-direction-changing-characters-2026-11-19-roadmap-55)).
-  An end-to-end item may now expect a refusal at admission (`"job": "REFUSED"`). The masking gaps and NFC are the
+  An end-to-end item may now expect a refusal at admission (`"job": "REFUSED"`).
+  On 2026-11-24 the ten masking gaps were fixed with new masking rules, `redact-v3`: 256/270 pass, 0 bugs, 3 gaps
+  ([evidence](evidence/2026-11-07-robustness-stage1.md#masking-rules-redact-v3-2026-11-24-roadmap-55)). NFC is the
   rest of 5.5.
 - E2 (PR #64) replaces the shadow workflow's official rules and this benchmark's `rules` layer with
   versioned Thai/English rules. The original v1 demo remains available. The [E2 evidence](evidence/2026-11-11-e2-rules-v2.md)

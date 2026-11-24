@@ -131,10 +131,14 @@ they were degraded quietly, a broken setup could go unnoticed.
   English name) become `[EMAIL]`, `[PHONE]`, `[THAI_ID]`, `[CARD]`, `[NUMBER]`, `[NAME]`. The gateway refuses
   text that did not go through `mask()`, and since `redact-v2` (2026-11-10, ADR-028) it masks the text again
   itself and sends nothing the rules would still change; the rules also run again until nothing changes, so a
-  name or number glued to another one is no longer missed. The output's `masked` field counts each kind, never
-  the values.
+  name or number glued to another one is no longer missed. Since `redact-v3` (2026-11-24, roadmap 5.5) it also
+  masks phone numbers split by double spaces, slashes or invisible zero-width characters, names in capitals or
+  small letters after a title (and McDonald or O'Neil), e-mail addresses with Thai letters (`.ไทย`) or written out
+  as "at … dot", and "my name is" + a name in small letters; common English words in capitals or small letters are
+  not taken for a name. The output's `masked` field counts each kind, never the values.
   Not detected: names without a title or label, Thai surnames after a given name, addresses, short numbers,
-  mixed letter-and-digit identifiers. The keywords the rules and the AI need stay readable.
+  numbers spelled out in words, mixed letter-and-digit identifiers. The keywords the rules and the AI need stay
+  readable.
 - **The API key is never stored.** It is read from `ANTHROPIC_API_KEY` (Claude), `TYPHOON_API_KEY`
   (Typhoon) or, when a local server asks for one, `NEURON_FLOW_LOCAL_API_KEY` at call time, never placed in
   the job, and the tests scan every stored file to confirm it is absent. A server on this machine (`local`,
