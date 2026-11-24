@@ -57,6 +57,8 @@ PERMISSIONS = {
     ("GET", "/v1/jobs/{job_id}"): _EVERYONE,
     ("GET", "/v1/jobs/{job_id}/events"): _EVERYONE,
     ("POST", "/v1/jobs/{job_id}/cancel"): _SENDS,
+    ("POST", "/v1/jobs/{job_id}/confirm"): _SENDS,  # a person confirms the router's proposal (roadmap 4.2)
+    ("POST", "/v1/jobs/{job_id}/reply"): _SENDS,    # a person answers the router's question
     ("GET", "/v1/reviews"): _DECIDES,
     ("GET", "/v1/reviews/scorecard"): _DECIDES,
     ("GET", "/v1/reviews/{review_id}"): _DECIDES,

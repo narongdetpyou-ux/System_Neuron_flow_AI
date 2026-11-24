@@ -356,12 +356,14 @@ class QueueStore:
     # -- admission (API) ---------------------------------------------------------------------
 
     def admit(self, *, job_id, idempotency_key, request_fingerprint, workflow_type, input, max_queued,
-              request_id=None, trace_parent=None, now=None):
+              request_id=None, trace_parent=None, link=None, now=None):
         """Insert a QUEUED job, or return the job that already holds this idempotency key.
 
         Returns ``(job, created)``. The caller compares fingerprints for a reused key. ``request_id`` and
         ``trace_parent`` (the W3C ``traceparent`` of the admitting request's span, when tracing is on) go
-        into the new job's ``job.queued`` event.
+        into the new job's ``job.queued`` event. ``link`` is ``(from_job_id, event kind)``: a job a person started from
+        a router's answer (roadmap 4.2, ADR-039). The new job's event names where it came from, and the earlier job gets
+        one event that names the new job, in the same transaction.
         """
         now = time.time() if now is None else now
         with self._write() as db:
@@ -376,9 +378,14 @@ class QueueStore:
                 queued["request_id"] = request_id
             if trace_parent:
                 queued["trace_parent"] = trace_parent
+            if link is not None:
+                queued["from_job_id"] = link[0]
             self._insert_job(db, job_id=job_id, idempotency_key=idempotency_key,
                              request_fingerprint=request_fingerprint, workflow_type=workflow_type, input=input,
                              queued=queued, now=now)
+            if link is not None:
+                self._event(db, link[0], link[1], {"target_job_id": job_id, "target_workflow_type": workflow_type},
+                            now)
             return self._select(db, job_id), True
 
     def _insert_job(self, db, *, job_id, idempotency_key, request_fingerprint, workflow_type, input, queued, now):
@@ -555,6 +562,11 @@ class QueueStore:
                  started_at, now))
 
     # -- reads (API) ---------------------------------------------------------------------------
+
+    def job_by_key(self, idempotency_key):
+        """The job that holds this idempotency key, or ``None``."""
+        with self._connect() as db:
+            return self._job(db.execute("SELECT * FROM jobs WHERE idempotency_key=?", (idempotency_key,)).fetchone())
 
     def get(self, job_id):
         with self._connect() as db:

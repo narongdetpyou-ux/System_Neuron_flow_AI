@@ -10,6 +10,8 @@
   GET  /v1/jobs/{job_id}          status, step plan, reviewer proposal, step timeline, AI provenance
   GET  /v1/jobs/{job_id}/events   bounded pages: ?after=<seq>&limit=1-100
   POST /v1/jobs/{job_id}/cancel   withdraw a job that is still QUEUED: 200, or 409 not_cancellable
+  POST /v1/jobs/{job_id}/confirm  a person confirms the router's proposal ("ใช่ ทำเลย"): 202 new job, 200 the same again
+  POST /v1/jobs/{job_id}/reply    a person answers the router's question: 202 a new router job, 200 the same again
   GET  /v1/reviews                cases waiting for a person: ?state=PENDING|APPROVED|REJECTED&limit=1-100&after=
   GET  /v1/reviews/{review_id}    the case, the proposal (rules, AI second opinion, why raised), every decision
   GET  /v1/reviews/scorecard      rules and AI against the categories people recorded (roadmap 2.8) and reviewer
@@ -79,6 +81,7 @@ from app.persistence.queue_store import iso
 from app.services import access
 from app.services.admission import AdmissionError, admit
 from app.services.frame import load_frame
+from app.services import intake
 from app.services.metrics import queue_metrics
 from app.services.results import plan_view
 from app.services import review_labels
@@ -90,7 +93,7 @@ from .limits import RateLimiter
 
 MAX_BODY_BYTES = 16 * 1024
 WEB_DIR = Path(__file__).resolve().parent.parent / "web"
-JOB_PATH = re.compile(r"^/v1/jobs/(job_[0-9a-f]{24})(/events|/cancel)?$")
+JOB_PATH = re.compile(r"^/v1/jobs/(job_[0-9a-f]{24})(/events|/cancel|/confirm|/reply)?$")
 JOB_ID_TEXT = re.compile(r"(?:job|rev)_[0-9a-f]{24}")  # a review id is named after its job, so it counts as one
 REVIEW_PATH = re.compile(r"^/v1/reviews/(rev_[0-9a-f]{24})(/decisions)?$")
 TOKEN_PATH = re.compile(r"^/v1/tokens/([0-9a-f]{16})/revoke$")
@@ -278,6 +281,8 @@ class ApiApp:
             return error(404, "not_found", "No such API route")
         if match.group(2) == "/cancel":
             return self._cancel(request, match.group(1)) if method == "POST" else _not_allowed("POST")
+        if match.group(2) in ("/confirm", "/reply"):
+            return self._answer(request, match.group(1), match.group(2)) if method == "POST" else _not_allowed("POST")
         if not reading:
             return _not_allowed("GET, HEAD")
         job = self.store.get(match.group(1))
@@ -428,6 +433,38 @@ class ApiApp:
             return error(409, "not_cancellable", "Only a job that is still waiting in the queue can be cancelled",
                          job_status=str(exc))
         return json_response(200, {**self._job_view(job), "changed": changed})
+
+    def _answer(self, request, job_id, action):
+        """A person acts on the router's answer (roadmap 4.2, ADR-039): confirm its proposal or reply to its question.
+        Both go through normal admission; the new job's input comes from the stored router job, never from the body
+        (``app.services.intake``). A confirmation's body may be empty, ``{}`` or ``{"task": …}``."""
+        empty = action == "/confirm" and not request.body.strip()
+        content_type = request.headers.get("content-type", "").split(";", 1)[0].strip().lower()
+        if not empty and content_type != "application/json":
+            return error(415, "unsupported_media_type", "Send JSON with Content-Type: application/json")
+        if len(request.body) > MAX_BODY_BYTES:
+            return error(413, "body_too_large", f"The body is larger than {MAX_BODY_BYTES} bytes")
+        allowed, retry = self._submit_limit.allow(request.client)
+        if not allowed:
+            return error(429, "rate_limited", "Too many submissions; wait and try again",
+                         headers=[("Retry-After", str(retry))], retry_after_s=retry)
+        try:
+            body = None if empty else decode(request.body)
+        except ValueError:  # a SpecError, or any other parse failure: the client's input, never a 500
+            return error(400, "invalid_json", "The body is not valid JSON, or it repeats a field")
+        act = intake.confirm if action == "/confirm" else intake.reply
+        try:
+            result = act(self.store, self.store.get(job_id), body, catalog=self.catalog,
+                         max_queued=self.settings.max_queued, request_id=request.request_id,
+                         trace_parent=request.trace_parent)
+        except intake.IntakeError as exc:
+            headers = [("Retry-After", "60")] if exc.status == 503 else []
+            return error(exc.status, exc.code, exc.message, headers=headers, **exc.extra)
+        job, created = result[0], result[1]
+        extra = {"confirmed_task": result[2]} if action == "/confirm" else {}
+        return json_response(202 if created else 200,
+                             {**self._job_view(job), "created": created, **extra, "retention": self._retention()},
+                             [("Location", f"/v1/jobs/{job['job_id']}")])
 
     def _reviews(self, request):
         raw_state = (request.query.get("state") or [PENDING])[-1]
@@ -606,10 +643,13 @@ class ApiApp:
             came = self.store.handoff_to(job["job_id"])
             view["handoff"] = {"from": self.exchange.handoff_view(came) if came else None,
                                "to": [self.exchange.handoff_view(item) for item in self.store.handoffs_from(job["job_id"])]}
+            # A person's confirmation of, or reply to, the router (roadmap 4.2): ids only.
+            view["router"] = intake.links(self.store, job)
         else:
             view["summary_preview"] = (case.get("summary") or case.get("message") or "")[:90]
             came = self.store.handoff_to(job["job_id"])
-            view["from_job_id"] = came["source_job_id"] if came else None
+            routed = intake.came_from(job)
+            view["from_job_id"] = came["source_job_id"] if came else (routed["job_id"] if routed else None)
         return view
 
 

@@ -26,14 +26,28 @@ from .contracts import (BIDI_CONTROLS, FRAME_TAG, LLM_MAX_ATTEMPTS, MESSAGE_MAX_
                         OUT_OF_SCOPE, ROUTE_VERSION, UNDERSTAND_PROMPT_ID, has_visible_character, visible_length)
 
 _JOB_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]{0,79}$")
+_ROUTER_JOB_ID = re.compile(r"^job_[0-9a-f]{24}$")
 _VIEW_KEYS = {"frame_version", "languages", "out_of_scope", "tasks"}
+EARLIER_QUESTION_MAX = 300
 
 
 def check_message(request):
-    """The input contract: exactly ``{"message": "..."}``, 4-500 characters after trimming, at least one letter, digit
-    or sign, and no characters that change the direction of the text (they make a person read something else)."""
-    if not isinstance(request, dict) or set(request) != {"message"}:
-        raise SpecError("Router input must contain only message")
+    """The input contract: ``{"message": "..."}``, 4-500 characters after trimming, at least one letter, digit or sign,
+    and no characters that change the direction of the text (they make a person read something else).
+
+    A reply to the router's question (roadmap 4.2's second part) also carries ``earlier``: the earlier router job's id
+    and the question it asked. Only the API sets it, copied from the stored job (``app.services.intake``); a request
+    from outside that carries it is refused at admission. The message of a reply is the earlier message and the
+    answer, both the person's own words."""
+    if not isinstance(request, dict) or set(request) not in ({"message"}, {"message", "earlier"}):
+        raise SpecError("Router input must contain only message (and earlier, which only the system sets)")
+    earlier = request.get("earlier")
+    if earlier is not None:
+        if (not isinstance(earlier, dict) or set(earlier) != {"job_id", "question"}
+                or not isinstance(earlier["job_id"], str) or not _ROUTER_JOB_ID.fullmatch(earlier["job_id"])
+                or not isinstance(earlier["question"], str)
+                or not 1 <= len(earlier["question"]) <= EARLIER_QUESTION_MAX):
+            raise SpecError("earlier must hold the earlier router job's id and the question it asked")
     message = request["message"]
     if not isinstance(message, str):
         raise SpecError("message must be text")
@@ -44,6 +58,8 @@ def check_message(request):
             or not has_visible_character(trimmed)):
         raise SpecError(f"message must contain {MESSAGE_MIN_CHARS}–{MESSAGE_MAX_CHARS} characters, not counting "
                         "invisible ones, with at least one letter, digit or sign")
+    if earlier is not None:
+        return {"message": trimmed, "earlier": {"job_id": earlier["job_id"], "question": earlier["question"]}}
     return {"message": trimmed}
 
 

@@ -204,7 +204,7 @@ def first_run(client, state_file, timeout_s, summary=None, expect_storage=None):
     check(status == 200 and str(frame.get("frame_version", "")).startswith("frame-v1@sha256:")
           and [task.get("id") for task in frame.get("tasks") or []] == ["case_triage", "study_guide"],
           "the frame lists what the system can do: 2 tasks in plain words (roadmap 4.1)")
-    router_reads(client, timeout_s)
+    router_reads(client, timeout_s, summary)
     key = f"smoke-{uuid.uuid4()}"
     body = {"workflow_type": "case_triage.v2", "idempotency_key": key,
             "input": {"case_id": "SMOKE-TH-01", "summary": "อัปโหลดไฟล์แนบไม่ได้ ค้างที่ 99%"}}
@@ -255,9 +255,10 @@ def first_run(client, state_file, timeout_s, summary=None, expect_storage=None):
                                                 "token_id": token_id}), encoding="utf-8")
 
 
-def router_reads(client, timeout_s):
+def router_reads(client, timeout_s, summary=None):
     """Roadmap 4.2 (ADR-039): a plain-language message to the router ends COMPLETED with a proposal of the case task in
-    the person's own words, and creates no other job: a person confirms first."""
+    the person's own words, and creates no other job; a person's confirmation then admits exactly one case, which waits
+    for a person; a reply to the router's question becomes a new router job."""
     text = "ลูกค้าบอกว่าอัปโหลดไฟล์แนบไม่ได้ ค้างที่ 99%"
     _, before = client.call("GET", "/v1/jobs?limit=100")
     status, routed = client.call("POST", "/v1/jobs", {"workflow_type": "intake.route.v1",
@@ -271,6 +272,28 @@ def router_reads(client, timeout_s):
           and (reply.get("kind"), reply.get("task"), reply.get("input")) == ("proposal", "case_triage", {"summary": text})
           and len(after.get("jobs", [])) == len(before.get("jobs", [])) + 1,
           "the router proposes the case task in the person's own words and creates no job itself (roadmap 4.2)")
+    status, confirmed = client.call("POST", f"/v1/jobs/{routed['job_id']}/confirm", {})
+    case = wait_for_result(client, confirmed["job_id"], timeout_s) if status == 202 else {}
+    check(status == 202 and case.get("status") == "REVIEW_REQUIRED" and (case.get("input") or {}).get("summary") == text
+          and (case.get("router") or {}).get("from") == {"job_id": routed["job_id"], "how": "confirm"},
+          "a person's confirmation admits exactly one case in their own words, and it waits for a person")
+    status, again = client.call("POST", f"/v1/jobs/{routed['job_id']}/confirm", {})
+    check(status == 200 and again.get("job_id") == confirmed["job_id"], "confirming again returns the same case")
+    status, asked = client.call("POST", "/v1/jobs", {"workflow_type": "intake.route.v1",
+                                                    "idempotency_key": f"smoke-route-{uuid.uuid4()}",
+                                                    "input": {"message": "ลืมรหัสผ่าน"}})
+    question = ((wait_for_result(client, asked["job_id"], timeout_s).get("result") or {}).get("output") or {})
+    status, replied = client.call("POST", f"/v1/jobs/{asked['job_id']}/reply",
+                                  {"message": "ลูกค้ากดลืมรหัสผ่านแล้วแต่อีเมลตั้งรหัสใหม่ไม่มา",
+                                   "idempotency_key": f"smoke-reply-{uuid.uuid4()}"})
+    answered = ((wait_for_result(client, replied["job_id"], timeout_s).get("result") or {}).get("output") or {}
+                if status == 202 else {})
+    check(question.get("kind") == "question" and status == 202 and answered.get("kind") == "proposal",
+          "the router asks one question, and the person's reply becomes a new router job with a proposal")
+    write_summary(summary, "### ตัวอ่านข้อความกับปุ่ม \"ใช่ ทำเลย\" (ขั้น 4.2)\n\n"
+                  "- ข้อความ \"อัปโหลดไฟล์แนบไม่ได้\" → ตัวอ่านข้อความเสนองาน \"คัดแยกเคส\" และยังไม่สร้างงาน ✓\n"
+                  "- กดยืนยัน → เกิดเคส 1 เคสด้วยคำเดิมของคน และเคสรอคนตรวจ ✓ · กดซ้ำไม่เกิดเคสที่ 2 ✓\n"
+                  "- ข้อความ \"ลืมรหัสผ่าน\" → ระบบถามกลับ 1 คำถาม · ตอบแล้วได้ข้อเสนองานใหม่ ✓\n")
 
 
 def personal_tokens(client, timeout_s):

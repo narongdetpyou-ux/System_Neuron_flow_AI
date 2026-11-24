@@ -37,6 +37,9 @@ class WorkflowType:
     ai_step: Optional[str] = None  # the step whose output becomes the result's AI view (and the trace's AI span)
     preview_input: dict = field(default_factory=lambda: dict(_PREVIEW_CASE))  # a placeholder that passes check_input
     route_only: bool = False   # True: only a skill-handoff route starts it (ADR-030); admission refuses it
+    # Input fields only the application sets (the router's ``earlier``, copied from the store for a reply, ADR-039).
+    # A request from outside that carries one is refused at admission.
+    system_fields: tuple = ()
 
 
 def check_case(case):
@@ -70,7 +73,8 @@ CATALOG = {
         "respond", check_route_message,
         lambda job_id, request, config: build_route_workflow(job_id, request, config, frame=router_frame()),
         lambda config: route_registry(config, router_frame()), ai_step="understand",
-        preview_input={"message": "Placeholder request that shows the shape of this workflow"}),
+        preview_input={"message": "Placeholder request that shows the shape of this workflow"},
+        system_fields=("earlier",)),
     # Started only by the route "triage-approved-to-apply" after a person approves a case (roadmap 2.3, ADR-030).
     "case_triage.v2.apply": WorkflowType(
         "case_triage.v2.apply", "Record where an approved case goes, with a Core receipt (started only after a "

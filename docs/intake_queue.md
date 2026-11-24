@@ -1,6 +1,6 @@
 # Intake API, job queue, Runner and web page (round 2, Milestone B)
 
-**Status:** built in PR #11 and tested offline (743 tests on 2026-11-24, including killing the Runner
+**Status:** built in PR #11 and tested offline (754 tests on 2026-11-24, including killing the Runner
 mid-step). The container build is checked on every push by *Actions → Service container*. Live on
 Render's free plan since 2026-11-01 (`render.yaml`). Railway was the first choice, but it has paused new
 sign-ups since 22 Oct 2026 after a security incident; `railway.json` stays in the repository for later.
@@ -43,7 +43,9 @@ when that is missing, and who decides (see "ระบบช่วยอะไร
 the kind of message above the box until the router (roadmap 4.2) chooses from this list.
 The router (2026-11-24, roadmap 4.2's first part, ADR-039): `POST /v1/jobs` with `"workflow_type": "intake.route.v1"`
 and `{"message"}` answers a proposal in the person's own words, one question, or out of scope, and creates no other job
-([intake_router.md](intake_router.md)). The page does not use it yet (4.4); confirming a proposal is 4.2's second part.
+([intake_router.md](intake_router.md)). Since 4.2's second part (the same day) a person confirms a proposal with
+`POST /v1/jobs/{id}/confirm`, which admits exactly one job in the person's own words, or answers the router's question
+with `POST /v1/jobs/{id}/reply`. The page does not use them yet (4.4).
 Design principles: [design_philosophy.md](design_philosophy.md).
 
 ## ภาพรวมการทำงาน (ภาษาไทย)
@@ -494,6 +496,8 @@ app runs, carries an `X-Request-Id` header:
 | `GET /v1/reviews/scorecard` | The owner and reviewers: the rules and the AI against the categories people recorded (roadmap 2.8), and reviewer time per group (2.10), below | 200 | 401, 403 |
 | `GET /v1/me` | Who the credential is (`token_id`, `role`, `display_name`, `shared_key`) and what its role may do (`can`: `submit`, `cancel`, `review`, `manage_tokens`) | 200 | 401, 429 |
 | `GET /v1/frame` | Every role: what the system can do, in plain words (roadmap 4.1, ADR-038), below | 200 | 401, 405, 429 |
+| `POST /v1/jobs/{job_id}/confirm` | The owner and submitters: confirm the router's proposal ("ใช่ ทำเลย", roadmap 4.2). The body is empty, `{}` or `{"task": …}` (the proposed task or the study offer). The new job's input comes from the stored answer, never the body; the reply is the new job's view plus `confirmed_task` and `retention` | 202 new, 200 the same again | 400 `invalid_fields`, `unknown_task`; 401, 403, 404, 409 `not_a_router_job`, `router_not_finished`, `nothing_to_confirm`, `already_confirmed`; 413, 415, 429, 503 |
+| `POST /v1/jobs/{job_id}/reply` | The owner and submitters: answer the router's question, `{"message": "…", "idempotency_key": "…"}`; a new router job whose message is the earlier message and the answer, with `earlier` copied from the store | 202 new, 200 the same again | 400 `invalid_fields`, `invalid_input`, `invalid_idempotency_key`; 401, 403, 404, 409 `not_a_router_job`, `router_not_finished`, `nothing_to_answer`; 413, 415, 429, 503 |
 | `GET /v1/tokens` | The owner: every personal token (never a secret or its hash), `active`, the limits and `retention` | 200 | 401, 403 |
 | `POST /v1/tokens` | The owner: issue a token, `{"display_name": "…", "role": "reviewer"\|"submitter"}`; the reply's `token` is the only copy (`shown_once`) | 201 | 400, 401, 403, 409 `too_many_tokens`, 413, 415, 429 |
 | `POST /v1/tokens/{token_id}/revoke` | The owner: revoke at once; the body is empty or `{}`; `changed` is `false` when it was already revoked | 200 | 400, 401, 403, 404 `token_not_found`, 415 |
@@ -562,7 +566,7 @@ workflow, agent, translator or the Runner reads it (a test checks).
   most once a minute.
 - Roles (`app/services/access.py`, `PERMISSIONS`): every route is open to the owner; `reviewer` may read
   `/v1/status`, `/v1/me`, `/v1/frame`, jobs, their events and reviews, and decide; `submitter` may read the same but reviews,
-  and send and cancel jobs. Anything else → `403 {"error": "forbidden", "role": …}`. Tokens are issued for
+  and send, cancel, confirm (the router's proposal) and reply (to the router's question). Anything else → `403 {"error": "forbidden", "role": …}`. Tokens are issued for
   `reviewer` and `submitter` only, at most 50 active, 10 new ones a minute per client; a display name is 1–60
   characters of text.
 - On storage that is not persistent the tokens go with the queue at every sleep, restart and deploy: a lost
