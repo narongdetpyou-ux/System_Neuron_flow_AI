@@ -13,7 +13,7 @@
 | ยังอ่านไม่ได้ | AI ไม่ตอบ (เช่น ระบบ AI ขัดข้อง) | ให้เลือกงานจากรายการเอง |
 
 **สิ่งที่ตัวอ่านข้อความไม่ทำ:**
-- ไม่สร้างงานเอง ต้องมีคนกด "ใช่ ทำเลย" ก่อน ซึ่งเป็นขั้น 4.2 ส่วนที่สอง ยังไม่ได้ทำ
+- ไม่สร้างงานเอง ต้องมีคนกด "ใช่ ทำเลย" ก่อน (ขั้น 4.2 ส่วนที่สอง ทำแล้วผ่าน API: กดยืนยันได้ครั้งเดียวต่อข้อความ กดซ้ำไม่เกิดงานซ้ำ และเคสที่ได้ยังรอคนตรวจเหมือนเดิม ส่วนข้อความที่ระบบถามกลับ ตอบต่อได้)
 - AI ไม่เขียนข้อความของคุณใหม่ งานที่เสนอใช้คำของคุณเองทุกตัวอักษร
 - ไม่ตัดสินอะไรแทนใคร
 
@@ -115,15 +115,38 @@ The two misses were a request for a secret (proposed as a case) and a wish to le
 a case). Typhoon said `high` on 57 of 60 development messages, so the `confirm` kind never appeared, and it never
 offered the study guide. These figures describe Typhoon only, on developer-written text.
 
+## Confirm and reply (roadmap 4.2's second part)
+
+Both are a person's requests at the API (`app/services/intake.py`), for the owner and submitters. A reviewer's token
+gets `403`. Both go through normal admission.
+
+- **`POST /v1/jobs/{router_job_id}/confirm`** ("ใช่ ทำเลย"):
+  - The router job must have ended with a `proposal` or a `confirm` answer. Otherwise the reply is `409
+    nothing_to_confirm` (with its `kind`), `router_not_finished`, `not_a_router_job`, or `404`.
+  - The body is empty, `{}`, or `{"task": …}` to take the study offer instead of the proposed task.
+  - The new job's input comes from the stored answer: the person's own words, and the fields the application fills (a
+    case's id, `RT-` and 12 hex digits of the router job's id). Nothing comes from the body.
+  - The task's own input check runs at admission.
+  - The idempotency key is `confirm:<router job id>`, so a router job is confirmed at most once: the same confirmation
+    again returns the same job (`200`), and another task gets `409 already_confirmed`.
+  - The confirmed case waits for a person like any case (rule 4).
+- **`POST /v1/jobs/{router_job_id}/reply`**, with `{"message", "idempotency_key"}`:
+  - The router job must have asked a `question`.
+  - The answer becomes a new router job. Its message is the earlier message and the answer, on two lines, both the
+    person's words, at most 500 characters together. Its input carries `earlier`: the earlier job's id and the
+    question, copied from the store.
+- **The links belong to the system.** A request from outside may not use an idempotency key that starts with
+  `confirm:` or `handoff:`, or the router's `earlier` field.
+  - The key is the link, so there is no new table.
+  - The queue writes the new job's first event with `from_job_id`, and one event on the router job
+    (`router.confirmed` or `router.replied`), in the same transaction.
+  - A job's detail shows `router: {"from": {"job_id", "how"}, "confirmed_job_id"}`, and the job list gives
+    `from_job_id`.
+
 ## What comes next (roadmap Phase 4)
 
-1. **Confirm and reply** (4.2's second part):
-   - `POST /v1/jobs/{router_job_id}/confirm` admits the proposal through normal admission, with the key
-     `confirm:<router job>` and a link row;
-   - `POST /v1/jobs/{router_job_id}/reply` makes a new router job carrying the earlier answer, copied by the API from
-     the store.
-2. **Layered answers** (4.3): one presenter for every result.
-3. **The chat page** (4.4):
+1. **Layered answers** (4.3): one presenter for every result.
+2. **The chat page** (4.4):
    - every message goes to the router;
    - the case / study switch stays as a fallback while the page runs the mock;
    - Phase 4's gate is measured again.
@@ -138,6 +161,17 @@ offered the study guide. These figures describe Typhoon only, on developer-writt
 - the domain imports no admission code, and through the API a router job completes and creates nothing else;
 - both message sets load and are new phrases, and the gate notices a changed answer.
 
+`tests/test_intake_confirm.py` (4.2's second part) covers:
+- a confirmation admits one case in the person's words that waits for a person, and the same confirmation again
+  returns the same job;
+- what cannot be confirmed: an out-of-scope answer, a question, an unanswered router job, another type, an unknown
+  job;
+- a body that tries to carry an input is refused, and a reviewer can neither confirm nor reply;
+- the reserved keys and field are refused from outside;
+- a reply is built from the store;
+- an injected message creates nothing until a person confirms.
+
 Also:
 - `tests/test_web_page.py` keeps a Thai name for each of the router's steps;
-- the *Service container* smoke test sends a message to the router on the real image.
+- the *Service container* smoke test runs message → proposal → confirm (and again) → a case that waits for a person,
+  and question → reply → proposal, on the real image. Its Thai summary is on the run page.

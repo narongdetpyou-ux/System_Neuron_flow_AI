@@ -9,6 +9,11 @@ Flow for one ``POST /v1/jobs``:
 4. a new idempotency key creates one QUEUED job; the same key with the same fingerprint returns
    the existing job (a retry or a double click never makes a second job); the same key with a
    different fingerprint is a conflict.
+
+Some keys and fields belong to the system, and a request from outside that uses one is refused: idempotency keys
+that start with ``confirm:`` (a person's confirmation of a router proposal, roadmap 4.2, ADR-039) or ``handoff:``
+(the exchange, ADR-030), and a workflow type's ``system_fields`` (the router's ``earlier``). The API's confirm and
+reply routes admit with ``internal=True`` after building the key and the input from the stored router job.
 """
 
 import re
@@ -23,6 +28,7 @@ from app.persistence import QueueFull
 from .workflows import CATALOG, admissible
 
 IDEMPOTENCY_KEY = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{7,127}$")
+RESERVED_KEY_PREFIXES = ("confirm:", "handoff:")  # the system's own links; never from a request
 _FIELDS = {"workflow_type", "idempotency_key", "input"}
 
 
@@ -42,11 +48,14 @@ def request_fingerprint(workflow_type, normalized_input):
     return fingerprint({"workflow_type": workflow_type, "input": normalized_input})
 
 
-def admit(store, body, *, max_queued, catalog=CATALOG, request_id=None, trace_parent=None):
+def admit(store, body, *, max_queued, catalog=CATALOG, request_id=None, trace_parent=None, internal=False,
+          link=None):
     """Returns ``(job, created)``; raises :class:`AdmissionError` when the request is refused.
 
     ``request_id`` (already checked by the API) and ``trace_parent`` (the admitting request's span, made by
     the API's tracing; only a well-formed W3C value is kept) are stored in the new job's first event.
+    ``internal`` is for the API's own confirm and reply routes, which may use a reserved key and the system fields;
+    ``link`` (``(from_job_id, event kind)``) records where the new job came from, in the same transaction.
     """
     if not isinstance(body, dict) or set(body) != _FIELDS:
         raise AdmissionError(400, "invalid_fields", "The body must contain exactly: workflow_type, idempotency_key, input")
@@ -59,6 +68,14 @@ def admit(store, body, *, max_queued, catalog=CATALOG, request_id=None, trace_pa
     if not isinstance(key, str) or not IDEMPOTENCY_KEY.fullmatch(key):
         raise AdmissionError(400, "invalid_idempotency_key",
                              "idempotency_key must be 8-128 letters, digits, '.', '_', ':' or '-'")
+    if not internal and key.startswith(RESERVED_KEY_PREFIXES):
+        raise AdmissionError(400, "invalid_idempotency_key",
+                             "idempotency_key must not start with " + " or ".join(RESERVED_KEY_PREFIXES)
+                             + ": those are the system's own links")
+    if not internal and isinstance(body["input"], dict) and set(body["input"]) & set(workflow.system_fields):
+        raise AdmissionError(400, "invalid_input",
+                             "The input holds a field that only the system sets: "
+                             + ", ".join(sorted(set(body["input"]) & set(workflow.system_fields))))
     try:
         normalized = workflow.check_input(body["input"])
     except SpecError as exc:
@@ -72,7 +89,8 @@ def admit(store, body, *, max_queued, catalog=CATALOG, request_id=None, trace_pa
         job, created = store.admit(job_id=new_job_id(), idempotency_key=key, request_fingerprint=digest,
                                    workflow_type=workflow.name, input=normalized, max_queued=max_queued,
                                    request_id=request_id,
-                                   trace_parent=trace_parent if parse_traceparent(trace_parent) else None)
+                                   trace_parent=trace_parent if parse_traceparent(trace_parent) else None,
+                                   link=link)
     except QueueFull:
         raise AdmissionError(503, "queue_full", "The queue is full; try again in a few minutes") from None
     if not created and job["request_fingerprint"] != digest:

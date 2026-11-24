@@ -26,6 +26,7 @@ SAMPLES = {
     "/v1/status": "/v1/status", "/v1/me": "/v1/me", "/v1/frame": "/v1/frame", "/v1/jobs": "/v1/jobs",
     "/v1/jobs/{job_id}": f"/v1/jobs/{JOB}",
     "/v1/jobs/{job_id}/events": f"/v1/jobs/{JOB}/events", "/v1/jobs/{job_id}/cancel": f"/v1/jobs/{JOB}/cancel",
+    "/v1/jobs/{job_id}/confirm": f"/v1/jobs/{JOB}/confirm", "/v1/jobs/{job_id}/reply": f"/v1/jobs/{JOB}/reply",
     "/v1/reviews": "/v1/reviews", "/v1/reviews/scorecard": "/v1/reviews/scorecard",
     "/v1/reviews/{review_id}": f"/v1/reviews/{REVIEW}",
     "/v1/reviews/{review_id}/decisions": f"/v1/reviews/{REVIEW}/decisions", "/v1/tokens": "/v1/tokens",
@@ -36,6 +37,8 @@ BODIES = {
     "/v1/reviews/{review_id}/decisions": {"decision": "APPROVE", "reason": "role check", "expected_version": 1,
                                           "idempotency_key": "key-role-check-0002"},
     "/v1/tokens": {"display_name": "role check", "role": "submitter"},
+    "/v1/jobs/{job_id}/confirm": {},
+    "/v1/jobs/{job_id}/reply": {"message": "role check", "idempotency_key": "key-role-check-0003"},
 }
 
 
