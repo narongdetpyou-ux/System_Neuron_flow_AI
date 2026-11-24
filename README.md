@@ -160,7 +160,7 @@ so; a paid plan with a disk keeps them.
 
 **Locally (Python 3.10+):**
 ```bash
-python -m unittest discover -s tests -v        # 689 tests
+python -m unittest discover -s tests -v        # 690 tests
 python -m examples.case_triage_demo            # v1 rules, one synthetic case
 python -m examples.case_triage_shadow_demo     # v2 shadow mode, three synthetic cases (offline mock AI)
 python -m app.eval.triage_shadow_eval          # scorecard on 61 synthetic cases
@@ -188,7 +188,9 @@ most 1 MiB. The agent `version` is frozen into each job, so an old job refuses t
 | Document | What it is for |
 |---|---|
 | [Roadmap](docs/ROADMAP.md) | What to build next, in order: tasks, acceptance checks, owner tests and owner decisions |
-| [CLAUDE.md](CLAUDE.md) | How Claude Code works on this repo: working with the owner, rules, checks, definition of done |
+| [CLAUDE.md](CLAUDE.md) | How Claude Code works on this repo: working with the owner, rules, checks, definition of done, and what is paused, waiting and next; kept under 200 lines, because it is loaded into every session |
+| [Developer guide](docs/developer_guide.md) | Every command, what each GitHub Actions workflow checks, notes for cloud sessions, every folder, and hosting on Render (moved from CLAUDE.md on 2026-11-24) |
+| [Status history](docs/status_history.md) | CLAUDE.md's status section as it stood on 2026-11-24, kept word for word; newer history is in the roadmap's change log |
 | [Security policy](SECURITY.md) | How to report a vulnerability privately, and what is in scope |
 | [Contributing](CONTRIBUTING.md) and [code of conduct](CODE_OF_CONDUCT.md) | How to ask, report and propose a change; the rules every change keeps; the Contributor Covenant 2.1 and how to report behaviour privately |
 | [Design philosophy](docs/design_philosophy.md) | The owner's principles, the first-response rule and study resources (mostly Thai) |

@@ -98,7 +98,7 @@ class RecipeTests(unittest.TestCase):
         self.assertEqual(self.recipe["chat_template_kwargs"], {"enable_thinking": False})
 
     def test_the_base_model_revision_is_the_one_on_record(self):
-        record = (ROOT / "CLAUDE.md").read_text(encoding="utf-8")
+        record = (ROOT / "docs" / "own_model_plan.md").read_text(encoding="utf-8")  # section 14, the record
         revision = re.search(r"`typhoon-ai/typhoon2\.5-qwen3-4b` \(revision\s+`([0-9a-f]{40})`\)", record).group(1)
         self.assertEqual(self.recipe["base_model"], {**self.recipe["base_model"], "repo": "typhoon-ai/typhoon2.5-qwen3-4b",
                                                      "revision": revision})

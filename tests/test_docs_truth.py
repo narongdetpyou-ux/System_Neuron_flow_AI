@@ -3,6 +3,7 @@
 1. Every relative link in README.md, CLAUDE.md, CONTRIBUTING.md, CODE_OF_CONDUCT.md and docs/**/*.md
    points at a file that exists, and every ``#anchor`` points at a heading that exists in the target Markdown file (GitHub's anchor rules).
 2. Every place that states the current number of tests states the real number.
+3. CLAUDE.md stays short: Claude Code loads it in full into every session.
 
 Both read files only; nothing is imported from ``app`` or ``neuron_flow``.
 """
@@ -116,6 +117,15 @@ class DocsTruthTests(unittest.TestCase):
                 problems.append(f"{name}: the test-count sentence was not found (update TEST_COUNT_CLAIMS)")
             problems += [f"{name}: says {value}, but there are {real} tests" for value in stated if int(value) != real]
         self.assertEqual(problems, [], "\n".join(problems))
+
+    def test_claude_md_stays_short(self):
+        # Anthropic's memory guide targets under 200 lines per CLAUDE.md, because longer files consume more context
+        # and reduce adherence (https://code.claude.com/docs/en/memory). Details belong in the docs it links
+        # (docs/developer_guide.md, docs/status_history.md); the character cap stops long lines from hiding growth.
+        text = (ROOT / "CLAUDE.md").read_text(encoding="utf-8")
+        lines, chars = text.count("\n"), len(text)
+        self.assertLess(lines, 200, f"CLAUDE.md has {lines} lines: move details into the docs it links")
+        self.assertLessEqual(chars, 20_000, f"CLAUDE.md has {chars} characters: move details into the docs it links")
 
 
 class SlugTests(unittest.TestCase):

@@ -23,7 +23,7 @@ differs, this file and architecture.md win.
   - ถ้าสองฝ่ายเห็นไม่ตรงกัน โค้ดเจอสัญญาณ หรือ AI ชี้ เคสจะถูกยกให้คนดูก่อน พร้อมบอกเหตุผล (ขั้น 5.10)
 - ถ้าเครื่องดับกลางทาง ระบบทำต่อได้ ส่งซ้ำก็ไม่เกิดงานซ้ำ
 - ยกเลิกเคสที่ยังรอคิวได้ และทุกคำขอมีรหัสคำขอ (request id) ไว้ไล่ดูใน log (ขั้น 1.2, 1.3)
-- ผ่านชุดทดสอบอัตโนมัติ 689 ข้อ และเปิดใช้ออนไลน์บน Render แล้ว ระบบปิดตัวอย่างเรียบร้อย และการแก้แค่เอกสารไม่ทำให้ Render ขึ้นเวอร์ชันใหม่ (ขั้น 0.1, 0.5)
+- ผ่านชุดทดสอบอัตโนมัติ 690 ข้อ และเปิดใช้ออนไลน์บน Render แล้ว ระบบปิดตัวอย่างเรียบร้อย และการแก้แค่เอกสารไม่ทำให้ Render ขึ้นเวอร์ชันใหม่ (ขั้น 0.1, 0.5)
 - หน้าเว็บเป็นแบบแชท: พิมพ์เคส ดูขั้นตอนก่อนส่ง กดยืนยัน แล้วติดตามใน Flow และประวัติเหตุการณ์ (ขั้น 1.6)
 - หน้าเว็บบอกว่ามีเคสรอกี่เคส เคสที่รอนานสุดรอมานานเท่าไร ปกติแต่ละเคสใช้เวลาเท่าไร และเคสที่ไม่สำเร็จล้มเพราะอะไร (ขั้น 5.3)
 - ถ้ามีคนแก้กฎหรือ prompt แล้วคำตอบของเคสทดสอบเคสไหนเปลี่ยน ช่องตรวจบน GitHub จะเป็นสีแดงและบอกว่าเคสไหนเปลี่ยนอะไร (ขั้น 5.2)
@@ -2057,4 +2057,13 @@ status is in the table above.
   The 30B does not fit GitHub's free runner, so its exam needs a larger machine (the owner's decision). The rules
   for collecting training cases are in [own_model_plan.md](own_model_plan.md#13-the-owners-decisions-of-2026-11-24).
   Docs only; nothing downloaded or pinned.
+- 2026-11-24: the owner asked whether CLAUDE.md was too long, as an expert had said, and to shorten it only if so.
+  It was: 839 lines and 81,608 characters, against Anthropic's target of under 200 lines for a file that Claude Code
+  loads in full into every session; 369 of its lines were the status section, which every pull request added to.
+  Shortened to 196 lines and 17,599 characters, every rule kept. The status section moved word for word to
+  [status_history.md](status_history.md); the commands, the CI workflows, the cloud-session notes, the folder table
+  and the Render notes to [developer_guide.md](developer_guide.md); the record of the owner's set-aside fine-tune to
+  [own_model_plan.md §14](own_model_plan.md#14-the-owners-set-aside-fine-tune-the-record). History now goes into
+  this change log only, and `tests/test_docs_truth.py` keeps CLAUDE.md under 200 lines and 20,000 characters. Docs
+  and tests only; Render does not redeploy.
 
