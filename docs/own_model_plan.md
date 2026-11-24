@@ -7,7 +7,10 @@ touched. The decision is [ADR-037](architecture.md#8-architecture-decisions-adrs
 The status of each package is in the roadmap's table ([ROADMAP.md](ROADMAP.md#own-model-track-t1t6)). Merged as
 PR #80 the same day. Then the owner chose the base and round 0: the publisher's Typhoon 2.5 Qwen3 4B that the local
 lane already tests on GitHub, because the owner's fine-tuned file on Drive was too troublesome to share. That file is
-set aside, and nothing is done with it.
+set aside, and nothing is done with it. On 2026-11-24, after round 0's exam, the owner paused training (D10: not now),
+chose Typhoon 2.5 Qwen3 30B-A3B as the base of a future training round, kept the 4B as round 0 and the comparison,
+and asked for training cases to be collected along the way while development keeps using Typhoon's API
+([section 13](#13-the-owners-decisions-of-2026-11-24)). Nothing was downloaded or pinned for the 30B.
 
 ## สรุปสำหรับเจ้าของโปรเจกต์
 
@@ -37,13 +40,22 @@ set aside, and nothing is done with it.
 และ 37/40 ในชุดเก็บไว้ทดสอบ เคสที่ต้องให้คนดูก่อนถูกยกขึ้นครบ 70 จาก 70 คะแนนชุดนี้คือเส้นที่รุ่นที่ฝึกแล้วต้องทำได้ดีกว่า
 ([บันทึกหลักฐาน](evidence/2026-11-23-own-model-round0.md))
 
-**รอคุณตัดสินใจ**
-- D10 จะฝึกที่ไหน: Colab ฟรีหรือเสียเงิน, เช่าการ์ดจอเป็นชั่วโมง หรือเครื่องของคุณเอง
-- เมื่อฝึกรอบแรกเสร็จ (T5) ไฟล์รุ่นใหม่ต้องไปอยู่ที่ที่ GitHub ดาวน์โหลดเองได้ เช่น Hugging Face แบบส่วนตัวหรือสาธารณะ ผมจะถามอีกครั้งตอนนั้น
+**ตัดสินใจแล้ว (24 พ.ย.)** ([รายละเอียด](#13-the-owners-decisions-of-2026-11-24))
+- **พักการฝึกไว้ก่อน** (D10: ยังไม่ฝึกตอนนี้) เพราะคุณประเมินแล้วว่าทรัพยากรยังไม่พร้อม ระหว่างนี้การพัฒนาใช้ AI ภายนอก (Typhoon ผ่าน API ฟรี) เหมือนเดิม
+- **ฐานของรอบฝึกในอนาคตคือ 30B** (Typhoon 2.5 Qwen3 30B-A3B) ตามเหตุผลของคุณว่าโมเดลเล็กลืมง่าย และโมเดล 4B ที่คุณเคยฝึกเองนิดหน่อยได้ผลถอยหลัง
+  ส่วน 4B ตัวเดิมยังเป็น "รอบ 0" และเป็นตัวเทียบต่อไป เพราะสอบบนเครื่องฟรีของ GitHub ได้
+- **สะสมชุดฝึกระหว่างทาง:** ระหว่างพัฒนา ผมเขียนเคสสมมติสำหรับฝึกเพิ่ม พร้อมเฉลยที่ผมเขียนเอง (ไม่ลอกคำตอบของ AI) ตรวจด้วยโค้ด และตรวจว่าไม่ซ้ำข้อสอบ
+  ชุดฝึกนี้ใช้กับ 30B ได้ ไม่ต้องทิ้ง
+- **ข้อจำกัดของ 30B:** ไฟล์ราว 19 GB ใหญ่กว่าเครื่องฟรีของ GitHub (หน่วยความจำ 16 GB ดิสก์ 14 GB) จึงสอบบนเครื่องฟรีไม่ได้
+  และการฝึกต้องใช้การ์ดจอหน่วยความจำมากกว่า 16 GB (ผมประเมินจากขนาดไฟล์ ยังไม่ได้วัด)
+
+**รอคุณตัดสินใจ (เมื่อคุณพร้อม)**
+- D10 จะฝึกที่ไหน: Colab ฟรีหรือเสียเงิน, เช่าการ์ดจอเป็นชั่วโมง หรือเครื่องของคุณเอง และจะสอบ 30B บนเครื่องไหน (เครื่องใหญ่ของ GitHub คิดเงินตามนาที)
+- เมื่อฝึกรอบแรกเสร็จ (T5) ไฟล์รุ่นใหม่ต้องไปอยู่ที่ที่เครื่องสอบดาวน์โหลดเองได้ เช่น Hugging Face แบบส่วนตัวหรือสาธารณะ ผมจะถามอีกครั้งตอนนั้น
 
 **ตัดสินใจแล้ว (22 พ.ย.):** ใช้โมเดล 4B ตัวเดิมที่ GitHub ทดสอบอยู่ (Typhoon 2.5 Qwen3 4B ของผู้พัฒนา) เป็นจุดตั้งต้นและ "รอบ 0"
 GitHub ดาวน์โหลดไฟล์นี้เองจาก Hugging Face และตรวจรหัส SHA-256 ทุกครั้ง จึงไม่ต้องใช้ลิงก์หรือไฟล์ใน Drive
-ส่วนโมเดลที่คุณฝึกเองใน Drive ผมพักไว้ ไม่แตะ
+ส่วนโมเดลที่คุณฝึกเองใน Drive ผมพักไว้ ไม่แตะ (24 พ.ย. คุณเปลี่ยนฐานของรอบฝึกในอนาคตเป็น 30B ดูข้างบน)
 - เรื่องอื่นที่มีอยู่แล้ว: 2.9 (ให้คนเลือกหมวดก่อนเห็นข้อเสนอ), D1 (ดิสก์ถาวร เพื่อสะสมเฉลย), D3 (ผู้ตรวจจริง), D4 (ข้อมูลจริง), D7 (เครื่องเสียเงินสำหรับใช้โมเดลบนหน้าเว็บ), D6 (บทบาทของ AI)
 
 **สิ่งที่แผนนี้จะไม่ทำ:** ไม่ให้ AI เรียนเองขณะทำงาน ไม่เปลี่ยนรุ่นเอง ไม่เอาข้อสอบไปฝึก ไม่ใช้ข้อมูลจริงก่อน D4
@@ -67,10 +79,12 @@ GitHub ดาวน์โหลดไฟล์นี้เองจาก Huggin
 ## 1. What "our own model" means here
 
 - **Fine-tuning, not pretraining.** Training a language model from nothing takes data and compute far beyond this
-  project. We take an open-weight base and teach it our task. The base, chosen by the owner on 2026-11-22, is the
-  file the local lane already serves: Typhoon 2.5 Qwen3 4B (SCB 10X, Apache-2.0; ADR-026), Q4_K_M, pinned by
+  project. We take an open-weight base and teach it our task. The first base, chosen by the owner on 2026-11-22, is
+  the file the local lane already serves: Typhoon 2.5 Qwen3 4B (SCB 10X, Apache-2.0; ADR-026), Q4_K_M, pinned by
   repository, revision and SHA-256 in `.github/workflows/local-model-eval.yml` (`MODEL_REPO`, `MODEL_REVISION`,
-  `MODEL_SHA256`). Training starts from the publisher's un-quantized weights of the same model, pinned in T3. We
+  `MODEL_SHA256`). Training starts from the publisher's un-quantized weights of the same model, pinned in T3. It is
+  round 0 and stays the comparison. On 2026-11-24 the owner chose Typhoon 2.5 Qwen3 30B-A3B as the base of a future
+  round instead (section 13); it is not pinned yet. We
   hold the file, run it on a machine we control and send nothing to an AI company. The base is still someone else's work, so its licence is checked again for each
   new base before it is served.
 - **One narrow job first:** the triage second opinion, a category and the attention flag, both fixed choices. It
@@ -125,7 +139,8 @@ GitHub ดาวน์โหลดไฟล์นี้เองจาก Huggin
 ## 4. Where and how training runs
 
 - **It needs a GPU.** GitHub's hosted runners are CPU only. The lane uses them only to measure (ADR-026), and this
-  plan keeps it that way: no training and no serving there.
+  plan keeps it that way: no training and no serving there. The 30B-A3B base (section 13) needs a GPU with more than
+  16 GB of memory: its Q4_K_M file alone is about 19 GB (an estimate from the file's size, not measured).
 - **Owner decision D10:** Google Colab (the owner trained v01 there; the free tier has session limits, paid tiers
   cost money), a GPU rented by the hour, or the owner's own computer with a GPU. Accounts and money are the owner's.
 - **The recipe lives in the repository** (T3) under `training/`, which the image never copies and Render's build
@@ -141,7 +156,9 @@ GitHub ดาวน์โหลดไฟล์นี้เองจาก Huggin
 - **Where:** the local lane (5.8), on a GitHub runner. Round 0 is the lane's own pinned file, fetched from Hugging
   Face as today. A trained candidate (T5) must be put where the runner can fetch it and check its size and SHA-256.
   Hugging Face, which `fetch_model.py` already reads, is the natural place. Whether that repository is private (a
-  read-only token as a repository secret) or public is the owner's choice at T5.
+  read-only token as a repository secret) or public is the owner's choice at T5. A 30B-A3B candidate does not fit
+  the free runner (section 13): its exam, and round 0 of the 30B beside it, need a larger machine, which is the
+  owner's decision because it costs money.
 - **Sets:** all of section 3's exam sets, with the sealed half counted only.
 - **Compared with:** round 0, the publisher's 4B unchanged, and Typhoon's saved answers (2026-11-11), set by set,
   as counts (n/N). Its full run of 2026-11-08 used that day's prompt and answer checks; today's agent version
@@ -170,7 +187,8 @@ GitHub ดาวน์โหลดไฟล์นี้เองจาก Huggin
 - The live page needs a machine with room for the model (owner decision D7, roadmap 5.8 step 4). Measured so far:
   a Q4_K_M file of this 4B model is about 2.5 GB (the owner's set-aside fine-tune: 2,497,278,816 bytes); the
   publisher's 4B used at most 8.8 GB of memory and took about 8 to
-  10 s a case after loading on a GitHub runner (run 43421904358). Render's free plan has 512 MB.
+  10 s a case after loading on a GitHub runner (run 43421904358). Render's free plan has 512 MB. The 30B-A3B's
+  Q4_K_M file is about 19 GB (section 13).
 - Then the model server goes into the service's container (one machine, ADR-003) through `render.yaml`, with
   `NEURON_FLOW_LLM_PROVIDER=local` and the file's model id. Latency is measured again on that machine.
 
@@ -182,7 +200,7 @@ GitHub ดาวน์โหลดไฟล์นี้เองจาก Huggin
 | **T2** | Synthetic training set v1 with its manifest, and the overlap check against every exam set in CI | ✅ built on 2026-11-22 (section 10); the owner reads a sample |
 | **T3** | The training recipe and receipt format in `training/`, kept out of the image and Render's build, with a test | ✅ built on 2026-11-22 (section 11); D10 to run it |
 | **T4** | The exam gate: round 0 run again on `main`; the local lane takes a candidate file (Hugging Face repository, revision, size, SHA-256), runs every set and writes the comparison against the criteria | ✅ built on 2026-11-22 (section 12); round 0 examined on `main` on 2026-11-23 ([evidence](evidence/2026-11-23-own-model-round0.md)) |
-| **T5** | Round 1: train on T2's set, run the exam, write an evidence note; the owner decides | T2–T4, D10; where the trained file is put |
+| **T5** | Round 1: train on T2's set, run the exam, write an evidence note; the owner decides | ⏸ paused by the owner on 2026-11-24 (D10: not now; section 13) · T2–T4, D10; for the 30B-A3B base also a machine for its exam; where the trained file is put |
 | **T6** | Rounds from people's decisions: the owner exports blind labels (masked) as a training set; the cadence is the owner's choice | 2.9, D1, D3; real cases also D4, 7.1–7.3, 7.5 |
 
 Serving behind the page is not a T package: it is D7 and 5.8 step 4. As with a phase, a package starts when the
@@ -203,8 +221,9 @@ owner says so.
 
 - A few hundred synthetic cases can teach the model the sets' wording rather than the task. The held-out exams
   catch some of this, not all.
-- Fine-tuning a small model can cost it abilities it had (forgetting), which is one reason the exam covers more
-  than the trained task: the robustness edges, the injections and out-of-scope requests.
+- Fine-tuning can cost a model abilities it had (forgetting), which is one reason the exam covers more
+  than the trained task: the robustness edges, the injections and out-of-scope requests. A bigger base does not
+  prevent it by itself (section 13).
 - "Learning along with the system" is slow on purpose. Each round needs a training run, an exam on CPU (the first
   full local run of both scorecards took about 66 minutes, 55 of them the study guide) and an owner decision.
 - The base model is made by others, and its licence is theirs to set.
@@ -312,3 +331,93 @@ The owner said "เริ่ม T4 ต่อเลย" after merging T3.
   as printed, in its data file.
 - **Not done yet:** a private candidate repository (a token) is T5's question.
 
+
+## 13. The owner's decisions of 2026-11-24
+
+After round 0's exam the owner said to pause ("พักไว้ก่อน … ผมยังมีทรัพยากรไม่พร้อม": the resources are not ready),
+to keep relying on outside AI during development, and to build training sets along the way. The owner then asked to
+move the base to the 30B, for these reasons: almost every model is already good at Thai, small models forget easily,
+and the owner's own small fine-tune of the 4B went backwards. That last point is the owner's account, not measured here.
+
+- **Training is paused (D10: not now).** T5 waits until the owner resumes it. T2–T4 stay as built, and their checks
+  keep running in CI.
+- **Development keeps using Typhoon's API** (ADR-021) for live measurements, as before. The page stays on the mock
+  unless the owner chooses 0.4.
+- **The base of a future round is Typhoon 2.5 Qwen3 30B-A3B** (SCB 10X; on Hugging Face `typhoon-ai/typhoon2.5-qwen3-30b-a3b`
+  and `typhoon-ai/typhoon2.5-qwen3-30b-a3b-gguf`). It is a mixture of experts: about 30B parameters, about 3B of them
+  active for each token. Typhoon's API serves a 30B A3B model as `typhoon-v2.5-30b-a3b-instruct`, probably the same
+  weights, but how it is served there is Typhoon's.
+  - Nothing is pinned or downloaded yet. When T5 resumes, the repository, revision, file and SHA-256 are pinned by
+    program, and the 30B gets a new recipe version. `recipe_v1.json` pins the 4B and stays as it is.
+  - Its licence is Apache-2.0. Its model pages also ask users to accept OpenTyphoon's terms and privacy notice. Read
+    both before T5; accepting them is the owner's decision.
+- **The 4B stays.** Round 0 (2026-11-23) and the local lane keep the 4B, because it fits GitHub's free runner. The
+  exam's pins are not changed. A 30B candidate would be compared with round 0 of the 30B on the same machine, and
+  the 4B's results stay as a further comparison.
+
+### Why the 30B does not run on the free runner
+
+| | 4B (round 0) | 30B-A3B |
+|---|---|---|
+| Q4_K_M file | 2,497,276,128 bytes (the lane's pin) | about 19 GB (Ollama's listing of the Q4_K_M build) |
+| GitHub's free runner for a public repository: 16 GB of memory, 14 GB of SSD | fits: at most 8.8 GB of memory on a runner (run 43421904358); round 0's exam took 65 minutes | does not fit: the file alone is larger than the memory and the disk |
+| Where its exam can run | the free runner | a machine with more memory than the file's size: a larger runner (billed per minute) or another machine; the owner's decision |
+| Training | a GPU | a GPU with more than 16 GB of memory (an estimate from the file's size, not measured) |
+
+### What is known about both models on our sets
+
+The AI's category right, as n/N of the cases the AI answered:
+
+| Set | 4B, round 0 (2026-11-23, our file on a GitHub runner) | 30B through Typhoon's API (2026-11-11) |
+|---|---|---|
+| development (61) | 58/61 | 59/60 (1 unavailable) |
+| held-out (40) | 37/40 | 40/40 |
+| hard auto-send (128) | 104/128 | 115/128 |
+| held-out attention (64) | 57/64 | 55/62 (2 unavailable) |
+| robustness edges (116) | 98/116 | 103/116 |
+| BIPIA attacks (75) | 70/75 | 69/73 (2 unavailable) |
+
+- This is not a comparison under the same conditions. Both runs used the same prompt (`triage_classify_v2`, the
+  same SHA-256), but:
+  - the 30B ran on Typhoon's servers with a 30 s wait, and the 4B from our file on a runner with a 300 s wait;
+  - the 30B's answers were checked by the gateway before `answer-checks-v3` (2026-11-19);
+  - each was one run, on cases the developer labelled.
+- The 30B was ahead on three sets (held-out, hard, edges) and about level on the other three. It had 5 unavailable
+  answers; the 4B had none.
+- Sources: [round 0](evidence/2026-11-23-own-model-round0.md) and the saved reports of
+  [the attention run](evidence/2026-11-11-attention-signals.md) (`2026-11-11-attention-raw/typhoon-v2-*.json`).
+  The 30B's own file has never been examined here.
+
+### Forgetting
+
+- Fine-tuning can make a model lose what it could do before (catastrophic forgetting), at every size studied. In
+  one study of models from 1B to 7B parameters, forgetting grew with size within that range
+  ([Luo et al., 2023](https://arxiv.org/abs/2308.08747)).
+- LoRA forgets less than full fine-tuning, and also learns less
+  ([Biderman et al., 2024](https://arxiv.org/abs/2405.09673)).
+- So the 30B is a reasonable base, but not a guard by itself. The guards stay the same:
+  - QLoRA with a short recipe;
+  - an exam broader than the trained task (section 5);
+  - the owner's decision before any switch.
+
+### Collecting training cases along the way
+
+- When development adds a triage behaviour or a new kind of case (a category boundary, an attention kind, a kind of
+  injection), add synthetic training cases for it, in that pull request or the next one, and say so in its
+  description.
+- Write them as T2's were (section 10):
+  - Thai and English, from the categories and attention kinds;
+  - answers written by the developer and checked by code, never copied from an AI's answer (section 3);
+  - without reading exam texts, and never because of a held-out or sealed result.
+- They go into the next version of the set: `training/data/triage_train_v2.json`, with its manifest. Its checks
+  run with `python -m training.check_set --set <file>`, and the tests and the *Training set check* workflow cover it
+  from its first pull request. `triage_train_v1.json` is never edited, because `recipe_v1.json` pins it by SHA-256.
+- The owner approves each version by merging its pull request, as for v1.
+- The cases do not depend on the model. Each example is rendered with the service's own request builder (section 11),
+  so the same set serves the 4B's recipe or a 30B recipe.
+
+### Not done
+
+- Nothing downloaded or run for the 30B.
+- Its licence terms are not read in full.
+- No machine is chosen for its exam or its training.

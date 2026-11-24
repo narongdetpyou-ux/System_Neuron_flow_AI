@@ -66,7 +66,7 @@ differs, this file and architecture.md win.
 
 **ลำดับต่อจากนี้** แต่ละขั้นจบด้วยสิ่งที่คุณลองเองได้
 
-| ขั้น | ทำอะไร | คุณจะได้ลองอะไร | สถานะ (23 พ.ย. 2026) |
+| ขั้น | ทำอะไร | คุณจะได้ลองอะไร | สถานะ (24 พ.ย. 2026) |
 |---|---|---|---|
 | 0 | เปิดใช้ออนไลน์บน Render และวัดผล AI จริงครั้งแรก | ใส่เคสบนหน้าเว็บจริง และอ่านผลวัดของ AI จริง | ออนไลน์แล้ว; วัดผล AI จริงครั้งแรกแล้วด้วย Typhoon (0.3, 6 พ.ย.); ที่เหลือรอคุณตัดสินใจ: D1 แผน Render แบบเสียเงิน, D2 API key ของ Claude และ 0.4 กับ Typhoon (ฟรี แต่ข้อความที่พิมพ์บนหน้าเว็บจะถูกส่งไป Typhoon) |
 | 1 | เก็บงานเล็ก ๆ ให้ระบบแน่นขึ้น | ยกเลิกเคสที่ยังรอคิวได้ เปิด `/readyz` ดูว่าตัวรันงานพร้อมไหม และดูรูปหน้าจอมือถือที่ GitHub กดให้ | เสร็จ ยกเว้น 1.4 (สำรองข้อมูล) ที่ต้องใช้แผน Render แบบเสียเงิน; เพิ่มจากรายงานคุณภาพ 19 พ.ย.: 1.7 (สถานะที่ตรวจจริง) ทำแล้วและคุณลองผ่านแล้ว (21 พ.ย.) และ 1.8 (ทดสอบกดจริงบนจอมือถือ) ทำแล้ว (21 พ.ย.) |
@@ -78,7 +78,7 @@ differs, this file and architecture.md win.
 | 7 | เตรียมพร้อมก่อนให้คนอื่นใช้ หรือก่อนเปิด repo สาธารณะ | รายงานตรวจความปลอดภัย และรายการตรวจก่อนเปิดตัว | เริ่มแล้ว: 7.1 ปิดข้อมูลส่วนตัวก่อนส่งให้ AI ทำแล้ว และตั้งแต่ 10 พ.ย. ตัวกลางเรียก AI บังคับปิดซ้ำเองก่อนส่ง ส่วนการจำกัดว่าใครเห็นคีย์ AI ได้ เขียนแผนไว้ ยังไม่ทำ; 7.4 เสร็จ: repo นี้เป็นสาธารณะพร้อมประวัติทั้งหมดตั้งแต่ 8 พ.ย. (D5) เปลี่ยนคีย์ Sentry แล้ว และเปิดระบบสแกนคีย์ของ GitHub แล้ว; มีผู้ตรวจสอบอิสระอ่านโค้ดครั้งแรกเมื่อ 10 พ.ย. ตอบครบ 4 ข้อแล้ว และคุณเลือกเก็บประวัติอีเมลเก่าไว้ตามเดิม (D8) |
 | E | [แผนเพิ่มประสิทธิผล](effectiveness_plan.md) 6 งาน (E1–E6): เคสแรกหลังระบบตื่นเร็วขึ้น กฎรุ่น 2 ที่อ่านภาษาไทยได้ หน้าเว็บจริงใช้ AI จริง เก็บคำตอบ "เข้าใจถูกไหม" ให้ AI แยก "อื่น ๆ" ได้ดีขึ้น และคลังแหล่งเรียนที่มีภาษาไทยมากขึ้น | เวลาของเคสแรก ข้อเสนอหลักของเคสภาษาไทย และตัวนับ "เข้าใจถูก" บนหน้าเว็บ | เขียนแผนแล้วเมื่อ 10 พ.ย. ตามที่คุณขอ (PR #50); E1 สร้างแล้วใน PR #60 (10 พ.ย.): ภาพของบริการมีไฟล์ที่แปลไว้ล่วงหน้าครบแล้ว บนเครื่องของ GitHub ที่จำกัดกำลังให้เท่าเครื่องฟรี เคสแรกเร็วขึ้นจาก 14.4 เป็น 3.1 วินาที รวมแล้วเมื่อ 10 พ.ย. และวัดบน Render จริงแล้ว (16 พ.ย.): เคสแรกหลังระบบตื่นใช้ 3.2 วินาที จากเดิม 9.0–10.5 วินาที; E2 สร้างและวัดครบใน PR #64: กฎถูก 61/61 ในชุดพัฒนา 105/116 ในชุดเคสยาก และ 22/40 ในชุดที่กันไว้ ([ผลวัดและข้อจำกัด](evidence/2026-11-11-e2-rules-v2.md)); E3 รอคุณตัดสินใจ; E4 และ E6 (ของผู้ช่วยแนะนำแหล่งเรียน) หยุดไว้ก่อนตามที่คุณสั่ง (11 พ.ย.) |
 | H | [ทักษะแยกกัน ส่งงานผ่านตัวกลาง](skill_handoff.md) มีล่ามแปลเป็นภาษาของทักษะปลายทางระหว่างทาง (H1–H5) | อนุมัติเคสบนหน้าเว็บแล้วเห็นงานที่ส่งต่อมา 1 งาน และกล่อง "ส่งต่อแล้ว" | สร้างแล้วตามที่คุณขอ (11 พ.ย., H1–H3): เส้นทางแรก "อนุมัติเคส → บันทึกผลหลังอนุมัติ" ทำงานแล้ว หน้าเว็บแสดงการส่งต่อทั้งสองทาง ทดสอบกับเคสเดิม 217 เคสผ่านทุกข้อ; คุณลองบนหน้าเว็บจริงผ่านแล้ว (16 พ.ย.); ทักษะใหม่ตัวแรก (H4) รอคุณเลือก |
-| T | [AI ของเราเอง ที่เรียนเป็นรอบ](own_model_plan.md) (T1–T6): สอนโมเดลเปิดด้วยงานของเรา สอบก่อนใช้ทุกรอบ และคุณเป็นคนตัดสินใจเปลี่ยนรุ่น | ผลสอบของรุ่นใหม่เทียบรุ่นเดิมในหน้า Actions | เขียนแผนแล้ว (22 พ.ย. ตามที่คุณขอ) คุณเลือกโมเดล 4B ตัวที่ GitHub ทดสอบอยู่เป็นจุดตั้งต้น และพักไฟล์ใน Drive (22 พ.ย.) · T2 ชุดฝึกสมมติ 240 เคส พร้อมด่านตรวจว่าไม่ซ้ำข้อสอบ ทำแล้ว · T3 สูตรการฝึกพร้อมด่านกันข้อความตอนฝึกต่างจากตอนใช้งาน ทำแล้ว · T4 ด่านสอบ ทำแล้ว (22 พ.ย.) และคุณกดสอบรอบ 0 แล้ว (23 พ.ย.): ตอบครบ 484 ข้อ ผลอยู่ใน[บันทึกหลักฐาน](evidence/2026-11-23-own-model-round0.md) · ยังไม่ได้ฝึกจริง รอเลือกที่ฝึก (D10) |
+| T | [AI ของเราเอง ที่เรียนเป็นรอบ](own_model_plan.md) (T1–T6): สอนโมเดลเปิดด้วยงานของเรา สอบก่อนใช้ทุกรอบ และคุณเป็นคนตัดสินใจเปลี่ยนรุ่น | ผลสอบของรุ่นใหม่เทียบรุ่นเดิมในหน้า Actions | เขียนแผนแล้ว (22 พ.ย. ตามที่คุณขอ) คุณเลือกโมเดล 4B ตัวที่ GitHub ทดสอบอยู่เป็นจุดตั้งต้น และพักไฟล์ใน Drive (22 พ.ย.) · T2 ชุดฝึกสมมติ 240 เคส พร้อมด่านตรวจว่าไม่ซ้ำข้อสอบ ทำแล้ว · T3 สูตรการฝึกพร้อมด่านกันข้อความตอนฝึกต่างจากตอนใช้งาน ทำแล้ว · T4 ด่านสอบ ทำแล้ว (22 พ.ย.) และคุณกดสอบรอบ 0 แล้ว (23 พ.ย.): ตอบครบ 484 ข้อ ผลอยู่ใน[บันทึกหลักฐาน](evidence/2026-11-23-own-model-round0.md) · ยังไม่ได้ฝึกจริง: **คุณพักรอบฝึกไว้ก่อน (24 พ.ย.)** ระหว่างนี้ใช้ Typhoon ผ่าน API เหมือนเดิม และผมสะสมชุดฝึกไว้ระหว่างทาง ฐานของรอบฝึกในอนาคตเป็น 30B ตามที่คุณเลือก ส่วน 4B ตัวเดิมเก็บไว้เทียบ ([รายละเอียด](own_model_plan.md#13-the-owners-decisions-of-2026-11-24)) |
 
 **เรื่องที่คุณต้องตัดสินใจเอง** อยู่ในตาราง [Owner decisions](#owner-decisions) ข้างล่าง เช่น
 - จะจ่ายค่า Render เพื่อให้เคสและรหัสรายคนไม่หายหรือไม่
@@ -88,7 +88,7 @@ differs, this file and architecture.md win.
 - จะเปิด repo เป็นสาธารณะเมื่อไร
 - จะให้หน้าเว็บจริงใช้ AI จริง (Typhoon ฟรี) หรือไม่ และจะเริ่มงานไหนของแผนเพิ่มประสิทธิผลก่อน (E1–E6)
 - ทักษะใหม่ตัวแรกที่จะต่อกับตัวกลาง (H4) คืออะไร
-- AI ของเราเอง: จะฝึกที่ไหน (D10) ก่อนรอบฝึกจริงรอบแรก (T5)
+- AI ของเราเอง: จะฝึกที่ไหน และจะสอบ 30B บนเครื่องไหน (D10) เมื่อคุณพร้อม (24 พ.ย. คุณเลือกพักไว้ก่อน)
 - จะมี "ปุ่มอนุมัติเอง" จริงหรือไม่ (D9): ตอนนี้ยังไม่ควร เพราะผลวัด (5.9) บอกว่าความมั่นใจของ AI ใช้แยกถูกผิดไม่ได้ และการเปลี่ยนนี้แก้กติกาข้อ 4
 
 ## How to use this file (for Claude Code)
@@ -187,7 +187,7 @@ owner.
 | T2 | A synthetic training set and the overlap check against every exam set | ✅ built on 2026-11-22: 240 cases (120 Thai, 120 English; 60 per category; every attention kind), a manifest with the file's SHA-256, `training/check_set.py` in the unit tests and the *Training set check* workflow; 0 exact and 0 near matches with every exam set, the open sets and the sealed half included | — |
 | T3 | The training recipe and its receipt, kept out of the image and Render's build | ✅ built on 2026-11-22: `training/recipe_v1.json`, `render.py` (examples from the service's own request builder, compared byte for byte with serving in a test), `receipt.py` (receipt and serving contract), `train_qlora.py` (dry run in CI; GPU libraries pinned in `requirements-train.txt`, never in the image) | D10 to run it |
 | T4 | The exam gate for a candidate model on the local lane, with round 0 run again on `main` | ✅ built on 2026-11-22: `training/exam.py` (six sets, 484 cases; the 8-case probe; criteria v1) and the *Own model exam* workflow (round 0 and a candidate on one runner, the lane's build and file, the recipe's serving flags); round 0's first full run on `main` (2026-11-23, started by the owner): 484/484 answered, probe 8/8, AI correct 58/61 development, 37/40 held-out, 104/128 hard, 57/64 attention, 98/116 edges and 70/75 BIPIA ([evidence](evidence/2026-11-23-own-model-round0.md)) | — |
-| T5 | Round 1: train, examine, decide | ⬜ | T2–T4, D10; where the trained file is put |
+| T5 | Round 1: train, examine, decide | ⏸ paused by the owner on 2026-11-24 (D10: not now); the base of a future round is Typhoon 2.5 Qwen3 30B-A3B, the 4B stays round 0 and the comparison ([decisions](own_model_plan.md#13-the-owners-decisions-of-2026-11-24)) | T2–T4, D10; for the 30B also a machine for its exam; where the trained file is put |
 | T6 | Rounds from people's blind labels | ⬜ | 2.9, D1, D3; real cases also D4, 7.1–7.3, 7.5 |
 
 Phase 2 can be built and tested without a disk. Real use needs D1 = paid: on the free plan, tokens and
@@ -1786,8 +1786,9 @@ is developed, instead of using other companies' AI, and then asked for the plan.
 criteria and each package are in [own_model_plan.md](own_model_plan.md); the decision is ADR-037 (in force since T2 started). Their
 status is in the table above.
 
-- **The idea in one line:** fine-tune an open-weight model (the base: Typhoon 2.5 Qwen3 4B, the file the local
-  lane pins, chosen by the owner on 2026-11-22) in measured rounds: collect, the owner approves the training set by its hash, train outside the service,
+- **The idea in one line:** fine-tune an open-weight model (round 0 and the comparison: Typhoon 2.5 Qwen3 4B, the
+  file the local lane pins, chosen by the owner on 2026-11-22; the base of a future round: Typhoon 2.5 Qwen3
+  30B-A3B, chosen by the owner on 2026-11-24) in measured rounds: collect, the owner approves the training set by its hash, train outside the service,
   examine on the local lane by criteria written first, the owner decides the switch, watch the 2.8 scorecard.
 - **Order:** T2 and T3 need no money and no real data; T4 needs only the criteria confirmed, because round 0 is the
   lane's own file; T5 needs D10 and a place for the trained file that the runner can fetch (Hugging Face); T6 needs
@@ -1795,6 +1796,10 @@ status is in the table above.
 - **Round 0 (2026-11-23):** the publisher's 4B before any training, examined on `main` when the owner started
   *Run workflow*: 484/484 answered; it is the baseline a T5 candidate is compared with, round 0 running again beside
   it on the same runner ([evidence](evidence/2026-11-23-own-model-round0.md)).
+- **Paused (2026-11-24):** the owner paused training (D10: not now), keeps development on Typhoon's API, and asked
+  for training cases to be collected along the way. The 30B does not fit GitHub's free runner (a file of about 19 GB
+  against 16 GB of memory), so its exam needs a larger machine, the owner's decision
+  ([decisions](own_model_plan.md#13-the-owners-decisions-of-2026-11-24)).
 - **The owner's fine-tuned Typhoon 4B is set aside** (2026-11-22: sharing the file from Drive was too troublesome).
   Nothing is downloaded, shared or run.
 - **Don't:** let a model learn while it serves or switch by itself; train on an exam set or the sealed half; use real
@@ -1825,7 +1830,7 @@ status is in the table above.
 | D8 | The personal e-mail address in 53 public commits | — (the setting in 7.6 stops new ones now) | Keep the history (chosen by the owner on 2026-11-10) · rewrite it and ask GitHub Support to purge the old commits · re-create the repository from the rewritten history (7.6) | Decided: kept as it is; new commits checked in CI |
 | D7 | An open model behind the online page | 5.8 step 4 | Mock (today) · Typhoon through 0.4 (free; what is typed goes to SCB 10X) · the local model on a paid machine with room for it (prices checked at the time) | The mock on the page; the local model only in GitHub Actions, for measuring |
 | D9 | Sending a case without a person (an auto-approve button) | not planned; it would change rule 4 and ADR-010 | No (today) · a narrow trial for one low-risk action with undo, only after a confidence that can be checked (E5), a check for text that talks to the system, and reviewer labels (2.8); see 5.9 | Simulation only (ADR-031): every case waits for a person |
-| D10 | Where our own model is trained (ADR-037) | T5 | Not now (today) · Google Colab on the owner's account (free tier limits; paid tiers) · a GPU rented by the hour · the owner's own computer with a GPU | No training; T2–T4 can be built |
+| D10 | Where our own model is trained, and for the 30B base also where it is examined (ADR-037) | T5 | Not now (chosen by the owner on 2026-11-24: the resources are not ready) · Google Colab on the owner's account (free tier limits; paid tiers) · a GPU rented by the hour · the owner's own computer with a GPU; for the 30B's exam, a larger runner (billed per minute) or another machine | No training; T2–T4 built; synthetic training cases collected along the way ([own_model_plan.md](own_model_plan.md#13-the-owners-decisions-of-2026-11-24)) |
 
 ## Evidence track
 
@@ -2045,4 +2050,11 @@ status is in the table above.
   the probe passed 8 of 8; the figures per set, the misses and the limits are in
   [the evidence note](evidence/2026-11-23-own-model-round0.md), and the 484 `EXAM-CASE` rows as printed in its data
   file. Docs only.
+- 2026-11-24: the owner paused own-model training (D10: not now; the resources are not ready) and said to keep
+  relying on Typhoon's API during development and to build training sets along the way. The owner then chose
+  Typhoon 2.5 Qwen3 30B-A3B as the base of a future round (small models forget easily, and the owner's own small
+  fine-tune of the 4B went backwards); the 4B stays round 0 and the comparison, and the exam's pins are unchanged.
+  The 30B does not fit GitHub's free runner, so its exam needs a larger machine (the owner's decision). The rules
+  for collecting training cases are in [own_model_plan.md](own_model_plan.md#13-the-owners-decisions-of-2026-11-24).
+  Docs only; nothing downloaded or pinned.
 
