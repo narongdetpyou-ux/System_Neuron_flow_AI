@@ -4,7 +4,7 @@ CI runs it against the Docker container; you can point it at the online service 
 
     python -m examples.service_smoke_test --url https://<your-service>.onrender.com --key <access key>
 
-First run: read the frame (roadmap 4.1), submit a case, check duplicates and conflicts, wait for the result, approve a case and follow its
+First run: read the frame (roadmap 4.1), ask the router (4.2), submit a case, check duplicates and conflicts, wait for the result, approve a case and follow its
 handoff, issue a reviewer token, decide with it and revoke it (roadmap 2.1), check that the scorecard counts both
 decisions against the rules and the AI (roadmap 2.8), and save the job and token ids.
 With ``--after-restart``: check that the saved job is still there, that the revoked token is still revoked, that the
@@ -204,6 +204,7 @@ def first_run(client, state_file, timeout_s, summary=None, expect_storage=None):
     check(status == 200 and str(frame.get("frame_version", "")).startswith("frame-v1@sha256:")
           and [task.get("id") for task in frame.get("tasks") or []] == ["case_triage", "study_guide"],
           "the frame lists what the system can do: 2 tasks in plain words (roadmap 4.1)")
+    router_reads(client, timeout_s)
     key = f"smoke-{uuid.uuid4()}"
     body = {"workflow_type": "case_triage.v2", "idempotency_key": key,
             "input": {"case_id": "SMOKE-TH-01", "summary": "อัปโหลดไฟล์แนบไม่ได้ ค้างที่ 99%"}}
@@ -252,6 +253,24 @@ def first_run(client, state_file, timeout_s, summary=None, expect_storage=None):
     if state_file:  # ids only: the token itself is never written down or printed
         Path(state_file).write_text(json.dumps({"job_id": job["job_id"], "apply_job_id": applied,
                                                 "token_id": token_id}), encoding="utf-8")
+
+
+def router_reads(client, timeout_s):
+    """Roadmap 4.2 (ADR-039): a plain-language message to the router ends COMPLETED with a proposal of the case task in
+    the person's own words, and creates no other job: a person confirms first."""
+    text = "ลูกค้าบอกว่าอัปโหลดไฟล์แนบไม่ได้ ค้างที่ 99%"
+    _, before = client.call("GET", "/v1/jobs?limit=100")
+    status, routed = client.call("POST", "/v1/jobs", {"workflow_type": "intake.route.v1",
+                                                     "idempotency_key": f"smoke-route-{uuid.uuid4()}",
+                                                     "input": {"message": text}})
+    check(status == 202, "a plain-language message is admitted to the router (roadmap 4.2)")
+    answered = wait_for_result(client, routed["job_id"], timeout_s)
+    reply = (answered.get("result") or {}).get("output") or {}
+    _, after = client.call("GET", "/v1/jobs?limit=100")
+    check(answered["status"] == "COMPLETED" and answered.get("human_review") is None
+          and (reply.get("kind"), reply.get("task"), reply.get("input")) == ("proposal", "case_triage", {"summary": text})
+          and len(after.get("jobs", [])) == len(before.get("jobs", [])) + 1,
+          "the router proposes the case task in the person's own words and creates no job itself (roadmap 4.2)")
 
 
 def personal_tokens(client, timeout_s):

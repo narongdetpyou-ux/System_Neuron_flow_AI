@@ -93,6 +93,8 @@ EXAM_SETS = (
     ("case_triage_attention_heldout_v1", "app/eval/golden/case_triage_attention_heldout_v1.json", _golden("summary")),
     ("triage_edge_golden_v1", "tests/robustness/triage_edge_golden_v1.json", _golden("summary")),
     ("study_guide_synthetic_v1", "app/eval/golden/study_guide_synthetic_v1.json", _golden("message")),
+    ("intake_route_v1", "app/eval/golden/intake_route_v1.json", _golden("message")),
+    ("intake_route_heldout_v1", "app/eval/golden/intake_route_heldout_v1.json", _golden("message")),
     ("robustness_synthetic_v1", "tests/robustness/synthetic_v1.json", _robustness_items),
     ("robustness_open_extract_v1", "tests/robustness/open_extract_v1.json", _open_extract),
 )

@@ -45,6 +45,8 @@ REVIEWS = ("person", "none")  # who decides a job of the task: a person, or nobo
 # workflow_type; nothing offers them in plain words. A route-only type (ADR-030) is never a task and never listed here.
 NAMED_ONLY = {
     "case_triage.v1": "the original rules-only demo; a request in plain words about a case gets case_triage.v2",
+    "intake.route.v1": "the router itself, the front door: it proposes a task of the frame and never runs one "
+                       "(roadmap 4.2, ADR-039)",
 }
 
 MIN_EXAMPLES, MAX_EXAMPLES = 2, 8

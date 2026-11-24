@@ -23,8 +23,10 @@ python -m unittest discover -s tests -v        # all tests (the count is in CLAU
 python -m examples.case_triage_demo            # v1 rules, one synthetic case
 python -m examples.case_triage_shadow_demo     # v2 shadow mode with the offline mock AI
 python -m examples.study_guide_demo            # the study guide's answers to four synthetic requests
+python -m examples.intake_route_demo           # the router's answers to five synthetic messages (roadmap 4.2)
 python -m app.eval.triage_shadow_eval --compare-with tests/baselines/shadow_eval_mock.json  # scorecard + eval gate
 python -m app.eval.study_guide_eval --compare-with tests/baselines/study_guide_eval_mock.json  # study guide's
+python -m app.eval.intake_route_eval --compare-with tests/baselines/intake_route_mock.json  # the router's gate
 python -m tests.robustness.bench --compare-with tests/baselines/robustness_v1.json  # robustness gate (~25 s)
 python -m tests.handoff_check                  # skill handoffs over all 217 triage cases, end to end (~16 s)
 python -m app.eval.triage_shadow_eval --golden app/eval/golden/case_triage_autosend_hard_v1.json --out hard.json \
@@ -187,6 +189,7 @@ For sessions on claude.ai/code.
 |---|---|
 | `neuron_flow/` | Core (rule 1) |
 | `app/domains/case_triage/` | v1 rules, the input contract, the v2 shadow agents and workflow, and the attention signals (`signals.py`, `signals_v2.json`, ADR-032) |
+| `app/domains/intake/` | the plain-language router `intake.route.v1` (roadmap 4.2, ADR-039): its input contract and steps (`workflow.py`), its three agents, `understand` (AI), `check` and `respond` (rules) (`agents.py`), its fixed vocabulary (`contracts.py`) and its mock (`mock_answers.py`); it gets the frame as plain data and never imports `app.services` |
 | `app/domains/study_guide/` | the study guide: topic catalog and verified resource library (`catalog/*_v1.json`), their checks and hash (`library.py`), the link check (`link_check.py`), and the `study_guide.v1` workflow (`workflow.py`, `agents.py`, `planning.py`, `ai_prompts.py`, `mock_answers.py`); no `.md` files here, because the Render build filter ignores them |
 | `app/llm/` | AI gateway, prompt library (prompt + answer schema, one hash), personal-data masking, mock, Claude, Typhoon and local providers (`providers/openai_compat.py` serves OpenAI-format services, Typhoon and a server we run ourselves, and states the answer format in words for both, ADR-022, ADR-026; `providers/_http.py` refuses redirects for every real client) |
 | `app/exchange/` | the skill-handoff exchange (ADR-030): the common language (`common.py`, `vocabulary_v2.json`; v2 lets a reviewer approve, ADR-034), translators (`translators/`, one module per skill, outside `app/domains/`), the route table (`routes.py`, `routes_v1.json`) and `exchange.py`, which checks the table at start and prepares each handoff for the queue store |

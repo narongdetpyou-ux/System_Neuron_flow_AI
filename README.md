@@ -107,6 +107,7 @@ guide** (`study_guide.v1`, the owner's first-response rule):
 | Rules and AI against people's decisions: how often each named the category a reviewer recorded, per proposal version, split by Thai text or not, with a 95% interval on every rate | `app/services/review_labels.py`, `app/api/routes.py`, `app/web/` | **Built on 2026-11-19** (roadmap 2.8): `GET /v1/reviews/scorecard` and the settings tab, for the owner and reviewers; counts only. The labels lean towards the proposal and are synthetic cases, so they are not accuracy; on the free plan they vanish at every sleep |
 | Reviewer time per case: how long a decision card was open before the decision, as the median and the 95th percentile per proposal version and by priority, never per person | `app/web/app.js`, `app/services/reviews.py`, `app/services/review_labels.py`, `app/persistence/queue_store.py` | **Built on 2026-11-22** (roadmap 2.10): the page sends `card_open_s` with a decision (queue schema 5); real figures need real reviewers (D3) and a disk (D1) |
 | The frame: what the system can do, in plain words (two tasks, each with Thai and English names, examples, the information it needs, one question for each missing field, and who decides) | `app/services/frame.py`, `frame_v1.json`, `app/api/routes.py`, `app/web/` | **Built on 2026-11-24** (roadmap 4.1, ADR-038): one versioned file checked against the catalog at start, `GET /v1/frame` and the first panel of the settings tab. It describes only: the plain-language router that chooses a task by itself is roadmap 4.2 |
+| The plain-language router: a message in, one task of the frame proposed in the person's own words, one question when it says too little, or an honest "out of scope"; it never runs a task | `app/domains/intake/`, `app/eval/intake_route_eval.py` | **Built on 2026-11-24** (roadmap 4.2, first part; ADR-039): reachable over the API as `intake.route.v1`, with a mock eval gate in CI; first Typhoon run: task right 47/48 (development) and 22/22 (held out), every proposal in the person's own words ([evidence](docs/evidence/2026-11-24-intake-router-typhoon.md)). Confirming a proposal (part two) and the chat page (4.4) come next |
 | n8n intake, reviewer notifications | — | **Not built yet** (Milestone C in [architecture](docs/architecture.md)) |
 | Skill handoff: separate skills that pass work through one exchange, with a translator on each side of a common language; the first route starts the linked job after an approval (roadmap 2.3) | `app/exchange/`, `app/domains/case_triage/apply.py` | **Working since 2026-11-11** (ADR-030, [design and tests](docs/skill_handoff.md)): checked over all 217 triage cases end to end; the first new skill waits for the owner's choice |
 
@@ -161,7 +162,7 @@ so; a paid plan with a disk keeps them.
 
 **Locally (Python 3.10+):**
 ```bash
-python -m unittest discover -s tests -v        # 721 tests
+python -m unittest discover -s tests -v        # 743 tests
 python -m examples.case_triage_demo            # v1 rules, one synthetic case
 python -m examples.case_triage_shadow_demo     # v2 shadow mode, three synthetic cases (offline mock AI)
 python -m app.eval.triage_shadow_eval          # scorecard on 61 synthetic cases
@@ -198,6 +199,7 @@ most 1 MiB. The agent `version` is frozen into each job, so an old job refuses t
 | [Architecture](docs/architecture.md) | Layers, Core constraints, how AI fits, decisions (ADRs), milestones and their status |
 | [case_triage v1](docs/case_triage_pilot.md) | The deterministic keyword rules |
 | [case_triage v2 shadow mode](docs/case_triage_v2_shadow.md) | The AI second opinion: flow, failure handling, configuration, scorecard |
+| [The plain-language router](docs/intake_router.md) | Roadmap 4.2: `intake.route.v1` reads a message and proposes one task of the frame, asks one question or says it is out of scope; it never runs a task. Its message sets, scorecard and first Typhoon run |
 | [Intake API, queue, Runner and web page](docs/intake_queue.md) | Round 2: how a case flows from outside, recovery rules, API reference, readiness (`/readyz`) and the storage check, Render setup |
 | [Sentry error reporting](docs/observability_sentry.md) | What gets reported, privacy rules, alerts |
 | [Tracing to Honeycomb](docs/observability_tracing.md) | One trace per case: what a span carries and never carries, setup in Render, how it is checked |
