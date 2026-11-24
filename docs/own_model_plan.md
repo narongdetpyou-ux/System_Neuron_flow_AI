@@ -421,3 +421,50 @@ The AI's category right, as n/N of the cases the AI answered:
 - Nothing downloaded or run for the 30B.
 - Its licence terms are not read in full.
 - No machine is chosen for its exam or its training.
+
+## 14. The owner's set-aside fine-tune (the record)
+
+Moved from CLAUDE.md §8 on 2026-11-24, word for word. The rule stays in CLAUDE.md: never fetch, share or run the
+Drive file, and do nothing with it unless the owner asks again. `tests/test_training_recipe.py` reads the base
+revision below, because `recipe_v1.json` pins the same base.
+
+- **The owner's fine-tuned Typhoon 4B is set aside by the owner (on hold since 2026-11-13; on 2026-11-22 the owner
+  chose the publisher's 4B for the own-model plan instead, because sharing the Drive file was too troublesome). Never
+  fetch, share or run the Drive file. Do nothing with it unless the owner asks again.**
+  - What it is: the owner's QLoRA fine-tune of `typhoon-ai/typhoon2.5-qwen3-4b` (revision
+    `ce0a7416fe82d4404b2b4a253ce3ac095ab1252c`) for case triage, merged and quantized to Q4_K_M:
+    `nf_typhoon4b_v01_q4_k_m.gguf`, 2,497,278,816 bytes, SHA-256
+    `323ea4bb91fea1b6aa2e03fe845ca247f8c48de1e9e4d8da1841d48f18cc5c88`, model id `nf-typhoon4b-v01-q4_k_m:323ea4bb91fe`;
+    adapter SHA-256 `6d172e4ac9b177c78059f8318f38671b7ae1694d78da697e0b907a627bacd8ff`. The owner's Colab results (test
+    50/50, hard 36/36, attention 37/38, one CPU answer in 140.93 s) are the owner's, not measured here.
+  - Where it is: the owner's Google Drive, `NeuronFlowAI/Typhoon4B_FineTuned_v01/`, next to `conversion_receipt.json`
+    and `conversion_receipt_before_smoke_recheck.json`. The Drive connector sees it since the owner reconnected it with
+    the right Google account on 2026-11-13; the size in Drive matches, and the SHA-256 can only be checked on a download
+    (this session's network cannot reach Drive's download host; GitHub Actions can). Before the reconnect the connector
+    was signed in to another account and showed nothing after 2026-11-08. Never write either account's address anywhere.
+  - What was built and cancelled: PR #68, closed unmerged at the owner's request (a pin file, a private-link source for
+    `fetch_model.py` that never caches or uploads the file, the lane running both 4B files on one runner, an end-to-end
+    check through the real service, a comparison and a training-overlap check). Its commits stay readable on the closed
+    PR; restore or rebuild only when the owner asks. Its one real-model run (the publisher's 4B on a GitHub runner, run
+    43421904358): end-to-end 70/70 checks, first answer after loading 36.5 s, then about 8 to 10 s a case, peak memory
+    8.8 GB.
+  - 2026-11-16: the owner asked to continue with it, then chose to keep it on hold before a route was chosen. Done
+    first, read only: `conversion_receipt.json` (status `GGUF_SMOKE_PASSED`) matches every value above, compared by a
+    program, and its `llama_cpp_commit` is the lane's `LLAMA_CPP_COMMIT`. The folder also holds `SHA256SUMS.txt` and
+    a `llama-server` binary built in Colab (`llama_server_b12198_cpu`); never run that binary, the lane builds
+    llama.cpp itself. Nothing was downloaded, shared or changed. The two routes put to the owner, for next time: a
+    Drive link in a repository secret (fewest steps for the owner; anyone holding the link could download the file)
+    or a private Hugging Face repository with a read-only token (more private, more steps; `fetch_model.py` already
+    reads Hugging Face). The scope offered: download, check the size and SHA-256, five triage cases on a GitHub
+    runner, report, and ask again before a full run.
+  - The own-model plan ([docs/own_model_plan.md](own_model_plan.md)) uses the publisher's 4B as its base and round 0,
+    the file the local lane pins; this file is not part of it.
+  - Before touching it again:
+    1. Ask the owner first how their file may be reached or shared (a Drive link they share, or a private Hugging Face
+       repository with a token): it is their decision. When a connector cannot see a file, stop and ask which account
+       holds it; do not carry on along another route.
+    2. The owner's usage credits are limited. Agree on the scope and the size of the work before starting, build in
+       small steps the owner confirms, and never start long runs or wide changes unasked.
+    3. Copy hashes and ids from the owner's text with a program, never by hand: a hand-typed pin was wrong once.
+    4. First step when asked: read `conversion_receipt.json` (read only; done on 2026-11-16, so read it again only if
+       its modified time in Drive changed), then ask one question about the route and the scope.
