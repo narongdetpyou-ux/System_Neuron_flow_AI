@@ -1,6 +1,6 @@
 # Intake API, job queue, Runner and web page (round 2, Milestone B)
 
-**Status:** built in PR #11 and tested offline (721 tests on 2026-11-24, including killing the Runner
+**Status:** built in PR #11 and tested offline (743 tests on 2026-11-24, including killing the Runner
 mid-step). The container build is checked on every push by *Actions → Service container*. Live on
 Render's free plan since 2026-11-01 (`render.yaml`). Railway was the first choice, but it has paused new
 sign-ups since 22 Oct 2026 after a security incident; `railway.json` stays in the repository for later.
@@ -41,6 +41,9 @@ The frame (2026-11-24, roadmap 4.1, ADR-038): `GET /v1/frame` and the first pane
 the system can do, in plain words: two tasks, each with examples, the information it needs, the one question asked
 when that is missing, and who decides (see "ระบบช่วยอะไรได้บ้าง" and "The frame" below). The person still chooses
 the kind of message above the box until the router (roadmap 4.2) chooses from this list.
+The router (2026-11-24, roadmap 4.2's first part, ADR-039): `POST /v1/jobs` with `"workflow_type": "intake.route.v1"`
+and `{"message"}` answers a proposal in the person's own words, one question, or out of scope, and creates no other job
+([intake_router.md](intake_router.md)). The page does not use it yet (4.4); confirming a proposal is 4.2's second part.
 Design principles: [design_philosophy.md](design_philosophy.md).
 
 ## ภาพรวมการทำงาน (ภาษาไทย)

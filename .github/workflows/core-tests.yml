@@ -24,6 +24,9 @@ jobs:
       # The study guide's answers to four synthetic requests, shown on the run page (roadmap 3.2).
       - name: Run study guide demonstration (offline mock AI)
         run: python -m examples.study_guide_demo --summary "$GITHUB_STEP_SUMMARY"
+      # The plain-language router's answers to five synthetic messages, shown on the run page (roadmap 4.2, ADR-039).
+      - name: Run router demonstration (offline mock AI)
+        run: python -m examples.intake_route_demo --summary "$GITHUB_STEP_SUMMARY"
       # Skill handoff (ADR-030, docs/skill_handoff.md): one case step by step through the exchange and its
       # translators, shown on the run page.
       - name: Run skill handoff demonstration (offline mock AI)
@@ -69,6 +72,19 @@ jobs:
         run: >-
           python -m app.eval.study_guide_eval --summary "$GITHUB_STEP_SUMMARY" --out study-guide-eval-mock.json
           --compare-with tests/baselines/study_guide_eval_mock.json
+      # The router's scorecard and eval gates (roadmap 4.2, ADR-039): fail when a promise breaks (a job that does not
+      # end, a proposal whose input is not the person's own words) or when any message answers differently from the
+      # baseline, on the development set and on the held-out set.
+      - name: Score the router and compare every message with the baseline (offline mock AI)
+        if: ${{ !cancelled() }}
+        run: >-
+          python -m app.eval.intake_route_eval --summary "$GITHUB_STEP_SUMMARY" --out intake-route-eval-mock.json
+          --compare-with tests/baselines/intake_route_mock.json
+      - name: Score the router's held-out set and compare every message with the baseline (offline mock AI)
+        if: ${{ !cancelled() }}
+        run: >-
+          python -m app.eval.intake_route_eval --golden app/eval/golden/intake_route_heldout_v1.json
+          --out intake-route-heldout-mock.json --compare-with tests/baselines/intake_route_heldout_mock.json
       # Robustness benchmark, stage 1 (roadmap 5.4, docs/benchmarking.md): 270 synthetic edge cases and four pinned open
       # datasets through intake, rules, masking, AI replies, Core contracts and whole jobs, offline (mock AI and a local
       # fake of the Typhoon API). Fails when any item's outcome differs from the baseline, which records failures too.
@@ -93,5 +109,7 @@ jobs:
             autosend-hard-mock.json
             autosend-sim-mock.json
             study-guide-eval-mock.json
+            intake-route-eval-mock.json
+            intake-route-heldout-mock.json
             robustness.json
             handoff-eval-mock.json

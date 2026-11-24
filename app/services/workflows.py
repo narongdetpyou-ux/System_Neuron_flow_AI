@@ -10,12 +10,16 @@ a recorded state of another job; ``POST /v1/jobs`` refuses it like a type outsid
 """
 
 from dataclasses import dataclass, field
+import functools
 from typing import Callable, Optional
 
 from app.domains.case_triage import (apply_registry, build_apply_workflow, build_shadow_workflow, build_workflow,
                                      check_apply_input, registry, shadow_registry)
 from app.domains.case_triage.apply import PREVIEW_INPUT as _APPLY_PREVIEW, STEP_ID as _APPLY_STEP
+from app.domains.intake import build_route_workflow, check_message as check_route_message, route_registry
 from app.domains.study_guide import build_study_workflow, check_message, study_registry
+
+from .frame import load_frame
 
 _CHECK_JOB_ID = "admission_check"
 _PREVIEW_JOB_ID = "workflow_preview"
@@ -58,6 +62,15 @@ CATALOG = {
         lambda job_id, request, config: build_study_workflow(job_id, request, config),
         lambda config: study_registry(config), ai_step="detect_topic",
         preview_input={"message": "Placeholder request that shows the shape of this workflow"}),
+    # The plain-language router (roadmap 4.2, ADR-039): a message in, one task of the frame proposed, a question, or
+    # out of scope. Informational: it decides nothing and runs no task, so it ends COMPLETED; a person confirms first.
+    "intake.route.v1": WorkflowType(
+        "intake.route.v1", "Plain-language router: a message in, one task of the frame proposed (or a question, or "
+        "out of scope); it never runs a task itself",
+        "respond", check_route_message,
+        lambda job_id, request, config: build_route_workflow(job_id, request, config, frame=router_frame()),
+        lambda config: route_registry(config, router_frame()), ai_step="understand",
+        preview_input={"message": "Placeholder request that shows the shape of this workflow"}),
     # Started only by the route "triage-approved-to-apply" after a person approves a case (roadmap 2.3, ADR-030).
     "case_triage.v2.apply": WorkflowType(
         "case_triage.v2.apply", "Record where an approved case goes, with a Core receipt (started only after a "
@@ -67,6 +80,14 @@ CATALOG = {
         lambda config: apply_registry(), preview_input=dict(_APPLY_PREVIEW), route_only=True),
 }
 DEFAULT_WORKFLOW = "case_triage.v2"
+
+
+@functools.lru_cache(maxsize=1)
+def router_frame():
+    """The frame as the router sees it: the view of the tasks this catalog runs (roadmap 4.2, ADR-039). Read and
+    checked once per process. The router's domain gets it as plain data, so it never imports this layer; callers
+    must not change it (the workflow builder copies it into each job)."""
+    return load_frame().view(CATALOG)
 
 
 def admissible(catalog):

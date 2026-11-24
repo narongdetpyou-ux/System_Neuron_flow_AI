@@ -182,7 +182,7 @@ class StatusAndAdmissionTests(ApiTestCase):
         self.assertEqual(handoff["counts"], {"STARTED": 0, "REFUSED": 0})
         flags = {item["name"]: item["route_only"] for item in status["workflows"]}
         self.assertEqual(flags, {"case_triage.v2": False, "case_triage.v1": False, "study_guide.v1": False,
-                                 "case_triage.v2.apply": True})
+                                 "intake.route.v1": False, "case_triage.v2.apply": True})
         self.assertNotIn("pattern", json.dumps(handoff))
 
     def test_posting_a_route_only_skill_is_refused(self):

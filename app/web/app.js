@@ -111,19 +111,23 @@
     detect_topic: "AI ถอดความว่าอยากเรียนเรื่องอะไร", pick_resources: "กฎเลือกแหล่งเรียน (ไม่เกิน 5)",
     build_path: "กฎเรียงลำดับการเรียน", explain: "AI อธิบายเป็นภาษาธรรมดา", answer: "เตรียมคำตอบเป็นชั้น",
     record_routing: "บันทึกว่าเคสไปคิวไหน และใครอนุมัติ",
+    understand: "AI ถอดความว่าต้องการงานไหนในสมุดงาน", check: "กฎตรวจว่างานอยู่ในสมุดงานและข้อมูลพอ",
+    respond: "เตรียมคำตอบ: เสนองาน ถามกลับ หรือบอกว่านอกกรอบ",
   };
   const STEP_SHORT = {
     classify_rules: "กฎเดิม", classify_llm: "AI", screen: "สัญญาณ", compare: "เทียบ", prepare: "เตรียม", classify: "กฎ",
     detect_topic: "ถอดความ", pick_resources: "เลือกแหล่ง", build_path: "เรียงลำดับ", explain: "อธิบาย", answer: "คำตอบ",
-    record_routing: "บันทึกผล",
+    record_routing: "บันทึกผล", understand: "อ่านข้อความ", check: "ตรวจ", respond: "ตอบ",
   };
-  const AI_STEPS = new Set(["classify_llm", "detect_topic", "explain"]);
+  const AI_STEPS = new Set(["classify_llm", "detect_topic", "explain", "understand"]);
   const ROLE = {
     classify_rules: "ข้อเสนอหลัก (กฎ)", classify: "ข้อเสนอหลัก (กฎ)", classify_llm: "ความเห็นที่สอง (AI · shadow)",
     screen: "กฎ: จับเรื่องที่ต้องให้คนดูก่อน (ไม่เปลี่ยนหมวด)", compare: "เทียบสองความเห็น", prepare: "เตรียมให้คนตรวจ",
     detect_topic: "AI เสนอหัวข้อจากสมุดหัวข้อ", pick_resources: "กฎ: เฉพาะแหล่งในคลังที่ตรวจแล้ว",
     build_path: "กฎ: พื้นฐานก่อน ง่ายไปยาก", explain: "AI อธิบาย (ไม่เขียนลิงก์เอง)", answer: "คำตอบ ไม่ต้องรอคนตรวจ",
     record_routing: "กฎ: บันทึกตามที่คนอนุมัติ ไม่ส่งอะไรออกนอกระบบ",
+    understand: "AI เสนองานจากสมุดงาน (ไม่สร้างงานเอง)", check: "กฎ: งานต้องอยู่ในสมุดงาน และข้อมูลต้องพอ",
+    respond: "กฎ: ตอบแบบเดียว ไม่สร้างงานเอง ต้องมีคนกดยืนยันก่อน",
   };
   const STUDY = "study_guide.v1";
   const WORKFLOW = {
@@ -131,6 +135,7 @@
     "case_triage.v1": "จัดหมวดเคส: กฎอย่างเดียว",
     "study_guide.v1": "ผู้ช่วยแนะนำแหล่งเรียน: ถามด้วยคำธรรมดา ได้แหล่งเรียนไม่เกิน 5 แหล่ง",
     "case_triage.v2.apply": "บันทึกผลหลังอนุมัติ: ส่งต่อมาจากเคสที่อนุมัติแล้ว ผ่านตัวกลางและล่าม",
+    "intake.route.v1": "ตัวอ่านข้อความ: อ่านข้อความแล้วเสนองานจากสมุดงาน (ไม่สร้างงานเอง)",
   };
   /* Skill handoffs (ADR-030, docs/skill_handoff.md): one skill hands work to the next only through the exchange,
    * along a fixed route, through an out-translator, the common language and the target's in-translator. The
@@ -1624,8 +1629,9 @@
     }
     if (TERMINAL.has(job.status)) body.push(technical(job));
     return [
-      el("div", { class: "msg-user", text: (job.input || {}).summary || "" }),
-      el("div", { class: "msg-meta" }, [el("span", { class: "file-chip", text: job.case_id }),
+      // A case carries a summary; a message to the router (roadmap 4.2) carries a message and no case id.
+      el("div", { class: "msg-user", text: (job.input || {}).summary || (job.input || {}).message || "" }),
+      el("div", { class: "msg-meta" }, [job.case_id ? el("span", { class: "file-chip", text: job.case_id }) : null,
         el("span", { text: `ส่งเมื่อ ${shortTime(job.created_at)}` })]),
       botMsg(body.filter(Boolean)),
     ];
